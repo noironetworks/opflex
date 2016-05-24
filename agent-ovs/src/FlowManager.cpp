@@ -590,6 +590,7 @@ SetDestActionArpReply(FlowEntry *fe, const uint8_t *mac, const address& ip,
     ab.SetRegLoad(MFF_ARP_SPA, ip.to_v4().to_ulong());
     if (type != FlowManager::ENCAP_NONE) {
         ab.SetRegLoad(MFF_REG0, replyEpg);
+        ab.SetRegLoad(MFF_REG7, outPort);
         ab.SetWriteMetadata(FlowManager::METADATA_TUNNEL_OUT,
                             FlowManager::METADATA_OUT_MASK);
         ab.SetGotoTable(FlowManager::OUT_TABLE_ID);
@@ -654,8 +655,9 @@ SetActionEPGFdBroadcast(FlowEntry *fe, FlowManager::EncapType encapType,
 }
 
 static void
-SetDestActionOutputToEPGTunnel(FlowEntry *fe) {
+SetDestActionOutputToEPGTunnel(FlowEntry *fe, uint32_t outPort) {
     ActionBuilder ab;
+    ab.SetRegLoad(MFF_REG7, outPort);
     ab.SetWriteMetadata(FlowManager::METADATA_TUNNEL_OUT,
                         FlowManager::METADATA_OUT_MASK);
     ab.SetGotoTable(FlowManager::OUT_TABLE_ID);
@@ -1930,13 +1932,13 @@ FlowManager::HandleEndpointGroupDomainUpdate(const URI& epgURI) {
             unknownTunnelBr = new FlowEntry();
             unknownTunnelBr->entry->priority = 1;
             unknownTunnelBr->entry->table_id = BRIDGE_TABLE_ID;
-            SetDestActionOutputToEPGTunnel(unknownTunnelBr);
+            SetDestActionOutputToEPGTunnel(unknownTunnelBr, tunPort);
 
             if (virtualRouterEnabled) {
                 unknownTunnelRt = new FlowEntry();
                 unknownTunnelRt->entry->priority = 1;
                 unknownTunnelRt->entry->table_id = ROUTE_TABLE_ID;
-                SetDestActionOutputToEPGTunnel(unknownTunnelRt);
+                SetDestActionOutputToEPGTunnel(unknownTunnelRt, tunPort);
             }
         }
         WriteFlow("static", BRIDGE_TABLE_ID, unknownTunnelBr);
@@ -2173,7 +2175,7 @@ FlowManager::HandleEndpointGroupDomainUpdate(const URI& epgURI) {
                                       htonll(METADATA_OUT_MASK));
             ActionBuilder ab;
             FlowManager::SetActionTunnelMetadata(ab, encapType, epgTunDst);
-            ab.SetOutputToPort(tunPort);
+            ab.SetOutputReg(MFF_REG7);
             ab.Build(tunnelOut->entry);
 
             egOutFlows.push_back(FlowEntryPtr(tunnelOut));
@@ -2192,7 +2194,7 @@ FlowManager::HandleEndpointGroupDomainUpdate(const URI& epgURI) {
                                       htonll(METADATA_OUT_MASK));
             ActionBuilder ab;
             FlowManager::SetActionTunnelMetadata(ab, encapType, GetTunnelDst());
-            ab.SetOutputToPort(tunPort);
+            ab.SetOutputReg(MFF_REG7);
             ab.Build(tunnelOutRtr->entry);
 
             egOutFlows.push_back(FlowEntryPtr(tunnelOutRtr));
@@ -2395,7 +2397,7 @@ FlowManager::HandleRoutingDomainUpdate(const URI& rdURI) {
                        sn.second, false);
         if (fallbackMode == FALLBACK_PROXY && tunPort != OFPP_NONE &&
             encapType != ENCAP_NONE) {
-            SetDestActionOutputToEPGTunnel(snr);
+            SetDestActionOutputToEPGTunnel(snr, tunPort);
         }
         rdRouteFlows.push_back(FlowEntryPtr(snr));
     }
@@ -2452,7 +2454,7 @@ FlowManager::HandleRoutingDomainUpdate(const URI& rdURI) {
                                tunPort != OFPP_NONE &&
                                encapType != ENCAP_NONE) {
                         // For other external networks, output to the tunnel
-                        SetDestActionOutputToEPGTunnel(snr);
+                        SetDestActionOutputToEPGTunnel(snr, tunPort);
                     }
                     // else drop the packets
                     rdRouteFlows.push_back(FlowEntryPtr(snr));
