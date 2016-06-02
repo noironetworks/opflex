@@ -1415,7 +1415,7 @@ BOOST_FIXTURE_TEST_CASE(virtDhcp, VxlanFlowManagerFixture) {
 }
 
 enum REG {
-    SEPG, SEPG12, DEPG, BD, FD, RD, OUTPORT, TUNID, TUNDST, VLAN,
+    SEPG, SEPG12, DEPG, BD, FD, RD, OUTPORT, TUNID, TUNSRC, TUNDST, VLAN,
     ETHSRC, ETHDST, ARPOP, ARPSHA, ARPTHA, ARPSPA, ARPTPA, METADATA,
     PKT_MARK
 };
@@ -1426,7 +1426,7 @@ enum TABLE {
 string rstr[] = {
     "NXM_NX_REG0[]", "NXM_NX_REG0[0..11]", "NXM_NX_REG2[]", "NXM_NX_REG4[]",
     "NXM_NX_REG5[]", "NXM_NX_REG6[]", "NXM_NX_REG7[]", "NXM_NX_TUN_ID[0..31]",
-    "NXM_NX_TUN_IPV4_DST[]", "OXM_OF_VLAN_VID[]",
+    "NXM_NX_TUN_IPV4_SRC[]", "NXM_NX_TUN_IPV4_DST[]", "OXM_OF_VLAN_VID[]",
     "NXM_OF_ETH_SRC[]", "NXM_OF_ETH_DST[]", "NXM_OF_ARP_OP[]",
     "NXM_NX_ARP_SHA[]", "NXM_NX_ARP_THA[]", "NXM_OF_ARP_SPA[]", "NXM_OF_ARP_TPA[]",
     "OXM_OF_METADATA[]", "NXM_NX_PKT_MARK[]"
@@ -1625,11 +1625,9 @@ void FlowManagerFixture::initExpStatic() {
         ADDF(Bldr().table(SEC).priority(50).in(tunPort)
              .actions().go(SRC).done());
         ADDF(Bldr().table(BR).priority(1)
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
         ADDF(Bldr().table(RT).priority(1)
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
     }
 }
 
@@ -1692,7 +1690,7 @@ void FlowManagerFixture::initExpEpg(shared_ptr<EpGroup>& epg,
             ADDF(Bldr().table(OUT).priority(10).reg(SEPG, vnid)
                  .isMdAct(FlowManager::METADATA_TUNNEL_OUT)
                  .actions().pushVlan().move(SEPG12, VLAN)
-                 .out(OUTPORT).done());
+                 .outPort(tunPort).done());
             break;
         case FlowManager::ENCAP_VXLAN:
         case FlowManager::ENCAP_IVXLAN:
@@ -1704,13 +1702,13 @@ void FlowManagerFixture::initExpEpg(shared_ptr<EpGroup>& epg,
                  .isMdAct(FlowManager::METADATA_TUNNEL_OUT)
                  .actions().move(SEPG, TUNID)
                  .load(TUNDST, mcast.to_v4().to_ulong())
-                 .out(OUTPORT).done());
+                 .outPort(tunPort).done());
             ADDF(Bldr().table(OUT).priority(11).reg(SEPG, vnid)
                  .isMdAct(FlowManager::METADATA_TUNNEL_OUT)
                  .isEthDst(rmac)
                  .actions().move(SEPG, TUNID)
                  .load(TUNDST, flowManager.GetTunnelDst().to_v4().to_ulong())
-                 .out(OUTPORT).done());
+                 .outPort(tunPort).done());
             break;
         }
     }
@@ -1758,16 +1756,13 @@ void FlowManagerFixture::initExpRd(uint32_t rdId) {
     if (tunPort != OFPP_NONE) {
         ADDF(Bldr().table(RT).priority(324)
              .ip().reg(RD, rdId).isIpDst("10.20.44.0/24")
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
         ADDF(Bldr().table(RT).priority(324)
              .ip().reg(RD, rdId).isIpDst("10.20.45.0/24")
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
         ADDF(Bldr().table(RT).priority(332)
              .ipv6().reg(RD, rdId).isIpv6Dst("2001:db8::/32")
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
     } else {
         ADDF(Bldr().table(RT).priority(324)
              .ip().reg(RD, rdId).isIpDst("10.20.44.0/24")
@@ -1786,6 +1781,7 @@ void FlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
                                    shared_ptr<EpGroup>& epg,
                                    uint32_t fdId, uint32_t bdId, uint32_t rdId,
                                    bool arpOn, bool routeOn) {
+    FlowManager::EncapType encapType = flowManager.GetEncapType();
     string mac = ep->getMAC().get().toString();
     uint32_t port = portmapper.FindPort(ep->getInterfaceName().get());
     unordered_set<string> ips(ep->getIPs());
@@ -1859,20 +1855,37 @@ void FlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
                              .move(ARPSPA, ARPTPA).load(ARPSPA,
                                                         ipa.to_v4().to_ulong())
                              .inport().done());
-                        ADDF(Bldr().table(BR).priority(21).arp()
-                             .reg(BD, bdId).reg(RD, rdId).in(tunPort)
-                             .isEthDst(bmac).isTpa(ipa.to_string())
-                             .isArpOp(1)
-                             .actions()
-                             .move(ETHSRC, ETHDST)
-                             .load(ETHSRC, "0x8000").load(ARPOP, 2)
-                             .move(ARPSHA, ARPTHA).load(ARPSHA, "0x8000")
-                             .move(ARPSPA, ARPTPA)
-                             .load(ARPSPA, ipa.to_v4().to_ulong())
-                             .load(SEPG, vnid)
-                             .load(OUTPORT, OFPP_IN_PORT)
-                             .mdAct(FlowManager::METADATA_TUNNEL_OUT)
-                             .go(OUT).done());
+                        switch (encapType) {
+                        case FlowManager::ENCAP_VLAN:
+                            ADDF(Bldr().table(BR).priority(21).arp()
+                                 .reg(BD, bdId).reg(RD, rdId).in(tunPort)
+                                 .isEthDst(bmac).isTpa(ipa.to_string())
+                                 .isArpOp(1)
+                                 .actions()
+                                 .move(ETHSRC, ETHDST)
+                                 .load(ETHSRC, "0x8000").load(ARPOP, 2)
+                                 .move(ARPSHA, ARPTHA).load(ARPSHA, "0x8000")
+                                 .move(ARPSPA, ARPTPA)
+                                 .load(ARPSPA, ipa.to_v4().to_ulong())
+                                 .inport().done());
+                            break;
+                        case FlowManager::ENCAP_VXLAN:
+                        case FlowManager::ENCAP_IVXLAN:
+                        default:
+                            ADDF(Bldr().table(BR).priority(21).arp()
+                                 .reg(BD, bdId).reg(RD, rdId).in(tunPort)
+                                 .isEthDst(bmac).isTpa(ipa.to_string())
+                                 .isArpOp(1)
+                                 .actions()
+                                 .move(ETHSRC, ETHDST)
+                                 .load(ETHSRC, "0x8000").load(ARPOP, 2)
+                                 .move(ARPSHA, ARPTHA).load(ARPSHA, "0x8000")
+                                 .move(ARPSPA, ARPTPA)
+                                 .load(ARPSPA, ipa.to_v4().to_ulong())
+                                 .move(TUNSRC, TUNDST)
+                                 .inport().done());
+                            break;
+                        }
                     } else if (arpOn) {
                         // arp optimization
                         ADDF(Bldr().table(BR).priority(20).arp()
@@ -2159,9 +2172,8 @@ void FlowManagerFixture::initExpIpMapping(bool natEpgMap, bool nextHop) {
          .load(ETHSRC, "0x8000").load(ARPOP, 2)
          .move(ARPSHA, ARPTHA).load(ARPSHA, "0x8000")
          .move(ARPSPA, ARPTPA).load(ARPSPA, 0x5050505)
-         .load(SEPG, 0x4242).load(OUTPORT, OFPP_IN_PORT)
-         .mdAct(FlowManager::METADATA_TUNNEL_OUT)
-         .go(OUT).done());
+         .move(TUNSRC, TUNDST)
+         .inport().done());
 
     ADDF(Bldr().table(RT).priority(452).ipv6().reg(SEPG, 0x4242).reg(RD, 2)
          .isIpv6Dst("fdf1:9f86:d1af:6cc9::5")
@@ -2193,12 +2205,10 @@ void FlowManagerFixture::initExpIpMapping(bool natEpgMap, bool nextHop) {
     } else {
         ADDF(Bldr().table(RT).priority(166).ipv6().reg(RD, 1)
              .isIpv6Dst("fdf1::/16")
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
         ADDF(Bldr().table(RT).priority(158).ip().reg(RD, 1)
              .isIpDst("5.0.0.0/8")
-             .actions().load(OUTPORT, tunPort)
-             .mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
+             .actions().mdAct(FlowManager::METADATA_TUNNEL_OUT).go(OUT).done());
     }
 
     ADDF(Bldr().table(NAT).priority(166).ipv6().reg(RD, 1)
