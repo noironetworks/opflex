@@ -1867,6 +1867,7 @@ void FlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
                                  .move(ARPSHA, ARPTHA).load(ARPSHA, "0x8000")
                                  .move(ARPSPA, ARPTPA)
                                  .load(ARPSPA, ipa.to_v4().to_ulong())
+                                 .pushVlan().move(SEPG12, VLAN)
                                  .inport().done());
                             break;
                         case FlowManager::ENCAP_VXLAN:

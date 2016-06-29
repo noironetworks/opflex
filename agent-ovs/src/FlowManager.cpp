@@ -588,6 +588,10 @@ SetDestActionArpReply(FlowEntry *fe, const uint8_t *mac, const address& ip,
     ab.SetRegMove(MFF_ARP_SPA, MFF_ARP_TPA);
     ab.SetRegLoad(MFF_ARP_SPA, ip.to_v4().to_ulong());
     switch (type) {
+    case FlowManager::ENCAP_VLAN:
+        ab.SetPushVlan();
+        ab.SetRegMove(MFF_REG0, MFF_VLAN_VID);
+        break;
     case FlowManager::ENCAP_VXLAN:
     case FlowManager::ENCAP_IVXLAN:
         ab.SetRegMove(MFF_TUN_SRC, MFF_TUN_DST);
