@@ -1369,16 +1369,6 @@ FlowManager::HandleEndpointUpdate(const string& uuid) {
             SetSourceMatchEp(e1, 138, ofPort, NULL);
             SetSourceAction(e1, epgVnid, bdId, fgrpId, rdId, LEARN_TABLE_ID);
             elSrc.push_back(FlowEntryPtr(e1));
-
-            // Multicast traffic from promiscuous ports is delivered
-            // normally
-            FlowEntry *e2 = new FlowEntry();
-            SetSourceMatchEp(e2, 139, ofPort, NULL);
-            match_set_dl_dst_masked(&e2->entry->match,
-                                    packets::MAC_ADDR_BROADCAST,
-                                    packets::MAC_ADDR_MULTICAST);
-            SetSourceAction(e2, epgVnid, bdId, fgrpId, rdId);
-            elSrc.push_back(FlowEntryPtr(e2));
         }
 
         if (virtualDHCPEnabled && hasMac) {
@@ -1952,8 +1942,7 @@ FlowManager::HandleEndpointGroupDomainUpdate(const URI& epgURI) {
     if (tunPort != OFPP_NONE && encapType != ENCAP_NONE) {
         // In flood mode we send all traffic from the uplink to the
         // learning table.  Otherwise move to the destination mapper
-        // table as normal.  Multicast traffic still goes to the
-        // destination table, however.
+        // table as normal.
 
         uint8_t floodMode = UnknownFloodModeEnumT::CONST_DROP;
         optional<shared_ptr<FloodDomain> > epgFd = polMgr.getFDForGroup(epgURI);
@@ -1973,17 +1962,6 @@ FlowManager::HandleEndpointGroupDomainUpdate(const URI& epgURI) {
         SetSourceAction(e0, epgVnid, bdId, fgrpId, rdId,
                         nextTable, encapType);
         uplinkMatch.push_back(FlowEntryPtr(e0));
-
-        if (floodMode == UnknownFloodModeEnumT::CONST_FLOOD) {
-            FlowEntry *e1 = new FlowEntry();
-            SetSourceMatchEpg(e1, encapType, 150, tunPort, epgVnid);
-            match_set_dl_dst_masked(&e1->entry->match,
-                                    packets::MAC_ADDR_BROADCAST,
-                                    packets::MAC_ADDR_MULTICAST);
-            SetSourceAction(e1, epgVnid, bdId, fgrpId, rdId,
-                            FlowManager::BRIDGE_TABLE_ID, encapType);
-            uplinkMatch.push_back(FlowEntryPtr(e1));
-        }
     }
     WriteFlow(epgId, SRC_TABLE_ID, uplinkMatch);
 

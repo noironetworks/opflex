@@ -56,7 +56,8 @@ bool PacketInHandler::writeLearnFlow(SwitchConnection *conn,
     const address& tunDst = flowManager.GetTunnelDst();
 
     bool dstKnown = (0 != pi.flow_metadata.flow.regs[7]);
-    if (stage2 && !dstKnown) return false;
+    bool broadcast = (flow.dl_dst[0] & 0x01) != 0;
+    if (stage2 && (!dstKnown || broadcast)) return false;
 
     uint8_t* flowMac = NULL;
 
@@ -106,7 +107,7 @@ bool PacketInHandler::writeLearnFlow(SwitchConnection *conn,
         LOG(ERROR) << "Could not write flow mod: " << ovs_strerror(error);
     }
 
-    if (flowReader) {
+    if (flowReader && !stage2) {
         FlowReader::FlowCb dstCb =
             boost::bind(&PacketInHandler::dstFlowCb, this,
                         _1, MAC(flowMac), outport,
@@ -114,7 +115,7 @@ bool PacketInHandler::writeLearnFlow(SwitchConnection *conn,
         match fmatch;
         memset(&fmatch, 0, sizeof(fmatch));
         match_set_reg(&fmatch, 5 /* REG5 */, pi.flow_metadata.flow.regs[5]);
-        match_set_dl_dst(&fmatch, flowMac);
+        match_set_dl_dst(&fmatch, flow.dl_src);
 
         flowReader->getFlows(FlowManager::LEARN_TABLE_ID,
                              &fmatch, dstCb);
@@ -252,6 +253,10 @@ void PacketInHandler::handleLearnPktIn(SwitchConnection *conn,
     if (writeLearnFlow(conn, proto, pi, flow, true))
         return;
 
+    bool broadcast = (flow.dl_dst[0] & 0x01) != 0;
+    uint32_t groupId = broadcast
+        ? pi.flow_metadata.flow.regs[5]
+        : FlowManager::getPromId(pi.flow_metadata.flow.regs[5]);
     {
         // install a forward flow to flood to the promiscuous ports in
         // the flood domain until we learn the correct reverse path
@@ -270,7 +275,7 @@ void PacketInHandler::handleLearnPktIn(SwitchConnection *conn,
         match_set_dl_src(&fm.match, flow.dl_src);
 
         ActionBuilder ab;
-        ab.SetGroup(FlowManager::getPromId(pi.flow_metadata.flow.regs[5]));
+        ab.SetGroup(groupId);
         ab.Build(&fm);
 
         struct ofpbuf* message = ofputil_encode_flow_mod(&fm, proto);
@@ -291,7 +296,7 @@ void PacketInHandler::handleLearnPktIn(SwitchConnection *conn,
 
         ActionBuilder ab;
         ab.SetRegLoad(MFF_REG0, pi.flow_metadata.flow.regs[0]);
-        ab.SetGroup(FlowManager::getPromId(pi.flow_metadata.flow.regs[5]));
+        ab.SetGroup(groupId);
         ab.Build(&po);
 
         struct ofpbuf* message = ofputil_encode_packet_out(&po, proto);
