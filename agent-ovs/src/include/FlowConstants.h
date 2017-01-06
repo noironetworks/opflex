@@ -81,6 +81,11 @@ namespace meta {
  */
 extern const uint64_t POLICY_APPLIED;
 
+/**
+ * Indicates that a packet has been routed and is allowed to hairpin
+ */
+extern const uint64_t ROUTED;
+
 namespace out {
 
 /**

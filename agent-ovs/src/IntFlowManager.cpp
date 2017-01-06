@@ -539,6 +539,7 @@ static FlowBuilder& actionRevNatDest(FlowBuilder& fb, uint32_t epgVnid,
         .reg(MFF_REG5, fgrpId)
         .reg(MFF_REG6, rdId)
         .reg(MFF_REG7, ofPort)
+        .metadata(flow::meta::ROUTED, flow::meta::ROUTED)
         .go(IntFlowManager::NAT_IN_TABLE_ID);
     return fb;
 }
@@ -648,6 +649,7 @@ static void flowsIpm(IntFlowManager& flowMgr,
                 .action()
                 .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
                 .ipDst(mappedIp).decTtl();
+
             actionRevNatDest(ipmRoute, epgVnid, bdId,
                              fgrpId, rdId, ofPort);
             ipmRoute.build(elRouteDst);
@@ -689,16 +691,16 @@ static void flowsIpm(IntFlowManager& flowMgr,
         ab.decTtl();
 
         if (nextHopPort == OFPP_NONE) {
-            ab.reg(MFF_REG0, fepgVnid);
-            ab.reg(MFF_REG4, fbdId);
-            ab.reg(MFF_REG5, ffdId);
-            ab.reg(MFF_REG6, frdId);
-            ab.reg(MFF_REG7, (uint32_t)0);
-            ab.reg64(MFF_METADATA, 0);
-            ab.resubmit(OFPP_IN_PORT, IntFlowManager::BRIDGE_TABLE_ID);
+            ab.reg(MFF_REG0, fepgVnid)
+                .reg(MFF_REG4, fbdId)
+                .reg(MFF_REG5, ffdId)
+                .reg(MFF_REG6, frdId)
+                .reg(MFF_REG7, (uint32_t)0)
+                .reg64(MFF_METADATA, flow::meta::ROUTED)
+                .resubmit(OFPP_IN_PORT, IntFlowManager::BRIDGE_TABLE_ID);
         } else {
-            ab.reg(MFF_PKT_MARK, rdId);
-            ab.output(nextHopPort);
+            ab.reg(MFF_PKT_MARK, rdId)
+                .output(nextHopPort);
         }
         ipmNatOut.build(elOutput);
     }
@@ -1047,6 +1049,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         .ethSrc(getRouterMacAddr())
                         .ethDst(macAddr)
                         .decTtl()
+                        .metadata(flow::meta::ROUTED, flow::meta::ROUTED)
                         .go(POL_TABLE_ID)
                         .parent().build(elRouteDst);
                 }
@@ -1138,6 +1141,26 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                 flowsProxyDiscovery(*this, elServiceMap,
                                     51, ipAddr, macAddr, 0, rdId, 0);
             }
+        }
+    }
+
+    if (ofPort != OFPP_NONE) {
+        // If a packet has a routing action applied, we'll allow it to
+        // hairpin for ordinary default output action or reverse NAT
+        // output
+        vector<uint64_t> metadata;
+        metadata.push_back(flow::meta::ROUTED);
+        metadata.push_back(flow::meta::ROUTED | flow::meta::out::REV_NAT);
+
+        BOOST_FOREACH (uint64_t m, metadata) {
+            FlowBuilder()
+                .priority(2)
+                .inPort(ofPort)
+                .metadata(m, flow::meta::ROUTED | flow::meta::out::MASK)
+                .reg(7, ofPort)
+                .action()
+                .output(OFPP_IN_PORT)
+                .parent().build(elOutput);
         }
     }
 
@@ -1264,7 +1287,8 @@ void IntFlowManager::handleAnycastServiceUpdate(const string& uuid) {
                     svcIp.ipSrc(nextHopAddr)
                         .action()
                         .ipSrc(addr)
-                        .decTtl();
+                        .decTtl()
+                        .metadata(flow::meta::ROUTED, flow::meta::ROUTED);
                 } else {
                     svcIp.ipSrc(addr);
                 }
@@ -1565,7 +1589,7 @@ void IntFlowManager::handleEndpointGroupDomainUpdate(const URI& epgURI) {
             .reg(MFF_REG5, fgrpId)
             .reg(MFF_REG6, rdId)
             .reg(MFF_REG7, (uint32_t)0)
-            .reg64(MFF_METADATA, 0)
+            .reg64(MFF_METADATA, flow::meta::ROUTED)
             .resubmit(OFPP_IN_PORT, BRIDGE_TABLE_ID)
             .parent().build(egOutFlows);
     }
