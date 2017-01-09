@@ -556,7 +556,8 @@ static void handleDHCPv4PktIn(shared_ptr<const Endpoint>& ep,
                                       v4c.get().getDnsServers(),
                                       v4c.get().getDomain(),
                                       v4c.get().getStaticRoutes(),
-                                      v4c.get().getInterfaceMtu());
+                                      v4c.get().getInterfaceMtu(),
+                                      v4c.get().getLeaseTime());
 
     if (b)
         send_packet_out(intFlowManager, conn, b, proto,
@@ -681,7 +682,11 @@ static void handleDHCPv6PktIn(shared_ptr<const Endpoint>& ep,
                                       v6c.get().getDnsServers(),
                                       v6c.get().getSearchList(),
                                       temporary,
-                                      rapid_commit);
+                                      rapid_commit,
+                                      v6c.get().getT1(),
+                                      v6c.get().getT2(),
+                                      v6c.get().getPreferredLifetime(),
+                                      v6c.get().getValidLifetime());
 
     if (b)
         send_packet_out(intFlowManager, conn, b, proto,
