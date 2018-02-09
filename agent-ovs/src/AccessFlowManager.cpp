@@ -202,8 +202,6 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             if (ep->getAccessIfaceVlan()) {
                 in.vlan(ep->getAccessIfaceVlan().get());
                 in.action().popVlan();
-            } else {
-                in.vlan(0xffff);
             }
             if (zoneId != static_cast<uint16_t>(-1))
                 in.action()
