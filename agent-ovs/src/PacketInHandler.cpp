@@ -420,17 +420,22 @@ static void send_packet_out(Agent& agent,
 
         unordered_set<string> eps;
         agent.getEndpointManager().getEndpointsByIface(iface, eps);
-        if (eps.size() == 0)
+        if (eps.size() == 0) {
             LOG(WARNING) << "No endpoint found for ICMP error packet"
                          << " on " << iface;
+            ofpbuf_delete(b);
+            return;
+        }
         if (eps.size() > 1)
             LOG(WARNING) << "Multiple possible endpoints for ICMP error packet "
                          << " on " << iface;
 
         ep_ptr ep = agent.getEndpointManager().getEndpoint(*eps.begin());
         if (ep && ep->getAccessInterface() && ep->getAccessUplinkInterface()) {
-            if (!accConn || !accPortMapper)
+            if (!accConn || !accPortMapper) {
+                ofpbuf_delete(b);
                 return;
+            }
             conn = accConn;
             uint32_t accPort =
                 accPortMapper->FindPort(ep->getAccessInterface().get());
