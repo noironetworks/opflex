@@ -1430,9 +1430,10 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
 
                 serviceDest
                     .priority(50)
-                    .ipDst(serviceAddr)
-                    .action()
-                    .ethSrc(getRouterMacAddr());
+                    .ipDst(serviceAddr);
+                if (as.getServiceMode() == Service::LOCAL_ANYCAST) {
+                    serviceDest.action().ethSrc(getRouterMacAddr());
+                }
 
                 if (!nextHopAddrs.empty()) {
                     // map traffic to service to the next hop IPs
