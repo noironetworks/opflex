@@ -47,6 +47,9 @@ StitchedModeRenderer::StitchedModeRenderer(Agent& agent_)
       tunnelEpManager(&agent_), tunnelRemotePort(0), uplinkVlan(0),
       virtualRouter(true), routerAdv(true),
       connTrack(true), ctZoneRangeStart(0), ctZoneRangeEnd(0),
+      ifaceStatsEnabled(true), ifaceStatsInterval(0),
+      contractStatsEnabled(true), contractStatsInterval(0),
+      secGroupStatsEnabled(true), secGroupStatsInterval(0),
       started(false) {
 
 }
@@ -137,16 +140,24 @@ void StitchedModeRenderer::start() {
     std::string agentUUID =
         to_string(basic_random_generator<std::mt19937>(urng)());
 
-    interfaceStatsManager.
-        registerConnection(intSwitchManager.getConnection(),
-                           (accessBridgeName != "")
-                           ? accessSwitchManager.getConnection()
-                           : NULL);
-    interfaceStatsManager.start();
-    contractStatsManager.setAgentUUID(agentUUID);
-    contractStatsManager.registerConnection(intSwitchManager.getConnection());
-    contractStatsManager.start();
-    if (accessBridgeName != "") {
+    if (ifaceStatsEnabled) {
+        interfaceStatsManager.setTimerInterval(ifaceStatsInterval);
+        interfaceStatsManager.
+            registerConnection(intSwitchManager.getConnection(),
+                               (accessBridgeName != "")
+                               ? accessSwitchManager.getConnection()
+                               : NULL);
+        interfaceStatsManager.start();
+    }
+    if (contractStatsEnabled) {
+        contractStatsManager.setTimerInterval(contractStatsInterval);
+        contractStatsManager.setAgentUUID(agentUUID);
+        contractStatsManager.
+            registerConnection(intSwitchManager.getConnection());
+        contractStatsManager.start();
+    }
+    if (secGroupStatsEnabled && accessBridgeName != "") {
+        secGrpStatsManager.setTimerInterval(secGroupStatsInterval);
         secGrpStatsManager.setAgentUUID(agentUUID);
         secGrpStatsManager.
             registerConnection(accessSwitchManager.getConnection());
@@ -174,9 +185,12 @@ void StitchedModeRenderer::stop() {
         cleanupTimer->cancel();
     }
 
-    interfaceStatsManager.stop();
-    contractStatsManager.stop();
-    secGrpStatsManager.stop();
+    if (ifaceStatsEnabled)
+        interfaceStatsManager.stop();
+    if (contractStatsEnabled)
+        contractStatsManager.stop();
+    if (secGroupStatsEnabled)
+        secGrpStatsManager.stop();
 
     pktInHandler.stop();
 
@@ -243,6 +257,20 @@ void StitchedModeRenderer::setProperties(const ptree& properties) {
     static const std::string CONN_TRACK_RANGE_END("forwarding."
                                                   "connection-tracking."
                                                   "zone-range.end");
+
+    static const std::string STATS_INTERFACE_ENABLED("statistics"
+                                                     ".interface.enabled");
+    static const std::string STATS_INTERFACE_INTERVAL("statistics"
+                                                      ".interface.interval");
+    static const std::string STATS_CONTRACT_ENABLED("statistics"
+                                                    ".contract.enabled");
+    static const std::string STATS_CONTRACT_INTERVAL("statistics"
+                                                    ".contract.interval");
+    static const std::string STATS_SECGROUP_ENABLED("statistics"
+                                                    ".security-group.enabled");
+    static const std::string STATS_SECGROUP_INTERVAL("statistics"
+                                                     ".security-group"
+                                                     ".interval");
 
     intBridgeName =
         properties.get<std::string>(OVS_BRIDGE_NAME, "br-int");
@@ -316,6 +344,24 @@ void StitchedModeRenderer::setProperties(const ptree& properties) {
 
     mcastGroupFile = properties.get<std::string>(MCAST_GROUP_FILE,
                                                  DEF_MCAST_GROUPFILE);
+
+    ifaceStatsEnabled = properties.get<bool>(STATS_INTERFACE_ENABLED, true);
+    contractStatsEnabled = properties.get<bool>(STATS_CONTRACT_ENABLED, true);
+    secGroupStatsEnabled = properties.get<bool>(STATS_SECGROUP_ENABLED, true);
+    ifaceStatsInterval = properties.get<long>(STATS_INTERFACE_INTERVAL, 30000);
+    contractStatsInterval =
+        properties.get<long>(STATS_CONTRACT_INTERVAL, 10000);
+    secGroupStatsInterval =
+        properties.get<long>(STATS_SECGROUP_INTERVAL, 10000);
+    if (ifaceStatsInterval <= 0) {
+        ifaceStatsEnabled = false;
+    }
+    if (contractStatsInterval <= 0) {
+        contractStatsEnabled = false;
+    }
+    if (secGroupStatsInterval <= 0) {
+        secGroupStatsEnabled = false;
+    }
 }
 
 static bool connTrackIdGarbageCb(EndpointManager& endpointManager,

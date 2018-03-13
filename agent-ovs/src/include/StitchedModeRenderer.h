@@ -108,6 +108,13 @@ private:
     uint16_t ctZoneRangeStart;
     uint16_t ctZoneRangeEnd;
 
+    bool ifaceStatsEnabled;
+    long ifaceStatsInterval;
+    bool contractStatsEnabled;
+    long contractStatsInterval;
+    bool secGroupStatsEnabled;
+    long secGroupStatsInterval;
+
     bool started;
 
     /**
