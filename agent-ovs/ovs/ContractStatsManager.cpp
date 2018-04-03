@@ -53,13 +53,16 @@ using boost::system::error_code;
 ContractStatsManager::ContractStatsManager(Agent* agent_, IdGenerator& idGen_,
                                            SwitchManager& switchManager_,
                                            long timer_interval_)
-    : PolicyStatsManager(agent_,idGen_,switchManager_,timer_interval_) {}
+    : PolicyStatsManager(agent_,idGen_,switchManager_,timer_interval_),
+      dropGenId(0) {}
 
 ContractStatsManager::~ContractStatsManager() {
 
 }
+
 void ContractStatsManager::start() {
-    LOG(DEBUG) << "Starting policy stats manager";
+    LOG(DEBUG) << "Starting contract stats manager ("
+               << timer_interval << " ms)";
     PolicyStatsManager::start();
     EpGroup::registerListener(agent->getFramework(),this);
     RoutingDomain::registerListener(agent->getFramework(),this);
@@ -67,7 +70,7 @@ void ContractStatsManager::start() {
 }
 
 void ContractStatsManager::stop() {
-    LOG(DEBUG) << "Stopping policy stats manager";
+    LOG(DEBUG) << "Stopping contract stats manager";
     stopping = true;
     EpGroup::unregisterListener(agent->getFramework(),this);
     RoutingDomain::unregisterListener(agent->getFramework(),this);
