@@ -28,6 +28,7 @@
 #include <opflexagent/cmd.h>
 #include "Policies.h"
 #include <signal.h>
+#include <sys/inotify.h>
 
 using std::string;
 using std::make_pair;
@@ -46,6 +47,9 @@ void sighandler(int sig) {
          OFConstants::ENDPOINT_REGISTRY |     \
          OFConstants::OBSERVER)
 #define LOCALHOST "127.0.0.1"
+#define EVENT_SIZE  ( sizeof (struct inotify_event) )
+#define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
+#define POLICY_DIR "/usr/local/etc/opflex-server"
 
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
@@ -85,6 +89,8 @@ int main(int argc, char** argv) {
     std::string ssl_pass;
     std::vector<std::string> peers;
     std::vector<std::string> transport_mode_proxies;
+    char buf[EVENT_BUF_LEN];
+    int fd, wd;
 
     po::variables_map vm;
     try {
@@ -157,7 +163,50 @@ int main(int argc, char** argv) {
 
         server.start();
         signal(SIGINT | SIGTERM, sighandler);
-        pause();
+	fd = inotify_init();
+	if (fd < 0) {
+            LOG(ERROR) << "Could not initialize inotify: "
+                       << strerror(errno);
+            goto cleanup;
+	}
+	wd = inotify_add_watch(fd, POLICY_DIR, IN_CLOSE_WRITE);
+	if (wd < 0) {
+            LOG(ERROR) << "Could not add inotify watch for "
+                       << policy_file << ": "
+                       << strerror(errno);
+            goto cleanup;
+	} else {
+            LOG(INFO) << "Watching policy file: "
+		      << policy_file;
+        }
+	while (true) {
+	    ssize_t len = read(fd, buf, sizeof buf);
+	    if (len < 0 && errno != EAGAIN) {
+                LOG(ERROR) << "Error while reading inotify events: "
+                           << strerror(errno);
+                goto cleanup;
+	    }
+
+	    if (len < 0) continue;
+
+            const struct inotify_event *event;
+            for (char* ptr = buf; ptr < buf + len;
+                 ptr += sizeof(struct inotify_event) + event->len) {
+                 event = (const struct inotify_event *) ptr;
+
+                if ((event->mask & IN_CLOSE_WRITE) && event->len > 0) {
+		    LOG(INFO) << "Policy file modified : " << policy_file;
+		    if (execv(argv[0], argv)) {
+	                LOG(ERROR) << "opflex_server failed to restart self"
+			           << strerror(errno);
+                        goto cleanup;
+		    }
+		} else {
+		    break;
+		}
+	    }
+	}
+cleanup:
         server.stop();
     } catch (const std::exception& e) {
         LOG(ERROR) << "Fatal error: " << e.what();
