@@ -11,6 +11,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <cstdint>
 #include <arpa/inet.h>
 
 #include "opflex/engine/internal/OpflexConnection.h"
@@ -74,11 +75,13 @@ public:
     virtual yajr::Peer* getPeer() { return peer; }
     virtual void messagesReady();
 
+    uint64_t getConnId(void) { return conn_id; }
 private:
     OpflexListener* listener;
 
     std::string remote_peer;
     void setRemotePeer(int rc, struct sockaddr_storage& name);
+    uint64_t conn_id;
 
     yajr::Peer* peer;
 };

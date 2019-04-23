@@ -17,6 +17,7 @@
 #include <cstdio>
 
 #include <boost/foreach.hpp>
+#include <boost/asio/placeholders.hpp>
 
 #include "opflex/test/MockOpflexServer.h"
 #include "opflex/engine/internal/OpflexMessage.h"
@@ -75,6 +76,10 @@ using rapidjson::Value;
 using rapidjson::Writer;
 using modb::mointernal::StoreClient;
 using test::MockOpflexServer;
+using boost::asio::deadline_timer;
+using boost::asio::placeholders::error;
+
+static const boost::posix_time::seconds CLEANUP_INTERVAL(5);
 
 MockOpflexServerImpl::MockOpflexServerImpl(int port_, uint8_t roles_,
                                            MockOpflexServer::peer_vec_t peers_,
@@ -83,7 +88,8 @@ MockOpflexServerImpl::MockOpflexServerImpl(int port_, uint8_t roles_,
     : port(port_), roles(roles_), peers(peers_),
       proxies(proxies_),
       listener(*this, port_, "name", "domain"),
-      db(threadManager), serializer(&db) {
+      db(threadManager), serializer(&db),
+      stopping(false) {
     db.init(md);
     client = &db.getStoreClient("_SYSTEM_");
 }
@@ -101,13 +107,26 @@ void MockOpflexServerImpl::enableSSL(const std::string& caStorePath,
 }
 
 void MockOpflexServerImpl::start() {
+    stopping = false;
+    cleanupTimer.reset(new deadline_timer(io, CLEANUP_INTERVAL));
+    cleanupTimer->async_wait(bind(&MockOpflexServerImpl::onCleanupTimer,
+                                  this, error));
     db.start();
     listener.listen();
+    io_service_thread.reset(new std::thread([this]() { io.run(); }));
 }
 
 void MockOpflexServerImpl::stop() {
+    stopping = true;
+    if (cleanupTimer) {
+        cleanupTimer->cancel();
+    }
     listener.disconnect();
     db.stop();
+    if (io_service_thread) {
+        io_service_thread->join();
+        io_service_thread.reset();
+    }
     client = NULL;
 }
 
@@ -212,6 +231,27 @@ void MockOpflexServerImpl::policyUpdate(const std::vector<modb::reference_t>& re
     listener.sendToAll(req);
 }
 
+void MockOpflexServerImpl::policyUpdate(UpdateOp op,
+                                        const std::vector<modb::reference_t>& mo) {
+    std::vector<modb::reference_t> emptyref{};
+    PolicyUpdateReq* req;
+
+    switch (op) {
+    case UpdateOp::replace:
+        req = new PolicyUpdateReq(*this, mo, emptyref, emptyref);
+        break;
+    case UpdateOp::merge:
+        req = new PolicyUpdateReq(*this, emptyref, mo, emptyref);
+        break;
+    case UpdateOp::del:
+        req = new PolicyUpdateReq(*this, emptyref, emptyref, mo);
+        break;
+    default:
+        break;
+    }
+    listener.sendToListeners(mo, req);
+}
+
 class EndpointUpdateReq : public OpflexMessage {
 public:
     EndpointUpdateReq(MockOpflexServerImpl& server_,
@@ -282,6 +322,17 @@ void MockOpflexServerImpl::endpointUpdate(const std::vector<modb::reference_t>& 
     listener.sendToAll(req);
 }
 
+void MockOpflexServerImpl::onCleanupTimer(const boost::system::error_code& ec) {
+    if (ec) return;
+
+    if (!stopping) {
+        LOG(DEBUG) << "onCleanupTimer";
+        listener.onCleanupTimer();
+        cleanupTimer->expires_from_now(CLEANUP_INTERVAL);
+        cleanupTimer->async_wait(bind(&MockOpflexServerImpl::onCleanupTimer,
+                                      this, error));
+    }
+}
 } /* namespace internal */
 } /* namespace engine */
 } /* namespace opflex */

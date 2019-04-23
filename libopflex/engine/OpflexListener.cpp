@@ -40,7 +40,7 @@ OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
                                const std::string& name_,
                                const std::string& domain_)
     : handlerFactory(handlerFactory_), port(port_),
-      name(name_), domain(domain_), active(true) {
+      name(name_), domain(domain_), active(true), conn_id(0) {
     uv_mutex_init(&conn_mutex);
     uv_key_create(&conn_mutex_key);
 }
@@ -50,7 +50,7 @@ OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
                                const std::string& name_,
                                const std::string& domain_)
     : handlerFactory(handlerFactory_), socketName(socketName_),
-      port(-1), name(name_), domain(domain_), active(true) {
+      port(-1), name(name_), domain(domain_), active(true), conn_id(0) {
     uv_mutex_init(&conn_mutex);
     uv_key_create(&conn_mutex_key);
 }
@@ -81,8 +81,9 @@ void OpflexListener::on_cleanup_async(uv_async_t* handle) {
     {
         util::RecursiveLockGuard guard(&listener->conn_mutex,
                                        &listener->conn_mutex_key);
-        conn_set_t conns(listener->conns);
-        BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+        conn_map_t conns(listener->conns);
+        for (auto& it: listener->conns) {
+            OpflexServerConnection* conn = it.second;
             conn->close();
         }
         if (listener->conns.size() != 0) return;
@@ -97,7 +98,8 @@ void OpflexListener::on_writeq_async(uv_async_t* handle) {
     OpflexListener* listener = (OpflexListener*)handle->data;
     util::RecursiveLockGuard guard(&listener->conn_mutex,
                                    &listener->conn_mutex_key);
-    BOOST_FOREACH(OpflexServerConnection* conn, listener->conns) {
+    for (auto& it: listener->conns) {
+        OpflexServerConnection* conn = it.second;
         conn->processWriteQueue();
     }
 }
@@ -163,13 +165,13 @@ void* OpflexListener::on_new_connection(yajr::Listener* ylistener,
     util::RecursiveLockGuard guard(&listener->conn_mutex,
                                    &listener->conn_mutex_key);
     OpflexServerConnection* conn = new OpflexServerConnection(listener);
-    listener->conns.insert(conn);
+    listener->conns.insert({conn->getConnId(), conn});
     return conn;
 }
 
 void OpflexListener::connectionClosed(OpflexServerConnection* conn) {
     util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
-    conns.erase(conn);
+    conns.erase(conn->getConnId());
     delete conn;
     guard.release();
     if (!active)
@@ -180,15 +182,130 @@ void OpflexListener::sendToAll(OpflexMessage* message) {
     boost::scoped_ptr<OpflexMessage> messagep(message);
     util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
     if (!active) return;
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (auto& it: conns) {
+        OpflexServerConnection* conn = it.second;
         // this is inefficient but we only use this for testing
         conn->sendMessage(message->clone());
     }
 }
 
+void OpflexListener::resolvedUri(const std::string& uri, uint64_t conn_id) {
+    conn_set_t& connset = resolv_uri_map[uri];
+    if (connset.find(conn_id) != connset.end())
+        return;
+
+    connset.insert(conn_id);
+}
+
+void OpflexListener::unResolvedUri(const std::string& uri, uint64_t conn_id) {
+    auto it1 = resolv_uri_map.find(uri);
+    if (it1 == resolv_uri_map.end())
+        return;
+    conn_set_t& connset = it1->second;
+
+    auto it2 = connset.find(conn_id);
+    if (it2 != connset.end())
+        connset.erase(it2);
+
+    if (connset.empty())
+        resolv_uri_map.erase(it1);
+}
+
+void OpflexListener::sendToListeners(const std::string& uri,
+                                     OpflexMessage* message) {
+    boost::scoped_ptr<OpflexMessage> messagep(message);
+    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    if (!active) return;
+    auto it1 = resolv_uri_map.find(uri);
+    if (it1 == resolv_uri_map.end())
+        return;
+
+    uint64_t conn_id;
+    conn_set_t& connset = it1->second;
+    BOOST_FOREACH(conn_id, connset) {
+        auto it2 = conns.find(conn_id);
+        if (it2 != conns.end()) {
+            OpflexServerConnection* conn = it2->second;
+            if (conn->getConnId() == conn_id) {
+                conn->sendMessage(message->clone());
+                continue;
+            }
+        }
+        connset.erase(conn_id);
+        if (connset.empty()) {
+            resolv_uri_map.erase(it1);
+            return;
+        }
+    }
+}
+
+void OpflexListener::sendToListeners(const std::vector<modb::reference_t>& mo_,
+                                     OpflexMessage* message) {
+    std::vector<modb::reference_t> mo(mo_);
+    boost::scoped_ptr<OpflexMessage> messagep(message);
+    conn_set_t cset;
+    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    if (!active) return;
+
+    BOOST_FOREACH(modb::reference_t& p, mo) {
+        auto it = resolv_uri_map.find(p.second.toString().c_str());
+        if (it == resolv_uri_map.end())
+            continue;
+
+        conn_set_t& ucset = it->second;
+        if (!ucset.empty()) {
+            cset.insert(ucset.begin(), ucset.end());
+        }
+    }
+
+    uint64_t conn_id;
+    BOOST_FOREACH(conn_id, cset) {
+        auto it = conns.find(conn_id);
+        if (it != conns.end()) {
+            OpflexServerConnection* conn = it->second;
+            if (conn->getConnId() == conn_id) {
+                conn->sendMessage(message->clone());
+                continue;
+            }
+        }
+    }
+}
+
+void OpflexListener::onCleanupTimer(void) {
+    auto it1 = resolv_uri_map.begin();
+
+    while(it1 != resolv_uri_map.end()) {
+        uint64_t conn_id;
+        conn_set_t& connset = it1->second;
+        bool incr = true;
+
+        BOOST_FOREACH(conn_id, connset) {
+            auto it2 = conns.find(conn_id);
+            if (it2 != conns.end()) {
+                OpflexServerConnection* conn = it2->second;
+                if (conn->getConnId() == conn_id) {
+                    continue;
+                }
+            }
+            LOG(DEBUG) << "CLEANUP URI :: " << it1->first
+                       << "AGENT :: " << conn_id;
+            // We come here if conn_id is not present in conns
+            connset.erase(conn_id);
+            // If connset for uri is empty, remove uri
+            if (connset.empty()) {
+                it1 = resolv_uri_map.erase(it1);
+                incr = false;
+                break;
+            }
+        }
+        if (incr) { it1++; }
+    }
+}
+
 bool OpflexListener::applyConnPred(conn_pred_t pred, void* user) {
     util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (auto& it: conns) {
+        OpflexServerConnection* conn = it.second;
         if (!pred(conn, user)) return false;
     }
     return true;

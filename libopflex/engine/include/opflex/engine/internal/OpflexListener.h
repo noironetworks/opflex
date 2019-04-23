@@ -15,10 +15,13 @@
 #include <netinet/in.h>
 
 #include <uv.h>
+#include <cstdint>
 
 #include "opflex/engine/internal/OpflexServerConnection.h"
 #include "opflex/engine/internal/OpflexMessage.h"
+#include "opflex/ofcore/OFTypes.h"
 #include "yajr/transport/ZeroCopyOpenSSL.hpp"
+#include "opflex/modb/internal/ObjectStore.h"
 
 #pragma once
 #ifndef OPFLEX_ENGINE_OPFLEXLISTENER_H
@@ -39,6 +42,8 @@ class OpflexPool;
  */
 class OpflexListener {
 public:
+    typedef std::set<uint64_t> conn_set_t;
+
     /**
      * Create a new opflex listener for the given IP address and port
      *
@@ -123,6 +128,23 @@ public:
     void sendToAll(OpflexMessage* message);
 
     /**
+     * Send a given message to all the connected and ready peers
+     * that are subscribed to the uri.
+     *
+     * @param message the message to write.  The memory will be owned
+     * by the listener
+     */
+    void sendToListeners(const std::string& uri, OpflexMessage* message);
+
+    /**
+     * Send a given message to a set of listeners.
+     *
+     * @param set of clients and request to send.
+     */
+    void sendToListeners(const std::vector<modb::reference_t>& mo,
+                         OpflexMessage* message);
+
+    /**
      * A predicate for use with applyConnPred
      */
     typedef bool (*conn_pred_t)(OpflexServerConnection* conn, void* user);
@@ -138,6 +160,22 @@ public:
      * @return true if the server is listening
      */
     bool isListening();
+
+    /**
+     * Return unique connection id
+     */
+    uint64_t getUniqueConnId(void) { return conn_id++; }
+
+    /**
+     * update database of resolved URIs
+     */
+     void resolvedUri(const std::string& uri, uint64_t conn_id);
+     void unResolvedUri(const std::string& uri, uint64_t conn_id);
+
+    /**
+     * garbage collect stale uris
+     */
+    void onCleanupTimer(void);
 
 private:
     HandlerFactory& handlerFactory;
@@ -163,8 +201,13 @@ private:
 
     uv_mutex_t conn_mutex;
     uv_key_t conn_mutex_key;
-    typedef std::set<OpflexServerConnection*> conn_set_t;
-    conn_set_t conns;
+    typedef std::map<uint64_t, OpflexServerConnection*> conn_map_t;
+    conn_map_t conns;
+
+    uint64_t conn_id;
+
+    typedef OF_UNORDERED_MAP<std::string, conn_set_t> resolv_uri_map_t;
+    resolv_uri_map_t resolv_uri_map;
 
     uv_async_t cleanup_async;
     uv_async_t writeq_async;

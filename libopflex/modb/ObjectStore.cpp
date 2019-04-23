@@ -19,6 +19,7 @@
 #include <boost/foreach.hpp>
 
 #include "opflex/modb/internal/ObjectStore.h"
+#include "opflex/logging/internal/logging.hpp"
 #include "LockGuard.h"
 
 namespace opflex {
@@ -79,6 +80,7 @@ void ObjectStore::NotifQueueProc::processItem(const URI& uri,
     class_id_t class_id = boost::any_cast<class_id_t>(data);
     std::list<ObjectListener*>& listeners =
         store->class_map.at(class_id).listeners;
+    LOG(DEBUG) << "MODB OBJECT UPDATED " << class_id << "::" << uri;
     for (it = listeners.begin(); it != listeners.end(); ++it) {
         (*it)->objectUpdated(class_id, uri);
     }

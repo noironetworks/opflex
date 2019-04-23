@@ -17,6 +17,10 @@
 #include "opflex/engine/internal/OpflexListener.h"
 #include "opflex/engine/internal/OpflexHandler.h"
 #include "opflex/engine/internal/MockServerHandler.h"
+#include <boost/asio.hpp>
+#include <thread>
+
+using boost::asio::deadline_timer;
 
 #pragma once
 #ifndef OPFLEX_ENGINE_MOCKOPFLEXSERVERIMPL_H
@@ -32,6 +36,18 @@ namespace internal {
  */
 class MockOpflexServerImpl : public HandlerFactory {
 public:
+    /**
+      * Type of update operation
+      */
+    enum class UpdateOp {
+        /** replace an mo  */
+        replace,
+        /** merge children */
+        merge,
+        /** delete an mo  */
+        del
+    };
+
     /**
      * Construct a new mock opflex server
      *
@@ -136,6 +152,12 @@ public:
     void policyUpdate(const std::vector<modb::reference_t>& replace,
                       const std::vector<modb::reference_t>& merge_children,
                       const std::vector<modb::reference_t>& del);
+    /**
+     * Dispatch a policy update to interested clients
+     */
+    void policyUpdate(UpdateOp,
+                      const std::vector<modb::reference_t>& mo);
+
 
     /**
      * Dispatch an endpoint update to the attached clients
@@ -157,6 +179,12 @@ private:
     modb::ObjectStore db;
     MOSerializer serializer;
     modb::mointernal::StoreClient* client;
+
+    boost::asio::io_service io;
+    std::unique_ptr<std::thread> io_service_thread;
+    void onCleanupTimer(const boost::system::error_code& ec);
+    std::unique_ptr<boost::asio::deadline_timer> cleanupTimer;
+    std::atomic_bool stopping;
 };
 
 } /* namespace internal */

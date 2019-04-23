@@ -32,7 +32,7 @@ using yajr::transport::ZeroCopyOpenSSL;
 
 OpflexServerConnection::OpflexServerConnection(OpflexListener* listener_)
     : OpflexConnection(listener_->handlerFactory),
-      listener(listener_), peer(NULL) {
+      listener(listener_), peer(NULL), conn_id(listener_->getUniqueConnId()) {
 
 }
 
@@ -56,7 +56,10 @@ void OpflexServerConnection::setRemotePeer(int rc, struct sockaddr_storage& name
                   ? (void *) &(((struct sockaddr_in*)&name)->sin_addr)
                   : (void *) &(((struct sockaddr_in6*)&name)->sin6_addr),
                   addrbuffer, INET6_ADDRSTRLEN);
-        remote_peer = addrbuffer;
+        int port = name.ss_family == AF_INET
+                   ? ntohs(((struct sockaddr_in*)&name)->sin_port)
+                   : ntohs(((struct sockaddr_in6*)&name)->sin6_port);
+        remote_peer = std::string(addrbuffer) + ":" + std::to_string(port);
     }
 
     LOG(INFO) << "[" << getRemotePeer() << "] "

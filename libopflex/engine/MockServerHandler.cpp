@@ -264,7 +264,13 @@ void MockServerHandler::handleSendIdentityReq(const rapidjson::Value& id,
 
 void MockServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
                                                const Value& payload) {
-    LOG(DEBUG) << "Got policy_resolve req";
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got policy_resolve req from " << ": "
+               << conn->getConnId() << " : "
+               << conn->getRemotePeer();
 
     bool found = true;
     Value::ConstValueIterator it;
@@ -301,6 +307,8 @@ void MockServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
             return;
         }
 
+        LOG(DEBUG) << subjectv.GetString() << "::" << puriv.GetString();
+
         try {
             const modb::ClassInfo& ci =
                 server->getStore().getClassInfo(subjectv.GetString());
@@ -311,6 +319,7 @@ void MockServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
                 found = false;
             resolutions.insert(mo);
             mos.push_back(mo);
+            conn->getListener()->resolvedUri(puriv.GetString(), conn->getConnId());
         } catch (const std::out_of_range& e) {
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
@@ -331,7 +340,14 @@ void MockServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
 
 void MockServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
                                                  const rapidjson::Value& payload) {
-    LOG(DEBUG) << "Got policy_unresolve req";
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got policy_unresolve req from " << ": "
+               << conn->getConnId() << " : "
+               << conn->getRemotePeer();
+
     Value::ConstValueIterator it;
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
@@ -370,6 +386,7 @@ void MockServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
                 server->getStore().getClassInfo(subjectv.GetString());
             modb::URI puri(puriv.GetString());
             resolutions.erase(std::make_pair(ci.getId(), puri));
+            conn->getListener()->unResolvedUri(puriv.GetString(), conn->getConnId());
         } catch (const std::out_of_range& e) {
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
