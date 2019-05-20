@@ -1316,6 +1316,32 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                     .output(OFPP_IN_PORT)
                     .parent().build(elPortSec);
         }
+        // Allow traffic from pod to external ip
+        // This traffic will go back to access bridge
+        // then to outside world via veth_host_ac
+        FlowBuilder rdExt;
+        rdExt.priority(20)
+             .ethType(eth::type::IP)
+             .reg(6, rdId)
+             .ethDst(getRouterMacAddr())
+             .action()
+                 .ethSrc(getRouterMacAddr())
+                 .ethDst(macAddr)
+                 .decTtl()
+                 .output(ofPort)
+                 .parent().build(elRouteDst);
+        // Allow reverse traffic from external ips
+        // to reach the pod. iptables conntrack
+        // rules ensure only related or established
+        // traffic is sent to us.
+        FlowBuilder secExt;
+        secExt.priority(27)
+              .ethType(eth::type::IP)
+              .inPort(ofPort)
+              .ethSrc(macAddr)
+              .action()
+                  .go(SRC_TABLE_ID)
+                  .parent().build(elPortSec);
     }
 
     if (hasForwardingInfo) {
