@@ -1349,6 +1349,25 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                            zoneId, 0xff)
                 .output(ofPort)
                 .parent().build(elOutput);
+
+        // Add low priority rule in route table
+        // that would allow traffic to any external
+        // destination. This rule will only get hit
+        // if there is no higher priority rule
+        // matching same traffic in cases where we
+        // have an external epg applying policy.
+        FlowBuilder()
+            .priority(20)
+            .ethType(eth::type::IP)
+            .reg(6, rdId)
+            .ethDst(getRouterMacAddr())
+            .action()
+                .regMove(MFF_REG0, MFF_REG2)
+                .metadata(flow::meta::out::HOST_ACCESS,
+                          flow::meta::out::MASK)
+                .go(POL_TABLE_ID)
+                .parent().build(elRouteDst);
+
         // Allow reverse traffic from external ips
         // to reach the pod. iptables conntrack
         // rules ensure only related or established
