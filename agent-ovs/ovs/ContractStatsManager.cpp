@@ -96,13 +96,24 @@ void ContractStatsManager::on_timer(const error_code& ec) {
         switchManager.forEachCookieMatch(IntFlowManager::POL_TABLE_ID,
                                          cb_func);
 
-        PolicyCounterMap_t newClassCountersMap;
-        on_timer_base(ec, contractState, newClassCountersMap);
+        cb_func = [this](uint64_t cookie, uint16_t priority,
+                         const struct match& match) {
+            updateFlowEntryMap(statsState, cookie, priority, match);
+        };
+        switchManager
+            .forEachCookieMatch(IntFlowManager::STATS_TABLE_ID,
+                                cb_func);
 
-        generatePolicyStatsObjects(&newClassCountersMap);
+        PolicyCounterMap_t newClassCountersMap1;
+        PolicyCounterMap_t newClassCountersMap2;
+        on_timer_base(ec, contractState, newClassCountersMap1);
+        on_timer_base(ec, statsState, newClassCountersMap2);
+
+        generatePolicyStatsObjects(&newClassCountersMap1);
     }
 
     sendRequest(IntFlowManager::POL_TABLE_ID);
+    sendRequest(IntFlowManager::STATS_TABLE_ID);
     if (!stopping && timer) {
         timer->expires_from_now(milliseconds(timer_interval));
         timer->async_wait(bind(&ContractStatsManager::on_timer, this, error));
@@ -269,10 +280,14 @@ void ContractStatsManager::Handle(SwitchConnection* connection,
                                   int msgType, ofpbuf *msg) {
     handleMessage(msgType, msg,
                   [this](uint32_t table_id) -> flowCounterState_t* {
-                      if (table_id == IntFlowManager::POL_TABLE_ID)
+                      switch (table_id) {
+                      case IntFlowManager::POL_TABLE_ID:
                           return &contractState;
-                      else
+                      case IntFlowManager::STATS_TABLE_ID:
+                          return &statsState;
+                      default:
                           return NULL;
+                      }
                   });
 }
 
