@@ -59,10 +59,8 @@ public:
  */
 class ModbFixture : public BaseFixture {
     //! @cond Doxygen_Suppress
-    typedef opflex::ofcore::OFConstants::OpflexElementMode opflex_elem_t;
 public:
-    ModbFixture(opflex_elem_t mode = opflex_elem_t::INVALID_MODE) :
-                    BaseFixture(mode),
+    ModbFixture() : BaseFixture(),
                     epSrc(&agent.getEndpointManager()),
                     servSrc(&agent.getServiceManager()),
                     policyOwner("policyreg") {
