@@ -1374,27 +1374,10 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
         // traffic is sent to us. We check it as
         // well. prio > 25 = drop priority
         FlowBuilder()
-            .priority(27)
+            .priority(26)
                 .ethType(eth::type::IP)
                 .inPort(ofPort)
                 .ethSrc(macAddr)
-                .conntrackState(0, FlowBuilder::CT_TRACKED)
-                .action()
-                    .conntrack(0, static_cast<mf_field_id>(0),
-                               zoneId, IntFlowManager::SEC_TABLE_ID)
-                    .parent().build(elPortSec);
-
-        FlowBuilder()
-            .priority(27)
-                .ethType(eth::type::IP)
-                .inPort(ofPort)
-                .ethSrc(macAddr)
-                .conntrackState(FlowBuilder::CT_TRACKED |
-                                FlowBuilder::CT_ESTABLISHED,
-                                FlowBuilder::CT_TRACKED |
-                                FlowBuilder::CT_ESTABLISHED |
-                                FlowBuilder::CT_INVALID |
-                                FlowBuilder::CT_NEW)
                 .action()
                     .go(SRC_TABLE_ID)
                     .parent().build(elPortSec);
