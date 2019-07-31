@@ -362,6 +362,7 @@ void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
     uint32_t access = portmapper.FindPort(ep->getAccessInterface().get());
     uint32_t uplink = portmapper.FindPort(ep->getAccessUplinkInterface().get());
     uint32_t zoneId = idGen.getId("conntrack", ep->getUUID());
+    uint32_t zoneIdIp = idGen.getId("conntrack", ep->getUUID() + "|ip");
 
     if (access == OFPP_NONE || uplink == OFPP_NONE) return;
 
@@ -369,22 +370,23 @@ void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
         ADDF(Bldr().table(GRP).priority(100).in(access)
              .isVlan(ep->getAccessIfaceVlan().get())
              .actions()
-             .load(RD, zoneId).load(SEPG, 1)
+             .load(RD, zoneId).load(ZONE, zoneIdIp).load(SEPG, 1)
              .load(OUTPORT, uplink)
              .mdAct(flow::meta::access_out::POP_VLAN)
              .go(OUT_POL).done());
         ADDF(Bldr().table(GRP).priority(100).in(uplink)
-             .actions().load(RD, zoneId).load(SEPG, 1).load(OUTPORT, access)
+             .actions().load(RD, zoneId).load(ZONE, zoneIdIp).load(SEPG, 1)
+             .load(OUTPORT, access)
              .load(FD, ep->getAccessIfaceVlan().get())
              .mdAct(flow::meta::access_out::PUSH_VLAN)
              .go(IN_POL).done());
     } else {
         ADDF(Bldr().table(GRP).priority(100).in(access)
              .noVlan()
-             .actions().load(RD, zoneId).load(SEPG, 1)
+             .actions().load(RD, zoneId).load(ZONE, zoneIdIp).load(SEPG, 1)
              .load(OUTPORT, uplink).go(OUT_POL).done());
         ADDF(Bldr().table(GRP).priority(100).in(uplink)
-             .actions().load(RD, zoneId).load(SEPG, 1)
+             .actions().load(RD, zoneId).load(ZONE, zoneIdIp).load(SEPG, 1)
              .load(OUTPORT, access).go(IN_POL).done());
     }
 }

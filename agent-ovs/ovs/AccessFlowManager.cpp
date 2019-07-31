@@ -193,8 +193,10 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
         agent.getEndpointManager().getEndpoint(uuid);
     if (!ep) {
         switchManager.clearFlows(uuid, GROUP_MAP_TABLE_ID);
-        if (conntrackEnabled)
+        if (conntrackEnabled) {
             ctZoneManager.erase(uuid);
+            ctZoneManager.erase(uuid + "|ip");
+        }
         return;
     }
 
@@ -211,11 +213,16 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
     uint32_t secGrpSetId = idGen.getId(ID_NMSPC_SECGROUP_SET,
                                        getSecGrpSetId(ep->getSecurityGroups()));
     uint16_t zoneId = -1;
+    uint16_t zoneIdIp = -1;
     if (conntrackEnabled) {
         zoneId = ctZoneManager.getId(uuid);
         if (zoneId == static_cast<uint16_t>(-1))
             LOG(ERROR) << "Could not allocate connection tracking zone for "
                        << uuid;
+        zoneIdIp = ctZoneManager.getId(uuid + "|ip");
+        if (zoneIdIp == static_cast<uint16_t>(-1))
+            LOG(ERROR) << "Could not allocate connection tracking zone for "
+                       << uuid + "|ip";
     }
 
     MaskList trunkVlans;
@@ -245,6 +252,9 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             if (zoneId != static_cast<uint16_t>(-1))
                 in.action()
                     .reg(MFF_REG6, zoneId);
+            if (zoneIdIp != static_cast<uint16_t>(-1))
+                in.action()
+                    .reg(MFF_REG1, zoneIdIp);
 
             in.action()
                 .reg(MFF_REG0, secGrpSetId)
@@ -281,6 +291,9 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             if (zoneId != static_cast<uint16_t>(-1))
                 out.action()
                     .reg(MFF_REG6, zoneId);
+            if (zoneIdIp != static_cast<uint16_t>(-1))
+                out.action()
+                    .reg(MFF_REG1, zoneIdIp);
 
             out.priority(100).inPort(uplinkPort)
                 .action()

@@ -173,8 +173,14 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                 for (const Mask& dm : dstPorts) {
                     for (uint32_t flagMask : tcpFlagsVec) {
                         FlowBuilder f;
+                        bool isIp = false;
                         f.cookie(ckbe);
                         f.flags(flags);
+
+                        if (sm.first == 0 && sm.second == 0 &&
+                            dm.first == 0 && dm.second == 0 &&
+                            flagMask == TcpFlagsEnumT::CONST_UNSPECIFIED)
+                            isIp = true;
 
                         switch (act) {
                         case flowutils::CA_REFLEX_REV:
@@ -216,11 +222,18 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
 
                         switch (act) {
                         case flowutils::CA_REFLEX_REV:
-                            f.action().conntrack(0, MFF_REG6, 0, nextTable);
+                            if (isIp)
+                                f.action().conntrack(0, MFF_REG1, 0, nextTable);
+                            else
+                                f.action().conntrack(0, MFF_REG6, 0, nextTable);
                             break;
                         case flowutils::CA_REFLEX_FWD:
-                            f.action().conntrack(ActionBuilder::CT_COMMIT,
-                                                 MFF_REG6);
+                            if (isIp)
+                                f.action().conntrack(ActionBuilder::CT_COMMIT,
+                                                     MFF_REG1);
+                            else
+                                f.action().conntrack(ActionBuilder::CT_COMMIT,
+                                                     MFF_REG6);
 
                             // fall through
                         case flowutils::CA_REFLEX_REV_ALLOW:
