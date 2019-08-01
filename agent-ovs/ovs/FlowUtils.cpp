@@ -130,6 +130,9 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
     ovs_be64 ckbe = ovs_htonll(cookie);
     MaskList srcPorts;
     MaskList dstPorts;
+    bool isIp = true;
+    if (clsfr.getProt(0) > 0)
+        isIp = false;
     if (clsfr.getProt(0) == 1 &&
         (clsfr.isIcmpTypeSet() || clsfr.isIcmpCodeSet())) {
         if (clsfr.isIcmpTypeSet()) {
@@ -173,14 +176,8 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                 for (const Mask& dm : dstPorts) {
                     for (uint32_t flagMask : tcpFlagsVec) {
                         FlowBuilder f;
-                        bool isIp = false;
                         f.cookie(ckbe);
                         f.flags(flags);
-
-                        if (sm.first == 0 && sm.second == 0 &&
-                            dm.first == 0 && dm.second == 0 &&
-                            flagMask == TcpFlagsEnumT::CONST_UNSPECIFIED)
-                            isIp = true;
 
                         switch (act) {
                         case flowutils::CA_REFLEX_REV:
