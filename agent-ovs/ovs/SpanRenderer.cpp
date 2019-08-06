@@ -14,13 +14,9 @@
 #include <opflexagent/SpanManager.h>
 #include <boost/optional.hpp>
 
-#include <boost/range/adaptors.hpp>
-#include <boost/format.hpp>
-
 
 namespace opflexagent {
     using boost::optional;
-    using namespace boost::adaptors;
 
     SpanRenderer::SpanRenderer(Agent& agent_) : agent(agent_),
                                                 taskQueue(agent.getAgentIOService()) {
@@ -42,27 +38,19 @@ namespace opflexagent {
     }
 
 
-    void SpanRenderer::sessionDeleted(shared_ptr<SessionState> seSt) {
-        deleteMirror(seSt->getName());
-        // There is only one ERSPAN port.
-        deleteErspnPort(ERSPAN_PORT_NAME);
-    }
-
     void SpanRenderer::handleSpanUpdate(const opflex::modb::URI& spanURI) {
         LOG(DEBUG) << "Span handle update";
         SpanManager& spMgr = agent.getSpanManager();
-        optional<shared_ptr<SessionState>> seSt =
+        optional<shared_ptr<SpanManager::SessionState>> seSt =
                                              spMgr.getSessionState(spanURI);
         // Is the session state pointer set
         if (!seSt) {
             return;
         }
         // There should be at least one source and one destination.
-        // need to accommodate for a change from previous configuration.
+        // TBD: need to accommodate for a change from previous configuration.
         if (seSt.get()->getSrcEndPointMap().empty() ||
             seSt.get()->getDstEndPointMap().empty()) {
-            LOG(DEBUG) << "Delete existing mirror if any";
-            sessionDeleted(seSt.get());
             return;
         }
         //get the source ports.
@@ -71,22 +59,11 @@ namespace opflexagent {
             srcPort.push_back(src.second.get()->getPort());
         }
         // get the destination IPs
-        set<address> dstIp;
+        vector<address> dstIp;
         for (auto dst : seSt.get()->getDstEndPointMap()) {
-            dstIp.insert(dst.second.get()->getAddress());
+            dstIp.push_back(dst.second.get()->getAddress());
         }
-
-        // delete existing mirror and erspan port, then create a new one.
-        sessionDeleted(seSt.get());
-        LOG(DEBUG) << "creating mirror";
-        createMirror(seSt.get()->getName(), srcPort, dstIp);
     }
 
-    bool SpanRenderer::deleteMirror(string sess) {
-    }
 
-    bool SpanRenderer::deleteErspnPort(const string name) {
-    }
-    bool SpanRenderer::createMirror(string sess, vector<string> srcPort, set<address> dstIp) {
-    }
 }

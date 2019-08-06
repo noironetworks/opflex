@@ -16,14 +16,13 @@
 #include <boost/noncopyable.hpp>
 #include <opflexagent/PolicyListener.h>
 #include <opflexagent/Agent.h>
-#include <opflexagent/SpanListener.h>
 
 namespace opflexagent {
 
 /**
  * class to render span config on a virtual switch
  */
-class SpanRenderer : public SpanListener,
+class SpanRenderer : public PolicyListener,
                      private boost::noncopyable {
 
 public:
@@ -44,7 +43,6 @@ public:
     void stop();
 
     virtual void spanUpdated(const opflex::modb::URI& spanURI);
-    virtual void sessionDeleted(shared_ptr<SessionState> sesSt);
 
 private:
     /**
@@ -54,10 +52,6 @@ private:
      */
     void handleSpanUpdate(const opflex::modb::URI& spanURI);
 
-    bool deleteErspnPort(string name);
-    bool deleteMirror(string session);
-    bool createMirror(string session, vector<string> srcPorts, set<address> dstIPs);
-    const string ERSPAN_PORT_NAME = "erspn";
     Agent& agent;
     TaskQueue taskQueue;
 };
