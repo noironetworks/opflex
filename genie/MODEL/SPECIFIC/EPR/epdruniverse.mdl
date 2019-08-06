@@ -29,35 +29,4 @@ module[epdr]
             }
         }
     }
-
-    # universe containing L3Out end-points
-    class[ExternalDiscovered;
-          super=epr/Universe;
-          concrete;
-          ]
-    {
-        named
-        {
-            parent[class=*;]
-            {
-                component[prefix=external-l3discovered;]
-            }
-        }
-    }
-
-    # universe containing merged local routes
-    class[LocalRouteDiscovered;
-          super=epr/Universe;
-          concrete;
-          ]
-    {
-        named
-        {
-            parent[class=*;]
-            {
-                component[prefix=local-routes;]
-            }
-        }
-    }
-
 }

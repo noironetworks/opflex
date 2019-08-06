@@ -27,11 +27,4 @@ void EndpointSource::removeEndpoint(const std::string& uuid) {
     manager->removeEndpoint(uuid);
 }
 
-void EndpointSource::updateEndpointExternal(const Endpoint& endpoint) {
-    manager->updateEndpointExternal(endpoint);
-}
-
-void EndpointSource::removeEndpointExternal(const std::string& uuid) {
-    manager->removeEndpointExternal(uuid);
-}
 } /* namespace opflexagent */

@@ -41,19 +41,4 @@ module[epr]
             }
         }
     }
-
-    # universe containing reported dynamic routes
-    class[PeerRouteUniverse;
-          super=epr/Universe;
-          concrete;
-          ]
-    {
-        named
-        {
-            parent[class=*;]
-            {
-                component[prefix=dynamic-rt;]
-            }
-        }
-    }
 }
