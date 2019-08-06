@@ -713,13 +713,6 @@ public:
     opflex::ofcore::OFConstants::OpflexElementMode mode_);
 
     /**
-     * Get the element mode for the opflex element.
-     *
-     * @return stitched or transport mode
-     */
-    opflex::ofcore::OFConstants::OpflexElementMode getElementMode();
-
-    /**
      * Set the tunnel mac for the opflex element.
      * Changing the tunnel mac value has the effect of restarting the
      * opflex connection if framework is in transport mode
