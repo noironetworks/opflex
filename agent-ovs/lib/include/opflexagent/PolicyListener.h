@@ -78,11 +78,6 @@ public:
      * Called when the platform config object is updated
      */
     virtual void configUpdated(const opflex::modb::URI&) {}
-
-    /**
-     * Called when span opjects are updated.
-     */
-     virtual void spanUpdated(const opflex::modb::URI&) {}
 };
 
 } /* namespace opflexagent */

@@ -138,8 +138,7 @@ noinst_HEADERS = \
 	ovs/include/udp.h \
 	ovs/include/dhcp.h \
 	ovs/include/arp.h \
-	ovs/include/eth.h \
-	ovs/include/SpanRenderer.h
+	ovs/include/eth.h
 
 libopflex_agent_la_SOURCES = \
 	lib/AgentLogHandler.cpp \
@@ -211,8 +210,7 @@ if RENDERER_OVS
 	ovs/AdvertManager.cpp \
 	ovs/FlowUtils.cpp \
 	ovs/FlowConstants.cpp \
-	ovs/ovs-shim.c \
-	ovs/SpanRenderer.cpp
+	ovs/ovs-shim.c
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
 	$(libofproto_CFLAGS)
