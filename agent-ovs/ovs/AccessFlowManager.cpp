@@ -339,6 +339,9 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
     using flowutils::CA_REFLEX_REV;
     using flowutils::CA_REFLEX_FWD;
     using flowutils::CA_ALLOW;
+    using flowutils::CA_TRACK;
+    using flowutils::CA_REFLEX_FWD_EST;
+    using flowutils::CA_REFLEX_REV_RELATED;
 
     LOG(DEBUG) << "Updating security group set \"" << secGrpsIdStr << "\"";
 
@@ -389,6 +392,24 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                   secGrpSetId, 0,
                                                   secGrpIn);
                 if (act == CA_REFLEX_FWD) {
+                    flowutils::add_classifier_entries(*cls, CA_TRACK,
+                                                      remoteSubs,
+                                                      boost::none,
+                                                      GROUP_MAP_TABLE_ID,
+                                                      pc->getPriority(),
+                                                      OFPUTIL_FF_SEND_FLOW_REM,
+                                                      secGrpCookie,
+                                                      secGrpSetId, 0,
+                                                      secGrpIn);
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST,
+                                                      remoteSubs,
+                                                      boost::none,
+                                                      OUT_TABLE_ID,
+                                                      pc->getPriority(),
+                                                      OFPUTIL_FF_SEND_FLOW_REM,
+                                                      secGrpCookie,
+                                                      secGrpSetId, 0,
+                                                      secGrpIn);
                     // add reverse entries for reflexive classifier
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV,
                                                       boost::none,
@@ -400,6 +421,15 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                       secGrpSetId, 0,
                                                       secGrpOut);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW,
+                                                      boost::none,
+                                                      remoteSubs,
+                                                      OUT_TABLE_ID,
+                                                      pc->getPriority(),
+                                                      OFPUTIL_FF_SEND_FLOW_REM,
+                                                      secGrpCookie,
+                                                      secGrpSetId, 0,
+                                                      secGrpOut);
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED,
                                                       boost::none,
                                                       remoteSubs,
                                                       OUT_TABLE_ID,
@@ -422,6 +452,24 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                   secGrpSetId, 0,
                                                   secGrpOut);
                 if (act == CA_REFLEX_FWD) {
+                    flowutils::add_classifier_entries(*cls, CA_TRACK,
+                                                      boost::none,
+                                                      remoteSubs,
+                                                      GROUP_MAP_TABLE_ID,
+                                                      pc->getPriority(),
+                                                      OFPUTIL_FF_SEND_FLOW_REM,
+                                                      secGrpCookie,
+                                                      secGrpSetId, 0,
+                                                      secGrpOut);
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST,
+                                                      boost::none,
+                                                      remoteSubs,
+                                                      OUT_TABLE_ID,
+                                                      pc->getPriority(),
+                                                      OFPUTIL_FF_SEND_FLOW_REM,
+                                                      secGrpCookie,
+                                                      secGrpSetId, 0,
+                                                      secGrpOut);
                     // add reverse entries for reflexive classifier
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV,
                                                       remoteSubs,
@@ -433,6 +481,15 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                       secGrpSetId, 0,
                                                       secGrpIn);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW,
+                                                      remoteSubs,
+                                                      boost::none,
+                                                      OUT_TABLE_ID,
+                                                      pc->getPriority(),
+                                                      OFPUTIL_FF_SEND_FLOW_REM,
+                                                      secGrpCookie,
+                                                      secGrpSetId, 0,
+                                                      secGrpIn);
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED,
                                                       remoteSubs,
                                                       boost::none,
                                                       OUT_TABLE_ID,

@@ -182,8 +182,20 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                             break;
                         case flowutils::CA_REFLEX_REV_ALLOW:
                             f.conntrackState(FlowBuilder::CT_TRACKED |
-                                             FlowBuilder::CT_ESTABLISHED,
+                                             FlowBuilder::CT_ESTABLISHED |
+                                             FlowBuilder::CT_REPLY,
                                              FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_ESTABLISHED |
+                                             FlowBuilder::CT_REPLY |
+                                             FlowBuilder::CT_INVALID |
+                                             FlowBuilder::CT_NEW |
+                                             FlowBuilder::CT_RELATED);
+                            break;
+                        case flowutils::CA_REFLEX_REV_RELATED:
+                            f.conntrackState(FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_RELATED,
+                                             FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_RELATED |
                                              FlowBuilder::CT_ESTABLISHED |
                                              FlowBuilder::CT_INVALID |
                                              FlowBuilder::CT_NEW);
@@ -197,6 +209,10 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                         uint16_t etht = match_protocol(f, clsfr);
 
                         switch (act) {
+                        case flowutils::CA_TRACK:
+                            f.conntrackState(0, FlowBuilder::CT_TRACKED)
+                                .action().conntrack(0, MFF_REG6, 0, nextTable);
+                            break;
                         case flowutils::CA_DENY:
                         case flowutils::CA_ALLOW:
                         case flowutils::CA_REFLEX_FWD:
@@ -219,11 +235,22 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                             f.action().conntrack(0, MFF_REG6, 0, nextTable);
                             break;
                         case flowutils::CA_REFLEX_FWD:
+                            f.conntrackState(FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_NEW,
+                                             FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_NEW);
                             f.action().conntrack(ActionBuilder::CT_COMMIT,
-                                                 MFF_REG6);
-
-                            // fall through
+                                                 MFF_REG6).go(nextTable);
+                            break;
+                        case CA_REFLEX_FWD_EST:
+                            f.conntrackState(FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_ESTABLISHED,
+                                             FlowBuilder::CT_TRACKED |
+                                             FlowBuilder::CT_ESTABLISHED);
+                            f.action().go(nextTable);
+                            break;
                         case flowutils::CA_REFLEX_REV_ALLOW:
+                        case flowutils::CA_REFLEX_REV_RELATED:
                         case flowutils::CA_ALLOW:
                             f.action().go(nextTable);
                             break;

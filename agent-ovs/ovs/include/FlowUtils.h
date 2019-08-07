@@ -51,6 +51,10 @@ FlowEntryPtr default_out_flow();
  */
 enum ClassAction {
     /**
+     * Untracked flows to be sent to conntrack in both directions
+     */
+    CA_TRACK,
+    /**
      * Drop the flow
      */
     CA_DENY,
@@ -64,6 +68,10 @@ enum ClassAction {
      */
     CA_REFLEX_FWD,
     /**
+     * Track an established forward flow
+     */
+    CA_REFLEX_FWD_EST,
+    /**
      * Match against empty conntrack state and send to conntrack table,
      * recirculating the flow to nextTable
      */
@@ -72,6 +80,10 @@ enum ClassAction {
      * Match against established conntrack state and go to nextTable
      */
     CA_REFLEX_REV_ALLOW,
+    /**
+     * Match against related flows in reverse direction
+     */
+    CA_REFLEX_REV_RELATED,
 };
 
 /**
