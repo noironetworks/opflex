@@ -177,7 +177,8 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                         f.flags(flags);
 
                         switch (act) {
-                        case flowutils::CA_REFLEX_REV:
+                        case flowutils::CA_REFLEX_FWD_TRACK:
+                        case flowutils::CA_REFLEX_REV_TRACK:
                             f.conntrackState(0, FlowBuilder::CT_TRACKED);
                             break;
                         case flowutils::CA_REFLEX_REV_ALLOW:
@@ -209,13 +210,11 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                         uint16_t etht = match_protocol(f, clsfr);
 
                         switch (act) {
-                        case flowutils::CA_TRACK:
-                            f.conntrackState(0, FlowBuilder::CT_TRACKED)
-                                .action().conntrack(0, MFF_REG6, 0, nextTable);
-                            break;
                         case flowutils::CA_DENY:
                         case flowutils::CA_ALLOW:
+                        case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_FWD:
+                        case flowutils::CA_REFLEX_FWD_EST:
                             if (tcpFlags != TcpFlagsEnumT::CONST_UNSPECIFIED)
                                 match_tcp_flags(f, flagMask);
 
@@ -231,7 +230,8 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                         }
 
                         switch (act) {
-                        case flowutils::CA_REFLEX_REV:
+                        case flowutils::CA_REFLEX_FWD_TRACK:
+                        case flowutils::CA_REFLEX_REV_TRACK:
                             f.action().conntrack(0, MFF_REG6, 0, nextTable);
                             break;
                         case flowutils::CA_REFLEX_FWD:

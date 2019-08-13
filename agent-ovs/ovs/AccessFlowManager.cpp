@@ -336,10 +336,10 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
     using modelgbp::gbp::DirectionEnumT;
     using modelgbp::gbp::ConnTrackEnumT;
     using flowutils::CA_REFLEX_REV_ALLOW;
-    using flowutils::CA_REFLEX_REV;
+    using flowutils::CA_REFLEX_REV_TRACK;
     using flowutils::CA_REFLEX_FWD;
     using flowutils::CA_ALLOW;
-    using flowutils::CA_TRACK;
+    using flowutils::CA_REFLEX_FWD_TRACK;
     using flowutils::CA_REFLEX_FWD_EST;
     using flowutils::CA_REFLEX_REV_RELATED;
 
@@ -392,7 +392,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                   secGrpSetId, 0,
                                                   secGrpIn);
                 if (act == CA_REFLEX_FWD) {
-                    flowutils::add_classifier_entries(*cls, CA_TRACK,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK,
                                                       remoteSubs,
                                                       boost::none,
                                                       GROUP_MAP_TABLE_ID,
@@ -411,7 +411,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                       secGrpSetId, 0,
                                                       secGrpIn);
                     // add reverse entries for reflexive classifier
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK,
                                                       boost::none,
                                                       remoteSubs,
                                                       GROUP_MAP_TABLE_ID,
@@ -452,7 +452,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                   secGrpSetId, 0,
                                                   secGrpOut);
                 if (act == CA_REFLEX_FWD) {
-                    flowutils::add_classifier_entries(*cls, CA_TRACK,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK,
                                                       boost::none,
                                                       remoteSubs,
                                                       GROUP_MAP_TABLE_ID,
@@ -471,7 +471,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                       secGrpSetId, 0,
                                                       secGrpOut);
                     // add reverse entries for reflexive classifier
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK,
                                                       remoteSubs,
                                                       boost::none,
                                                       GROUP_MAP_TABLE_ID,
