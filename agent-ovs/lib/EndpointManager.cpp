@@ -1057,25 +1057,30 @@ void EndpointManager::configUpdated(const URI& uri) {
 
     optional<shared_ptr<Config>> config = Config::resolve(framework, uri);
     if (config) {
-       boost::optional<const uint8_t> invType = config.get()->getInventoryType();
-       if (invType) {
-           auto on_link =  RemoteInventoryTypeEnumT::CONST_ON_LINK;
-           if (invType.get() == on_link) {
-               LOG(DEBUG) << "setting remote endpoint discovery";
-               configD.get()->addDomainConfigToRemoteEndpointInventoryRSrc()
-                            ->setTargetRemoteEndpointInventory();
-               setRemoteEndpoint = true;
-           }
-       }
+        optional<const uint8_t> invType = config.get()->getInventoryType();
+        if (invType) {
+            auto on_link = RemoteInventoryTypeEnumT::CONST_ON_LINK;
+            if (invType.get() == on_link) {
+                LOG(DEBUG) << "setting remote endpoint discovery";
+                configD.get()->addDomainConfigToRemoteEndpointInventoryRSrc()
+                             ->setTargetRemoteEndpointInventory();
+                setRemoteEndpoint = true;
+            }
+        }
     }
     if (!setRemoteEndpoint) {
-       optional<shared_ptr<modelgbp::domain::ConfigToRemoteEndpointInventoryRSrc>> reInv =
-                        configD.get()->resolveDomainConfigToRemoteEndpointInventoryRSrc();
-       if (reInv) {
-          LOG(DEBUG) << "removing remote endpoint discovery";
-          reInv.get()->remove();
-       }
+        optional<shared_ptr<modelgbp::domain::ConfigToRemoteEndpointInventoryRSrc>> reInv =
+                configD.get()->resolveDomainConfigToRemoteEndpointInventoryRSrc();
+        if (reInv) {
+            LOG(DEBUG) << "removing remote endpoint discovery";
+            reInv.get()->remove();
+        }
     }
     mutator.commit();
+
+    if (!config) {
+        LOG(WARNING) << "Platform config has been deleted. Disconnect from existing peers and fallback to configured list";
+        framework.resetAllPeers();
+    }
 }
 } /* namespace opflexagent */
