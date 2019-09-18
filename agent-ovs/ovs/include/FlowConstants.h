@@ -135,6 +135,11 @@ extern const uint64_t FLOOD;
  */
 extern const uint64_t REMOTE_TUNNEL;
 
+/**
+ * Output to the proxy tunnel destination specified in the output register
+ */
+extern const uint64_t PROXY_TUNNEL;
+
 } // namespace out
 
 

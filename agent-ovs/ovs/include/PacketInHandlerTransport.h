@@ -1,0 +1,102 @@
+/* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
+/*
+ * Include file for PacketInHandlerTransport
+ *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+#ifndef OPFLEXAGENT_PACKETINHANDLERTRANSPORT_H
+#define OPFLEXAGENT_PACKETINHANDLERTRANSPORT_H
+
+#include <boost/noncopyable.hpp>
+
+#include "SwitchConnection.h"
+#include "PortMapper.h"
+#include "FlowReader.h"
+#include "TableState.h"
+#include <opflexagent/Agent.h>
+
+struct dp_packet;
+struct flow;
+struct ofputil_packet_in;
+
+namespace opflexagent {
+
+class IntFlowManagerTransport;
+
+/**
+ * Handler for packet-in messages arriving from the switch
+ */
+class PacketInHandlerTransport : public MessageHandler,
+                        private boost::noncopyable {
+public:
+    /**
+     * Construct a PacketInHandlerTransport
+     */
+    PacketInHandlerTransport(Agent& agent, IntFlowManagerTransport& intFlowManager);
+
+    /**
+     * Set the port mapper to use
+     * @param intMapper the integration bridge port mapper
+     * @param accessMapper the access bridge port mapper
+     */
+    void setPortMapper(PortMapper* intMapper,
+                       PortMapper* accessMapper);
+
+    /**
+     * Set the integration bridge flow reader to use
+     * @param r the flow reader
+     */
+    void setFlowReader(FlowReader* r) { intFlowReader = r; }
+
+    /**
+     * Set the switch connections to use
+     * @param intConnection the integration bridge switch connection
+     * @param accessConnection the access bridge switch connection
+     */
+    void registerConnection(SwitchConnection* intConnection,
+                            SwitchConnection* accessConnection);
+
+    /**
+     * Reconcile the provided reactive flow against the current system
+     * state.
+     *
+     * @param fe the flow entry to reconcile
+     * @return true if the flow should be ignored during reconcilation (and
+     * therefore left as is), false if it must be compared with expected flows
+     */
+    bool reconcileReactiveFlow(const FlowEntryPtr& fe);
+
+    /**
+     * Start the packet in handler
+     */
+    void start();
+
+    /**
+     * Stop the packet in handler
+     */
+    void stop();
+
+    // **************
+    // MessageHandler
+    // **************
+
+    virtual void Handle(SwitchConnection *swConn, int msgType,
+                        ofpbuf *msg);
+
+private:
+    Agent& agent;
+    IntFlowManagerTransport& intFlowManager;
+    PortMapper* intPortMapper;
+    PortMapper* accessPortMapper;
+    FlowReader* intFlowReader;
+    SwitchConnection* intSwConnection;
+    SwitchConnection* accSwConnection;
+};
+} /* namespace opflexagent */
+
+#endif /* OPFLEXAGENT_PACKETINHANDLERTRANSPORT_H */

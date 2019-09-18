@@ -278,9 +278,10 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         }
     }
 
-    if (properties.get_child_optional(RENDERERS_OPENVSWITCH) ||
-        properties.get_child_optional(RENDERERS_STITCHED_MODE) ||
-        properties.get_child_optional(RENDERERS_TRANSPORT_MODE)) {
+    if ((properties.get_child_optional(RENDERERS_OPENVSWITCH) ||
+        properties.get_child_optional(RENDERERS_STITCHED_MODE)) &&
+        !properties.get_child_optional(RENDERERS_TRANSPORT_MODE) &&
+        this->rendererFwdMode != opflex::ofcore::OFConstants::TRANSPORT_MODE) {
         // Special case for backward compatibility: if config attempts
         // to create an openvswitch renderer, load the plugin
         // automatically.

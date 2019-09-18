@@ -33,6 +33,7 @@ namespace meta {
 const uint64_t POLICY_APPLIED = 0x100;
 const uint64_t FROM_SERVICE_INTERFACE = 0x200;
 const uint64_t ROUTED = 0x400;
+const uint64_t FROM_LOCAL_INTERFACE = 0x800;
 
 namespace out {
 
@@ -43,6 +44,7 @@ const uint64_t REV_NAT = 0x3;
 const uint64_t TUNNEL = 0x4;
 const uint64_t FLOOD = 0x5;
 const uint64_t REMOTE_TUNNEL = 0x7;
+const uint64_t PROXY_TUNNEL = 0x8;
 
 } // namespace out
 

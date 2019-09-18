@@ -1,6 +1,6 @@
 /* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
 /*
- * Implementation for OVSRenderer class
+ * Implementation for OVSRendererTransport class
  *
  * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
  *
@@ -9,7 +9,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-#include "OVSRenderer.h"
+#include "OVSRendererTransport.h"
 #include <opflexagent/logging.h>
 
 #include <boost/asio/placeholders.hpp>
@@ -27,48 +27,42 @@ using boost::asio::placeholders::error;
 static const std::string ID_NMSPC_CONNTRACK("conntrack");
 static const boost::posix_time::milliseconds CLEANUP_INTERVAL(3*60*1000);
 
-OVSRendererPlugin::OVSRendererPlugin() {
+OVSRendererTransportPlugin::OVSRendererTransportPlugin() {
     /* No good way to redirect OVS logs to our logs, suppress them for now */
     vlog_set_levels(NULL, VLF_ANY_DESTINATION, VLL_OFF);
 }
 
-std::unordered_set<std::string> OVSRendererPlugin::getNames() const {
-    return {"stitched-mode", "openvswitch"};
+std::unordered_set<std::string> OVSRendererTransportPlugin::getNames() const {
+    return {"transport-mode", "openvswitch"};
 }
 
-Renderer* OVSRendererPlugin::create(Agent& agent) const {
-    return new OVSRenderer(agent);
+Renderer* OVSRendererTransportPlugin::create(Agent& agent) const {
+    return new OVSRendererTransport(agent);
 }
 
-OVSRenderer::OVSRenderer(Agent& agent_)
+OVSRendererTransport::OVSRendererTransport(Agent& agent_)
     : Renderer(agent_), ctZoneManager(idGen),
       intSwitchManager(agent_, intFlowExecutor, intFlowReader, intPortMapper),
       intFlowManager(agent_, intSwitchManager, idGen,
-                     ctZoneManager, pktInHandler, tunnelEpManager),
+                     ctZoneManager),
       accessSwitchManager(agent_, accessFlowExecutor,
                           accessFlowReader, accessPortMapper),
       accessFlowManager(agent_, accessSwitchManager, idGen, ctZoneManager),
-      pktInHandler(agent_, intFlowManager),
-      interfaceStatsManager(&agent_, intSwitchManager.getPortMapper(),
-                            accessSwitchManager.getPortMapper()),
-      contractStatsManager(&agent_, idGen, intSwitchManager),
-      secGrpStatsManager(&agent_, idGen, accessSwitchManager),
       tunnelEpManager(&agent_), tunnelRemotePort(0), uplinkVlan(0),
       virtualRouter(true), routerAdv(true),
       connTrack(true), ctZoneRangeStart(0), ctZoneRangeEnd(0),
       ifaceStatsEnabled(true), ifaceStatsInterval(0),
       contractStatsEnabled(true), contractStatsInterval(0),
       secGroupStatsEnabled(true), secGroupStatsInterval(0),
-      spanRenderer(agent_),
       started(false) {
 
 }
 
-OVSRenderer::~OVSRenderer() {
+OVSRendererTransport::~OVSRendererTransport() {
 
 }
 
-void OVSRenderer::start() {
+void OVSRendererTransport::start() {
     if (started) return;
 
     if (intBridgeName == "") {
@@ -76,12 +70,12 @@ void OVSRenderer::start() {
         return;
     }
 
-    if(getAgent().getRendererForwardingMode() == opflex::ofcore::OFConstants::TRANSPORT_MODE) {
-        LOG(ERROR) << "This renderer does not support transport mode";
+    if ((encapType != IntFlowManagerTransport::ENCAP_IVXLAN ) && (encapType != IntFlowManagerTransport::ENCAP_NONE)) {
+        LOG(ERROR) << "Only supported encapsulation type in transport mode is ivxlan";
         return;
     }
 
-    if (encapType == IntFlowManager::ENCAP_NONE)
+    if (encapType == IntFlowManagerTransport::ENCAP_NONE)
         LOG(WARNING)
             << "No encapsulation type specified; only local traffic will work";
     if (flowIdCache == "")
@@ -90,13 +84,12 @@ void OVSRenderer::start() {
         LOG(WARNING) << "No multicast group file specified";
 
     started = true;
-    LOG(INFO) << "Starting stitched-mode renderer using"
+    LOG(INFO) << "Starting transport-mode renderer using"
               << " integration bridge " << intBridgeName
               << " and access bridge "
               << (accessBridgeName == "" ? "[none]" : accessBridgeName);
 
-    if (encapType == IntFlowManager::ENCAP_VXLAN ||
-        encapType == IntFlowManager::ENCAP_IVXLAN) {
+    if (encapType == IntFlowManagerTransport::ENCAP_IVXLAN) {
         tunnelEpManager.setUplinkIface(uplinkIface);
         tunnelEpManager.setUplinkVlan(uplinkVlan);
         tunnelEpManager.setParentRenderer(this);
@@ -117,17 +110,14 @@ void OVSRenderer::start() {
 
     intFlowManager.setEncapType(encapType);
     intFlowManager.setEncapIface(encapIface);
-    intFlowManager.setFloodScope(IntFlowManager::ENDPOINT_GROUP);
-    if (encapType == IntFlowManager::ENCAP_VXLAN ||
-        encapType == IntFlowManager::ENCAP_IVXLAN) {
+    intFlowManager.setFloodScope(IntFlowManagerTransport::ENDPOINT_GROUP);
+    if (encapType == IntFlowManagerTransport::ENCAP_IVXLAN) {
         assert(tunnelRemotePort != 0);
         intFlowManager.setTunnel(tunnelRemoteIp, tunnelRemotePort);
     }
     intFlowManager.setVirtualRouter(virtualRouter, routerAdv, virtualRouterMac);
     intFlowManager.setVirtualDHCP(virtualDHCP, virtualDHCPMac);
     intFlowManager.setMulticastGroupFile(mcastGroupFile);
-    intFlowManager.setEndpointAdv(endpointAdvMode, tunnelEndpointAdvMode,
-            tunnelEndpointAdvIntvl);
 
     intSwitchManager.registerStateHandler(&intFlowManager);
     intSwitchManager.start(intBridgeName);
@@ -137,45 +127,9 @@ void OVSRenderer::start() {
     }
     intFlowManager.start();
     intFlowManager.registerModbListeners();
-    spanRenderer.start();
 
     if (accessBridgeName != "") {
         accessFlowManager.start();
-    }
-
-    pktInHandler.registerConnection(intSwitchManager.getConnection(),
-                                    (accessBridgeName != "")
-                                    ? accessSwitchManager.getConnection()
-                                    : NULL);
-    pktInHandler.setPortMapper(&intSwitchManager.getPortMapper(),
-                               (accessBridgeName != "")
-                               ? &accessSwitchManager.getPortMapper()
-                               : NULL);
-    pktInHandler.setFlowReader(&intSwitchManager.getFlowReader());
-    pktInHandler.start();
-
-    if (ifaceStatsEnabled) {
-        interfaceStatsManager.setTimerInterval(ifaceStatsInterval);
-        interfaceStatsManager.
-            registerConnection(intSwitchManager.getConnection(),
-                               (accessBridgeName != "")
-                               ? accessSwitchManager.getConnection()
-                               : NULL);
-        interfaceStatsManager.start();
-    }
-    if (contractStatsEnabled) {
-        contractStatsManager.setTimerInterval(contractStatsInterval);
-        contractStatsManager.setAgentUUID(getAgent().getUuid());
-        contractStatsManager.
-            registerConnection(intSwitchManager.getConnection());
-        contractStatsManager.start();
-    }
-    if (secGroupStatsEnabled && accessBridgeName != "") {
-        secGrpStatsManager.setTimerInterval(secGroupStatsInterval);
-        secGrpStatsManager.setAgentUUID(getAgent().getUuid());
-        secGrpStatsManager.
-            registerConnection(accessSwitchManager.getConnection());
-        secGrpStatsManager.start();
     }
 
     intSwitchManager.connect();
@@ -185,11 +139,11 @@ void OVSRenderer::start() {
 
     cleanupTimer.reset(new deadline_timer(getAgent().getAgentIOService()));
     cleanupTimer->expires_from_now(CLEANUP_INTERVAL);
-    cleanupTimer->async_wait(bind(&OVSRenderer::onCleanupTimer,
+    cleanupTimer->async_wait(bind(&OVSRendererTransport::onCleanupTimer,
                                   this, error));
 }
 
-void OVSRenderer::stop() {
+void OVSRendererTransport::stop() {
     if (!started) return;
     started = false;
 
@@ -199,23 +153,14 @@ void OVSRenderer::stop() {
         cleanupTimer->cancel();
     }
 
-    if (ifaceStatsEnabled)
-        interfaceStatsManager.stop();
-    if (contractStatsEnabled)
-        contractStatsManager.stop();
-    if (secGroupStatsEnabled)
-        secGrpStatsManager.stop();
-
-    pktInHandler.stop();
-
     intFlowManager.stop();
     accessFlowManager.stop();
 
     intSwitchManager.stop();
     accessSwitchManager.stop();
 
-    if (encapType == IntFlowManager::ENCAP_VXLAN ||
-        encapType == IntFlowManager::ENCAP_IVXLAN) {
+    if (encapType == IntFlowManagerTransport::ENCAP_VXLAN ||
+        encapType == IntFlowManagerTransport::ENCAP_IVXLAN) {
         tunnelEpManager.stop();
     }
 }
@@ -225,7 +170,7 @@ void OVSRenderer::stop() {
 #define DEF_MCAST_GROUPFILE \
     LOCALSTATEDIR"/lib/opflex-agent-ovs/mcast/opflex-groups.json"
 
-void OVSRenderer::setProperties(const ptree& properties) {
+void OVSRendererTransport::setProperties(const ptree& properties) {
     static const std::string OVS_BRIDGE_NAME("ovs-bridge-name");
     static const std::string INT_BRIDGE_NAME("int-bridge-name");
     static const std::string ACCESS_BRIDGE_NAME("access-bridge-name");
@@ -255,10 +200,6 @@ void OVSRenderer::setProperties(const ptree& properties) {
                                           "endpoint-advertisements.enabled");
     static const std::string ENDPOINT_ADV_MODE("forwarding."
                                                "endpoint-advertisements.mode");
-    static const std::string ENDPOINT_TNL_ADV_MODE("forwarding."
-                               "endpoint-advertisements.tunnel-endpoint-mode");
-    static const std::string ENDPOINT_TNL_ADV_INTVL("forwarding."
-                                   "endpoint-advertisements.tunnel-endpoint-interval");
 
     static const std::string FLOWID_CACHE_DIR("flowid-cache-dir");
     static const std::string MCAST_GROUP_FILE("mcast-group-file");
@@ -300,19 +241,23 @@ void OVSRenderer::setProperties(const ptree& properties) {
     boost::optional<const ptree&> vlan =
         properties.get_child_optional(ENCAP_VLAN);
 
-    encapType = IntFlowManager::ENCAP_NONE;
+    encapType = IntFlowManagerTransport::ENCAP_NONE;
     int count = 0;
     if (ivxlan) {
-        LOG(ERROR) << "Encapsulation type ivxlan unsupported";
+        encapType = IntFlowManagerTransport::ENCAP_IVXLAN;
+        encapIface = ivxlan.get().get<std::string>(ENCAP_IFACE, "");
+        uplinkIface = ivxlan.get().get<std::string>(UPLINK_IFACE, "");
+        uplinkVlan = ivxlan.get().get<uint16_t>(UPLINK_VLAN, 0);
+        tunnelRemotePort = ivxlan.get().get<uint16_t>(REMOTE_PORT, 48879);
         count += 1;
     }
     if (vlan) {
-        encapType = IntFlowManager::ENCAP_VLAN;
+        encapType = IntFlowManagerTransport::ENCAP_VLAN;
         encapIface = vlan.get().get<std::string>(ENCAP_IFACE, "");
         count += 1;
     }
     if (vxlan) {
-        encapType = IntFlowManager::ENCAP_VXLAN;
+        encapType = IntFlowManagerTransport::ENCAP_VXLAN;
         encapIface = vxlan.get().get<std::string>(ENCAP_IFACE, "");
         uplinkIface = vxlan.get().get<std::string>(UPLINK_IFACE, "");
         uplinkVlan = vxlan.get().get<uint16_t>(UPLINK_VLAN, 0);
@@ -323,7 +268,7 @@ void OVSRenderer::setProperties(const ptree& properties) {
 
     if (count > 1) {
         LOG(WARNING) << "Multiple encapsulation types specified for "
-                     << "stitched-mode renderer";
+                     << "transport-mode renderer";
     }
 
     virtualRouter = properties.get<bool>(VIRTUAL_ROUTER, true);
@@ -333,36 +278,6 @@ void OVSRenderer::setProperties(const ptree& properties) {
     virtualDHCP = properties.get<bool>(VIRTUAL_DHCP, true);
     virtualDHCPMac =
         properties.get<std::string>(VIRTUAL_DHCP_MAC, "00:22:bd:f8:19:ff");
-
-    if (properties.get<bool>(ENDPOINT_ADV, true) == false) {
-        endpointAdvMode = AdvertManager::EPADV_DISABLED;
-    } else {
-        std::string epAdvStr =
-            properties.get<std::string>(ENDPOINT_ADV_MODE,
-                                        "gratuitous-broadcast");
-        if (epAdvStr == "gratuitous-unicast") {
-            endpointAdvMode = AdvertManager::EPADV_GRATUITOUS_UNICAST;
-        } else if (epAdvStr == "router-request") {
-            endpointAdvMode = AdvertManager::EPADV_ROUTER_REQUEST;
-        } else {
-            endpointAdvMode = AdvertManager::EPADV_GRATUITOUS_BROADCAST;
-        }
-    }
-
-    std::string tnlEpAdvStr =
-        properties.get<std::string>(ENDPOINT_TNL_ADV_MODE,
-                                    "rarp-broadcast");
-    if (tnlEpAdvStr == "gratuitous-broadcast") {
-        tunnelEndpointAdvMode = AdvertManager::EPADV_GRATUITOUS_BROADCAST;
-    } else if(tnlEpAdvStr == "disabled") {
-        tunnelEndpointAdvMode = AdvertManager::EPADV_DISABLED;
-    } else {
-        tunnelEndpointAdvMode = AdvertManager::EPADV_RARP_BROADCAST;
-    }
-
-    tunnelEndpointAdvIntvl =
-        properties.get<uint64_t>(ENDPOINT_TNL_ADV_INTVL,
-                                    300);
 
     connTrack = properties.get<bool>(CONN_TRACK, true);
     ctZoneRangeStart = properties.get<uint16_t>(CONN_TRACK_RANGE_START, 1);
@@ -408,7 +323,7 @@ static bool connTrackIdGarbageCb(EndpointManager& endpointManager,
     }
 }
 
-void OVSRenderer::onCleanupTimer(const boost::system::error_code& ec) {
+void OVSRendererTransport::onCleanupTimer(const boost::system::error_code& ec) {
     if (ec) return;
 
     idGen.cleanup();
@@ -423,7 +338,7 @@ void OVSRenderer::onCleanupTimer(const boost::system::error_code& ec) {
 
     if (started) {
         cleanupTimer->expires_from_now(CLEANUP_INTERVAL);
-        cleanupTimer->async_wait(bind(&OVSRenderer::onCleanupTimer,
+        cleanupTimer->async_wait(bind(&OVSRendererTransport::onCleanupTimer,
                                       this, error));
     }
 }
@@ -431,7 +346,7 @@ void OVSRenderer::onCleanupTimer(const boost::system::error_code& ec) {
 } /* namespace opflexagent */
 
 extern "C" const opflexagent::RendererPlugin* init_renderer_plugin() {
-    static const opflexagent::OVSRendererPlugin smrPlugin;
+    static const opflexagent::OVSRendererTransportPlugin smrPlugin;
 
     return &smrPlugin;
 }

@@ -112,10 +112,12 @@ libopflex_agent_la_include_HEADERS = \
 
 noinst_HEADERS = \
 	ovs/include/OVSRenderer.h \
+	ovs/include/OVSRendererTransport.h \
 	ovs/include/FlowExecutor.h \
 	ovs/include/FlowReader.h \
 	ovs/include/SwitchStateHandler.h \
 	ovs/include/IntFlowManager.h \
+	ovs/include/IntFlowManagerTransport.h \
 	ovs/include/AccessFlowManager.h \
 	ovs/include/ovs-shim.h \
 	ovs/include/ovs-ofputil.h \
@@ -134,6 +136,7 @@ noinst_HEADERS = \
 	ovs/include/RangeMask.h \
 	ovs/include/Packets.h \
 	ovs/include/PacketInHandler.h \
+	ovs/include/PacketInHandlerTransport.h \
 	ovs/include/AdvertManager.h \
 	ovs/include/FlowUtils.h \
 	ovs/include/FlowConstants.h \
@@ -235,6 +238,50 @@ if RENDERER_OVS
   libopflex_agent_renderer_openvswitch_la_LIBADD = \
 	librenderer_openvswitch.la
   libopflex_agent_renderer_openvswitch_la_LDFLAGS = \
+	-avoid-version -module -shared
+
+  lib_LTLIBRARIES += libopflex_agent_renderer_openvswitch_transport.la
+  libopflex_agent_renderer_openvswitch_transport_la_SOURCES =
+  noinst_LTLIBRARIES += librenderer_openvswitch_transport.la
+  librenderer_openvswitch_transport_la_SOURCES = \
+	ovs/OVSRendererTransport.cpp \
+	ovs/SwitchStateHandler.cpp \
+	ovs/IntFlowManagerTransport.cpp \
+	ovs/AccessFlowManager.cpp \
+	ovs/TableState.cpp \
+	ovs/FlowExecutor.cpp \
+	ovs/FlowReader.cpp \
+	ovs/ActionBuilder.cpp \
+	ovs/FlowBuilder.cpp \
+	ovs/SwitchConnection.cpp \
+	ovs/SwitchManager.cpp \
+	ovs/PortMapper.cpp \
+	ovs/RangeMask.cpp \
+	ovs/Packets.cpp \
+	ovs/PacketInHandlerTransport.cpp \
+	ovs/FlowUtils.cpp \
+	ovs/FlowConstants.cpp \
+	ovs/ovs-shim.c
+  librenderer_openvswitch_transport_la_CFLAGS = \
+	$(libopenvswitch_CFLAGS) \
+	$(libofproto_CFLAGS)
+  librenderer_openvswitch_transport_la_CXXFLAGS = \
+	$(libopflex_CFLAGS) \
+	$(libmodelgbp_CFLAGS) \
+	$(OVS_ADDL_CFLAGS) \
+	$(libopenvswitch_CFLAGS) \
+	$(libofproto_CFLAGS)
+  librenderer_openvswitch_transport_la_LIBADD = \
+	$(libopflex_LIBS) \
+	$(libmodelgbp_LIBS) \
+	$(libopenvswitch_LIBS) \
+	$(libofproto_LIBS) \
+	$(USE_BOOST_SYSTEM_LIB) \
+	$(USE_BOOST_FILESYSTEM_LIB) \
+	$(USE_BOOST_ASIO_LIB)
+  libopflex_agent_renderer_openvswitch_transport_la_LIBADD = \
+	librenderer_openvswitch_transport.la
+  libopflex_agent_renderer_openvswitch_transport_la_LDFLAGS = \
 	-avoid-version -module -shared
 endif
 
