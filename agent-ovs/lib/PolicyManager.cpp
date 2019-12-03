@@ -1878,9 +1878,23 @@ uint8_t PolicyManager::getEffectiveRoutingMode(const URI& egURI) {
     return routingMode;
 }
 
+const std::string
+getDefaultRouterIpForSubnet(modelgbp::gbp::Subnet& subnet) {
+    optional<const string &> uri = subnet.getURI().toString();
+    if (uri) {
+        const string tmp = *uri;
+        const std::string tmp1 = tmp.substr(0, tmp.find("%"));
+        std::size_t found = tmp1.find_last_of("/\\");
+        return tmp1.substr(found+1);
+   }
+    return std::string();
+}
+
 boost::optional<address>
 PolicyManager::getRouterIpForSubnet(modelgbp::gbp::Subnet& subnet) {
-    optional<const string&> routerIpStr = subnet.getVirtualRouterIp();
+    const std::string defaultRouterIp = getDefaultRouterIpForSubnet(subnet);
+    optional<const string&> routerIpStr = subnet.getVirtualRouterIp(defaultRouterIp);
+    //optional<const string&> routerIpStr = subnet.getVirtualRouterIp();
     if (routerIpStr) {
         boost::system::error_code ec;
         address routerIp = address::from_string(routerIpStr.get(), ec);
@@ -1892,6 +1906,7 @@ PolicyManager::getRouterIpForSubnet(modelgbp::gbp::Subnet& subnet) {
             return routerIp;
         }
     }
+    LOG(DEBUG) << "Subnet: " << subnet.getURI() << " RouterIp: NIL";
     return boost::none;
 }
 

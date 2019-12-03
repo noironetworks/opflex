@@ -199,8 +199,10 @@ void OpflexListener::addPendingUpdate(opflex::modb::class_id_t class_id,
                                       opflex::gbp::PolicyUpdateOp op) {
     if (!active) return;
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
-        if (conn->getUri(uri))
+        if (conn->getUri(uri)) {
             conn->addPendingUpdate(class_id, uri, op);
+        } else
+            LOG(DEBUG) << "could not find uri " << uri;
     }
 }
 
