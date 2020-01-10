@@ -18,7 +18,6 @@
 extern "C" {
 #include <openvswitch/meta-flow.h>
 #include <openflow/nicira-ext.h>
-#include <openvswitch/ofp-packet.h>
 }
 
 struct ofputil_flow_stats;

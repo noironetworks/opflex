@@ -23,7 +23,6 @@
 
 extern "C" {
 #include <openvswitch/ofp-msgs.h>
-#include <openvswitch/ofp-monitor.h>
 }
 
 #include <opflex/modb/URI.h>

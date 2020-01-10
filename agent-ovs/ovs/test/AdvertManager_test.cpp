@@ -236,7 +236,6 @@ static void verify_epadv(ofpbuf* msg, unordered_set<string>& found,
     ofpbuf_use_stub(&ofpact, ofpacts_stub, sizeof ofpacts_stub);
     ofputil_decode_packet_out(&po,
                               (ofp_header*)msg->data,
-                              NULL,
                               &ofpact);
 
     DpPacketP pkt;
@@ -353,7 +352,6 @@ BOOST_FIXTURE_TEST_CASE(routerAdvert, RouterAdvertFixture) {
         ofpbuf_use_stub(&ofpact, ofpacts_stub, sizeof ofpacts_stub);
         ofputil_decode_packet_out(&po,
                                   (ofp_header*)msg.data(),
-                                  NULL,
                                   &ofpact);
         DpPacketP pkt;
         struct flow flow;

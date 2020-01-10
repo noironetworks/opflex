@@ -10,9 +10,6 @@
 #ifndef OPFLEXAGENT_TEST_POLSTATSMANAGERFIXTURE_H_
 #define OPFLEXAGENT_TEST_POLSTATSMANAGERFIXTURE_H_
 
-#include <openvswitch/ofp-msgs.h>
-#include <openvswitch/ofp-monitor.h>
-
 #include <opflexagent/test/ModbFixture.h>
 #include "SwitchManager.h"
 #include "MockSwitchManager.h"
@@ -163,7 +160,7 @@ public:
             fs->flags = fe->entry->flags;
             fs->match = fe->entry->match;
 
-            ofputil_append_flow_stats_reply(fs, &ovs_replies, NULL);
+            ofputil_append_flow_stats_reply(fs, &ovs_replies);
         }
         reply = ofpbuf_from_list(ovs_list_back(&ovs_replies));
         ofpmsg_update_length(reply);

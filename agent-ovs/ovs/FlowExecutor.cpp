@@ -18,7 +18,6 @@
 #include <lib/util.h>
 extern "C" {
 #include <openvswitch/ofp-msgs.h>
-#include <openvswitch/match.h>
 }
 
 typedef std::unique_lock<std::mutex> mutex_guard;
@@ -105,7 +104,7 @@ template<>
 OfpBuf
 FlowExecutor::EncodeMod<GroupEdit::Entry>(const GroupEdit::Entry& edit,
                                           int ofVersion) {
-    return OfpBuf(ofputil_encode_group_mod((ofp_version)ofVersion, edit->mod, NULL, -1));
+    return OfpBuf(ofputil_encode_group_mod((ofp_version)ofVersion, edit->mod));
 }
 
 template<>
@@ -129,7 +128,7 @@ FlowExecutor::EncodeMod<FlowEdit::Entry>(const FlowEdit::Entry& edit,
     }
     flowMod.new_cookie = mod == FlowEdit::MOD ? OVS_BE64_MAX :
             (mod == FlowEdit::ADD ? flow.cookie : 0);
-    minimatch_init(&flowMod.match, &flow.match);
+    memcpy(&flowMod.match, &flow.match, sizeof(flow.match));
     if (mod != FlowEdit::DEL) {
         flowMod.ofpacts_len = flow.ofpacts_len;
         flowMod.ofpacts = (ofpact*)flow.ofpacts;

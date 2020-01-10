@@ -18,18 +18,15 @@
 #include <unordered_map>
 
 #include "ovs-ofputil.h"
-#include <lib/util.h>
-#include <openvswitch/poll-loop.h>
-#define HAVE_STRUCT_MMSGHDR_MSG_LEN
-#define HAVE_SENDMMSG
 
 extern "C" {
+#include <lib/util.h>
 #include <lib/dirs.h>
 #include <lib/socket-util.h>
 #include <lib/stream.h>
+#include <lib/poll-loop.h>
 #include <openvswitch/vconn.h>
 #include <openvswitch/ofp-msgs.h>
-#include <openvswitch/ofp-packet.h>
 }
 
 typedef std::lock_guard<std::mutex> mutex_guard;
@@ -117,7 +114,7 @@ SwitchConnection::doConnectOF() {
     vconn *newConn;
     int error;
     error = vconn_open_block(swPath.c_str(), versionBitmap, DSCP_DEFAULT,
-            0, &newConn);
+            &newConn);
     if (error) {
         return error;
     }
@@ -258,7 +255,7 @@ SwitchConnection::Monitor() {
                 connLost = true;
             } else if (diff >= ECHO_INTERVAL) {
                 OfpBuf msg(
-                    ofputil_encode_echo_request((ofp_version)GetProtocolVersion()));
+                    make_echo_request((ofp_version)GetProtocolVersion()));
                 SendMessage(msg);
             }
         }
@@ -342,8 +339,11 @@ SwitchConnection::FireOnConnectListeners() {
     }
     {
         // Set packet-in format to nicira-extended format
-        OfpBuf b2(ofputil_encode_set_packet_in_format((ofp_version)GetProtocolVersion(),
-                  OFPUTIL_PACKET_IN_NXT));
+        nx_set_packet_in_format* pif;
+        OfpBuf b2(ofpraw_alloc(OFPRAW_NXT_SET_PACKET_IN_FORMAT,
+                               GetProtocolVersion(), sizeof *pif));
+        pif = (nx_set_packet_in_format*)b2.put_zeros(sizeof *pif);
+        pif->format = htonl(NXPIF_NXT_PACKET_IN);
         SendMessage(b2);
     }
     notifyConnectListeners();
@@ -360,7 +360,7 @@ void
 SwitchConnection::EchoRequestHandler::Handle(SwitchConnection *swConn,
                                              int, ofpbuf *msg) {
     const ofp_header *rq = (const ofp_header *)msg->data;
-    OfpBuf echoReplyMsg(ofputil_encode_echo_reply(rq));
+    OfpBuf echoReplyMsg(make_echo_reply(rq));
     swConn->SendMessage(echoReplyMsg);
 }
 

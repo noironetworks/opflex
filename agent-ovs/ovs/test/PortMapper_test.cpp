@@ -19,7 +19,6 @@
 extern "C" {
 #include <openvswitch/ofp-msgs.h>
 #include <openvswitch/list.h>
-#include <openvswitch/ofp-port.h>
 }
 
 using namespace std;
