@@ -1055,8 +1055,19 @@ static void flowsEndpointPortSec(FlowEntryList& elPortSec,
                 .ndTarget(ND_NEIGHBOR_ADVERT,
                           vip_cidr.first, vip_cidr.second);
         }
-        vf.action().controller().go(IntFlowManager::SRC_TABLE_ID)
-            .parent().build(elPortSec);
+        // AAP mode active-active skip controller for grat arp
+        if (!endPoint.isAapModeAA())
+            vf.action().controller();
+        actionSecAllow(vf).build(elPortSec);
+
+        // AAP mode active-active allow IPv4/IPv6 packets from
+        // port with virtual ip address and endpoint macaddr
+        if (hasMac && endPoint.isAapModeAA()) {
+            actionSecAllow(FlowBuilder().priority(30)
+                           .inPort(ofPort).ethSrc(vmac)
+                           .ipSrc(vip_cidr.first, vip_cidr.second))
+                .build(elPortSec);
+        }
     }
 }
 
@@ -1765,6 +1776,31 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                             .parent().build(elRouteDst);
                     }
 
+                }
+
+                // virtual ip addresses in active-active AAP mode
+                if (endPoint.isAapModeAA()) {
+                    for (const Endpoint::virt_ip_t& vip : endPoint.getVirtualIPs()) {
+                        network::cidr_t vip_cidr;
+                        if (!network::cidr_from_string(vip.second, vip_cidr)) {
+                            LOG(WARNING) << "Invalid endpoint VIP (CIDR): " << vip.second;
+                            continue;
+                        }
+                        uint8_t vmac[6];
+                        vip.first.toUIntArray(vmac);
+
+                        FlowBuilder e0;
+                        matchDestDom(e0, 0, rdId);
+                        e0.priority(500)
+                            .ethDst(vmac)
+                            .ipDst(vip_cidr.first, vip_cidr.second)
+                            .action()
+                            .reg(MFF_REG2, epgVnid)
+                            .reg(MFF_REG7, ofPort)
+                            .metadata(flow::meta::ROUTED, flow::meta::ROUTED)
+                            .go(POL_TABLE_ID)
+                            .parent().build(elRouteDst);
+                    }
                 }
 
                 // IP address mappings
@@ -2729,6 +2765,14 @@ void IntFlowManager::createStaticFlows() {
         switchManager.writeFlow("static", OUT_TABLE_ID, outFlows);
     }
     {
+        TlvEntryList tlvFlows;
+        for(int i = 0; i <= 10; i++) {
+            FlowBuilder().tlv(0xffff, i, 8, i).buildTlv(tlvFlows);
+        }
+        FlowBuilder().tlv(0xffff, 11, 20, 11).buildTlv(tlvFlows);
+        switchManager.writeTlv("DropLogStatic", tlvFlows);
+    }
+    {
         FlowEntryList dropLogFlows;
         FlowBuilder().priority(0)
                 .action().go(IntFlowManager::SEC_TABLE_ID)
@@ -2747,6 +2791,7 @@ void IntFlowManager::createStaticFlows() {
         }
         handleDropLogPortUpdate();
     }
+
 }
 
 void IntFlowManager::handleEndpointGroupDomainUpdate(const URI& epgURI) {

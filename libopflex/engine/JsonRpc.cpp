@@ -17,7 +17,6 @@
 #include <set>
 #include <tuple>
 #include <memory>
-#include <thread>
 
 #include <yajr/rpc/methods.hpp>
 
@@ -44,13 +43,6 @@ namespace opflex {
 namespace engine {
 namespace internal {
 
-void prettyPrintValue(const rapidjson::Value& val) {
-    StringBuffer buf;
-    PrettyWriter<StringBuffer> writer(buf);
-    val.Accept(writer);
-    LOG(DEBUG) << buf.GetString();
-}
-
 TransactReq::TransactReq(const transData& td) : OpflexMessage("transact", REQUEST),
         tData(td) {}
 
@@ -64,10 +56,10 @@ void TransactReq::serializePayload(MessageWriter& writer) {
     (*this)(writer);
 }
 
-JsonReq::JsonReq(list<transData> tl, uint64_t reqId)
+JsonReq::JsonReq(const list<transData>& tl, uint64_t reqId)
     : OpflexMessage("transact", REQUEST), reqId(reqId)
 {
-    for (auto elem : tl) {
+    for (auto& elem : tl) {
         shared_ptr<TransactReq> pTr = make_shared<TransactReq>(elem);
         transList.push_back(pTr);
     }
@@ -81,10 +73,6 @@ void JsonReq::serializePayload(yajr::rpc::SendHandler& writer) {
 void JsonReq::serializePayload(MessageWriter& writer) {
     LOG(DEBUG) << "serializePayload message writer";
     (*this)(writer);
-}
-
-void JsonReq::addTransaction(shared_ptr<TransactReq> req) {
-    transList.push_back(req);
 }
 
 void OvsdbConnection::send_req_cb(uv_async_t* handle) {
@@ -115,18 +103,17 @@ void OvsdbConnection::sendTransaction(const list<transData>& tl,
  * @param[in] idx list of indices to walk the tree.
  * @return a Value object.
  */
-Value getValue(const Value& val, const list<string>& idx) {
+void getValue(const Document& val, const list<string>& idx, Value& result) {
     stringstream ss;
-    for (auto str : idx) {
+    for (auto& str : idx) {
         ss << " " << str << ", ";
     }
     LOG(DEBUG4) << ss.rdbuf();
-    Document d;
-    Document::AllocatorType& alloc = d.GetAllocator();
+    Document::AllocatorType& alloc = ((Document&)val).GetAllocator();
     Value tmpVal(Type::kNullType);
-    //Value tmpVal;
     if (val == NULL || !val.IsArray()) {
-        return tmpVal;
+        result = tmpVal;
+        return;
     }
     // if string is a number, treat it as index array.
     // otherwise its an object name.
@@ -152,7 +139,8 @@ Value getValue(const Value& val, const list<string>& idx) {
                 LOG(DEBUG4) << "arr size is less than index";
                 // array size is less than the index we are looking for
                 tmpVal.SetNull();
-                return tmpVal;
+                result = tmpVal;
+                return;
             }
             tmpVal = tmpVal[index];
         } else if (tmpVal.IsObject()) {
@@ -165,21 +153,24 @@ Value getValue(const Value& val, const list<string>& idx) {
                 } else {
                     // member not found
                     tmpVal.RemoveAllMembers();
-                    return tmpVal;
+                    result = tmpVal;
+                    return;
                 }
             } else {
                 tmpVal.RemoveAllMembers();
-                return tmpVal;
+                result = tmpVal;
+                return;
             }
         } else {
             LOG(DEBUG) << "Value is not array or object";
             // some primitive type, should not hit this before
             // list iteration is over.
             tmpVal.SetNull();
-            return tmpVal;
+            result = tmpVal;
+            return;
         }
     }
-    return tmpVal;
+    result = tmpVal;
 }
 
 template<typename T>
@@ -241,7 +232,7 @@ void TransactReq::writePair(rapidjson::Writer<T>& writer, shared_ptr<BaseData> b
 
 template <typename T>
 bool TransactReq::operator()(rapidjson::Writer<T> & writer) {
-    for (auto pair : tData.kvPairs) {
+    for (auto& pair : tData.kvPairs) {
         writePair<T>(writer, pair, true);
     }
 
@@ -277,9 +268,7 @@ bool TransactReq::operator()(rapidjson::Writer<T> & writer) {
     if (!tData.columns.empty()) {
         writer.String("columns");
         writer.StartArray();
-        for (set<string>::iterator it = tData.columns.begin();
-                it != tData.columns.end(); ++it) {
-            string tmp = *it;
+        for (auto& tmp : tData.columns) {
             writer.String(tmp.c_str());
         }
         writer.EndArray();
@@ -300,12 +289,11 @@ bool TransactReq::operator()(rapidjson::Writer<T> & writer) {
                 writer.StartArray();
                 LOG(DEBUG) << "label " << tdsPtr->label;
 
-                for (auto val : tdsPtr->tset)
-                {
+                for (auto& val : tdsPtr->tset) {
                     writePair<T>(writer, val, false);
                 }
-                    writer.EndArray();
-                    writer.EndArray();
+                writer.EndArray();
+                writer.EndArray();
             } else {
                 writePair(writer, *(tdsPtr->tset.begin()), false);
             }
@@ -330,10 +318,10 @@ void OvsdbConnection::start() {
 void OvsdbConnection::connect_cb(uv_async_t* handle) {
     OvsdbConnection* ocp = (OvsdbConnection*)handle->data;
     VLOG(5) << ocp;
-    ocp->peer = yajr::Peer::create(ocp->hostname,
-                               boost::lexical_cast<string>(ocp->port),
-                               on_state_change,
-                               ocp, loop_selector, false);
+    // TODO - don't hardcode socket...this whole thing needs to moved out of libopflex
+    std::string swPath("/usr/local/var/run/openvswitch/db.sock");
+    ocp->peer = yajr::Peer::create(swPath, on_state_change,
+                                   ocp, loop_selector, false);
     assert(ocp->peer);
 }
 
@@ -386,7 +374,7 @@ uv_loop_t* OvsdbConnection::loop_selector(void* data) {
 }
 
 void RpcConnection::handleTransaction(uint64_t reqId,
-            const rapidjson::Value& payload) {
+            const rapidjson::Document& payload) {
     pTrans->handleTransaction(reqId, payload);
 }
 
@@ -404,7 +392,7 @@ std::shared_ptr<RpcConnection> createConnection(Transaction& trans) {
 void MockRpcConnection::sendTransaction(const list<transData>& tl,
         const uint64_t& reqId) {
     ResponseDict& rDict = ResponseDict::Instance();
-    map<size_t, int>::iterator itr = rDict.dict.find(reqId);
+    auto itr = rDict.dict.find(reqId);
     if (itr != rDict.dict.end()) {
         handleTransaction(1, rDict.d[itr->second]);
     } else {

@@ -34,12 +34,6 @@ using namespace std;
 using namespace rapidjson;
 
 /**
- * utility class to pretty print rapidjson::Value
- * @param val Value object reference
- */
-void prettyPrintValue(const rapidjson::Value& val);
-
-/**
  * enum for data types to be sent over JSON/RPC
  */
 enum class  Dtype {STRING, INTEGER, BOOL};
@@ -216,7 +210,7 @@ public:
     string toString() {
         stringstream ss;
         ss << "label " << label << endl;
-        for (auto elem : tset) {
+        for (auto& elem : tset) {
             if (elem->getType() == Dtype::INTEGER) {
                 shared_ptr<TupleData<int>> tPtr =
                         dynamic_pointer_cast<TupleData<int>>(elem);
@@ -289,7 +283,7 @@ public:
      * pure virtual method for handling transactions
      */
     virtual void handleTransaction(uint64_t reqId,
-            const rapidjson::Value& payload) = 0;
+            const rapidjson::Document& payload) = 0;
 };
 
 /**
@@ -308,7 +302,7 @@ class RpcConnection {
      * @param[in] payload rapidjson::Value reference of the response body.
      */
     virtual void handleTransaction(uint64_t reqId,
-                const rapidjson::Value& payload);
+                const rapidjson::Document& payload);
 
     /**
      * destructor
@@ -601,9 +595,9 @@ shared_ptr<RpcConnection> createConnection(Transaction& trans);
  * helper function to get Value of a given index
  * @param[in] val rapidjson Value object
  * @param[in] idx list of strings representing indices
- * @return Value object
+ * @param[out] result Value object
  */
-Value getValue(const Value& val, const list<string>& idx);
+void getValue(const Document& val, const list<string>& idx, Value& result);
 }
 }
 }
