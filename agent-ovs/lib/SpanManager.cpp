@@ -224,6 +224,9 @@ namespace opflexagent {
         }
         sessState = make_shared<SessionState>(sess->getURI(), sess->getName().get());
         spanmanager.sess_map.insert(make_pair(sess->getURI(), sessState));
+        if (sess->getState()) {
+            sessState->setAdminState(sess->getState().get());
+        }
         print_map(spanmanager.sess_map);
 
         vector <shared_ptr<SrcGrp>> srcGrpVec;
@@ -290,6 +293,9 @@ namespace opflexagent {
                         address ip = boost::asio::ip::address::from_string(dest.get());
                         shared_ptr<DstEndPoint> dEp = make_shared<DstEndPoint>(ip);
                         seSt->second->addDstEndPoint(dstSumm.get()->getURI(), dEp);
+                        if (dstSumm.get()->getVersion()) {
+                            seSt->second->setVersion(dstSumm.get()->getVersion().get());
+                        }
                     }
                 }
             }

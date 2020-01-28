@@ -488,7 +488,7 @@ using boost::uuids::basic_random_generator;
         return true;
     }
 
-        bool JsonRpc::getErspanIfcParams(erspan_ifc& ifc) {
+        bool JsonRpc::getErspanIfcParams(shared_ptr<erspan_ifc> pIfc) {
             // for ERSPAN port get IP address
             transData td;
             td.operation = "select";
@@ -512,7 +512,7 @@ using boost::uuids::basic_random_generator;
             }
 
             unordered_map<string, string> optMap;
-            if (!getErspanOptions(pResp->reqId, pResp->payload, ifc)) {
+            if (!getErspanOptions(pResp->reqId, pResp->payload, pIfc)) {
                 LOG(DEBUG) << "failed to get ERSPAN options";
                 return false;
             }
@@ -588,7 +588,7 @@ using boost::uuids::basic_random_generator;
     }
 
     bool JsonRpc::getErspanOptions(const uint64_t reqId, const Value& payload,
-            erspan_ifc& ifc) {
+            shared_ptr<erspan_ifc> pIfc) {
         if (!payload.IsArray()) {
             LOG(DEBUG) << "payload is not an array";
             return false;
@@ -601,18 +601,38 @@ using boost::uuids::basic_random_generator;
                 LOG(DEBUG) << "expected array";
                 return false;
             }
+            map<string, string>options;
             for (Value::ConstValueIterator itr1 = arr.Begin();
                     itr1 != arr.End(); itr1++) {
                 LOG(DEBUG) << (*itr1)[0].GetString() << ":"
                 << (*itr1)[1].GetString();
                 string val((*itr1)[1].GetString());
                 string index((*itr1)[0].GetString());
-                if (index.compare("erspan_idx") == 0 ||
-                    index.compare("erspan_ver") == 0 ||
-                    index.compare("key")) {
-                        ifc.erspan_ver = stoi(val);
-                } else if (index.compare("remote_ip") == 0) {
-                    ifc.remote_ip = val;
+                options.emplace(index, val);
+            }
+            auto ver = options.find("erspan_ver");
+            if (ver != options.end()) {
+                if (ver->second.compare("1") == 0) {
+                    pIfc = make_shared<erspan_ifc_v1>();
+                    if (options.find("erspan_idx") != options.end())
+                        static_pointer_cast<erspan_ifc_v1>(pIfc)->erspan_idx
+                            = stoi(options["erspan_idx"]);
+                } else  if (ver->second.compare("2") == 0) {
+                    pIfc = make_shared<erspan_ifc_v2>();
+                    if (options.find("erspan_hwid") != options.end())
+                        static_pointer_cast<erspan_ifc_v2>(pIfc)->erspan_hw_id
+                            = stoi(options["erspan_hwid"]);
+                    if (options.find("erspan_dir") != options.end())
+                        static_pointer_cast<erspan_ifc_v2>(pIfc)->erspan_dir
+                            = stoi(options["erspan_dir"]);
+                }
+
+                if (pIfc) {
+                    if (options.find("key") != options.end())
+                        pIfc->key = stoi(options["key"]);
+                    pIfc->erspan_ver = stoi(ver->second);
+                    if (options.find("remote_ip") != options.end())
+                        pIfc->remote_ip = options["remote_ip"];
                 }
             }
        } catch(const std::exception &e) {
@@ -860,13 +880,13 @@ using boost::uuids::basic_random_generator;
         return std::regex_replace(uuid_name, hyph, underscore);
     }
 
-    bool JsonRpc::addErspanPort(const string& bridge, const erspan_ifc& port) {
+    bool JsonRpc::addErspanPort(const string& bridge, shared_ptr<erspan_ifc> port) {
 
         transData td;
         td.operation = "insert";
         td.table = "Port";
         shared_ptr<TupleData<string>> tPtr =
-                make_shared<TupleData<string>>("", port.name);
+                make_shared<TupleData<string>>("", port->name);
         set<shared_ptr<BaseData>> pSet;
         pSet.emplace(tPtr);
         shared_ptr<TupleDataSet> pTdSet = make_shared<TupleDataSet>(TupleDataSet(pSet));
@@ -896,22 +916,32 @@ using boost::uuids::basic_random_generator;
 
         // row entries
         // name
-        tPtr.reset(new TupleData<string>("", port.name));
+        tPtr.reset(new TupleData<string>("", port->name));
         pSet.clear();
         pSet.emplace(tPtr);
         pTdSet.reset(new TupleDataSet(pSet));
         td1.rows.emplace("name", pTdSet);
 
-        // options
+        // options depend upon version
         pSet.clear();
-        tPtr.reset(new TupleData<string>("erspan_idx", std::to_string(port.erspan_idx)));
+        tPtr.reset(new TupleData<string>("erspan_ver", std::to_string(port->erspan_ver)));
         pSet.emplace(tPtr);
-        tPtr.reset(new TupleData<string>("erspan_ver", std::to_string(port.erspan_ver)));
+        tPtr.reset(new TupleData<string>("key", std::to_string(port->key)));
         pSet.emplace(tPtr);
-        tPtr.reset(new TupleData<string>("key", std::to_string(port.key)));
+        tPtr.reset(new TupleData<string>("remote_ip", port->remote_ip));
         pSet.emplace(tPtr);
-        tPtr.reset(new TupleData<string>("remote_ip", port.remote_ip));
-        pSet.emplace(tPtr);
+        if (port->erspan_ver == 1) {
+            tPtr.reset(new TupleData<string>("erspan_idx",
+                    std::to_string(static_pointer_cast<erspan_ifc_v1>(port)->erspan_idx)));
+            pSet.emplace(tPtr);
+        } else if (port->erspan_ver == 2) {
+            tPtr.reset(new TupleData<string>("erspan_hwid",
+                    std::to_string(static_pointer_cast<erspan_ifc_v2>(port)->erspan_hw_id)));
+            pSet.emplace(tPtr);
+            tPtr.reset(new TupleData<string>("erspan_dir",
+                    std::to_string(static_pointer_cast<erspan_ifc_v2>(port)->erspan_dir)));
+            pSet.emplace(tPtr);
+        }
         pTdSet.reset(new TupleDataSet(pSet));
         pTdSet->label = "map";
         td1.rows.emplace("options", pTdSet);

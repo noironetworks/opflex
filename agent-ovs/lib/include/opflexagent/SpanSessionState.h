@@ -109,6 +109,7 @@ using namespace opflex::modb;
          * @return address address of this destination end point.
          */
         const address& getAddress() const { return dstIp; };
+
     private:
         string name;
         address dstIp;
@@ -271,9 +272,32 @@ using namespace opflex::modb;
          */
         const string& getName() { return name; };
 
+        /**
+         * get session admin state
+         * @returns admin state of session
+         */
+        const uint8_t getAdminState() { return adminState;};
+
+        /**
+         * set session admin state
+         * @param ast admin state of session
+         */
+        void setAdminState(const uint8_t ast) { adminState = ast;};
+        /**
+        * get ERSPAN version setting
+        * @return ERSPAN version
+        */
+       const uint8_t getVersion() { return version; };
+       /**
+        * set ERSPAN version
+        * @param ver ERSPAN version
+        */
+       void setVersion(uint8_t ver) { version = ver;};
     private:
         URI uri;
         string name;
+        uint8_t adminState;
+        uint8_t version;
         // mapping LocalEp to SourceEndPoint
         // unordered_map<URI, shared_ptr<SourceEndPoint>> srcEndPoints;
 
