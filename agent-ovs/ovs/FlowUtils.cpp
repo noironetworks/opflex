@@ -188,7 +188,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                                              FlowBuilder::CT_TRACKED |
                                              FlowBuilder::CT_ESTABLISHED |
                                              FlowBuilder::CT_REPLY |
-                                             FlowBuilder::CT_INVALID |
                                              FlowBuilder::CT_NEW |
                                              FlowBuilder::CT_RELATED);
                             break;
@@ -198,7 +197,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                                              FlowBuilder::CT_TRACKED |
                                              FlowBuilder::CT_RELATED |
                                              FlowBuilder::CT_ESTABLISHED |
-                                             FlowBuilder::CT_INVALID |
                                              FlowBuilder::CT_NEW);
                             break;
                         default:
