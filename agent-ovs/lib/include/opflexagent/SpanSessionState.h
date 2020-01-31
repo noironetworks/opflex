@@ -264,7 +264,7 @@ using namespace opflex::modb;
          * @return a reference to the destination end point map.
          */
         const unordered_map<URI, shared_ptr<DstEndPoint>>&
-             getDstEndPointMap() const;
+             getDstEndPointMap();
 
         /**
          * gets the name string for this object
@@ -293,6 +293,13 @@ using namespace opflex::modb;
         * @param ver ERSPAN version
         */
        void setVersion(uint8_t ver) { version = ver;};
+       /**
+        * overloading output stream operator
+        * @param out output stream reference
+        * @param seSt SessionState reference
+        * @return output stream.
+        */
+       friend ostream& operator<< (ostream& out, const SessionState& seSt);
     private:
         URI uri;
         string name;
@@ -305,6 +312,7 @@ using namespace opflex::modb;
         // mapping DstSummary to DstEndPoint
         unordered_map<URI, shared_ptr<DstEndPoint>> dstEndPoints;
         unordered_map<string, filter_t> filters;
+        recursive_mutex objUpdMut;
     };
 }
 

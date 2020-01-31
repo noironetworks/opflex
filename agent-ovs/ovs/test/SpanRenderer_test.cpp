@@ -100,7 +100,7 @@ static bool verifyCreateDestroy(shared_ptr<MockSpanRenderer> spr) {
     if (!spr->jRpc->deleteMirror("br-int")) {
         return false;
     }
-    shared_ptr<JsonRpc::erspan_ifc_v1> ep;
+    shared_ptr<JsonRpc::erspan_ifc_v1> ep = make_shared<JsonRpc::erspan_ifc_v1>();
     ep->name = "erspan";
     ep->remote_ip = "10.20.120.240";
     ep->erspan_idx = 1;

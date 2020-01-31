@@ -375,10 +375,10 @@ public:
 
     /**
      * get ERSPAN interface parameters from OVSDB
-     * @param[in] pIfc shared pointer to erspan interface struct
+     * @param[out] pIfc empty shared pointer reference to erspan interface struct
      * @return true if success, false otherwise
      */
-    bool getErspanIfcParams(shared_ptr<erspan_ifc> pIfc);
+    bool getErspanIfcParams(shared_ptr<erspan_ifc>& pIfc);
 
     /**
      * check if connection has been established
@@ -471,11 +471,11 @@ private:
      * get ERSPAN interface options from Value struct
      * @param[in] reqId request ID
      * @param[in] payload response Value struct
-     * @param[out] pIfc uninitialized shared pointer to ifc ERSPAN
+     * @param[out] pIfc empty shared pointer to ERSPAN
      * interface struct
      */
     bool getErspanOptions(const uint64_t reqId, const Document& payload,
-            shared_ptr<erspan_ifc> pIfc);
+            shared_ptr<erspan_ifc>& pIfc);
 
 
     template <typename T>

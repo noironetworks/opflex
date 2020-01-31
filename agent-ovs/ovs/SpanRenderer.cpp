@@ -160,8 +160,11 @@ namespace opflexagent {
         if (seSt.get()->getSrcEndPointSet().empty() ||
             seSt.get()->getDstEndPointMap().empty() ||
             seSt.get()->getAdminState() == 0) {
-            if (isMirProv)
+            if (isMirProv) {
+                LOG(DEBUG) << "deleting mirror";
                 sessionDeleted(seSt.get());
+            }
+            LOG(DEBUG) << "No mirror config";
             cleanup();
             return;
         }
@@ -186,6 +189,7 @@ namespace opflexagent {
         // same as provisioned.
         if (srcPort.size() != mir.src_ports.size() ||
                 dstPort.size() != mir.dst_ports.size()) {
+            LOG(DEBUG) << "updating mirror config";
             updateMirrorConfig(seSt.get());
             cleanup();
             return;
@@ -308,7 +312,8 @@ namespace opflexagent {
             // dir can be set to 0 as it does not have an affect on the mirror traffic.
             static_pointer_cast<JsonRpc::erspan_ifc_v2>(ep)->erspan_hw_id = 1;
             static_pointer_cast<JsonRpc::erspan_ifc_v2>(ep)->erspan_dir = 0;
-
+        } else {
+            return false;
         }
         ep->name = ERSPAN_PORT_NAME;
         ep->remote_ip = ipAddr;
