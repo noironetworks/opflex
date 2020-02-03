@@ -49,7 +49,8 @@ Renderer* OVSRendererPlugin::create(Agent& agent) const {
 
 OVSRenderer::OVSRenderer(Agent& agent_)
     : Renderer(agent_), ctZoneManager(idGen),
-      intSwitchManager(agent_, intFlowExecutor, intFlowReader, intPortMapper),
+      intSwitchManager(agent_, intFlowExecutor, intFlowReader,
+                       intPortMapper),
       tunnelEpManager(&agent_),
       intFlowManager(agent_, intSwitchManager, idGen,
                      ctZoneManager, pktInHandler, tunnelEpManager),
@@ -60,15 +61,18 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       interfaceStatsManager(&agent_, intSwitchManager.getPortMapper(),
                             accessSwitchManager.getPortMapper()),
       contractStatsManager(&agent_, idGen, intSwitchManager),
+      podsvcStatsManager(&agent_, idGen, intSwitchManager,
+                           intFlowManager),
       secGrpStatsManager(&agent_, idGen, accessSwitchManager),
       tunnelRemotePort(0), uplinkVlan(0),
       virtualRouter(true), routerAdv(true),
       connTrack(true), ctZoneRangeStart(0), ctZoneRangeEnd(0),
       ifaceStatsEnabled(true), ifaceStatsInterval(0),
       contractStatsEnabled(true), contractStatsInterval(0),
+      podsvcStatsEnabled(true), podsvcStatsInterval(0),
       secGroupStatsEnabled(true), secGroupStatsInterval(0),
       spanRenderer(agent_), netflowRenderer(agent_), started(false),
-      pktLogger(pktLoggerIO) {
+      pktLogger(pktLoggerIO, exporterIO) {
 
 }
 
@@ -184,6 +188,13 @@ void OVSRenderer::start() {
             registerConnection(intSwitchManager.getConnection());
         contractStatsManager.start();
     }
+    if (podsvcStatsEnabled) {
+        podsvcStatsManager.setTimerInterval(podsvcStatsInterval);
+        podsvcStatsManager.setAgentUUID(getAgent().getUuid());
+        podsvcStatsManager.
+            registerConnection(intSwitchManager.getConnection());
+        podsvcStatsManager.start();
+    }
     if (secGroupStatsEnabled && accessBridgeName != "") {
         secGrpStatsManager.setTimerInterval(secGroupStatsInterval);
         secGrpStatsManager.setAgentUUID(getAgent().getUuid());
@@ -219,8 +230,6 @@ void OVSRenderer::start() {
             } else {
                 LOG(ERROR) << "PacketLogger: Failed to fork:" << errno;
             }
-            int status;
-            waitpid(pid, &status, 0);
             return;
         }
         setsid();
@@ -228,31 +237,19 @@ void OVSRenderer::start() {
         if(chdir_ret) {
             LOG(ERROR) << "PacketLogger: Failed to chdir to /";
         }
-        pktLoggerIO.notify_fork(boost::asio::io_service::fork_prepare);
-        if (pid_t pid = fork()) {
-            if (pid > 0) {
-                pktLoggerIO.notify_fork(boost::asio::io_service::fork_parent);
-                exit(0);
-            } else {
-                LOG(ERROR) << "PacketLogger: Second fork failed:" << errno;
-                exit(1);
-            }
-        }
+        // Inform the io_service that we have finished becoming a daemon. The
+        // io_service uses this opportunity to create any internal file descriptors
+        // that need to be private to the new process.
+        pktLoggerIO.notify_fork(boost::asio::io_service::fork_child);
         // Close the standard streams. This decouples the daemon from the terminal
         // that started it.
         int fd;
         fd = open("/dev/null",O_RDWR, 0);
         if (fd != -1) {
             dup2 (fd, STDIN_FILENO);
-            dup2 (fd, STDOUT_FILENO);
-            dup2 (fd, STDERR_FILENO);
-            if (fd > 2)
+            if (fd > 0)
                 close (fd);
         }
-        // Inform the io_service that we have finished becoming a daemon. The
-        // io_service uses this opportunity to create any internal file descriptors
-        // that need to be private to the new process.
-        pktLoggerIO.notify_fork(boost::asio::io_service::fork_child);
         std::string netNs = "/var/run/netns/" + dropLogNs;
         int ns_fd = open(netNs.c_str(), O_RDONLY);
         if(ns_fd < 0) {
@@ -266,17 +263,13 @@ void OVSRenderer::start() {
                        << netNs << ":" << err;
             exit(1);
         }
-
         pktLogger.setAddress(addr, dropLogRemotePort);
-        if(!pktLogger.start()) {
+        pktLogger.setNotifSock(getAgent().getPacketEventNotifSock());
+        if(!pktLogger.startListener()) {
             LOG(ERROR) << "PacketLogger: Failed to bind socket:" << errno;
             exit(1);
         }
 
-        // Register signal handlers so that the daemon may be shut down.
-        boost::asio::signal_set signals(pktLoggerIO, SIGUSR1);
-        signals.async_wait([this](const boost::system::error_code err,
-                int signal_number) {this->getPacketLogger().stop();});
         pid_t child_pid = getpid();
         std::string fileName(std::string(PACKET_LOGGER_PIDDIR) + "/logger.pid");
         fstream s(fileName, s.out);
@@ -286,7 +279,34 @@ void OVSRenderer::start() {
             s << child_pid;
         }
         s.close();
-        pktLoggerIO.run();
+
+        // Register signal handlers.
+        sigset_t waitset;
+        sigemptyset(&waitset);
+        sigaddset(&waitset, SIGINT);
+        sigaddset(&waitset, SIGTERM);
+        sigaddset(&waitset, SIGUSR1);
+        sigprocmask(SIG_BLOCK, &waitset, NULL);
+        std::thread signal_thread([this, &waitset]() {
+            int sig;
+            int result = sigwait(&waitset, &sig);
+            if (result == 0) {
+                LOG(INFO) << "Got " << strsignal(sig) << " signal";
+            } else {
+                LOG(ERROR) << "Failed to wait for signals: " << errno;
+            }
+            this->getPacketLogger().stopListener();
+            this->getPacketLogger().stopExporter();
+        });
+        std::thread client_thread([this]() {
+           this->getPacketLogger().startExporter();
+        });
+        std::thread server_thread([this]() {
+            this->pktLoggerIO.run();
+        });
+        client_thread.join();
+        server_thread.join();
+        signal_thread.join();
         exit(0);
     }
 }
@@ -303,6 +323,8 @@ void OVSRenderer::stop() {
 
     if (ifaceStatsEnabled)
         interfaceStatsManager.stop();
+    if (podsvcStatsEnabled)
+        podsvcStatsManager.stop();
     if (contractStatsEnabled)
         contractStatsManager.stop();
     if (secGroupStatsEnabled)
@@ -401,6 +423,10 @@ void OVSRenderer::setProperties(const ptree& properties) {
                                                     ".contract.enabled");
     static const std::string STATS_CONTRACT_INTERVAL("statistics"
                                                     ".contract.interval");
+    static const std::string STATS_PODSVC_ENABLED("statistics"
+                                                  ".podsvc.enabled");
+    static const std::string STATS_PODSVC_INTERVAL("statistics"
+                                                   ".podsvc.interval");
     static const std::string STATS_SECGROUP_ENABLED("statistics"
                                                     ".security-group.enabled");
     static const std::string STATS_SECGROUP_INTERVAL("statistics"
@@ -513,10 +539,13 @@ void OVSRenderer::setProperties(const ptree& properties) {
 
     ifaceStatsEnabled = properties.get<bool>(STATS_INTERFACE_ENABLED, true);
     contractStatsEnabled = properties.get<bool>(STATS_CONTRACT_ENABLED, true);
+    podsvcStatsEnabled = properties.get<bool>(STATS_PODSVC_ENABLED, true);
     secGroupStatsEnabled = properties.get<bool>(STATS_SECGROUP_ENABLED, true);
     ifaceStatsInterval = properties.get<long>(STATS_INTERFACE_INTERVAL, 30000);
     contractStatsInterval =
         properties.get<long>(STATS_CONTRACT_INTERVAL, 10000);
+    podsvcStatsInterval =
+        properties.get<long>(STATS_PODSVC_INTERVAL, 10000);
     secGroupStatsInterval =
         properties.get<long>(STATS_SECGROUP_INTERVAL, 10000);
     if (ifaceStatsInterval <= 0) {

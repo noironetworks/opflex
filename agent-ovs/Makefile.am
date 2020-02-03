@@ -124,6 +124,7 @@ noinst_HEADERS = \
 	ovs/include/InterfaceStatsManager.h \
 	ovs/include/PolicyStatsManager.h \
 	ovs/include/ContractStatsManager.h \
+	ovs/include/PodSvcStatsManager.h \
 	ovs/include/SecGrpStatsManager.h \
 	ovs/include/CtZoneManager.h \
 	ovs/include/RangeMask.h \
@@ -213,6 +214,7 @@ if RENDERER_OVS
 	ovs/PolicyStatsManager.cpp \
 	ovs/InterfaceStatsManager.cpp \
 	ovs/ContractStatsManager.cpp \
+	ovs/PodSvcStatsManager.cpp \
 	ovs/SecGrpStatsManager.cpp \
 	ovs/RangeMask.cpp \
 	ovs/Packets.cpp \
@@ -297,7 +299,7 @@ mcast_daemon_LDADD = \
 	libopflex_agent.la
 
 TESTS = agent_test
-noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress
+noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress framework_stress
 
 agent_test_CFLAGS =
 agent_test_CXXFLAGS = \
@@ -427,6 +429,19 @@ policy_repo_stress_LDADD = \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB) \
 	libopflex_agent.la
+
+framework_stress_CXXFLAGS = \
+    $(libopflex_CFLAGS) \
+    $(libmodelgbp_CFLAGS)
+framework_stress_SOURCES = \
+    cmd/test/framework_stress.cpp
+framework_stress_LDADD = \
+    $(libopflex_LIBS) \
+    $(BOOST_PROGRAM_OPTIONS_LIB) \
+    $(BOOST_FILESYSTEM_LIB) \
+   	$(BOOST_SYSTEM_LIB) \
+	$(libmodelgbp_LIBS) \
+    libopflex_agent.la
 
 agentconfdir=$(sysconfdir)/opflex-agent-ovs
 agentconf_DATA = opflex-agent-ovs.conf
