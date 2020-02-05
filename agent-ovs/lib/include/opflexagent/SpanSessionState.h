@@ -95,6 +95,11 @@ using namespace opflex::modb;
          */
         DstEndPoint(const address& ip) : dstIp(ip) {};
         /**
+         * copy constructor
+         * @param dp reference to object being copied from
+         */
+        DstEndPoint(const DstEndPoint& dp) : name(dp.name), dstIp(dp.dstIp) {};
+        /**
          * get the name of this destination end point
          * @return string name of destination end point
          */
@@ -260,12 +265,23 @@ using namespace opflex::modb;
         const srcEpSet& getSrcEndPointSet();
 
         /**
+         * get a copy of the source end points
+         * @param ep reference to end point set
+         */
+        const void getSrcEndPointSet(srcEpSet& ep);
+
+        /**
          * gets the destination end point map reference
          * @return a reference to the destination end point map.
          */
         const unordered_map<URI, shared_ptr<DstEndPoint>>&
              getDstEndPointMap();
 
+        /**
+         * get a copy of destination end point map
+         * @param dMap a reference to a map of URI,DstEndPoint
+         */
+        const void getDstEndPointMap(unordered_map<URI, shared_ptr<DstEndPoint>>& dMap);
         /**
          * gets the name string for this object
          * @return the name attribute string.
@@ -300,6 +316,7 @@ using namespace opflex::modb;
         * @return output stream.
         */
        friend ostream& operator<< (ostream& out, const SessionState& seSt);
+
     private:
         URI uri;
         string name;
@@ -312,7 +329,6 @@ using namespace opflex::modb;
         // mapping DstSummary to DstEndPoint
         unordered_map<URI, shared_ptr<DstEndPoint>> dstEndPoints;
         unordered_map<string, filter_t> filters;
-        recursive_mutex objUpdMut;
     };
 }
 
