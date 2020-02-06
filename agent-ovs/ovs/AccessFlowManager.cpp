@@ -19,6 +19,7 @@
 #include <boost/algorithm/string/finder.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/range/sub_range.hpp>
+#include <boost/asio/ip/address.hpp>
 #include "ovs-ofputil.h"
 #include <modelgbp/gbp/DirectionEnumT.hpp>
 #include <modelgbp/gbp/ConnTrackEnumT.hpp>
@@ -40,6 +41,7 @@ using boost::algorithm::token_finder;
 using boost::algorithm::is_any_of;
 using boost::copy_range;
 using boost::optional;
+using boost::asio::ip::address;
 
 static const char* ID_NAMESPACES[] =
     {"secGroup", "secGroupSet"};
