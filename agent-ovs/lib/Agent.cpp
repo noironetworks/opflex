@@ -60,7 +60,8 @@ using boost::uuids::basic_random_generator;
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
 Agent::Agent(OFFramework& framework_)
-    : framework(framework_), prometheusManager(framework),
+    : framework(framework_),
+      prometheusManager(framework),
       policyManager(framework, agent_io),
       endpointManager(framework, policyManager, prometheusManager),
       extraConfigManager(framework),
@@ -616,8 +617,10 @@ void Agent::start() {
     }
 
     // disable reporting of some stats for now (MODB only)
-    LOG(INFO) << "Disable OpflexCounter reporting";
+    LOG(INFO) << "Disable unsupported stat reporting";
     framework.overrideObservableReporting(modelgbp::observer::OpflexCounter::CLASS_ID, false);
+    framework.overrideObservableReporting(modelgbp::gbpe::EpToSvcCounter::CLASS_ID, false);
+    framework.overrideObservableReporting(modelgbp::gbpe::SvcToEpCounter::CLASS_ID, false);
 }
 
 void Agent::stop() {
