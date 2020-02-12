@@ -569,8 +569,9 @@ static FlowBuilder& matchDestDom(FlowBuilder& fb, uint32_t bdId,
 }
 
 static FlowBuilder& matchDestArp(FlowBuilder& fb, const address& ip,
-                                 uint32_t bdId, uint32_t l3Id) {
-    fb.arpDst(ip)
+                                 uint32_t bdId, uint32_t l3Id,
+				 uint8_t prefixLen = 32) {
+    fb.arpDst(ip, prefixLen)
         .proto(arp::op::REQUEST)
         .ethDst(packets::MAC_ADDR_BROADCAST);
     return matchDestDom(fb, bdId, l3Id);
@@ -1314,21 +1315,6 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
     // Get remote endpoint IP addresses
     boost::system::error_code ec;
 
-    std::vector<address> ipAddresses;
-    std::vector<std::shared_ptr<modelgbp::inv::RemoteIp>> invIps;
-    ep.get()->resolveInvRemoteIp(invIps);
-    for (const auto& invIp : invIps) {
-        if (!invIp->isIpSet()) continue;
-
-        address addr = address::from_string(invIp->getIp().get(), ec);
-        if (ec) {
-            LOG(WARNING) << "Invalid remote endpoint IP: "
-                         << invIp->getIp().get() << ": " << ec.message();
-        } else {
-            ipAddresses.push_back(addr);
-        }
-    }
-
     // Get remote tunnel destination
     optional<address> tunDst;
     bool hasTunDest = false;
@@ -1358,6 +1344,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
 
     FlowEntryList elBridgeDst;
     FlowEntryList elRouteDst;
+    std::vector<std::shared_ptr<modelgbp::inv::RemoteIp>> invIps;
 
     if (hasForwardingInfo) {
         FlowBuilder bridgeFlow;
@@ -1383,13 +1370,33 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                 .parent().build(elBridgeDst);
         }
 
-        for (const address& ipAddr : ipAddresses) {
+        ep.get()->resolveInvRemoteIp(invIps);
+        for (const auto& invIp : invIps) {
+            if (!invIp->isIpSet()) continue;
+
+            address addr = address::from_string(invIp->getIp().get(), ec);
+            if (ec) {
+                LOG(WARNING) << "Invalid remote endpoint IP: "
+                             << invIp->getIp().get() << ": " << ec.message();
+                continue;
+            }
+
+            uint8_t prefix;
+            if (invIp->isPrefixLenSet()) {
+                prefix = invIp->getPrefixLen().get();
+            } else {
+                if (addr.is_v4())
+                    prefix = 32;
+                else
+                    prefix = 128;
+            }
+
             FlowBuilder routeFlow;
             FlowBuilder proxyArp;
             matchDestDom(routeFlow, 0, rdId)
                 .priority(500)
                 .ethDst(getRouterMacAddr())
-                .ipDst(ipAddr)
+                .ipDst(addr, prefix)
                 .action()
                 .reg(MFF_REG2, epgVnid)
                 .reg(MFF_REG7, outReg)
@@ -1397,10 +1404,26 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                 .go(POL_TABLE_ID)
                 .parent().build(elRouteDst);
 
-            // Resolve inter-node arp without going to leaf
-            matchDestArp(proxyArp.priority(40), ipAddr, bdId, rdId);
-            actionArpReply(proxyArp, macAddr, ipAddr)
-                .build(elBridgeDst);
+            if (addr.is_v4()) {
+                if (hasMac && prefix == 32) {
+                    // Resolve inter-node arp without going to leaf
+                    matchDestArp(proxyArp.priority(40), addr, bdId, rdId);
+                    actionArpReply(proxyArp, macAddr, addr)
+                        .build(elBridgeDst);
+                }
+                if (invIp->isNextHopIPSet() && invIp->isNextHopMacSet()) {
+                    uint8_t nextHopMac[6];
+                    address nextHopIP =
+                        address::from_string(invIp->getNextHopIP().get(), ec);
+                    if (ec) continue;
+                    invIp->getNextHopMac().get().toUIntArray(nextHopMac);
+                    // Resolve arp to CSR Gateway
+                    matchDestArp(proxyArp.priority(40), addr, bdId, rdId,
+                                 prefix);
+                    actionArpReply(proxyArp, nextHopMac, nextHopIP)
+                        .build(elBridgeDst);
+                }
+            }
         }
     }
 
