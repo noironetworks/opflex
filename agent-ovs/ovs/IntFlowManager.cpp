@@ -93,6 +93,38 @@ static const char* ID_NMSPC_L24CLASS_RULE = ID_NAMESPACES[4];
 static const char* ID_NMSPC_PODSVC        = ID_NAMESPACES[5];
 static const char* ID_NMSPC_SERVICE       = ID_NAMESPACES[6];
 
+void IntFlowManager::populateTableDescriptionMap() {
+    // Populate descriptions of flow tables
+    SwitchManager::TableDescriptionMap fwdTblDescr;
+#define TABLE_DESC(table_id, table_name, drop_reason) \
+        fwdTblDescr.insert( \
+                    std::make_pair(table_id, \
+                            std::make_pair(table_name, drop_reason)));
+    TABLE_DESC(SEC_TABLE_ID, "PORT_SECURITY_TABLE",
+            "Port security policy missing/incorrect")
+    TABLE_DESC(SRC_TABLE_ID, "SOURCE_TABLE",
+            "Source policy group derivation missing/incorrect")
+    TABLE_DESC(SNAT_REV_TABLE_ID, "SNAT_REV_TABLE",
+            "Reverse SNAT policy missing/incorrect")
+    TABLE_DESC(SERVICE_REV_TABLE_ID, "SERVICE_REV_TABLE",
+            "Service source policy missing/incorrect")
+    TABLE_DESC(BRIDGE_TABLE_ID, "BRIDGE_TABLE", "MAC lookup failed")
+    TABLE_DESC(SERVICE_NEXTHOP_TABLE_ID, "SERVICE_NEXTHOP_TABLE",
+            "Service destination policy missing/incorrect")
+    TABLE_DESC(ROUTE_TABLE_ID, "ROUTE_TABLE", "Route lookup failed")
+    TABLE_DESC(SNAT_TABLE_ID, "SNAT_TABLE", "SNAT policy missing/incorrect")
+    TABLE_DESC(NAT_IN_TABLE_ID, "NAT_IN_TABLE",
+            "NAT ingress port policy missing/incorrect")
+    TABLE_DESC(LEARN_TABLE_ID, "LEARN_TABLE", "Learn table drop")
+    TABLE_DESC(SERVICE_DST_TABLE_ID, "SERVICE_DST_TABLE",
+            "Service destination missing/incorrect")
+    TABLE_DESC(STATS_TABLE_ID, "STATS_TABLE", "Stats Table drop")
+    TABLE_DESC(OUT_TABLE_ID, "OUT_TABLE",
+            "Derived output port missing/incorrect")
+#undef TABLE_DESC
+    switchManager.setForwardingTableList(fwdTblDescr);
+}
+
 IntFlowManager::IntFlowManager(Agent& agent_,
                                SwitchManager& switchManager_,
                                IdGenerator& idGen_,
@@ -102,6 +134,9 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     agent(agent_), switchManager(switchManager_), idGen(idGen_),
     ctZoneManager(ctZoneManager_), pktInHandler(pktInHandler_),
     tunnelEpManager(tunnelEpManager_),
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    prometheusManager(agent.getPrometheusManager()),
+#endif
     taskQueue(agent.getAgentIOService()), encapType(ENCAP_NONE),
     floodScope(FLOOD_DOMAIN), tunnelPortStr("4789"),
     virtualRouterEnabled(false), routerAdv(false),
@@ -109,6 +144,7 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     advertManager(agent, *this), isSyncing(false), stopping(false) {
     // set up flow tables
     switchManager.setMaxFlowTables(NUM_FLOW_TABLES);
+    populateTableDescriptionMap();
 
     memset(routerMac, 0, sizeof(routerMac));
     memset(dhcpMac, 0, sizeof(dhcpMac));
@@ -2007,22 +2043,30 @@ void IntFlowManager::updatePodSvcStatsAttr (const std::shared_ptr<MO> &obj,
 {
     {
         auto podItr = epAttr.find("vm-name");
-        auto svcItr = svcAttr.find("name");
-        if ((podItr != epAttr.end())
-            && (svcItr != svcAttr.end())) {
+        if (podItr != epAttr.end())
             obj.get()->setEp(podItr->second);
+        else
+            obj.get()->unsetEp();
+
+        auto svcItr = svcAttr.find("name");
+        if (svcItr != svcAttr.end())
             obj.get()->setSvc(svcItr->second);
-        }
+        else
+            obj.get()->unsetSvc();
     }
 
     {
         auto podItr = epAttr.find("namespace");
-        auto svcItr = svcAttr.find("namespace");
-        if ((podItr != epAttr.end())
-            && (svcItr != svcAttr.end())) {
+        if (podItr != epAttr.end())
             obj.get()->setEpNs(podItr->second);
+        else
+            obj.get()->unsetEpNs();
+
+        auto svcItr = svcAttr.find("namespace");
+        if (svcItr != svcAttr.end())
             obj.get()->setSvcNs(svcItr->second);
-        }
+        else
+            obj.get()->unsetSvcNs();
     }
 }
 
@@ -2101,6 +2145,12 @@ updatePodSvcStatsCounters (const uint64_t &cookie,
         }
     }
     mutator.commit();
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    prometheusManager.addNUpdatePodSvcCounter(isEpToSvc,
+                                              idStr.get(),
+                                              epAttr,
+                                              svcAttr);
+#endif
 }
 
 // Clear pod svc objects
@@ -2117,6 +2167,9 @@ void IntFlowManager::clearPodSvcCounters (const std::string& uuid)
                                agent.getUuid(), uuid);
     }
     mutator.commit();
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    prometheusManager.removePodSvcCounter(isEpToSvc, uuid);
+#endif
 }
 
 // Add/del stats flows between "ep to svc" and "svc to ep"
@@ -3040,13 +3093,19 @@ void IntFlowManager::createStaticFlows() {
         {
             // Drop IP traffic that doesn't have the correct source
             // address
-            FlowBuilder().priority(25).ethType(eth::type::ARP)
+            FlowBuilder().priority(25).cookie(flow::cookie::TABLE_DROP_FLOW)
+                    .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                    .ethType(eth::type::ARP)
                     .action().dropLog(SEC_TABLE_ID)
                     .go(EXP_DROP_TABLE_ID).parent().build(portSec);
-            FlowBuilder().priority(25).ethType(eth::type::IP)
+            FlowBuilder().priority(25).cookie(flow::cookie::TABLE_DROP_FLOW)
+                    .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                    .ethType(eth::type::IP)
                     .action().dropLog(SEC_TABLE_ID)
                     .go(EXP_DROP_TABLE_ID).parent().build(portSec);
-            FlowBuilder().priority(25).ethType(eth::type::IPV6)
+            FlowBuilder().priority(25).cookie(flow::cookie::TABLE_DROP_FLOW)
+                    .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                    .ethType(eth::type::IPV6)
                     .action().dropLog(SEC_TABLE_ID)
                     .go(EXP_DROP_TABLE_ID).parent().build(portSec);
         }
@@ -3218,7 +3277,8 @@ void IntFlowManager::createStaticFlows() {
          */
         for(unsigned table_id = SEC_TABLE_ID; table_id < EXP_DROP_TABLE_ID; table_id++) {
             FlowEntryList dropLogFlow;
-            FlowBuilder().priority(0)
+            FlowBuilder().priority(0).cookie(flow::cookie::TABLE_DROP_FLOW)
+                    .flags(OFPUTIL_FF_SEND_FLOW_REM)
                     .action().dropLog(table_id)
                     .go(EXP_DROP_TABLE_ID)
                     .parent().build(dropLogFlow);
@@ -3592,9 +3652,16 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         switchManager.clearFlows(rdEnfPrefURIId, POL_TABLE_ID);
         idGen.erase(getIdNamespace(RoutingDomain::CLASS_ID), rdURI.toString());
         ctZoneManager.erase(rdURI.toString());
+#ifdef HAVE_PROMETHEUS_SUPPORT
+        prometheusManager.removeRDDropCounter(rdURI.toString());
+#endif
         return;
     }
     LOG(DEBUG) << "Updating routing domain " << rdURI;
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    prometheusManager.addNUpdateRDDropCounter(rdURI.toString(),
+                                              true);
+#endif
 
     FlowEntryList rdRouteFlows;
     FlowEntryList rdNatFlows;
@@ -3668,8 +3735,10 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         if (tunPort != OFPP_NONE && encapType != ENCAP_NONE) {
             actionOutputToEPGTunnel(snr);
         } else {
-            snr.action().dropLog(ROUTE_TABLE_ID)
-                    .go(EXP_DROP_TABLE_ID);
+            snr.cookie(flow::cookie::TABLE_DROP_FLOW)
+               .flags(OFPUTIL_FF_SEND_FLOW_REM)
+               .action().dropLog(ROUTE_TABLE_ID)
+               .go(EXP_DROP_TABLE_ID);
         }
         snr.build(rdRouteFlows);
     }
@@ -3726,8 +3795,10 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                         // For other external networks, output to the tunnel
                         actionOutputToEPGTunnel(snr);
                     } else {
-                        snr.action().dropLog(ROUTE_TABLE_ID)
-                                .go(EXP_DROP_TABLE_ID);
+                        snr.cookie(flow::cookie::TABLE_DROP_FLOW)
+                           .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                           .action().dropLog(ROUTE_TABLE_ID)
+                           .go(EXP_DROP_TABLE_ID);
                     }
                     // else drop the packets
                     snr.build(rdRouteFlows);
@@ -3771,7 +3842,11 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
     // routingDomain and summed up for all the routingDomain to
     // calculate per tenant drop counter.
     switchManager.writeFlow(rdURI.toString(), POL_TABLE_ID,
-             FlowBuilder().priority(1).reg(6, rdId).action()
+             FlowBuilder().priority(1)
+             .cookie((flow::cookie::TABLE_DROP_FLOW|
+                     flow::cookie::RD_POL_DROP_FLOW))
+             .flags(OFPUTIL_FF_SEND_FLOW_REM)
+             .reg(6, rdId).action()
              .dropLog(POL_TABLE_ID)
              .go(EXP_DROP_TABLE_ID).parent());
 }

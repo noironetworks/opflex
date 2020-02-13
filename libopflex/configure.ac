@@ -79,11 +79,19 @@ AC_ARG_WITH(buildversion,
 dnl allow to create final builds with assert()s disabled
 AC_HEADER_ASSERT
 
-dnl Create an option to install communications library separately
-AC_ARG_ENABLE(separate-comms,
-              AC_HELP_STRING([--enable-separate-comms],
-                             [Install raw opflex communications library separately]))
-AM_CONDITIONAL(SEPARATE_COMMS, [test x$enable_separate_comms = 'xyes'])
+dnl Create an option to build with TSAN enabled
+AC_ARG_ENABLE(tsan, AC_HELP_STRING([--enable-tsan], [Enable TSAN]))
+AM_CONDITIONAL(ENABLE_TSAN, [test x$enable_tsan = 'xyes'])
+AM_COND_IF([ENABLE_TSAN],
+          [AC_MSG_NOTICE([TSAN is enabled])],
+          [AC_MSG_NOTICE([TSAN is disabled])])
+
+dnl Create an option to build with ASAN enabled
+AC_ARG_ENABLE(tsan, AC_HELP_STRING([--enable-asan], [Enable ASAN]))
+AM_CONDITIONAL(ENABLE_ASAN, [test x$enable_asan = 'xyes'])
+AM_COND_IF([ENABLE_ASAN],
+          [AC_MSG_NOTICE([ASAN is enabled])],
+          [AC_MSG_NOTICE([ASAN is disabled])])
 
 dnl Create an option to build unit tests only with make check
 AC_ARG_ENABLE(tests-make-all,
