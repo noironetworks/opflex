@@ -626,6 +626,14 @@ public:
                             redir_dest_list_t &redirList, uint8_t &hashParam,
                             uint8_t &hashOpt);
 
+    /**
+     * Manage subnets URI to a set of routing domains URIs map
+     */
+    void addRoutingDomainToSubnets(const opflex::modb::URI& subnets,
+                                   const opflex::modb::URI& rd);
+    void deleteRoutingDomain(const opflex::modb::URI& rd);
+    void deleteSubnets(const opflex::modb::URI& subnets);
+
 private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;
@@ -664,6 +672,7 @@ private:
     typedef std::unordered_map<opflex::modb::URI, RoutingDomainState> rd_map_t;
     typedef std::unordered_map<opflex::modb::URI, L3NetworkState> l3n_map_t;
     typedef std::unordered_map<opflex::modb::URI, uri_set_t> uri_ref_map_t;
+    typedef std::unordered_map<opflex::modb::URI, uri_set_t> subnets_rd_map_t;
 
     /**
      * A map from EPG URI to its state
@@ -690,6 +699,11 @@ private:
      * networks that reference it as a nat EPG
      */
     uri_ref_map_t nat_epg_l3_ext;
+
+    /**
+     * A map from subnets URI to a set of routing domain URIs
+     */
+    subnets_rd_map_t subnets_rd_map;
 
     std::mutex state_mutex;
 
