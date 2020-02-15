@@ -2738,6 +2738,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         switchManager.clearFlows(rdURI.toString(), POL_TABLE_ID);
         idGen.erase(getIdNamespace(RoutingDomain::CLASS_ID), rdURI.toString());
         ctZoneManager.erase(rdURI.toString());
+        agent.getPolicyManager().deleteRoutingDomain(rdURI);
         return;
     }
     LOG(DEBUG) << "Updating routing domain " << rdURI;
@@ -2762,6 +2763,9 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
     for (shared_ptr<RoutingDomainToIntSubnetsRSrc>& subnets_ref :
              subnets_list) {
         optional<URI> subnets_uri = subnets_ref->getTargetURI();
+        if (subnets_uri)
+            agent.getPolicyManager()
+                .addRoutingDomainToSubnets(subnets_uri.get(), rdURI);
         PolicyManager::resolveSubnets(agent.getFramework(),
                                       subnets_uri, intSubnets);
     }
