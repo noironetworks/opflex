@@ -522,6 +522,41 @@ using boost::uuids::basic_random_generator;
         return false;
     }
 
+    bool JsonRpc::setMonitor(const vector<monitor>& mon) {
+        string cmdBuf;
+        if (mon.empty()) {
+            return false;
+        }
+        for (auto m : mon) {
+            cmdBuf += "{\"" + m.table + "\":";
+            cmdBuf += "[{\"columns\":[";
+            for (auto c : m.columns) {
+                cmdBuf += "\"" + c + "\",";
+            }
+            cmdBuf.pop_back();
+            cmdBuf += "]";
+            cmdBuf += ",\"where\":[";
+            for (auto w : m.conditions) {
+                cmdBuf += "[";
+                cmdBuf += "\"" + get<0>(w) + "\",";
+                cmdBuf += "\"" + get<1>(w) + "\",";
+                cmdBuf += "\"" + get<2>(w) + "\"";
+                cmdBuf += "],";
+            }
+            cmdBuf.pop_back();
+            cmdBuf += "]}]}";
+        }
+        LOG(DEBUG) << cmdBuf;
+        Document d;
+        string json = "{\"params\":[\"Open_vSwitch\"," + cmdBuf + "]}";
+        LOG(DEBUG) << json;
+        if (d.Parse(cmdBuf.c_str()).HasParseError()) {
+            LOG(DEBUG) << "JSON parse error";
+        }
+        LOG(DEBUG) << prettyPrintVal(d);
+        return true;
+    }
+
     bool JsonRpc::getOvsdbMirrorConfig(mirror& mir) {
         transData td;
         td.operation = "select";
@@ -1047,6 +1082,7 @@ using boost::uuids::basic_random_generator;
         tl.push_back(td1);
 
         // get bridge port list and add erspan port to it.
+
         BrPortResult res;
         if (!getBridgePortList(bridge, res)) {
             return false;
@@ -1058,11 +1094,13 @@ using boost::uuids::basic_random_generator;
         transData td2;
         td2.operation = "update";
         td2.table = "Bridge";
+
         pSet.clear();
         for (const auto& elem : res.portUuids) {
             tPtr.reset(new TupleData<string>("uuid", elem));
             pSet.emplace(tPtr);
         }
+
         tPtr.reset(new TupleData<string>("named-uuid", uuid_name));
         pSet.emplace(tPtr);
         pTdSet.reset(new TupleDataSet(pSet, "set"));

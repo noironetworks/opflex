@@ -156,6 +156,12 @@ public:
         set<string> portUuids;
     };
 
+    typedef struct monitor_ {
+        string table;
+        set<string> columns;
+        set<tuple<string, string, string>> conditions;
+    } monitor;
+
     /**
      * destructor
      */
@@ -385,6 +391,8 @@ public:
      */
     bool isConnected();
 
+    bool setMonitor(const vector<monitor>& mon);
+
 /*! macro to declare handlers */
 #define DECLARE_HANDLER(F) \
         /** \
@@ -479,7 +487,7 @@ private:
 
 
     template <typename T>
-    inline bool sendRequest(list<T>& tl, uint64_t reqId) {
+    inline bool sendRequest(list<T>& tl, uint64_t reqId, string method = "transact") {
         unique_lock<mutex> lock(pConn->mtx);
         if (!pConn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT*1000),
                 [=]{return pConn->isConnected();})) {
@@ -487,10 +495,35 @@ private:
             return false;
         }
         responseReceived = false;
-        pConn->sendTransaction(tl, reqId);
+        pConn->sendTransaction(tl, reqId, method);
         return true;
     }
 
+    template <typename T>
+    inline bool sendRequest(Document& d, uint64_t reqId, string method = "transact") {
+        unique_lock<mutex> lock(pConn->mtx);
+        if (!pConn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT*1000),
+                [=]{return pConn->isConnected();})) {
+            LOG(DEBUG) << "lock timed out";
+            return false;
+        }
+        responseReceived = false;
+        pConn->sendTransaction(d, reqId, method);
+        return true;
+    }
+
+    template <typename T>
+    inline bool processTransaction(list<T>& tl, uint64_t reqId, string method = "transact") {
+        if (!sendRequest(tl, reqId, method)) {
+            LOG(DEBUG) << "Error sending request";
+            return false;
+        }
+        if (checkForResponse()) {
+            LOG(DEBUG) << "Error getting response";
+            return false;
+        }
+        return true;
+    }
     static void substituteSet(set<string>& s, const unordered_map<string, string>& portMap);
 
     /**

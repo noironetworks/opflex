@@ -41,6 +41,9 @@ public:
     template <typename T>
     void writePair(rapidjson::Writer<T>& writer, shared_ptr<BaseData> bPtr, bool kvPair);
 
+    template <typename T>
+    void monitorWriter(rapidjson::Writer<T> & writer);
+
     transData tData;
 
 };
@@ -50,7 +53,9 @@ public:
  */
 class JsonReq : public OpflexMessage {
 public:
-    JsonReq(const list<transData>& tl, uint64_t reqId);
+    JsonReq(const list<transData>& tl, uint64_t reqId, string method = "transact");
+    JsonReq(const Document& d_, const uint64_t reqId, const string& method = "transact");
+    JsonReq(JsonReq& j);
 
     virtual void serializePayload(yajr::rpc::SendHandler& writer);
 
@@ -75,6 +80,7 @@ public:
 
     list<shared_ptr<TransactReq>> transList;
     uint64_t reqId;
+    Document d;
 };
 
 class OvsdbConnection : public RpcConnection {
@@ -138,9 +144,13 @@ class OvsdbConnection : public RpcConnection {
      * send transaction request
      * @param[in] tl list of transData objects
      * @param[in] reqId request ID
+     * @param[in] method the method for the request.
      */
-    virtual void sendTransaction(const list<transData>& tl, const uint64_t& reqId);
+    virtual void sendTransaction(const list<transData>& tl, const uint64_t reqId,
+            const string& method);
 
+    virtual void sendTransaction(const Document& d, const uint64_t reqId,
+            const string& method);
 
     yajr::Peer* peer;
 

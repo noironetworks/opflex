@@ -56,13 +56,24 @@ void TransactReq::serializePayload(MessageWriter& writer) {
     (*this)(writer);
 }
 
-JsonReq::JsonReq(const list<transData>& tl, uint64_t reqId)
-    : OpflexMessage("transact", REQUEST), reqId(reqId)
+JsonReq::JsonReq(const list<transData>& tl, uint64_t reqId, string method)
+    : OpflexMessage(method, REQUEST), reqId(reqId)
 {
     for (auto& elem : tl) {
         shared_ptr<TransactReq> pTr = make_shared<TransactReq>(elem);
         transList.push_back(pTr);
     }
+}
+
+JsonReq::JsonReq(JsonReq& j) : OpflexMessage(j.method, REQUEST), reqId(j.reqId) {
+    Document::AllocatorType& alloc = d.GetAllocator();
+    d.CopyFrom(j.d, alloc);
+}
+
+JsonReq::JsonReq(const Document& d_, const uint64_t reqId,
+        const string& method) : OpflexMessage(method,  REQUEST), reqId(reqId) {
+    Document::AllocatorType& alloc = d.GetAllocator();
+    d.CopyFrom(d_, alloc);
 }
 
 void JsonReq::serializePayload(yajr::rpc::SendHandler& writer) {
@@ -88,9 +99,18 @@ void OvsdbConnection::send_req_cb(uv_async_t* handle) {
 }
 
 void OvsdbConnection::sendTransaction(const list<transData>& tl,
-        const uint64_t& reqId) {
+        const uint64_t reqId, const string& method) {
     req_cb_data* reqCbd = new req_cb_data();
-    reqCbd->req = new JsonReq(tl, reqId);
+    reqCbd->req = new JsonReq(tl, reqId, method);
+    reqCbd->peer = getPeer();
+    send_req_async.data = (void*)reqCbd;
+    uv_async_send(&send_req_async);
+}
+
+void OvsdbConnection::sendTransaction(const Document& d,
+        const uint64_t reqId, const string& method) {
+    req_cb_data* reqCbd = new req_cb_data();
+    reqCbd->req = new JsonReq(d, reqId, method);
     reqCbd->peer = getPeer();
     send_req_async.data = (void*)reqCbd;
     uv_async_send(&send_req_async);
@@ -303,6 +323,13 @@ bool TransactReq::operator()(rapidjson::Writer<T> & writer) {
     return true;
 }
 
+template <typename T>
+void TransactReq::monitorWriter(rapidjson::Writer<T> & writer) {
+    if (method.compare("monitor_cond") != 0) {
+        return;
+    }
+}
+
 void OvsdbConnection::start() {
 
     LOG(DEBUG) << "Starting .....";
@@ -389,8 +416,26 @@ std::shared_ptr<RpcConnection> createConnection(Transaction& trans) {
     return make_shared<OvsdbConnection>(&trans);
 }
 
+void ResponseDict::init() {
+    uint64_t j=1000;
+    for (unsigned int i=0 ; i < no_of_msgs; i++, j++) {
+        d[i].GetAllocator().Clear();
+        d[i].Parse(response[i].c_str());
+        dict.emplace(j, i);
+    }
+}
+
+ResponseDict& ResponseDict::Instance() {
+    static ResponseDict inst;
+    if (!inst.isInitialized) {
+        inst.init();
+        inst.isInitialized = true;
+    }
+    return inst;
+}
+
 void MockRpcConnection::sendTransaction(const list<transData>& tl,
-        const uint64_t& reqId) {
+        const uint64_t reqId, const string& method) {
     ResponseDict& rDict = ResponseDict::Instance();
     auto itr = rDict.dict.find(reqId);
     if (itr != rDict.dict.end()) {
@@ -400,24 +445,9 @@ void MockRpcConnection::sendTransaction(const list<transData>& tl,
     }
 }
 
-void ResponseDict::init() {
-    uint64_t j=1000;
-    for (unsigned int i=0 ; i < no_of_msgs; i++, j++) {
-        d[i].GetAllocator().Clear();
-        d[i].Parse(response[i].c_str());
-        dict.emplace(j, i);
-    }
+void MockRpcConnection::sendTransaction(const Document& d,
+        const uint64_t reqId, const string& method) {}
 
-}
-
-    ResponseDict& ResponseDict::Instance() {
-        static ResponseDict inst;
-        if (!inst.isInitialized) {
-            inst.init();
-            inst.isInitialized = true;
-        }
-        return inst;
-    }
 
 }
 }

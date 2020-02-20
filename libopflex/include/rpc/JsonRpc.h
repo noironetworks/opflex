@@ -344,8 +344,11 @@ class RpcConnection {
      * @param[in] tl list of transData objects
      * @param[in] reqId request ID
      */
-    virtual void sendTransaction(const list<transData>& tl, const uint64_t& reqId) = 0;
+    virtual void sendTransaction(const list<transData>& tl, const uint64_t reqId,
+            const string& method) = 0;
 
+    virtual void sendTransaction(const Document& d, const uint64_t reqId,
+            const string& method) = 0;
     /**
      * condition variable used for synchronizing JSON/RPC
      * request and response
@@ -390,7 +393,10 @@ public:
      * @param reqId request ID
      */
     void sendTransaction(const list<transData>& tl,
-            const uint64_t& reqId);
+            const uint64_t reqId, const string& method);
+
+    void sendTransaction(const Document& d,
+                const uint64_t reqId, const string& method);
 
     /**
      * destructor
