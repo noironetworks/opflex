@@ -27,7 +27,7 @@ namespace opflexagent {
         }
         jRpc = unique_ptr<JsonRpc>(new JsonRpc());
         jRpc->start();
-        jRpc->connect(agent.getOvsdbIpAddress(), agent.getOvsdbPort());
+        jRpc->connect(agent.getOvsdbSocket());
         if (!jRpc->isConnected()) {
             return false;
         }

@@ -275,14 +275,9 @@ public:
     };
 
     /**
-     * get OVSDB IP address
+     * get OVSDB socket
      */
-    const std::string& getOvsdbIpAddress() { return ovsdbIpAddress; }
-
-    /**
-     * get OVSDB port
-     */
-    const unsigned long getOvsdbPort() { return ovsdbPort; }
+    const std::string& getOvsdbSocket() { return ovsdbSocket; }
 
     /**
      * get OVSDB bridge name
@@ -397,8 +392,7 @@ private:
     // feature flag array
     bool featureFlag[FeatureList::MAX];
     // ovsdb parameters
-    std::string ovsdbIpAddress;
-    unsigned long ovsdbPort;
+    std::string ovsdbSocket;
     std::string ovsdbBridge;
 };
 

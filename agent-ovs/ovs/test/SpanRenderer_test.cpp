@@ -36,8 +36,8 @@ public:
         getRpcConnectionPtr()->start();
     }
 
-    virtual void connect(const string& host, int port) {
-        getRpcConnectionPtr()->connect(host, port);
+    virtual void connect(const string& socket) {
+        getRpcConnectionPtr()->connect(socket);
     }
 
 };
@@ -59,7 +59,7 @@ public:
          }
          jRpc.reset(new MockJsonRpc());
          jRpc->start();
-         jRpc->connect("localhost", 6640);
+         jRpc->connect("socket");
          return true;
     }
 };

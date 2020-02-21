@@ -346,8 +346,8 @@ void OvsdbConnection::connect_cb(uv_async_t* handle) {
     OvsdbConnection* ocp = (OvsdbConnection*)handle->data;
     VLOG(5) << ocp;
     // TODO - don't hardcode socket...this whole thing needs to moved out of libopflex
-    std::string swPath("/usr/local/var/run/openvswitch/db.sock");
-    ocp->peer = yajr::Peer::create(swPath, on_state_change,
+    //std::string swPath("/usr/local/var/run/openvswitch/db.sock");
+    ocp->peer = yajr::Peer::create(ocp->socket, on_state_change,
                                    ocp, loop_selector, false);
     assert(ocp->peer);
 }
@@ -405,9 +405,8 @@ void RpcConnection::handleTransaction(uint64_t reqId,
     pTrans->handleTransaction(reqId, payload);
 }
 
-void OvsdbConnection::connect(string const& hostname, int port) {
-    this->hostname = hostname;
-    this->port = port;
+void OvsdbConnection::connect(string const& socket) {
+    this->socket = socket;
     connect_async.data = this;
     uv_async_send(&connect_async);
 }

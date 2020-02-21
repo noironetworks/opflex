@@ -67,15 +67,23 @@ public:
 
     template <typename T>
     bool operator()(rapidjson::Writer<T> & writer) {
-        writer.StartArray();
-        writer.String("Open_vSwitch");
-        for (shared_ptr<TransactReq> tr : transList) {
-            writer.StartObject();
-            (*tr)(writer);
-            writer.EndObject();
-        }
-        writer.EndArray();
-        return true;
+            writer.StartArray();
+            writer.String("Open_vSwitch");
+            if (d.GetType() != Type::kNullType) {
+                writer.StartArray();
+                writer.String("monid");
+                writer.String("Open_vSwitch");
+                writer.EndArray();
+                d.Accept(writer);
+            } else {
+                for (shared_ptr<TransactReq> tr : transList) {
+                    writer.StartObject();
+                    (*tr)(writer);
+                    writer.EndObject();
+                }
+            }
+            writer.EndArray();
+            return true;
     }
 
     list<shared_ptr<TransactReq>> transList;
@@ -123,10 +131,9 @@ class OvsdbConnection : public RpcConnection {
 
     /**
      * create a tcp connection to peer
-     * @param[in] hostname host name of the peer.
-     * @param[in] port port number to connect to.
+     * @param[in] socket local socket name.
      */
-    void connect(string const& hostname, int port);
+    void connect(string const& socket);
 
     /**
      * callback for invoking connect
@@ -165,8 +172,7 @@ private:
     util::ThreadManager threadManager;
     uv_async_t connect_async;
     uv_async_t send_req_async;
-    string hostname;
-    int port;
+    string socket;
 
 };
 }

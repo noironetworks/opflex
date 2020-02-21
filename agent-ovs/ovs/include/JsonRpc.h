@@ -214,7 +214,7 @@ public:
      * @param[in] hostname host name of the peer.
      * @param[in] port port number to connect to.
      */
-    virtual void connect(string const& hostname, int port);
+    virtual void connect(string const& socket);
 
     /**
      * create mirror
@@ -499,7 +499,6 @@ private:
         return true;
     }
 
-    template <typename T>
     inline bool sendRequest(Document& d, uint64_t reqId, string method = "transact") {
         unique_lock<mutex> lock(pConn->mtx);
         if (!pConn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT*1000),

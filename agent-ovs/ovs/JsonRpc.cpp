@@ -527,8 +527,9 @@ using boost::uuids::basic_random_generator;
         if (mon.empty()) {
             return false;
         }
+        cmdBuf += "{";
         for (auto m : mon) {
-            cmdBuf += "{\"" + m.table + "\":";
+            cmdBuf += "\"" + m.table + "\":";
             cmdBuf += "[{\"columns\":[";
             for (auto c : m.columns) {
                 cmdBuf += "\"" + c + "\",";
@@ -544,8 +545,10 @@ using boost::uuids::basic_random_generator;
                 cmdBuf += "],";
             }
             cmdBuf.pop_back();
-            cmdBuf += "]}]}";
+            cmdBuf += "]}],";
         }
+        cmdBuf.pop_back();
+        cmdBuf += "}";
         LOG(DEBUG) << cmdBuf;
         Document d;
         string json = "{\"params\":[\"Open_vSwitch\"," + cmdBuf + "]}";
@@ -554,6 +557,7 @@ using boost::uuids::basic_random_generator;
             LOG(DEBUG) << "JSON parse error";
         }
         LOG(DEBUG) << prettyPrintVal(d);
+        sendRequest(d, getNextId(), "monitor_cond");
         return true;
     }
 
@@ -1214,8 +1218,8 @@ using boost::uuids::basic_random_generator;
         pConn.reset();
     }
 
-    void JsonRpc::connect(string const& hostname, int port) {
-        pConn->connect(hostname, port);
+    void JsonRpc::connect(const string& socket) {
+        pConn->connect(socket);
     }
 
     bool JsonRpc::isConnected() {
