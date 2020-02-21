@@ -900,7 +900,7 @@ void PolicyManager::updateRedirectDestGroups(uri_set_t &notifyGroup) {
 
 void PolicyManager::addRoutingDomainToSubnets(const URI& subnets,
                                               const URI& rd) {
-    lock_guard<mutex> guard(state_mutex);
+    lock_guard<mutex> guard(subnets_rd_mutex);
 
     uri_set_t& rdset = subnets_rd_map[subnets];
     if (rdset.find(rd) != rdset.end())
@@ -910,7 +910,7 @@ void PolicyManager::addRoutingDomainToSubnets(const URI& subnets,
 }
 
 void PolicyManager::deleteRoutingDomain(const URI& rd) {
-    lock_guard<mutex> guard(state_mutex);
+    lock_guard<mutex> guard(subnets_rd_mutex);
 
     auto it1 = subnets_rd_map.begin();
     while (it1 != subnets_rd_map.end()) {
@@ -928,7 +928,7 @@ void PolicyManager::deleteRoutingDomain(const URI& rd) {
 }
 
 void PolicyManager::deleteSubnets(const URI& subnets) {
-    lock_guard<mutex> guard(state_mutex);
+    lock_guard<mutex> guard(subnets_rd_mutex);
 
     auto it = subnets_rd_map.find(subnets);
 
