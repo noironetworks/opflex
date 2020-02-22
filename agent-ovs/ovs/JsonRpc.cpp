@@ -558,6 +558,11 @@ using boost::uuids::basic_random_generator;
         }
         LOG(DEBUG) << prettyPrintVal(d);
         sendRequest(d, getNextId(), "monitor_cond");
+        if (!checkForResponse()) {
+            LOG(DEBUG) << "Error getting response";
+            return false;
+        }
+        LOG(DEBUG) << prettyPrintVal(pResp->payload);
         return true;
     }
 
