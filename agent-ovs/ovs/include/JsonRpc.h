@@ -175,6 +175,13 @@ public:
                 const rapidjson::Document& payload);
 
     /**
+     * call back for notification
+     * @param[in] remId request ID of the request for this notification.
+     * @param[in] payload rapidjson::Document reference of the response body.
+     */
+    void handleNotification(const Value& remId,
+                const rapidjson::Document& payload);
+    /**
      * update the port list for the bridge
      * @param[in] ports a tuple of bridge name a port UUIDs
      * @param[in] port port UUID to be added or removed.

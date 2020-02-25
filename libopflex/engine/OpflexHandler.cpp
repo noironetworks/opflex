@@ -369,5 +369,24 @@ void InbErr<&yajr::rpc::method::monitor_cond>::process() const {
     VLOG(5) << "calling InbErr monitor_cond";
 }
 
+template<>
+void InbRes<&yajr::rpc::method::update2>::process() const {
+    VLOG(5) << "calling InbRes update2";
+    ((opflex::engine::internal::OvsdbConnection*)getPeer()->getData())
+            ->handleTransaction(getLocalId().id_, (rapidjson::Document&)getPayload());
+}
+
+template<>
+void InbReq<&yajr::rpc::method::update2>::process() const {
+    VLOG(5) << "calling InbReq update2";
+    ((opflex::engine::internal::OvsdbConnection*)getPeer()->getData())
+            ->handleNotification(getRemoteId(), (rapidjson::Document&)getPayload());
+}
+
+template<>
+void InbErr<&yajr::rpc::method::update2>::process() const {
+    VLOG(5) << "calling InbErr update2";
+}
+
 } /* namespace rpc */
 } /* namespace yajr */

@@ -50,6 +50,7 @@ MessageFactory::InboundMessage(
     }
 
     /* we don't accept any notifications */
+    /*
     if (!doc.HasMember("id") || doc["id"].IsNull()) {
         LOG(ERROR)
             << &peer
@@ -59,7 +60,7 @@ MessageFactory::InboundMessage(
         ;
         goto error;
     }
-
+*/
     {
         /* Stale comment below. We used not to check that doc.HasMember("id"),
          * and the above branch was performed after the below aliasing of the

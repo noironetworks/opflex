@@ -284,6 +284,11 @@ public:
      */
     virtual void handleTransaction(uint64_t reqId,
             const rapidjson::Document& payload) = 0;
+    /**
+     * handle notification
+     */
+    virtual void handleNotification(const Value& remId,
+            const rapidjson::Document& payload) = 0;
 };
 
 /**
@@ -302,6 +307,12 @@ class RpcConnection {
      * @param[in] payload rapidjson::Value reference of the response body.
      */
     virtual void handleTransaction(uint64_t reqId,
+                const rapidjson::Document& payload);
+
+    /**
+     * call back for notification
+     */
+    virtual void handleNotification(const Value& remId,
                 const rapidjson::Document& payload);
 
     /**

@@ -131,7 +131,8 @@ void getValue(const Document& val, const list<string>& idx, Value& result) {
     LOG(DEBUG4) << ss.rdbuf();
     Document::AllocatorType& alloc = ((Document&)val).GetAllocator();
     Value tmpVal(Type::kNullType);
-    if (val == NULL || !val.IsArray()) {
+    //if (val == NULL || !val.IsArray()) {
+    if (val == NULL) {
         result = tmpVal;
         return;
     }
@@ -403,6 +404,12 @@ uv_loop_t* OvsdbConnection::loop_selector(void* data) {
 void RpcConnection::handleTransaction(uint64_t reqId,
             const rapidjson::Document& payload) {
     pTrans->handleTransaction(reqId, payload);
+}
+
+void RpcConnection::handleNotification(const Value& remId,
+            const rapidjson::Document& payload) {
+    LOG(DEBUG) << "got notification";
+    pTrans->handleNotification(remId, payload);
 }
 
 void OvsdbConnection::connect(string const& socket) {

@@ -54,6 +54,12 @@ using boost::uuids::basic_random_generator;
         pConn->ready.notify_all();
     }
 
+    void JsonRpc::handleNotification(const Value& remId,
+            const Document& payload) {
+        LOG(DEBUG) << prettyPrintVal(remId);
+        LOG(DEBUG) << prettyPrintVal(payload);
+    }
+
      bool JsonRpc::createNetFlow(const string& brUuid, const string& target, const int& timeout, bool addidtointerface ) {
         transData td1;
         td1.operation = "insert";
@@ -563,6 +569,10 @@ using boost::uuids::basic_random_generator;
             return false;
         }
         LOG(DEBUG) << prettyPrintVal(pResp->payload);
+        Value val;
+        list<string> ids = {"port"};
+        opflex::engine::internal::getValue(pResp->payload, ids,val);
+        LOG(DEBUG) << prettyPrintVal(val);
         return true;
     }
 

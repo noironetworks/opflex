@@ -40,6 +40,7 @@ namespace yajr {
             extern MethodName state_report;
             extern MethodName transact;
             extern MethodName monitor_cond;
+            extern MethodName update2;
             extern MethodName custom;
 
         } /* yajr::rpc::method namespace */

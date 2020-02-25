@@ -292,6 +292,7 @@ MethodName method::endpoint_update("endpoint_update");
 MethodName method::state_report("state_report");
 MethodName method::transact("transact");
 MethodName method::monitor_cond("monitor_cond");
+MethodName method::update2("update2");
 MethodName method::custom("custom");
 
 } /* yajr::rpc namespace */
