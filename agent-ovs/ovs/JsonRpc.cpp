@@ -540,7 +540,8 @@ using boost::uuids::basic_random_generator;
             for (auto c : m.columns) {
                 cmdBuf += "\"" + c + "\",";
             }
-            cmdBuf.pop_back();
+            if (cmdBuf.back() == ',')
+                cmdBuf.pop_back();
             cmdBuf += "]";
             cmdBuf += ",\"where\":[";
             for (auto w : m.conditions) {
@@ -550,7 +551,8 @@ using boost::uuids::basic_random_generator;
                 cmdBuf += "\"" + get<2>(w) + "\"";
                 cmdBuf += "],";
             }
-            cmdBuf.pop_back();
+            if (cmdBuf.back() == ',')
+                cmdBuf.pop_back();
             cmdBuf += "]}],";
         }
         cmdBuf.pop_back();
@@ -570,9 +572,23 @@ using boost::uuids::basic_random_generator;
         }
         LOG(DEBUG) << prettyPrintVal(pResp->payload);
         Value val;
-        list<string> ids = {"port"};
+        list<string> ids = {"Port"};
         opflex::engine::internal::getValue(pResp->payload, ids,val);
         LOG(DEBUG) << prettyPrintVal(val);
+        // add each table in the monitors document
+        monitors.SetObject();
+        for (auto m : mon) {
+            list<string> ids = { m.table };
+            Value table;
+            opflex::engine::internal::getValue(pResp->payload, ids, table);
+            if (table.GetType() != Type::kObjectType) {
+                LOG(WARNING) << "table " << m.table << " has no data, skipping";
+                continue;
+            }
+            Value tableName(m.table.c_str(), m.table.size(), dm.GetAllocator());
+            monitors.AddMember(tableName, table, dm.GetAllocator());
+        }
+        LOG(DEBUG) << prettyPrintVal(monitors);
         return true;
     }
 

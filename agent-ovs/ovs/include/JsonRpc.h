@@ -561,6 +561,8 @@ private:
     shared_ptr<RpcConnection> pConn;
     shared_ptr<Response> pResp;
     uint64_t id = 0;
+    Document dm;
+    Value monitors;
 };
 }
 #endif // OPFLEX_JSONRPC_H
