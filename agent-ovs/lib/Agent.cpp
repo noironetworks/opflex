@@ -325,7 +325,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
 
     if (statMode == StatMode::SIM) {
         LOG(INFO) << "Simulation of stats enabled";
-        Agent::StatProps statProps;
+        Agent::StatProps statProps{};
         statProps.interval = 30;
         setSimStatProperties(OPFLEX_STATS_INTERFACE_SETTING, OPFLEX_STATS_INTERFACE_INTERVAL,
                              properties, statProps);
@@ -496,7 +496,11 @@ void Agent::start() {
         pSimStats = std::unique_ptr<SimStats>(new SimStats(*this));
         pSimStats->start();
         policyManager.registerListener(&(*pSimStats));
+    }
 
+    if (statMode == StatMode::OFF) {
+        LOG(INFO) << "Disable stats reporting completely";
+        framework.disableObservableReporting();
     }
 }
 

@@ -888,6 +888,11 @@ public:
      */
      virtual void resetAllPeers();
 
+     /**
+      * Disable reporting of all observables
+      */
+     void disableObservableReporting();
+
 private:
     /**
      * Get the object store that provides access to the managed object

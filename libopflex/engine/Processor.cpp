@@ -59,6 +59,7 @@ Processor::Processor(ObjectStore* store_, ThreadManager& threadManager_)
       serializer(store_),
       threadManager(threadManager_),
       pool(*this, threadManager_), nextXid(FIRST_XID),
+      reportObservables(true),
       processingDelay(DEFAULT_PROC_DELAY),
       retryDelay(DEFAULT_RETRY_DELAY),
       proc_active(false) {
@@ -296,6 +297,10 @@ bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
     }
 }
 
+void Processor::disableObservableReporting() {
+    reportObservables = false;
+}
+
 bool Processor::declareObj(ClassInfo::class_type_t type, const item& i,
                            uint64_t& newexp) {
     uint64_t curTime = now(proc_loop);
@@ -313,7 +318,7 @@ bool Processor::declareObj(ClassInfo::class_type_t type, const item& i,
         return true;
         break;
     case ClassInfo::OBSERVABLE:
-        if (isParentSyncObject(i)) {
+        if (isParentSyncObject(i) && reportObservables) {
             LOG(DEBUG3) << "Declaring local observable " << i.uri;
             i.details->resolve_time = curTime;
             vector<reference_t> refs;

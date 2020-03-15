@@ -314,13 +314,13 @@ private:
 
     std::string uuid;
 
-    StatMode getStatModeFromString(const std::string& mode);
+    static StatMode getStatModeFromString(const std::string& mode);
     int setInterval(int& upd_interval);
 
-    void setSimStatProperties(const std::string& enabled_prop,
-                              const std::string& interval_prop,
-                              const boost::property_tree::ptree& properties,
-                              Agent::StatProps& props);
+    static void setSimStatProperties(const std::string& enabled_prop,
+                                     const std::string& interval_prop,
+                                     const boost::property_tree::ptree& properties,
+                                     Agent::StatProps& props);
     long contractInterval;
     long securityGroupInterval;
     long interfaceInterval;

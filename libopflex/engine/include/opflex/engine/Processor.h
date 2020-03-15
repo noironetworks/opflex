@@ -226,6 +226,11 @@ public:
      */
     void setTunnelMac(const opflex::modb::MAC &mac);
 
+    /**
+     * Disable reporting of all observables
+     */
+    void disableObservableReporting();
+
 private:
     /**
      * The system store client
@@ -251,6 +256,11 @@ private:
      * Request ID counter
      */
     uint64_t nextXid;
+
+    /**
+      * Should reporting of observables be completely disabled.
+      */
+     bool reportObservables;
 
     /**
      * The status of items in the MODB with respect to the opflex
