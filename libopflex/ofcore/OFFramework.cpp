@@ -280,5 +280,8 @@ void OFFramework::clearTLMutator() {
     uv_key_set(&pimpl->mutator_key, NULL);
 }
 
+void OFFramework::disableObservableReporting() {
+    pimpl->processor.disableObservableReporting();
+}
 } /* namespace ofcore */
 } /* namespace opflex */
