@@ -3776,10 +3776,8 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         if (tunPort != OFPP_NONE && encapType != ENCAP_NONE) {
             actionOutputToEPGTunnel(snr);
         } else {
-            snr.cookie(flow::cookie::TABLE_DROP_FLOW)
-               .flags(OFPUTIL_FF_SEND_FLOW_REM)
-               .action().dropLog(ROUTE_TABLE_ID)
-               .go(EXP_DROP_TABLE_ID);
+            LOG(ERROR) << "TUNNEL PORT " << tunPort
+                       << " ENCAP " << encapType;
         }
         snr.build(rdRouteFlows);
     }
