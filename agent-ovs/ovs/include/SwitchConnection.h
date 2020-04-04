@@ -63,6 +63,12 @@ public:
 class SwitchConnection {
 public:
     /**
+     * In containers, sometimes with OVS restarts, agent fails to
+     * connect to OVS with the failure being ENOENT, set the
+     * maximum value for such retries. Amounts to 30s.
+     */
+    static const uint32_t maxSocketFileMissingFailure = 6;
+    /**
      * Construct a new switch connection to the given switch name
      * @param swName the name of the OVS bridge to connect to
      */
