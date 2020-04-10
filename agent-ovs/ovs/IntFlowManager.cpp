@@ -3554,6 +3554,37 @@ handleLearningBridgeVlanUpdate(LearningBridgeIface::vlan_range_t vlan) {
                             LEARN_TABLE_ID, learnFlows);
 }
 
+static void flowsReverseSnat(FlowEntryList& revSnatFlows,
+                             bool local,
+                             uint32_t snatPort,
+                             const uint8_t* dmac,
+                             const address& snatIp,
+                             uint8_t protocol,
+                             const Mask& m,
+                             const Snat& as) {
+    FlowBuilder maskedFlow;
+    if (local)
+        maskedFlow.priority(200);
+    else
+        maskedFlow.priority(199);
+    maskedFlow.inPort(snatPort)
+              .ethDst(dmac)
+              .ipDst(snatIp)
+              .proto(protocol)
+              .tpDst(m.first, m.second);
+    if (as.getIfaceVlan())
+        maskedFlow.vlan(as.getIfaceVlan().get());
+    if (local) {
+        if (as.getIfaceVlan())
+            maskedFlow.action().popVlan();
+        maskedFlow.action().go(IntFlowManager::SNAT_REV_TABLE_ID);
+    } else {
+        maskedFlow.action().ethDst(dmac)
+                           .output(OFPP_IN_PORT);
+    }
+    maskedFlow.build(revSnatFlows);
+}
+
 void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
     LOG(DEBUG) << "Updating snat " << snatUuid;
 
@@ -3595,14 +3626,22 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
     protoVec.push_back(17);
     uint8_t dmac[6];
     uint8_t ifcMac[6];
+    uint8_t svcMac[6];
     bool hasIfcMac = as.getInterfaceMAC() != boost::none;
+    bool hasSvcMac = as.getServiceMAC() != boost::none;
 
     if (!hasIfcMac) {
         LOG(ERROR) << "missing inteface mac in snat "
                    << as;
         return;
     }
+    if (!hasSvcMac) {
+        LOG(ERROR) << "missing service mac in snat "
+                   << as;
+        return;
+    }
     as.getInterfaceMAC().get().toUIntArray(ifcMac);
+    as.getServiceMAC().get().toUIntArray(svcMac);
 
     /**
      * Either redirect to snat rev table for local snat processing or
@@ -3628,27 +3667,10 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
                 RangeMask::getMasks(pr.start, pr.end, snatMasks);
                 for (const Mask& m : snatMasks) {
                     for (auto protocol : protoVec) {
-                        FlowBuilder maskedFlow;
-                        if (local)
-                            maskedFlow.priority(200);
-                        else
-                            maskedFlow.priority(199);
-                        maskedFlow.inPort(snatPort)
-                                  .ethDst(ifcMac)
-                                  .ipDst(addr)
-                                  .proto(protocol)
-                                  .tpDst(m.first, m.second);
-                        if (as.getIfaceVlan())
-                            maskedFlow.vlan(as.getIfaceVlan().get());
-                        if (local) {
-                            if (as.getIfaceVlan())
-                                maskedFlow.action().popVlan();
-                            maskedFlow.action().go(SNAT_REV_TABLE_ID);
-                        } else {
-                            maskedFlow.action().ethDst(dmac)
-                                               .output(OFPP_IN_PORT);
-                        }
-                        maskedFlow.build(toSnatFlows);
+                        flowsReverseSnat(toSnatFlows, local, snatPort,
+                                         ifcMac, addr, protocol, m, as);
+                        flowsReverseSnat(toSnatFlows, local, snatPort,
+                                         svcMac, addr, protocol, m, as);
                     }
                 }
             }

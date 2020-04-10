@@ -129,11 +129,38 @@ public:
         this->interfaceMac = interfaceMac;
     }
 
+
     /**
      * Unset the interface MAC address for snat
      */
     void unsetInterfaceMAC() {
         interfaceMac = boost::none;
+    }
+
+    /**
+     * Get the MAC address for snat service
+     *
+     * @return the snat service mac address
+     */
+    const boost::optional<opflex::modb::MAC>& getServiceMAC() const {
+        return serviceMac;
+    }
+
+    /**
+     * Set the service MAC address for snat
+     *
+     * @param serviceMac the MAC address
+     */
+    void setServiceMAC(const opflex::modb::MAC& serviceMac) {
+        this->serviceMac = serviceMac;
+    }
+
+
+    /**
+     * Unset the service MAC address for snat
+     */
+    void unsetServiceMAC() {
+        serviceMac = boost::none;
     }
 
     /**
@@ -279,6 +306,7 @@ private:
     std::string interfaceName;
     bool local;
     boost::optional<opflex::modb::MAC> interfaceMac;
+    boost::optional<opflex::modb::MAC> serviceMac;
     boost::optional<uint16_t> ifaceVlan;
     std::vector<std::string> dest;
     boost::optional<uint16_t> zone;

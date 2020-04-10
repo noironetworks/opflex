@@ -54,6 +54,7 @@ void FSSnatSource::updated(const fs::path& filePath) {
     static const std::string LOCAL("local");
     static const std::string INTERFACE_NAME("interface-name");
     static const std::string INTERFACE_MAC("interface-mac");
+    static const std::string SERVICE_MAC("service-mac");
     static const std::string INTERFACE_VLAN("interface-vlan");
     static const std::string DEST("dest");
     static const std::string ZONE("zone");
@@ -91,6 +92,11 @@ void FSSnatSource::updated(const fs::path& filePath) {
              properties.get_optional<string>(INTERFACE_MAC);
         if (ifaceMac)
             newsnat.setInterfaceMAC(opflex::modb::MAC(ifaceMac.get()));
+
+        optional<string> svcMac =
+             properties.get_optional<string>(SERVICE_MAC);
+        if (svcMac)
+            newsnat.setServiceMAC(opflex::modb::MAC(svcMac.get()));
 
         optional<ptree&> nw_dsts =
             properties.get_child_optional(DEST);

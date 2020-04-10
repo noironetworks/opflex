@@ -28,6 +28,8 @@ std::ostream & operator<<(std::ostream &os, const Snat& s) {
         os << ",zone=" << s.getZone().get();
     if (s.getInterfaceMAC())
         os << ",interface-mac=" << s.getInterfaceMAC().get();
+    if (s.getServiceMAC())
+        os << ",service-mac=" << s.getServiceMAC().get();
     if (s.getIfaceVlan())
         os << ",interface-vlan=" << s.getIfaceVlan().get();
 
