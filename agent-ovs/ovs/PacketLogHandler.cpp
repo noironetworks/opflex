@@ -91,12 +91,12 @@ void LocalClient::run() {
 bool PacketLogHandler::startListener()
 {
     try {
-            socketListener.reset(new UdpServer(*this, server_io, addr, port));
-        } catch (boost::system::system_error& e) {
-            LOG(ERROR) << "Could not bind to socket: "
-                         << e.what();
-            return false;
-        }
+        socketListener.reset(new UdpServer(*this, server_io, addr, port));
+    } catch (boost::system::system_error& e) {
+        LOG(ERROR) << "Could not bind to socket: "
+                     << e.what();
+        return false;
+    }
     pktDecoder.configure();
     if(!socketListener->startListener()) {
         return false;
