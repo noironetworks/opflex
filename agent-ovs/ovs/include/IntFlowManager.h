@@ -654,9 +654,7 @@ private:
                                    const bool &isEpToSvc,
                                    const string& idStr,
                                    const uint64_t &pkts,
-                                   const uint64_t &bytes,
-                                   const attr_map &ep_attr_map,
-                                   const attr_map &svc_attr_map);
+                                   const uint64_t &bytes);
 
     /*
      * Update svc counter objects
