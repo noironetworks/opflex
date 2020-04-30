@@ -316,7 +316,10 @@ void AccessFlowManagerFixture::initExpStatic() {
     ADDF(Bldr().table(OUT).priority(1).isMdAct(0)
          .actions().out(OUTPORT).done());
     ADDF(Bldr().table(OUT).priority(1)
-         .isMdAct(flow::meta::access_out::PUSH_VLAN)
+         .isMdAct(opflexagent::flow::meta::access_out::PUSH_VLAN)
+         .actions().pushVlan().move(FD12, VLAN).out(OUTPORT).done());
+    ADDF(Bldr().table(OUT).priority(1)
+         .isMdAct(opflexagent::flow::meta::access_out::UNTAGGED_AND_PUSH_VLAN)
          .actions().out(OUTPORT).pushVlan()
          .move(FD12, VLAN).out(OUTPORT).done());
     ADDF(Bldr().table(OUT).priority(1)
@@ -354,7 +357,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
              .load(OUTPORT, uplink)
              .mdAct(flow::meta::access_out::POP_VLAN)
              .go(OUT).done());
-        if (ep->getAccessIfaceVlan()) {
+        if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
             ADDF(Bldr()
                  .table(GRP).priority(200).udp().in(access)
                  .isVlanTci("0x0000/0x1fff")
@@ -373,7 +376,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
              .load(OUTPORT, uplink)
              .mdAct(flow::meta::access_out::POP_VLAN)
              .go(OUT).done());
-        if (ep->getAccessIfaceVlan()) {
+        if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
             ADDF(Bldr()
                  .table(GRP).priority(200).udp6().in(access)
                  .isVlanTci("0x0000/0x1fff")
@@ -400,12 +403,14 @@ void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
              .load(OUTPORT, uplink)
              .mdAct(flow::meta::access_out::POP_VLAN)
              .go(OUT_POL).done());
-        ADDF(Bldr().table(GRP).priority(99).in(access)
-             .isVlanTci("0x0000/0x1fff")
-             .actions()
-             .load(RD, zoneId).load(SEPG, 1)
-             .load(OUTPORT, uplink)
-             .go(OUT_POL).done());
+        if (ep->isAccessAllowUntagged()) {
+            ADDF(Bldr().table(GRP).priority(99).in(access)
+                 .isVlanTci("0x0000/0x1fff")
+                 .actions()
+                 .load(RD, zoneId).load(SEPG, 1)
+                 .load(OUTPORT, uplink)
+                 .go(OUT_POL).done());
+        }
         ADDF(Bldr().table(GRP).priority(100).in(uplink)
              .actions().load(RD, zoneId).load(SEPG, 1).load(OUTPORT, access)
              .load(FD, ep->getAccessIfaceVlan().get())
