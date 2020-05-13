@@ -105,7 +105,7 @@ AM_COND_IF([ENABLE_GRPC],
 # Enable prometheus support, disabled by default
 AC_ARG_ENABLE(prometheus,
               AC_HELP_STRING([--enable-prometheus], [Enable Prometheus support]))
-AM_CONDITIONAL(ENABLE_PROMETHEUS, [test x$enable_prometheus = 'xyes'])
+AM_CONDITIONAL(ENABLE_PROMETHEUS, [test x$enable_prometheus != 'xno'])
 AM_COND_IF([ENABLE_PROMETHEUS],
           [AC_MSG_NOTICE([PROMETHEUS is enabled])],
           [AC_MSG_NOTICE([PROMETHEUS is disabled])])
