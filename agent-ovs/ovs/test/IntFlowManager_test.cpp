@@ -40,6 +40,7 @@
 #include "FlowManagerFixture.h"
 #include "FlowBuilder.h"
 #include "ovs-shim.h"
+#include "eth.h"
 
 using namespace boost::assign;
 using namespace opflex::modb;
@@ -61,6 +62,16 @@ using boost::asio::io_service;
 using boost::optional;
 
 BOOST_AUTO_TEST_SUITE(IntFlowManager_test)
+
+class RawFlowManagerFixture : public FlowManagerFixture {
+public:
+    RawFlowManagerFixture():FlowManagerFixture() {
+        expTables.resize(2);
+        switchManager.setMaxFlowTables(2);
+    }
+    virtual ~RawFlowManagerFixture() {
+    }
+};
 
 class BaseIntFlowManagerFixture : public FlowManagerFixture {
 public:
@@ -3885,4 +3896,20 @@ BOOST_FIXTURE_TEST_CASE(extSvi2, VxlanIntFlowManagerFixture) {
     WAIT_FOR_TABLES("delete_final", 500);
 }
 
+BOOST_FIXTURE_TEST_CASE(testFlagUpdate, RawFlowManagerFixture) {
+    start();
+    FlowBuilder fb1,fb2;
+    FlowEntryList elBase,elMod;
+    string base_flow = Bldr().table(1).priority(0).ip().actions().outPort(1).done();
+    fb1.table(1).priority(0).ethType(eth::type::IP).action().output(1).parent().build(elBase);
+    fb2.table(1).priority(0).ethType(eth::type::IP).flags(OFPUTIL_FF_SEND_FLOW_REM).action().output(1).parent().build(elMod);
+    string flow_with_flag = Bldr(SEND_FLOW_REM).table(1).priority(0).ip().actions().outPort(1).done();
+    ADDF(base_flow);
+    switchManager.writeFlow("Test1", 1, elBase);
+    WAIT_FOR_TABLES("base_flow", 500)
+    exec.Expect(FlowEdit::MOD, flow_with_flag);
+    switchManager.writeFlow("Test1", 1, elMod);
+    WAIT_FOR(exec.IsEmpty(), 500)
+    stop();
+}
 BOOST_AUTO_TEST_SUITE_END()
