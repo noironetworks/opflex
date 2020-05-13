@@ -257,36 +257,39 @@ int main(int argc, char** argv) {
 
     // Parse command line options
     po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help,h", "Print this help message")
-        ("level", po::value<string>()->default_value("warning"),
-         "Use the specified log level (default warning).")
-        ("no_ssl", "Disable SSL in OpFlex connection")
-        ("host", po::value<string>()->default_value("10.0.0.30"),
-         "OpFlex peer host name")
-        ("port", po::value<int>()->default_value(8009),
-         "OpFlex peer port")
-        ("domain", po::value<string>()->
-         default_value("comp/prov-OpenStack/"
-                       "ctrlr-[stress]-stress/sw-InsiemeLSOid"),
-         "OpFlex domain")
-        ("agents,a", po::value<uint32_t>()->default_value(128),
-         "Number of agents to create")
-        ("endpoints,e", po::value<uint32_t>()->default_value(50),
-         "Number of endpoints per agent to create")
-        ("epgroups,g", po::value<uint32_t>()->default_value(50),
-         "Number of EP groups to use for endpoints")
-        ("stats_interval,s", po::value<uint32_t>()->default_value(10000),
-         "Interval in milliseconds between updating stats. 0 to disable.")
-        ("identity_template", po::value<string>()->
-         default_value("stress_agent_<agent_id>"),
-         "Template for OpFlex agent identities")
-        ("epg_template", po::value<string>()->
-         default_value("/PolicyUniverse/PolicySpace/common/GbpEpGroup/"
-                       "stress%7cstress_<group_id>/"),
-         "Template for EPG URIs for endpoints")
-        ;
-
+    try {
+        desc.add_options()
+            ("help,h", "Print this help message")
+            ("level", po::value<string>()->default_value("warning"),
+             "Use the specified log level (default warning).")
+            ("no_ssl", "Disable SSL in OpFlex connection")
+            ("host", po::value<string>()->default_value("10.0.0.30"),
+             "OpFlex peer host name")
+            ("port", po::value<int>()->default_value(8009),
+             "OpFlex peer port")
+            ("domain", po::value<string>()->
+                 default_value("comp/prov-OpenStack/"
+                               "ctrlr-[stress]-stress/sw-InsiemeLSOid"),
+             "OpFlex domain")
+            ("agents,a", po::value<uint32_t>()->default_value(128),
+             "Number of agents to create")
+            ("endpoints,e", po::value<uint32_t>()->default_value(50),
+             "Number of endpoints per agent to create")
+            ("epgroups,g", po::value<uint32_t>()->default_value(50),
+             "Number of EP groups to use for endpoints")
+            ("stats_interval,s", po::value<uint32_t>()->default_value(10000),
+             "Interval in milliseconds between updating stats. 0 to disable.")
+            ("identity_template", po::value<string>()->
+                 default_value("stress_agent_<agent_id>"),
+             "Template for OpFlex agent identities")
+            ("epg_template", po::value<string>()->
+                 default_value("/PolicyUniverse/PolicySpace/common/GbpEpGroup/"
+                               "stress%7cstress_<group_id>/"),
+             "Template for EPG URIs for endpoints");
+    } catch (const boost::bad_lexical_cast& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
     std::string level_str;
     uint32_t num_agents;
     uint32_t num_endpoints;
@@ -324,10 +327,10 @@ int main(int argc, char** argv) {
         }
     } catch (const po::unknown_option& e) {
         std::cerr << e.what() << std::endl;
-        return 1;
+        return 2;
     } catch (const std::bad_cast& e) {
         std::cerr << e.what() << std::endl;
-        return 2;
+        return 3;
     }
 
     LOG(INFO) << "Starting " << num_agents << " agents with domain "
@@ -347,7 +350,7 @@ int main(int argc, char** argv) {
 
     if (agents.size() == 0) {
         LOG(opflexagent::ERROR) << "No agents created";
-        return 3;
+        return 4;
     }
 
     opflexagent::initLogging(level_str, false, "");
@@ -368,46 +371,55 @@ int main(int argc, char** argv) {
             }
         });
 
-    StatsSimulator stats(agents, stats_interval);
+    try {
+        StatsSimulator stats(agents, stats_interval);
 
-    for (size_t i = 0; i < agents.size(); i++) {
-        LOG(INFO) << "Starting agent " << (i+1);
-        TestAgent& a = agents.at(i);
-        a.agent->getPolicyManager().registerListener(&stats);
-        a.agent->start();
-        if (use_ssl) {
-            a.agent->getFramework().enableSSL("/etc/ssl/certs/", false);
+        for (size_t i = 0; i < agents.size(); i++) {
+            LOG(INFO) << "Starting agent " << (i + 1);
+            TestAgent& a = agents.at(i);
+            a.agent->getPolicyManager().registerListener(&stats);
+            a.agent->start();
+            if (use_ssl) {
+                a.agent->getFramework().enableSSL("/etc/ssl/certs/", false);
+            }
+            a.agent->getFramework().addPeer(host, port);
         }
-        a.agent->getFramework().addPeer(host, port);
+
+        stats.start();
+
+        uint32_t epId = 0;
+        uint32_t groupId = 0;
+        for (uint32_t i = 0; i < num_agents; i++) {
+            opflexagent::EndpointSource source(&agents[i].agent->
+                getEndpointManager());
+
+            for (uint32_t j = 0; j < num_endpoints; j++) {
+                try {
+                    auto ep = createEndpoint(epId, groupId, epg_template);
+                    LOG(INFO) << "Creating " << ep << " on agent " << (i + 1);
+                    source.updateEndpoint(ep);
+                } catch (const std::out_of_range& e) {
+                    LOG(ERROR) << "Unable to create endpoint for agent " << (1 + 1) << " " << e.what();
+                }
+
+                epId += 1;
+                groupId = (groupId + 1) % num_epgs;
+            }
+        }
+
+        signal_thread.join();
+
+        stats.stop();
+    } catch(...) {
+        LOG(ERROR) << "Unexpected failure while initializing simulator";
     }
 
-    stats.start();
-
-    uint32_t epId = 0;
-    uint32_t groupId = 0;
-    for (uint32_t i = 0; i < num_agents; i++) {
-        opflexagent::EndpointSource source(&agents[i].agent->
-                                           getEndpointManager());
-
-        for (uint32_t j = 0; j < num_endpoints; j++) {
-            auto ep = createEndpoint(epId, groupId, epg_template);
-            LOG(INFO) << "Creating " << ep << " on agent " << (i+1);
-            source.updateEndpoint(ep);
-
-            epId += 1;
-            groupId = (groupId + 1) % num_epgs;
-        }
-    }
-
-    signal_thread.join();
-
-    stats.stop();
     for (TestAgent& a : agents) {
         try {
             a.agent->stop();
         } catch (const std::runtime_error& e) {
             std::cerr << e.what() << std::endl;
-            return 4;
+            return 5;
         }
     }
 

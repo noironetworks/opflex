@@ -145,7 +145,7 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
         struct nd_opt_prefix_info* prefix = (struct nd_opt_prefix_info*)
             b.push_zeros(sizeof(struct nd_opt_prefix_info));
         struct nd_opt_prefix_info tmpPI;
-        memset(&tmpPI, 0, sizeof(tmpRI));
+        memset(&tmpPI, 0, sizeof(tmpPI));
         tmpPI.nd_opt_pi_type = ND_OPT_PREFIX_INFORMATION;
         tmpPI.nd_opt_pi_len = 4;
         tmpPI.nd_opt_pi_prefix_len = sn->getPrefixLen(64);
