@@ -270,7 +270,8 @@ void TableState::diffSnapshot(const FlowEntryList& oldEntries,
             if(newe->entry->cookie != olde->entry->cookie) {
                 diffs.add(FlowEdit::DEL, olde);
                 diffs.add(FlowEdit::ADD, newe);
-            } else if (!newe->actionEq(olde.get())) {
+            } else if (!newe->actionEq(olde.get())||
+               (newe->entry->flags != olde->entry->flags)) {
                 diffs.add(FlowEdit::MOD, newe);
             }
 
@@ -383,7 +384,9 @@ void TableState::apply(const std::string& objId,
                     diffs.add(FlowEdit::DEL, oit->second.front().second);
                     diffs.add(FlowEdit::ADD, tomod);
                     oit->second.front().second = tomod;
-                } else if (!oit->second.front().second->actionEq(tomod.get())) {
+                } else if (!oit->second.front().second->actionEq(tomod.get()) ||
+                           (oit->second.front().second->entry->flags
+                            != tomod->entry->flags)) {
                     oit->second.front().second = tomod;
                     diffs.add(FlowEdit::MOD, tomod);
                 }
