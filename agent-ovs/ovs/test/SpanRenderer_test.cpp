@@ -48,7 +48,7 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr) {
         return false;
     }
     string erspanUuid;
-    spr->jRpc->getPortUuid("erspan", erspanUuid);
+    spr->jRpc->getUuid(OvsdbTable::PORT, "erspan", erspanUuid);
     if (erspanUuid.empty()) {
         return false;
     }

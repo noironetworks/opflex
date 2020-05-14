@@ -14,21 +14,15 @@
 #include <opflexagent/NetFlowManager.h>
 #include <opflexagent/logging.h>
 #include <modelgbp/platform/Config.hpp>
-#include <modelgbp/netflow/ExporterConfig.hpp>
-#include <opflex/modb/PropertyInfo.h>
 #include <boost/optional/optional_io.hpp>
-#include <opflex/modb/Mutator.h>
 
 
 namespace opflexagent {
 
     using namespace std;
-    using namespace opflex::modb;
     using boost::optional;
     using opflex::modb::class_id_t;
     using opflex::modb::URI;
-    using boost::posix_time::milliseconds;
-    using opflex::modb::Mutator;
 
     recursive_mutex NetFlowManager::exporter_mutex;
 
@@ -77,21 +71,8 @@ namespace opflexagent {
             optional<shared_ptr<modelgbp::netflow::ExporterConfig>> exporterConfigOpt =
                 modelgbp::netflow::ExporterConfig::resolve(netflowmanager.framework, uri);
             if (exporterConfigOpt) {
-                auto& exporterConfig = exporterConfigOpt.get();
-                if (exporterConfig->isDstAddrSet() &&
-                    exporterConfig->isDstPortSet() &&
-                    exporterConfig->isVersionSet()) {
-                    LOG(DEBUG) << "update on exporterconfig and uri is "
-                               << exporterConfig->getURI()
-                               << " dst address is "
-                               << exporterConfig->getDstAddr()
-                               << " dst port is "
-                               << exporterConfig->getDstPort()
-                               << " version is "
-                               << std::to_string(exporterConfig->getVersion().get());
-                }
                 //process exporter config
-                processExporterConfig(exporterConfig);
+                processExporterConfig(exporterConfigOpt.get());
                 netflowmanager.notifyUpdate.insert(uri);
             } else {
                 LOG(DEBUG) << "exporterconfig removed " << uri;

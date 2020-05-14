@@ -33,14 +33,13 @@
 namespace opflexagent {
 
 using namespace std;
-using namespace opflex;
 using namespace opflex::jsonrpc;
 using namespace std::chrono;
 
 /*
  * name of ERPSAN port
  */
-static const string ERSPAN_PORT_PREFIX("erspan");
+static const string ERSPAN_PORT_PREFIX("erspan-");
 
 /**
  * class to handle JSON/RPC transactions without opflex.
@@ -98,13 +97,6 @@ public:
     bool updateBridgePorts(const string& brUuid, const string& portUuid, bool addToList);
 
     /**
-     * get the UUID of the port
-     * @param[in] name name of the port
-     * @param[out] uuid of the port or empty string.
-     */
-    void getPortUuid(const string& name, string& uuid);
-
-    /**
      * create a tcp connection to peer
      */
     virtual void connect();
@@ -136,18 +128,12 @@ public:
     bool deleteMirror(const string& brName, const string& sessionName);
 
     /**
-     * get uuid of bridge from OVSDB
-     * @param[in] name name of bridge
-     * @param[out] uuid of the bridge or empty
+     * get uuid for row that match name in table from OVSDB
+     * @param[in] table table
+     * @param[in] name name in table to match
+     * @param[out] uuid for row that matches name
      */
-    void getBridgeUuid(const string& name, string& uuid);
-
-    /**
-     * get uuid of the named mirror from OVSDB
-     * @param[in] name name of mirror
-     * @param[out] uuid of the mirror or empty
-     */
-    void getMirrorUuid(const string& name, string& uuid);
+    void getUuid(OvsdbTable table, const string& name, string& uuid);
 
     /**
      * read port uuids from the map and insert into list
@@ -270,7 +256,7 @@ private:
     template <typename T>
     inline bool sendRequestAndAwaitResponse(const list<T> &tl) {
         unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
-        if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT*1000),
+        if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT),
                 [=]{return conn->isConnected();})) {
             LOG(DEBUG) << "lock timed out";
             return false;
@@ -278,7 +264,7 @@ private:
         responseReceived = false;
         conn->sendTransaction(tl, this);
 
-        if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT*1000),
+        if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT),
                                    [=]{return responseReceived;})) {
             LOG(DEBUG) << "lock timed out";
             return false;
@@ -301,7 +287,7 @@ private:
     };
 
     bool responseReceived = false;
-    const int WAIT_TIMEOUT = 10;
+    const int WAIT_TIMEOUT = 5000;
     OvsdbConnection* conn;
     shared_ptr<Response> pResp;
 };
