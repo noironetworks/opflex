@@ -88,7 +88,7 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
 
     optional<shared_ptr<RoutingDomain> > rd = polMgr.getRDForGroup(egUri);
     if (!rd) return OfpBuf((struct ofpbuf*)NULL);
-
+    /*Ideally get MTU of egress interface*/
     uint32_t mtu = 0;
 
     PolicyManager::subnet_vector_t subnets;
@@ -163,7 +163,9 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
         std::memcpy(prefix, &tmpPI, sizeof(tmpPI));
     }
 
-    // MTU option
+    // MTU option - As of now not used since mtu
+    // is not known at packet composition time
+#if 0
     if (mtu) {
         struct nd_opt_mtu* opt_mtu = (struct nd_opt_mtu*)
             b.push_zeros(sizeof(struct nd_opt_mtu));
@@ -171,6 +173,7 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
         opt_mtu->nd_opt_mtu_len = 1;
         opt_mtu->nd_opt_mtu_mtu = htonl(mtu);
     }
+#endif
 
     // source link-layer address option
     struct nd_opt_hdr* source_ll = (struct nd_opt_hdr*)

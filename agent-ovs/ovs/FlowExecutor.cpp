@@ -116,7 +116,9 @@ template<>
 OfpBuf
 FlowExecutor::EncodeMod<GroupEdit::Entry>(const GroupEdit::Entry& edit,
                                           int ofVersion) {
-    return OfpBuf(ofputil_encode_group_mod((ofp_version)ofVersion, edit->mod, NULL, -1));
+    auto buf =  OfpBuf(ofputil_encode_group_mod((ofp_version)ofVersion, edit->mod, NULL, -1));
+    ofputil_uninit_group_mod(edit->mod);
+    return buf;
 }
 
 template<>

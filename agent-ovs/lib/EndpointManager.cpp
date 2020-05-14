@@ -773,12 +773,13 @@ void EndpointManager::removeEndpointExternal(const std::string& uuid) {
         {
             const set<URI>& secGroups = es.endpoint->getSecurityGroups();
             secgrp_ep_map_t::iterator sgit = secgrp_ep_map.find(secGroups);
-            if (sgit != secgrp_ep_map.end())
+            if (sgit != secgrp_ep_map.end()) {
                 sgit->second.erase(uuid);
 
-            if (sgit->second.empty()) {
-                secgrp_ep_map.erase(sgit);
-                notifySecGroupSets.insert(secGroups);
+                if (sgit->second.empty()) {
+                    secgrp_ep_map.erase(sgit);
+                    notifySecGroupSets.insert(secGroups);
+                }
             }
         }
         updateEpMap(es.endpoint->getInterfaceName(), boost::none,

@@ -2263,7 +2263,9 @@ void PolicyManager::updateExternalNode(const URI& uri,
             static_route_map.erase(routeIter);
             continue;
         }
-        routeIter->second->setPresent(false);
+        if(routeIter != static_route_map.end()) {
+            routeIter->second->setPresent(false);
+        }
         itr++;
     }
 }
@@ -2614,7 +2616,9 @@ void PolicyManager::updateRemoteRoutes(const URI& uri,
                 notifyLocalRoutes);
             continue;
         }
-        routeIter->second->setPresent(false);
+        if(routeIter != remote_route_map.end()) {
+            routeIter->second->setPresent(false);
+        }
         itr++;
     }
 }

@@ -203,16 +203,22 @@ void FSWatcher::operator()() {
                         event = (const struct inotify_event *) ptr;
 
                         if (event->len) {
+                            char *nullterm_event = (char *)malloc(sizeof(char)*(len+1));
+                            memcpy(nullterm_event,event->name,len);
+                            if(event->name[len-1] != '\0') {
+                                nullterm_event[len] = '\0';
+                            }
                             const WatchState* ws = activeWatches.at(event->wd);
                             for (Watcher* watcher : ws->watchers) {
                                 if ((event->mask & IN_CLOSE_WRITE) ||
                                     (event->mask & IN_MOVED_TO)) {
-                                    watcher->updated(ws->watchPath / event->name);
+                                    watcher->updated(ws->watchPath / nullterm_event);
                                 } else if ((event->mask & IN_DELETE) ||
                                            (event->mask & IN_MOVED_FROM)) {
-                                    watcher->deleted(ws->watchPath / event->name);
+                                    watcher->deleted(ws->watchPath / nullterm_event);
                                 }
                             }
+                            free(nullterm_event);
                         }
                     }
                 }
