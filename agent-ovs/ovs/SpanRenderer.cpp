@@ -246,7 +246,7 @@ namespace opflexagent {
     bool SpanRenderer::deleteErspanPort(const string& name) {
         LOG(DEBUG) << "deleting erspan port " << name;
         string erspanUuid;
-        jRpc->getPortUuid(name, erspanUuid);
+        jRpc->getUuid(OvsdbTable::PORT, name, erspanUuid);
         if (erspanUuid.empty()) {
             LOG(DEBUG) << "Port is not present in OVSDB: " << name;
             return false;
@@ -258,7 +258,7 @@ namespace opflexagent {
     bool SpanRenderer::createMirror(const string& sess, const set<string>& srcPorts,
             const set<string>& dstPorts) {
         string brUuid;
-        jRpc->getBridgeUuid(switchName, brUuid);
+        jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
         jRpc->createMirror(brUuid, sess, srcPorts, dstPorts);
         return true;

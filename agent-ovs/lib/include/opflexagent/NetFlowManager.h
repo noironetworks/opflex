@@ -17,9 +17,7 @@
 #include <opflex/modb/ObjectListener.h>
 #include <opflexagent/NetFlowListener.h>
 
-#include <modelgbp/platform/Config.hpp>
 #include <modelgbp/netflow/ExporterConfig.hpp>
-#include <modelgbp/netflow/CollectorVersionEnumT.hpp>
 #include <opflexagent/TaskQueue.h>
 #include <opflex/modb/URI.h>
 

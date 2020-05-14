@@ -12,6 +12,7 @@
 #include "NetFlowRenderer.h"
 #include <opflexagent/logging.h>
 #include <opflexagent/NetFlowManager.h>
+#include <modelgbp/netflow/CollectorVersionEnumT.hpp>
 
 #include <boost/optional.hpp>
 #include <boost/format.hpp>
@@ -123,7 +124,7 @@ namespace opflexagent {
         jRpc->deleteNetFlow(switchName);
         jRpc->deleteIpfix(switchName);
         string brUuid;
-        jRpc->getBridgeUuid(switchName, brUuid);
+        jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
         jRpc->createNetFlow(brUuid, targets, timeout);
         return true;
@@ -134,7 +135,7 @@ namespace opflexagent {
         jRpc->deleteNetFlow(switchName);
         jRpc->deleteIpfix(switchName);
         string brUuid;
-        jRpc->getBridgeUuid(switchName, brUuid);
+        jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid << "sampling rate is " << sampling;
         return jRpc->createIpfix(brUuid, targets, sampling);
     }

@@ -156,7 +156,7 @@ bool JsonRpc::updateBridgePorts(const string& brName, const string& portUuid, bo
     tuples.emplace_back("uuid", portUuid);
     TupleDataSet tdSet = TupleDataSet(tuples);
     msg1.mutateRowData.emplace("ports", std::make_pair(addToList ? OvsdbOperation::INSERT : OvsdbOperation::DELETE, tdSet));
-
+    LOG(DEBUG) << (addToList ? "inserting " : "deleting ") << portUuid;
     const list<JsonRpcTransactMessage> requests = {msg1};
     if (!sendRequestAndAwaitResponse(requests)) {
         LOG(DEBUG) << "Error sending message";
@@ -314,49 +314,19 @@ bool JsonRpc::getErspanOptions(const Document& payload, ErspanParams& params) {
     return (params.getVersion() != 0);
 }
 
-void JsonRpc::getPortUuid(const string& name, string& uuid) {
-    JsonRpcTransactMessage msg1(OvsdbOperation::SELECT, OvsdbTable::PORT);
-    set<tuple<string, OvsdbFunction, string>> condSet;
-    condSet.emplace("name", OvsdbFunction::EQ, name);
-    msg1.conditions = condSet;
-    msg1.columns.emplace("_uuid");
-
-    const list<JsonRpcTransactMessage> requests{msg1};
-    if (!sendRequestAndAwaitResponse(requests)) {
-        LOG(WARNING) << "Error sending message";
-        return;
-    }
-
-    getUuidByNameFromResp(pResp->payload, "_uuid", uuid);
-}
-
 void JsonRpc::getPortUuids(map<string, string>& ports) {
     for (auto& port : ports) {
         string uuid;
-        getPortUuid(port.first, uuid);
+        getUuid(OvsdbTable::PORT, port.first, uuid);
         if (!uuid.empty()) {
             port.second = uuid;
         }
     }
 }
 
-void JsonRpc::getMirrorUuid(const string& name, string& uuid) {
-    JsonRpcTransactMessage msg1(OvsdbOperation::SELECT, OvsdbTable::MIRROR);
-    set<tuple<string, OvsdbFunction, string>> condSet;
-    condSet.emplace("name", OvsdbFunction::EQ, name);
-    msg1.conditions = condSet;
-    msg1.columns.emplace("_uuid");
-
-    const list<JsonRpcTransactMessage> requests{msg1};
-    if (!sendRequestAndAwaitResponse(requests)) {
-        LOG(DEBUG) << "Error sending message";
-    }
-    getUuidByNameFromResp(pResp->payload, "_uuid", uuid);
-}
-
-void JsonRpc::getBridgeUuid(const string& name, string& uuid) {
+void JsonRpc::getUuid(OvsdbTable table, const string& name, string& uuid) {
     static const string uuidColumn("_uuid");
-    JsonRpcTransactMessage msg1(OvsdbOperation::SELECT, OvsdbTable::BRIDGE);
+    JsonRpcTransactMessage msg1(OvsdbOperation::SELECT, table);
     set<tuple<string, OvsdbFunction, string>> condSet;
     condSet.emplace("name", OvsdbFunction::EQ, name);
     msg1.conditions = condSet;
@@ -565,7 +535,7 @@ inline void JsonRpc::populatePortUuids(const set<string>& ports, const map<strin
 
 bool JsonRpc::deleteMirror(const string& brName, const string& sessionName) {
     string sessionUuid;
-    getMirrorUuid(sessionName, sessionUuid);
+    getUuid(OvsdbTable::MIRROR, sessionName, sessionUuid);
     if (sessionUuid.empty()) {
         LOG(DEBUG) << "Unable to find session " << sessionName;
         return false;
@@ -595,7 +565,7 @@ void JsonRpc::connect() {
 
 bool JsonRpc::isConnected() {
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
-    if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT*1000),
+    if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT),
         [=]{return conn->isConnected();})) {
         LOG(DEBUG) << "lock timed out, no connection";
         return false;

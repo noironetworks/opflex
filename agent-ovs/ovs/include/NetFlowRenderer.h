@@ -14,7 +14,6 @@
 #define OPFLEX_NETFLOWRENDERER_H
 
 #include <boost/noncopyable.hpp>
-#include <opflexagent/PolicyListener.h>
 #include <opflexagent/NetFlowListener.h>
 #include "JsonRpcRenderer.h"
 
