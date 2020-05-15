@@ -36,8 +36,11 @@ env:
   - TEST_SUITE=tsan-build.sh
   - TEST_SUITE=asan-build.sh
 
-script: bash ./.travis/$TEST_SUITE
+#script: bash ./.travis/$TEST_SUITE
 
-after_success:
-  - bash ./.travis/coveralls-deploy.sh
+#after_success:
+#  - bash ./.travis/coveralls-deploy.sh
+
+
+script: echo $TEST_SUITE
 
