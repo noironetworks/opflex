@@ -43,7 +43,7 @@ if ! [ "$(ls -A .)" ]; then
 else
     echo "using cached prometheus-cpp"
 fi
-pushd prometheus-cpp
-sudo make install
+pushd prometheus-cpp/_build
+sudo make install &> /dev/null
 popd
 popd
