@@ -15,11 +15,13 @@
 #include <SpanRenderer.h>
 #include "MockRpcConnection.h"
 #include <opflexagent/SpanSessionState.h>
+#include <modelgbp/dmtree/Root.hpp>
 
 namespace opflexagent {
 
 using namespace std;
 using namespace rapidjson;
+using namespace modelgbp;
 
 BOOST_AUTO_TEST_SUITE(SpanRenderer_test)
 
@@ -31,6 +33,17 @@ public:
         conn.reset(new MockRpcConnection());
         spr->start("br-int", conn.get());
         spr->connect();
+
+        auto pu = policy::Universe::resolve(framework).get();
+        auto su = span::Universe::resolve(framework).get();
+        Mutator mutator(framework, "policyreg");
+        space = pu->addPolicySpace("test");
+        bd = space->addGbpBridgeDomain("bd");
+        session = su->addSpanSession("ugh-vspan");
+        session->setState(0);
+        localEp = session->addSpanLocalEp("p1-tap");
+        localEp->setName("p1-tap");
+
     }
 
     virtual ~SpanRendererFixture() {
@@ -39,6 +52,12 @@ public:
 
     shared_ptr<SpanRenderer> spr;
     unique_ptr<OvsdbConnection> conn;
+
+    shared_ptr<policy::Space> space;
+    shared_ptr<gbp::BridgeDomain> bd;
+    shared_ptr<span::Session> session;
+    shared_ptr<span::LocalEp> localEp;
+    shared_ptr<epr::L2Ep> l2Ep;
 };
 
 static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr) {
@@ -84,14 +103,24 @@ BOOST_FIXTURE_TEST_CASE( verify_add_remote_port, SpanRendererFixture ) {
     BOOST_CHECK_EQUAL(true, spr->deleteErspanPort(ERSPAN_PORT_PREFIX));
 }
 
-BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
+BOOST_FIXTURE_TEST_CASE( delete_session, SpanRendererFixture ) {
     spr->setNextId(1015);
+
+    URI sessionUri("/SpanUniverse/SpanSession/abc/");
+    string sessionName("abc");
+    shared_ptr<SessionState> sessionState = std::make_shared<SessionState>(sessionUri, sessionName);
+    spr->spanDeleted(sessionState);
+}
+
+BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
+    spr->setNextId(1019);
 
     ErspanParams params;
     BOOST_CHECK_EQUAL(true, spr->jRpc->getCurrentErspanParams(ERSPAN_PORT_PREFIX, params));
 
-    URI spanUri("/SpanUniverse/SpanSession/ugh-vspan/");
-    spr->spanUpdated(spanUri);
+    agent.getSpanManager().processSession(session);
+    agent.getSpanManager().addEndpoint(localEp, l2Ep, DirectionEnumT::CONST_BIDIRECTIONAL);
+    spr->spanUpdated(session->getURI());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

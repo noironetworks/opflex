@@ -91,7 +91,7 @@ public:
     /**
      * number of span responses to send
      */
-    static const unsigned int no_of_span_msgs = 16;
+    static const unsigned int no_of_span_msgs = 26;
 
     /**
      * number of netflow responses to send
@@ -107,7 +107,7 @@ private:
     /* SPAN request/responses start */
 
     //string request1 {"[\"Open_vSwitch\",{\"where\":[],\"table\":\"Mirror\",\"op\":\"select\"}]"};
-    string response1 {"[{\"rows\":[{\"statistics\":[\"map\",[[\"tx_bytes\",0],[\"tx_packets\",0]]],\
+    string selectMirrorResp {"[{\"rows\":[{\"statistics\":[\"map\",[[\"tx_bytes\",0],[\"tx_packets\",0]]],\
             \"_version\":[\"uuid\",\"ec4c165c-335d-477f-a96b-c37c02d6131b\"],\"select_all\"\
              :false,\"name\":\"sess1\",\"output_vlan\":[\"set\",[]],\"select_dst_port\":\
              [\"uuid\",\"0a7a4d65-e785-4674-a219-167391d10c3f\"],\"select_src_port\":[\"set\",\
@@ -136,15 +136,6 @@ private:
             \"rstp_statistics\":[\"map\",[]],\"vlan_mode\":[\"set\",[]],\"interfaces\":[\"uuid\",\
             \"d05435fa-e35c-4661-8402-f5cfe32ca1f3\"],\"bond_fake_iface\":false,\"lacp\":[\"set\",[]]}]}]"};
 
-    /*string request4 {"[\"Open_vSwitch\",{\"where\":[[\"name\",\"==\",\"br-int\"]],\"table\":\"Bridge\",\
-            \"op\":\"select\",\"columns\":[\"_uuid\",\"ports\"]}]"};
-            */
-    string bridgePortSelectResp {"[{\"rows\":[{\"ports\":[\"set\",[[\"uuid\",\
-            \"0a7a4d65-e785-4674-a219-167391d10c3f\"],[\"uuid\",\
-            \"373108c7-ce2d-4d46-a419-1654a5bf47ef\"],[\"uuid\",\
-            \"ffaee0cd-bb7d-4698-9af1-99f57f9b7081\"],[\"uuid\",\
-            \"fff42dce-44cb-4b6a-8920-dfc32d88ec07\"]]],\"_uuid\":[\"uuid\",\
-            \"7cb323d7-0215-406d-ae1d-679b72e1f6aa\"]}]}]"};
     /*
     string request5 {"[\"Open_vSwitch\",{\"where\":[[\"_uuid\",\"==\",\
             [\"uuid\",\"7cb323d7-0215-406d-ae1d-679b72e1f6aa\"]]],\"table\":\"Bridge\",\"op\":\
@@ -176,11 +167,6 @@ private:
             */
     string interfaceInsertResp {"[{\"uuid\":[\"uuid\",\"67a63d27-9f82-48e6-9931-068bf7dd1b1d\"]},{\"uuid\":[\"uuid\",\
             \"56eadeda-cb76-4d09-b49a-b5abf7640cd4\"]},{\"count\":1}]"};
-    /*
-    string request9 {"[\"Open_vSwitch\",{\"where\":[[\"name\",\"==\",\"br-int\"]],\"table\":\
-            \"Bridge\",\"op\":\"select\",\"columns\":[\"_uuid\"]}]"};
-            */
-    string bridgeUuidResp {"[{\"rows\":[{\"_uuid\":[\"uuid\",\"7cb323d7-0215-406d-ae1d-679b72e1f6aa\"]}]}]"};
 
     /*
     string request13 {"[\"Open_vSwitch\",{\"uuid-name\":\"row8c31e171_96ef_452c_8a4b_abbdf1ea498c\
@@ -204,7 +190,7 @@ private:
     /*
       get bridge uuid
     */
-    string getBridgeUuidResp {"[{\"rows\":[{\"_uuid\":[\"uuid\",\"7cb323d7-0215-406d-ae1d-679b72e1f6aa\"]}]}]"};
+    string getUuidResp {"[{\"rows\":[{\"_uuid\":[\"uuid\",\"7cb323d7-0215-406d-ae1d-679b72e1f6aa\"]}]}]"};
 
     /*
      delete ipfix/netflow
@@ -212,7 +198,7 @@ private:
     string deleteResp{"[{\"count\":1}]"};
 
     /*
-     string createNetflox   {"Open_vSwitch",{"uuid-name":"row5ceec9e1-c8a4-496a-a265-1e98ec2986d1","table":"NetFlow",
+     string createNetflow   {"Open_vSwitch",{"uuid-name":"row5ceec9e1-c8a4-496a-a265-1e98ec2986d1","table":"NetFlow",
                              "op":"insert","row":{"active_timeout":180,"add_id_to_interface":false,"targets":"172.28.184.20:2055"}},
                              {"where":[["_uuid","==",["uuid","18368680-b320-458f-927c-3e8e87a75a7a"]]],"table":"Bridge",
                              "op":"update","row":{"netflow":["named-uuid","row5ceec9e1-c8a4-496a-a265-1e98ec2986d1"]}}]}
@@ -229,13 +215,15 @@ private:
 
     /* NetFlow request/responses end */
 
-    string response[no_of_span_msgs + no_of_netflow_msgs] = {response1, selectPortsResp, response3,
-            updateBridgePortsResp, getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, bridgeUuidResp,
+    string response[no_of_span_msgs + no_of_netflow_msgs] = {selectMirrorResp, selectPortsResp, response3,
+            updateBridgePortsResp, getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
             selectPortsResp, selectPortsResp, selectPortsResp, createMirrorResp, interfaceInsertResp,
-            selectPortsResp, updateBridgePortsResp, selectInterfaceResp,
-            deleteResp, deleteResp, getBridgeUuidResp, createNetflowResp, deleteResp,
-            deleteResp, deleteResp, getBridgeUuidResp, createIpFixResp,
-            deleteResp, deleteResp, getBridgeUuidResp, createIpFixResp, deleteResp};
+            selectPortsResp, updateBridgePortsResp, getMirrorUuidResp, updateBridgePortsResp,
+            getUuidResp, updateBridgePortsResp, selectInterfaceResp, selectMirrorResp, selectPortsResp,
+            getUuidResp, updateBridgePortsResp, getUuidResp, updateBridgePortsResp,
+            deleteResp, deleteResp, getUuidResp, createNetflowResp, deleteResp,
+            deleteResp, deleteResp, getUuidResp, createIpFixResp,
+            deleteResp, deleteResp, getUuidResp, createIpFixResp, deleteResp};
 
 };
 

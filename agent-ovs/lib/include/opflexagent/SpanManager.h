@@ -134,56 +134,6 @@ public:
                                    const URI& uri);
 
     private:
-        /**
-         * process session update
-         * @param[in] sess shared pointer to a Session object
-         */
-         void processSession(const shared_ptr<Session>& sess);
-
-        /**
-        * process source group update
-        * @param[in] srcGrp a shared pointer to the source group object in MODB.
-        */
-        void processSrcGrp(const shared_ptr<SrcGrp>& srcGrp);
-
-        /**
-         * process destination group update
-         * @param[in] dstGrp  shared pointer to a destination group object
-         * @param[in] sessUri URI of the associated Session object
-         */
-        void processDstGrp(const shared_ptr<DstGrp>& dstGrp, const URI& sessUri);
-
-        /**
-         * process LocalEp update
-         * @param[in] vUri a vector of uris pointing to the LocalEp objects in  MODB.
-         */
-        void processLocalEp(const URI& uri, unsigned char dir);
-
-        /**
-         * process L2EP update
-         * @param[in] l2Ep shared pointer to L2EP object
-         */
-        void processL2Ep(shared_ptr<L2Ep> l2Ep);
-
-        /**
-         * add an end point to session state object
-         * @param[in] lEp shared pointer to LocalEp object
-         * @param[in] l2Ep shared pointer to L2EP object
-         * @param[in] srcMemberUri src member URI
-         * @param[in] dir direction
-         */
-        void addEndpoint(
-            const shared_ptr<LocalEp>& lEp,
-            const shared_ptr<L2Ep>& l2Ep,
-            const URI& srcMemberUri,
-            const unsigned char dir);
-
-        /**
-         * process EP group
-         * @param[in] uri uri pointing to src member
-         * @param[in] dir direction
-         */
-        void processEpGroup(const URI& uri, unsigned char dir);
 
         SpanManager& spanmanager;
     };
@@ -199,6 +149,55 @@ public:
      * @return optional URI reference
      */
     static const optional<URI> getSession(const shared_ptr<LocalEp>& localEp);
+
+    /**
+     * process session update
+     * @param[in] sess shared pointer to a Session object
+     */
+    void processSession(const shared_ptr<Session>& sess);
+
+    /**
+    * process source group update
+    * @param[in] srcGrp a shared pointer to the source group object in MODB.
+    */
+    void processSrcGrp(const shared_ptr<SrcGrp>& srcGrp);
+
+    /**
+     * process LocalEp update
+     * @param[in] vUri a vector of uris pointing to the LocalEp objects in  MODB.
+     */
+    void processLocalEp(const URI& uri, unsigned char dir);
+
+    /**
+     * process L2EP update
+     * @param[in] l2Ep shared pointer to L2EP object
+     */
+    void processL2Ep(shared_ptr<L2Ep>& l2Ep);
+
+    /**
+     * process destination group update
+     * @param[in] dstGrp  shared pointer to a destination group object
+     * @param[in] sessUri URI of the associated Session object
+     */
+    void processDstGrp(const shared_ptr<DstGrp>& dstGrp, const URI& sessUri);
+
+    /**
+     * add an end point to session state object
+     * @param[in] lEp shared pointer to LocalEp object
+     * @param[in] l2Ep shared pointer to L2EP object
+     * @param[in] dir direction
+     */
+    void addEndpoint(
+        const shared_ptr<LocalEp>& lEp,
+        const shared_ptr<L2Ep>& l2Ep,
+        const unsigned char dir);
+
+    /**
+     * process EP group
+     * @param[in] uri uri pointing to src member
+     * @param[in] dir direction
+     */
+    void processEpGroup(const URI& uri, unsigned char dir);
 
     /**
      * mutex for guarding span manager data structures.

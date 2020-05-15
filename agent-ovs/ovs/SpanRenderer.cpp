@@ -37,7 +37,6 @@ namespace opflexagent {
     }
 
     void SpanRenderer::spanDeleted(const shared_ptr<SessionState>& seSt) {
-        unique_lock<mutex> lock(handlerMutex);
         if (!connect()) {
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
@@ -84,7 +83,6 @@ namespace opflexagent {
     }
 
     void SpanRenderer::handleSpanUpdate(const opflex::modb::URI& spanURI) {
-        unique_lock<mutex> lock(handlerMutex);
         SpanManager& spMgr = agent.getSpanManager();
         lock_guard<recursive_mutex> guard(opflexagent::SpanManager::updates);
         optional<shared_ptr<SessionState>> seSt = spMgr.getSessionState(spanURI);
