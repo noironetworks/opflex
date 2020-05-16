@@ -4,12 +4,6 @@ compiler:
 os: linux
 dist: bionic
 
-#default cache timeout is 3 minutes, if need be we can increase timeout
-cache:
-  directories:
-    - ../ovs
-    - ../prometheus-cpp
-
 addons:
   apt:
     packages:
