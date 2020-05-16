@@ -99,6 +99,8 @@ void ObjectInstance::Value::clear() {
             delete get<vector<reference_t>*>(value);
         else if (type == PropertyInfo::STRING)
             delete get<vector<string>*>(value);
+        else if (type == PropertyInfo::MAC)
+            delete get<vector<MAC>*>(value);
     }
 }
 
