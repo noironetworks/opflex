@@ -138,7 +138,7 @@ SwitchConnection::doConnectOF() {
     vconn *newConn;
     int error;
     error = vconn_open_block(swPath.c_str(), versionBitmap, DSCP_DEFAULT,
-            0, &newConn);
+            -1, &newConn);
     if (error) {
         return error;
     }
