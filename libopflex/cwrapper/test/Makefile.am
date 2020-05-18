@@ -33,10 +33,6 @@ if ENABLE_UBSAN
   AM_CPPFLAGS += -fsanitize=undefined
 endif
 
-if ENABLE_LSAN
-  AM_CPPFLAGS += -fsanitize=leak
-endif
-
 if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
@@ -60,10 +56,6 @@ endif
 
 if ENABLE_UBSAN
   cwrapper_test_CXXFLAGS += -fsanitize=undefined
-endif
-
-if ENABLE_LSAN
-  cwrapper_test_CXXFLAGS += -fsanitize=leak
 endif
 
 if ENABLE_COVERAGE

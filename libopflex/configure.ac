@@ -100,13 +100,6 @@ AM_COND_IF([ENABLE_UBSAN],
 [AC_MSG_NOTICE([UBSAN is enabled])],
 [AC_MSG_NOTICE([UBSAN is disabled])])
 
-dnl Create an option to build with LSAN enabled
-    AC_ARG_ENABLE(lsan, AC_HELP_STRING([--enable-lsan], [Enable LSAN]))
-AM_CONDITIONAL(ENABLE_LSAN, [test x$enable_lsan = 'xyes'])
-AM_COND_IF([ENABLE_LSAN],
-[AC_MSG_NOTICE([LSAN is enabled])],
-[AC_MSG_NOTICE([LSAN is disabled])])
-
 dnl Create an option to build with code coverage enabled
 AC_ARG_ENABLE(coverage, AC_HELP_STRING([--enable-coverage], [Enable coverage]))
 AM_CONDITIONAL(ENABLE_COVERAGE, [test x$enable_coverage = 'xyes'])
