@@ -24,7 +24,7 @@ popd
 
 pushd agent-ovs
 ./autogen.sh &> /dev/null
-./configure --enable-prometheus --enable-tsan
+./configure --enable-tsan &> /dev/null
 make -j2
 sudo make install
 make check

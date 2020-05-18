@@ -37,6 +37,14 @@ if ENABLE_ASAN
   AM_CPPFLAGS += -fsanitize=address
 endif
 
+if ENABLE_UBSAN
+  AM_CPPFLAGS += -fsanitize=undefined
+endif
+
+if ENABLE_LSAN
+  AM_CPPFLAGS += -fsanitize=leak
+endif
+
 if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
@@ -171,6 +179,14 @@ endif
 
 if ENABLE_ASAN
   comms_test_LDFLAGS += -fsanitize=address
+endif
+
+if ENABLE_UBSAN
+  comms_test_LDFLAGS += -fsanitize=undefined
+endif
+
+if ENABLE_LSAN
+  comms_test_LDFLAGS += -fsanitize=leak
 endif
 
 if ENABLE_COVERAGE
