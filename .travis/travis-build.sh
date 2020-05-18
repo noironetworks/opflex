@@ -24,7 +24,7 @@ popd
 
 pushd agent-ovs
 ./autogen.sh &> /dev/null
-./configure --enable-coverage --enable-prometheus
+./configure --enable-coverage &> /dev/null
 make -j2
 sudo make install
 make check

@@ -34,6 +34,10 @@ if ENABLE_ASAN
   AM_CPPFLAGS += -fsanitize=address
 endif
 
+if ENABLE_UBSAN
+  AM_CPPFLAGS += -fsanitize=undefined
+endif
+
 if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
@@ -46,6 +50,10 @@ endif
 
 if ENABLE_ASAN
   AM_LDFLAGS += -fsanitize=address
+endif
+
+if ENABLE_UBSAN
+  AM_LDFLAGS += -fsanitize=undefined
 endif
 
 if ENABLE_COVERAGE

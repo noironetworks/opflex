@@ -124,6 +124,13 @@ AM_COND_IF([ENABLE_ASAN],
           [AC_MSG_NOTICE([ASAN is enabled])],
           [AC_MSG_NOTICE([ASAN is disabled])])
 
+dnl Create an option to build with UBSAN enabled
+    AC_ARG_ENABLE(ubsan, AC_HELP_STRING([--enable-ubsan], [Enable UBSAN]))
+AM_CONDITIONAL(ENABLE_UBSAN, [test x$enable_ubsan = 'xyes'])
+AM_COND_IF([ENABLE_UBSAN],
+[AC_MSG_NOTICE([UBSAN is enabled])],
+[AC_MSG_NOTICE([UBSAN is disabled])])
+
 dnl Create an option to build with code coverage enabled
 AC_ARG_ENABLE(coverage, AC_HELP_STRING([--enable-coverage], [Enable coverage]))
 AM_CONDITIONAL(ENABLE_COVERAGE, [test x$enable_coverage = 'xyes'])

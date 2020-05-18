@@ -27,6 +27,9 @@ endif
 if ENABLE_ASAN
   AM_CPPFLAGS += -fsanitize=address
 endif
+if ENABLE_UBSAN
+  AM_CPPFLAGS += -fsanitize=undefined
+endif
 if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
@@ -37,6 +40,9 @@ if ENABLE_TSAN
 endif
 if ENABLE_ASAN
   AM_LDFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+  AM_LDFLAGS += -fsanitize=undefined
 endif
 if ENABLE_COVERAGE
   AM_LDFLAGS += --coverage
@@ -218,6 +224,9 @@ endif
 if ENABLE_ASAN
   libopflex_agent_la_LDFLAGS += -fsanitize=address
 endif
+if ENABLE_UBSAN
+  libopflex_agent_la_LDFLAGS += -fsanitize=undefined
+endif
 if ENABLE_COVERAGE
   libopflex_agent_la_LDFLAGS += --coverage
 endif
@@ -279,6 +288,9 @@ endif
 if ENABLE_ASAN
   librenderer_openvswitch_la_CXXFLAGS += -fsanitize=address
 endif
+if ENABLE_UBSAN
+  librenderer_openvswitch_la_CXXFLAGS += -fsanitize=undefined
+endif
 if ENABLE_COVERAGE
   librenderer_openvswitch_la_CXXFLAGS += --coverage
 endif
@@ -299,6 +311,9 @@ if ENABLE_TSAN
 endif
 if ENABLE_ASAN
   libopflex_agent_renderer_openvswitch_la_LDFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+  libopflex_agent_renderer_openvswitch_la_LDFLAGS += -fsanitize=undefined
 endif
 if ENABLE_COVERAGE
   libopflex_agent_renderer_openvswitch_la_LDFLAGS += --coverage
@@ -337,6 +352,9 @@ endif
 if ENABLE_ASAN
   gbp_inspect_CXXFLAGS += -fsanitize=address
 endif
+if ENABLE_UBSAN
+  gbp_inspect_CXXFLAGS += -fsanitize=undefined
+endif
 if ENABLE_COVERAGE
   gbp_inspect_CXXFLAGS += --coverage
 endif
@@ -357,6 +375,9 @@ if ENABLE_TSAN
 endif
 if ENABLE_ASAN
   mcast_daemon_CXXFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+  mcast_daemon_CXXFLAGS += -fsanitize=undefined
 endif
 if ENABLE_COVERAGE
   mcast_daemon_CXXFLAGS += --coverage
@@ -387,6 +408,9 @@ if ENABLE_TSAN
 endif
 if ENABLE_ASAN
   agent_test_CXXFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+  agent_test_CXXFLAGS += -fsanitize=undefined
 endif
 if ENABLE_COVERAGE
   agent_test_CXXFLAGS += --coverage
@@ -476,6 +500,9 @@ endif
 if ENABLE_ASAN
 opflex_server_CXXFLAGS += -fsanitize=address
 endif
+if ENABLE_UBSAN
+opflex_server_CXXFLAGS += -fsanitize=undefined
+endif
 if ENABLE_COVERAGE
 opflex_server_CXXFLAGS += --coverage
 endif
@@ -532,6 +559,9 @@ if ENABLE_ASAN
 endif
 if ENABLE_COVERAGE
   policy_repo_stress_CXXFLAGS += --coverage
+endif
+if ENABLE_UBSAN
+  policy_repo_stress_CXXFLAGS += -fsanitize=undefined
 endif
 
 policy_repo_stress_SOURCES = \
@@ -601,6 +631,9 @@ endif
 if ENABLE_COVERAGE
   integration_test_CXXFLAGS += --coverage
 endif
+if ENABLE_UBSAN
+  integration_test_CXXFLAGS += -fsanitize=undefined
+endif
 
 integration_test_SOURCES = \
 	lib/integration-test/ctzone_test.cpp \
@@ -612,6 +645,9 @@ if ENABLE_TSAN
 endif
 if ENABLE_ASAN
   integration_test_LDFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+  integration_test_LDFLAGS += -fsanitize=undefined
 endif
 
 integration_test_LDADD = \
