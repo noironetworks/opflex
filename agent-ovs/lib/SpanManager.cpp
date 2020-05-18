@@ -90,10 +90,9 @@ namespace opflexagent {
                 }
             }
         } else if (classId == L2Ep::CLASS_ID) {
-            if (L2Ep::resolve(spanmanager.framework, uri)) {
-                shared_ptr <L2Ep> l2Ep =
-                    L2Ep::resolve(spanmanager.framework, uri).get();
-                spanmanager.processL2Ep(l2Ep);
+            auto l2Ep = L2Ep::resolve(spanmanager.framework, uri);
+            if (l2Ep) {
+                spanmanager.processL2Ep(l2Ep.get());
             }
         } else if (classId == Session::CLASS_ID) {
             optional<shared_ptr<Session>> sess =
@@ -415,6 +414,10 @@ namespace opflexagent {
             // find out if L2Ep is a member of any of these groups.
             // if a match is found, add the L2Ep to the list of sources
             // of the mirror.
+            if (!l2Ep->getGroup()) {
+                LOG(WARNING) << "EPG has not been set for L2Ep " << l2Ep->getURI();
+                return;
+            }
             URI egUri(l2Ep->getGroup().get());
             boost::optional<shared_ptr<EpGroup>> epgOpt = getEpgIfPartOfSession(egUri);
             if (epgOpt) {

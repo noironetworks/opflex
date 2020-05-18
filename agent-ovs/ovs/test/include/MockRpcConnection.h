@@ -91,7 +91,7 @@ public:
     /**
      * number of span responses to send
      */
-    static const unsigned int no_of_span_msgs = 26;
+    static const unsigned int no_of_span_msgs = 47;
 
     /**
      * number of netflow responses to send
@@ -220,7 +220,12 @@ private:
             selectPortsResp, selectPortsResp, selectPortsResp, createMirrorResp, interfaceInsertResp,
             selectPortsResp, updateBridgePortsResp, getMirrorUuidResp, updateBridgePortsResp,
             getUuidResp, updateBridgePortsResp, selectInterfaceResp, selectMirrorResp, selectPortsResp,
-            getUuidResp, updateBridgePortsResp, getUuidResp, updateBridgePortsResp,
+            getUuidResp, updateBridgePortsResp, getUuidResp, updateBridgePortsResp, getUuidResp,
+            updateBridgePortsResp, getMirrorUuidResp, deleteMirrorResp, getUuidResp, createMirrorResp,
+            selectMirrorResp, selectMirrorResp, selectPortsResp, getUuidResp, deleteMirrorResp,
+            getUuidResp, deleteMirrorResp, getUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
+            deleteMirrorResp, getUuidResp, createMirrorResp, updateBridgePortsResp,
+
             deleteResp, deleteResp, getUuidResp, createNetflowResp, deleteResp,
             deleteResp, deleteResp, getUuidResp, createIpFixResp,
             deleteResp, deleteResp, getUuidResp, createIpFixResp, deleteResp};
