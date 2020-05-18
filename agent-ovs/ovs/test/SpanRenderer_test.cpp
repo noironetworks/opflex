@@ -33,17 +33,6 @@ public:
         conn.reset(new MockRpcConnection());
         spr->start("br-int", conn.get());
         spr->connect();
-
-        auto pu = policy::Universe::resolve(framework).get();
-        auto su = span::Universe::resolve(framework).get();
-        Mutator mutator(framework, "policyreg");
-        space = pu->addPolicySpace("test");
-        bd = space->addGbpBridgeDomain("bd");
-        session = su->addSpanSession("ugh-vspan");
-        session->setState(0);
-        localEp = session->addSpanLocalEp("p1-tap");
-        localEp->setName("p1-tap");
-
     }
 
     virtual ~SpanRendererFixture() {
@@ -52,12 +41,6 @@ public:
 
     shared_ptr<SpanRenderer> spr;
     unique_ptr<OvsdbConnection> conn;
-
-    shared_ptr<policy::Space> space;
-    shared_ptr<gbp::BridgeDomain> bd;
-    shared_ptr<span::Session> session;
-    shared_ptr<span::LocalEp> localEp;
-    shared_ptr<epr::L2Ep> l2Ep;
 };
 
 static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr) {
@@ -115,11 +98,37 @@ BOOST_FIXTURE_TEST_CASE( delete_session, SpanRendererFixture ) {
 BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
     spr->setNextId(1019);
 
+    auto pu = policy::Universe::resolve(framework).get();
+    auto su = span::Universe::resolve(framework).get();
+    Mutator mutator(framework, "policyreg");
+    auto space = pu->addPolicySpace("test");
+    auto bd = space->addGbpBridgeDomain("bd");
+    auto session = su->addSpanSession("ugh-vspan");
+    session->setState(0);
+    mutator.commit();
+
+    auto epr = epr::L2Universe::resolve(framework).get();
+    Mutator mutator2(framework, "policyelement");
+    MAC l2Mac("aa:bb:cc:dd:01:01");
+    auto l2Ep = epr->addEprL2Ep(bd->getURI().toString(), l2Mac);
+    MAC l2Mac2("aa:bb:cc:dd:01:02");
+    auto l2Ep2 = epr->addEprL2Ep(bd->getURI().toString(), l2Mac2);
+    mutator2.commit();
+
     ErspanParams params;
     BOOST_CHECK_EQUAL(true, spr->jRpc->getCurrentErspanParams(ERSPAN_PORT_PREFIX, params));
+    Mutator mutator3(framework, "policyreg");
+    auto localEp = session->addSpanLocalEp("p1-tap");
+    localEp->setName("p1-tap");
+    auto epRel = localEp->addSpanLocalEpToEpRSrc();
+    epRel->setTargetL2Ep(l2Ep->getURI());
+    auto localEp2 = session->addSpanLocalEp("p2-tap");
+    localEp2->setName("p2-tap");
+    auto ep2Rel = localEp2->addSpanLocalEpToEpRSrc();
+    ep2Rel->setTargetL2Ep(l2Ep2->getURI());
+    mutator3.commit();
+    WAIT_FOR(modelgbp::span::LocalEpToEpRSrc::resolve(framework, ep2Rel->getURI()), 500);
 
-    agent.getSpanManager().processSession(session);
-    agent.getSpanManager().addEndpoint(localEp, l2Ep, DirectionEnumT::CONST_BIDIRECTIONAL);
     spr->spanUpdated(session->getURI());
 }
 

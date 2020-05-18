@@ -164,7 +164,8 @@ public:
 
     /**
      * process LocalEp update
-     * @param[in] vUri a vector of uris pointing to the LocalEp objects in  MODB.
+     * @param[in] uri a uri pointing to a LocalEp object in  MODB.
+     * @param[in] dir direction
      */
     void processLocalEp(const URI& uri, unsigned char dir);
 
