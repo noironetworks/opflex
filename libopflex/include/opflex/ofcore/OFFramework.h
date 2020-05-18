@@ -729,6 +729,7 @@ public:
      */
     void setTunnelMac(const opflex::modb::MAC &mac);
 
+    int getUnresolvedItem(); 
     /**
      * set the prr (policy resolve request) timer durarion.
      * @param duration timer duration in milliseconds

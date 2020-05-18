@@ -209,6 +209,18 @@ public:
      */
     uint64_t getPrrTimerDuration() { return prrTimerDuration; }
 
+    std::unordered_map<std::string, std::string> pendingResolution; 
+
+    int unResolvedItem;
+
+    void setPendingItem(std::pair<std::string, int> peerName, std::string uri); 
+
+    void removePendingItem(std::string hostname, std::string uri); 
+  
+    int getUnresolvedItem(){
+        return unResolvedItem;
+    }
+ 
     // See HandlerFactory::newHandler
     virtual
     internal::OpflexHandler* newHandler(internal::OpflexConnection* conn);

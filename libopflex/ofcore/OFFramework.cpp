@@ -281,6 +281,11 @@ void OFFramework::getOpflexPeerStats(std::unordered_map<string, OF_SHARED_PTR<OF
     pool.getOpflexPeerStats(stats);
 }
 
+int OFFramework::getUnresolvedItem() {
+    int countUnresolved = pimpl->processor.getUnresolvedItem();
+    return countUnresolved ;
+}
+
 void OFFramework::overrideObservableReporting(modb::class_id_t class_id, bool enabled) {
     pimpl->processor.overrideObservableReporting(class_id, enabled);
 }

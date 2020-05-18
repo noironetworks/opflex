@@ -426,6 +426,7 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
         }
         incrementMsgCounter(conn, m_copy);
         conn->sendMessage(m_copy, sync);
+        setPeername(conn->getHostname(), conn->getPort());
         i += 1;
     }
     // all allocated buffers should have been dispatched to

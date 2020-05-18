@@ -365,12 +365,14 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
                        << "Malformed policy resolve response: policy must be array";
             conn->disconnect();
         }
-
         Value::ConstValueIterator it;
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
             serializer.deserialize(mo, *client, true, &notifs);
-        }
+            const Value& uriv = mo["uri"];
+            getProcessor()->removePendingItem(conn->getHostname(), uriv.GetString()); 
+             
+      }
     }
     client->deliverNotifications(notifs);
 }

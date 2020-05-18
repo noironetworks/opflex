@@ -20,6 +20,8 @@
 #include <limits>
 #include <cmath>
 #include <random>
+#include <fstream>
+#include <unordered_map>
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/foreach.hpp>
@@ -80,6 +82,25 @@ inline uint64_t now(uv_loop_t* loop) {
     return uv_now(loop);
 }
 
+void Processor::setPendingItem(std::pair<std::string, int> peerName, std::string uri) {
+    std::unordered_map<std::string, std::string>::iterator it;
+    pendingResolution[peerName.first] = uri;
+    for(it = pendingResolution.begin(); it != pendingResolution.end(); it++){
+}
+}
+
+void Processor::removePendingItem(std::string hostname, std::string uri) {
+     std::unordered_map<std::string, std::string>::iterator it;
+     for(it = pendingResolution.begin(); it != pendingResolution.end(); it++){
+         if (it->first == hostname && it->second == uri) {
+             pendingResolution.erase(it);
+         }
+     }
+     for(it = pendingResolution.begin(); it != pendingResolution.end(); it++){
+     }
+     unResolvedItem = pendingResolution.size();
+     }
+  
 Processor::change_expiration::change_expiration(uint64_t new_exp_)
     : new_exp(new_exp_) {}
 
@@ -279,6 +300,8 @@ bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
             PolicyResolveReq* req =
                 new PolicyResolveReq(this, nextXid++, refs);
             sendToRole(i, newexp, req, OFConstants::POLICY_REPOSITORY);
+            std::pair<std::string, int> peerName = pool.getPeername();
+            setPendingItem(peerName, i.uri.toString());
             return true;
         }
         break;
@@ -374,7 +397,6 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
                << " of class " << ci.getName()
                << " and type " << ci.getType()
                << " in state " << curState;
-
     ItemState newState;
 
     switch (curState) {
