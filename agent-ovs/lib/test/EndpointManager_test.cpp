@@ -183,6 +183,8 @@ public:
     }
     virtual void objectUpdated(class_id_t class_id,
                                const URI& uri) {
+        LOG(DEBUG) << "Updated URI is " << uri;
+
         // Simulate policy resolution from the policy repository by
         // writing the referenced object in response to any changes
         Mutator mutator(framework, "policyreg");
@@ -359,6 +361,7 @@ BOOST_FIXTURE_TEST_CASE( basic, EndpointFixture ) {
     Endpoint ep2("72ffb982-b2d5-4ae4-91ac-0dd61daf527a");
     ep2.setMAC(MAC("00:00:00:00:00:02"));
     ep2.setInterfaceName("veth2");
+    ep2.setAccessInterface("veth2-acc");
     ep2.addIP("10.1.1.4");
     ep2.setEgURI(epgu);
 
@@ -473,8 +476,19 @@ BOOST_FIXTURE_TEST_CASE( epgmapping, EndpointFixture ) {
         .addElement(rduri.toString())
         .addElement("10.1.1.4").build();
 
+    URI l3epdr = URIBuilder()
+        .addElement("EpdrL3Discovered")
+        .addElement("EpdrLocalL3Ep")
+        .addElement("10.1.1.4").build();
+    URI l2epdr = URIBuilder()
+        .addElement("EpdrL2Discovered")
+        .addElement("EpdrLocalL2Ep")
+        .addElement("72ffb982-b2d5-4ae4-91ac-0dd61daf527a").build();
+
     WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr2), 500);
     WAIT_FOR(hasEPREntry<L3Ep>(framework, l3epr2_4), 500);
+    WAIT_FOR(hasPolicyEntry<LocalL3Ep>(framework, l3epdr), 500);
+    WAIT_FOR(hasPolicyEntry<LocalL2Ep>(framework, l2epdr), 500);
 
     Mutator mutator(framework, "policyreg");
     shared_ptr<EpgMapping> mapping =
@@ -543,6 +557,15 @@ BOOST_FIXTURE_TEST_CASE( epgmapping, EndpointFixture ) {
     WAIT_FOR(0 == getEGSize(agent.getEndpointManager(), epg3u), 500);
     WAIT_FOR(0 == getEGSize(agent.getEndpointManager(), epg2u), 500);
     WAIT_FOR(1 == getEGSize(agent.getEndpointManager(), epgu), 500);
+
+    epSource.removeEndpoint(ep2.getUUID());
+    WAIT_FOR(!hasEPREntry<L2Ep>(framework, l2epr2), 500);
+    WAIT_FOR(!hasEPREntry<L3Ep>(framework, l3epr2_4), 500);
+    WAIT_FOR(!hasPolicyEntry<LocalL3Ep>(framework, l3epdr), 500);
+    WAIT_FOR(!hasPolicyEntry<LocalL2Ep>(framework, l2epdr), 500);
+    WAIT_FOR(0 == getEGSize(agent.getEndpointManager(), epg3u), 500);
+    WAIT_FOR(0 == getEGSize(agent.getEndpointManager(), epg2u), 500);
+    WAIT_FOR(0 == getEGSize(agent.getEndpointManager(), epgu), 500);
 }
 
 BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
@@ -788,6 +811,12 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(!hasPolicyEntry<LocalL3Ep>(framework, l3epdr_3), 500);
     WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
 
+    // check for removing an endpoint
+    fs::remove(path1);
+    WAIT_FOR(!hasPolicyEntry<LocalL3Ep>(framework, l3epdr_4), 500);
+    WAIT_FOR(!hasEPREntry<L2Ep>(framework, l2epr3, uuid3), 500);
+    WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
+
     watcher.stop();
 }
 
@@ -920,8 +949,15 @@ BOOST_FIXTURE_TEST_CASE( fsextsource, FSEndpointFixture ) {
         .addElement("GbpExternalL3BridgeDomain")
         .addElement("ext_int1bd").build();
 
+    URI extL3Ep1 = URIBuilder()
+        .addElement("EpdrExternalDiscovered")
+        .addElement("EpdrExternalL3Ep")
+        .addElement("83f18f0b-80f7-46e2-b06c-4d9487b0c790")
+        .build();
+
     WAIT_FOR(hasPolicyEntry<ExternalInterface>(framework, extInt1), 500);
     WAIT_FOR(hasPolicyEntry<ExternalL3BridgeDomain>(framework, extbd1), 500);
+    WAIT_FOR(hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep1), 500);
 
     // check for a new EP added to watch directory
     fs::path path2(temp / "83f18f0b-80f7-46e2-b06c-4d9487b0c791.extep");
@@ -959,6 +995,7 @@ BOOST_FIXTURE_TEST_CASE( fsextsource, FSEndpointFixture ) {
 
     WAIT_FOR(hasPolicyEntry<ExternalInterface>(framework, extInt2), 500);
     WAIT_FOR(hasPolicyEntry<ExternalL3BridgeDomain>(framework, extbd2), 500);
+    WAIT_FOR(hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep2), 500);
 
     // check for adjacency
     optional<opflex::modb::URI> rdURI = URIBuilder()
@@ -1004,8 +1041,12 @@ BOOST_FIXTURE_TEST_CASE( fsextsource, FSEndpointFixture ) {
         .addElement("EpdrExternalL3Ep")
         .addElement("83f18f0b-80f7-46e2-b06c-4d9487b0c792")
         .build();
+    WAIT_FOR(!hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep1), 500);
     WAIT_FOR(hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep3), 500);
 
+    // check for removing an endpoint
+    fs::remove(path1);
+    WAIT_FOR(!hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep3), 500);
     watcher.stop();
 }
 

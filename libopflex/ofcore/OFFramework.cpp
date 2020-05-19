@@ -133,13 +133,14 @@ MainLoopAdaptor* OFFramework::startSync() {
 }
 
 void OFFramework::stop() {
+    LOG(DEBUG) << "Stopping OpFlex Framework";
     if (pimpl->inspector) {
         LOG(DEBUG) << "Stopping OpFlex Inspector";
         pimpl->inspector->stop();
         pimpl->inspector.reset();
     }
     if (pimpl->started) {
-        LOG(DEBUG) << "Stopping OpFlex Framework";
+        LOG(DEBUG) << "Stopping OpFlex processor and db";
 
         pimpl->processor.stop();
         pimpl->db.stop();
@@ -239,13 +240,13 @@ void MockOFFramework::setMacProxy(const boost::asio::ip::address_v4& macProxyAdd
 }
 
 void MockOFFramework::start() {
-    LOG(DEBUG) << "Starting OpFlex Framework";
+    LOG(DEBUG) << "Starting Mock OpFlex Framework";
 
     pimpl->db.start();
 }
 
 void MockOFFramework::stop() {
-    LOG(DEBUG) << "Stopping OpFlex Framework";
+    LOG(DEBUG) << "Stopping Mock OpFlex Framework";
 
     pimpl->db.stop();
     pimpl->threadManager.stop();
