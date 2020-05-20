@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::state_report>::process() const {
-
-    VLOG(6)
-        << "Got state_report reply at "
-        << getReceived()
-    ;
-
 }
 
 }

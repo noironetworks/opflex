@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::endpoint_declare>::process() const {
-
-    VLOG(6)
-        << "Got endpoint_declare reply at "
-        << getReceived()
-    ;
-
 }
 
 }

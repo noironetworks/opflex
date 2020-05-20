@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::send_identity>::process() const {
-
-    VLOG(6)
-        << "Got send_identity reply at "
-        << getReceived()
-    ;
-
 }
 
 }

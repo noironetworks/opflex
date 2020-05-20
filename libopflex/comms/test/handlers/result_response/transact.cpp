@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::transact>::process() const {
-
-    VLOG(6)
-        << "Got transact reply at "
-        << getReceived()
-    ;
-
 }
 
 }

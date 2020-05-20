@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::endpoint_unresolve>::process() const {
-
-    VLOG(6)
-        << "Got endpoint_unresolve reply at "
-        << getReceived()
-    ;
-
 }
 
 }

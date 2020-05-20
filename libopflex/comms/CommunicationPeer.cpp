@@ -112,21 +112,10 @@ void CommunicationPeer::stopKeepAlive() {
 }
 
 void CommunicationPeer::on_timeout(uv_timer_t * timer) {
-    VLOG(6);
-
     get(timer)->timeout();
 }
 
 void CommunicationPeer::bumpLastHeard() const {
-
-    VLOG(5)
-        << this
-        << " "
-        << lastHeard_
-        << " -> "
-        << now()
-    ;
-
     lastHeard_ = now();
 }
 
@@ -256,9 +245,7 @@ int CommunicationPeer::tcpInit() {
     return 0;
 }
 
-void CommunicationPeer::readBufNoNull(char* buffer,
-                   size_t nread) {
-    VLOG(6) << "nread " << nread;
+void CommunicationPeer::readBufNoNull(char* buffer, size_t nread) {
     ssIn_.write(buffer, nread);
 
     boost::scoped_ptr<yajr::rpc::InboundMessage> msg(parseFrame());
@@ -268,23 +255,12 @@ void CommunicationPeer::readBufNoNull(char* buffer,
     }
 
     msg->process();
-
 }
 
 void CommunicationPeer::readBuffer(
         char * buffer,
         size_t nread,
         bool canWriteJustPastTheEnd) {
-
-    VLOG(6)
-        << "nread "
-        << nread
-        << " @"
-        << static_cast< void *>(buffer)
-        << ", canWriteJustPastTheEnd = "
-        << canWriteJustPastTheEnd
-    ;
-
     assert(nread);
 
     if (!nread) {
@@ -313,26 +289,11 @@ void CommunicationPeer::readBuffer(
 }
 
 void CommunicationPeer::readBufferZ(char const * buffer, size_t nread) {
-
     size_t chunk_size;
-
-    VLOG(6)
-        << "nread="
-        << nread
-        << " first "
-        << 1 + strlen(buffer)
-        << " bytes at @"
-        << static_cast< void const * >(buffer)
-        << ": ("
-        << buffer
-        << ")"
-    ;
 
     while ((--nread > 0) && connected_) {
         chunk_size = readChunk(buffer);
         nread -= chunk_size++;
-
-        VLOG(6) << "nread=" << nread << " chunk_size=" << chunk_size;
 
         if(!nread) {
             break;
@@ -419,24 +380,7 @@ void CommunicationPeer::sendEchoReq() {
 }
 
 void CommunicationPeer::timeout() {
-
     uint64_t rtt = now() - lastHeard_;
-
-    VLOG(5)
-        << this
-        << " refcnt: "
-        << uvRefCnt_
-        << " lastHeard_: "
-        <<   lastHeard_
-        << " now(): "
-        <<   now()
-        << " rtt >= "
-        <<   rtt
-        << " keepAliveInterval_: "
-        <<   keepAliveInterval_
-        <<                          " getHandle()->flags: "
-        << reinterpret_cast< void * >(getHandle()->flags)
-    ;
 
     if (uvRefCnt_ == 1) {
         /* we already have a pending close */
@@ -445,7 +389,6 @@ void CommunicationPeer::timeout() {
     }
 
     if (rtt <= (keepAliveInterval_ >> 3u) ) {
-        VLOG(5) << this << " still waiting";
         return;
     }
 
@@ -457,7 +400,6 @@ void CommunicationPeer::timeout() {
     }
 
     /* send echo request */
-    VLOG(5) << this << " sending a ping for keep-alive";
     sendEchoReq();
 }
 
@@ -523,17 +465,6 @@ int comms::internal::CommunicationPeer::unchoke() const {
 }
 
 yajr::rpc::InboundMessage * comms::internal::CommunicationPeer::parseFrame() {
-
-    VLOG(6)
-        << this
-        << " About to parse: ("
-        << ssIn_.str()
-        << ") from "
-        << ssIn_.str().size()
-        << " bytes at "
-        << reinterpret_cast<void const *>(ssIn_.str().data())
-    ;
-
     bumpLastHeard();
 
     /* empty frames are legal too */

@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::policy_resolve>::process() const {
-
-    VLOG(6)
-        << "Got policy_resolve reply at "
-        << getReceived()
-    ;
-
 }
 
 }

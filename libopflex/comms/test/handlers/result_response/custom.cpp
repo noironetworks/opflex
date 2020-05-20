@@ -19,12 +19,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::custom>::process() const {
-
-    VLOG(6)
-        << "Got custom reply at "
-        << getReceived()
-    ;
-
 }
 
 }
