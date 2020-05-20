@@ -61,6 +61,7 @@ extraction:
       - "make"
       - "make install"
       - "popd"
+      - "popd"
       - "pushd agent-ovs"
       - "./autogen.sh"
       - "export CPPFLAGS=-I$ROOT/include"
