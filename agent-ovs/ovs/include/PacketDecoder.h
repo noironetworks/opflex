@@ -124,7 +124,9 @@ struct ParseInfo {
             scratchpad{0,0,0,0}, packetTuple() {
         time_t rawtime = std::time(nullptr);
         char currTime[256];
-        std::strftime(currTime, sizeof(currTime),"%a %b %d %H:%M:%S %Z %Y", std::localtime(&rawtime));
+        struct tm tp;
+        std::strftime(currTime, sizeof(currTime),"%a %b %d %H:%M:%S %Z %Y",
+                localtime_r(&rawtime, &tp));
         packetTuple.TimeStamp = std::string(currTime);
         /*Remove trailing newline as it causes issues in JSON decoding*/
         if(!packetTuple.TimeStamp.empty() &&
