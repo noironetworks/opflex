@@ -119,9 +119,7 @@ namespace yajr {
                 )
                 : InboundError(peer, params, id)
                 {
-                    VLOG(3)
-                        << M->s
-                    ;
+                    LOG(DEBUG3) << M->s;
                 }
 
             virtual void process() const;

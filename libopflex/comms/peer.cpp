@@ -78,23 +78,12 @@ bool Peer::down() {
 uv_mutex_t Peer::LoopData::peerMutex{};
 
 void Peer::insert(Peer::LoopData::PeerState peerState) {
-
-    VLOG(3)
-        << this
-        << " is being inserted in "
-        << peerState
-    ;
-
+    LOG(DEBUG3) << this << " is being inserted in " << peerState;
     Peer::LoopData::addPeer(getUvLoop(), peerState, this);
 }
 
 void Peer::unlink() {
-
-    VLOG(4)
-        << this
-        << " manually unlinking"
-    ;
-
+    LOG(DEBUG4) << this << " manually unlinking";
     SafeListBaseHook::unlink();
 }
 

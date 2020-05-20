@@ -16,20 +16,15 @@
 
 #include <opflex/logging/internal/logging.hpp>
 
-#include <uv.h>
-
 int ::yajr::initLoop(uv_loop_t * loop) {
 
     if (!(loop->data = new (std::nothrow)
                 ::yajr::comms::internal::Peer::LoopData(loop))) {
-        LOG(WARNING)
-            << ": out of memory, cannot instantiate uv_loop LoopData"
-        ;
+        LOG(WARNING) << ": out of memory, cannot instantiate uv_loop LoopData";
         return UV_ENOMEM;
     }
 
     return 0;
-
 }
 
 void ::yajr::finiLoop(uv_loop_t * loop) {
@@ -101,15 +96,13 @@ char const * getUvHandleField(uv_handle_t * h, internal::Peer * peer) {
 void on_close(uv_handle_t * h) {
 
     if (!h) {
-        VLOG(ERROR)
-            << "NULL handle"
-        ;
+        LOG(ERROR) << "NULL handle";
         return;
     }
 
     CommunicationPeer * peer = Peer::get<CommunicationPeer>(h);
 
-    VLOG(1)
+    LOG(DEBUG1)
         << peer
         << " down() for an on_close("
         << static_cast< void * >(h)
@@ -131,12 +124,7 @@ void on_write(uv_write_t *req, int status) {
     peer->down();
 
     if (status == UV_ECANCELED || status == UV_ECONNRESET) {
-        LOG(INFO)
-            << "["
-            << uv_err_name(status)
-            << "] "
-            << uv_strerror(status)
-        ;
+        LOG(INFO) << "[" << uv_err_name(status) << "] " << uv_strerror(status);
         return;  /* Handle has been closed. */
     }
 
@@ -157,11 +145,7 @@ namespace boost
 
 void throw_exception(std::exception const & e) {
     assert(0);
-
-    LOG(FATAL)
-        << e.what()
-    ;
-
+    LOG(FATAL) << e.what();
     exit(127);
 }
 

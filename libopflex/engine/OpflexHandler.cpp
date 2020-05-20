@@ -325,7 +325,6 @@ void InbErr<&yajr::rpc::method::custom>::process() const {
  */
 template<>
 void InbRes<&yajr::rpc::method::transact>::process() const {
-    VLOG(5) << "calling InbRes transact";
     ((opflex::jsonrpc::RpcConnection*)getPeer()->getData())
             ->handleTransaction(getLocalId().id_, (rapidjson::Document&)getPayload());
 }
@@ -337,7 +336,6 @@ void InbReq<&yajr::rpc::method::transact>::process() const {
 
 template<>
 void InbErr<&yajr::rpc::method::transact>::process() const {
-    VLOG(5) << "calling InbErr transact";
 }
 
 
