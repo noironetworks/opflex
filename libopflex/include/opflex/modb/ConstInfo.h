@@ -59,7 +59,7 @@ public:
      * Get the unique ID for this const within the enclosing enum.
      * @return the const ID within the enum
      */
-    const uint64_t getId() const { return id; }
+    uint64_t getId() const { return id; }
 
 private:
     /**

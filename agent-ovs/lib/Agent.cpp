@@ -140,8 +140,8 @@ void Agent::loadPlugin(const std::string& name) {
     rendPluginHandles.insert(handle);
 
     auto names = plugin->getNames();
-    for (const auto& name : names) {
-        rendPlugins.emplace(name, plugin);
+    for (const auto& pluginName : names) {
+        rendPlugins.emplace(pluginName, plugin);
     }
 
     LOG(INFO) << "Loaded renderer plugin "

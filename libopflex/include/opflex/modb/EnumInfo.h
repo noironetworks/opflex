@@ -68,7 +68,7 @@ public:
      * @return The integer enum value
      * @throws std::out_of_range if the name does not exist
      */
-    const uint64_t getIdByName(const std::string& name) const;
+    uint64_t getIdByName(const std::string& name) const;
 
     /**
      * Get the enum constant name by the enum value

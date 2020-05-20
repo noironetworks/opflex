@@ -544,7 +544,7 @@ class OutboundRequest : public OutboundMessage,
     explicit OutboundRequest(
         PayloadGenerator const & params,   /* < [in] the params value to send */
         MethodName const * methodName,
-        uint64_t id, /* FIXME */
+        uint64_t id,
         yajr::Peer* peer                    /* < [in] where to send to */
         )
         :

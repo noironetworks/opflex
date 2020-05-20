@@ -34,7 +34,7 @@ EnumInfo::EnumInfo(const std::string &name_,
 EnumInfo::~EnumInfo() {
 }
 
-const uint64_t EnumInfo::getIdByName(const std::string& name) const {
+uint64_t EnumInfo::getIdByName(const std::string& name) const {
     return const_name_map.at(name);
 }
 

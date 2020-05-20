@@ -113,9 +113,9 @@ namespace opflexagent {
             }
         }
         // notify all listeners. put it on a task Q for non blocking notification.
-        for (const URI& uri : spanmanager.notifyUpdate) {
-            spanmanager.taskQueue.dispatch(uri.toString(), [=]() {
-                spanmanager.notifyListeners(uri);
+        for (const URI& updateUri : spanmanager.notifyUpdate) {
+            spanmanager.taskQueue.dispatch(updateUri.toString(), [=]() {
+                spanmanager.notifyListeners(updateUri);
             });
         }
         spanmanager.notifyUpdate.clear();
@@ -306,7 +306,7 @@ namespace opflexagent {
         }
     }
 
-    bool SessionState::hasSrcEndpoints() {
+    bool SessionState::hasSrcEndpoints() const {
         lock_guard<recursive_mutex> guard(opflexagent::SpanManager::updates);
         return !srcEndpoints.empty();
     }
