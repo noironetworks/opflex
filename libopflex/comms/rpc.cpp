@@ -17,7 +17,6 @@
 #include <opflex/yajr/rpc/rpc.hpp>
 
 #include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
 
 namespace yajr {
     namespace rpc {

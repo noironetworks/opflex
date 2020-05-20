@@ -139,7 +139,7 @@ void on_active_connection(uv_connect_t *req, int status) {
 
         /* the peer might have been deleted, so we have to avoid accessing any
          * of its members */
-        VLOG(1) << peer << " has had a connection attempt canceled";
+        LOG(DEBUG1) << peer << " has had a connection attempt canceled";
         peer->onError(status);
         return;
     }
@@ -248,7 +248,7 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
 
 void debug_address(struct addrinfo const * ai, size_t m = 0) {
 
-    if (!VLOG_IS_ON(3)) {
+    if (!LOG_SHOULD_EMIT(DEBUG3)) {
         return;
     }
 
@@ -281,7 +281,7 @@ void debug_address(struct addrinfo const * ai, size_t m = 0) {
                        NI_NUMERICHOST | NI_NUMERICSERV
                       );
 
-    VLOG(4)
+    LOG(DEBUG4)
         << msg[m][0]
         <<           host
         << msg[m][1]

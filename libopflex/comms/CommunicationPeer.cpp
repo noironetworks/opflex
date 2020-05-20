@@ -16,11 +16,7 @@
 #include <yajr/rpc/methods.hpp>
 #include <opflex/yajr/internal/comms.hpp>
 
-#include <opflex/logging/internal/logging.hpp>
-
 #include <rapidjson/error/en.h>
-
-#include <cctype>
 
 namespace yajr {
     namespace internal {
@@ -85,7 +81,7 @@ void CommunicationPeer::startKeepAlive(
         uint64_t repeat,
         uint64_t interval) {
 
-    VLOG(1)
+    LOG(DEBUG1)
         << this
         << " interval="
         <<   interval
@@ -103,10 +99,7 @@ void CommunicationPeer::startKeepAlive(
 }
 
 void CommunicationPeer::stopKeepAlive() {
-    VLOG(1)
-        << this
-    ;
-
+    LOG(DEBUG1)<< this;
     uv_timer_stop(&keepAliveTimer_);
     keepAliveInterval_ = 0;
 }
@@ -124,10 +117,7 @@ void CommunicationPeer::onConnect() {
     status_ = internal::Peer::kPS_ONLINE;
 
     keepAliveTimer_.data = this;
-    VLOG(1)
-        << this
-        << " up() for a timer init"
-    ;
+    LOG(DEBUG1) << this << " up() for a timer init";
     up();
     uv_timer_init(getUvLoop(), &keepAliveTimer_);
     uv_unref((uv_handle_t*) &keepAliveTimer_);
@@ -142,7 +132,7 @@ void CommunicationPeer::onConnect() {
 
 void CommunicationPeer::onDisconnect() {
 
-    VLOG(1)
+    LOG(DEBUG1)
         << this
         << " connected_ = "
         << static_cast< bool >(connected_)
@@ -177,26 +167,17 @@ void CommunicationPeer::onDisconnect() {
     unlink();
 
     if (destroying_) {
-        VLOG(2)
-            << this
-            << " already destroying"
-        ;
+        LOG(DEBUG2) << this << " already destroying";
         return;
     }
 
     if (!passive_) {
-        VLOG(2)
-            << this
-            << " active => retry queue"
-        ;
+        LOG(DEBUG2) << this << " active => retry queue";
         /* we should attempt to reconnect later */
         insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
         status_ = kPS_DISCONNECTED;
     } else {
-        VLOG(2)
-            << this
-            << " passive => eventually drop"
-        ;
+        LOG(DEBUG2) << this << " passive => eventually drop";
         /* whoever it was, hopefully will reconnect again */
         insert(internal::Peer::LoopData::PENDING_DELETE);
         status_ = kPS_PENDING_DELETE;
@@ -384,7 +365,7 @@ void CommunicationPeer::timeout() {
 
     if (uvRefCnt_ == 1) {
         /* we already have a pending close */
-        VLOG(4) << this << " Already closing";
+        LOG(DEBUG4) << this << " Already closing";
         return;
     }
 
@@ -507,7 +488,6 @@ yajr::rpc::InboundMessage * comms::internal::CommunicationPeer::parseFrame() {
          */
         ret = yajr::rpc::MessageFactory::getInboundMessage(*this, docIn_);
 
-        // assert(ret);
         if (!ret) {
             onError(UV_EPROTO);
             const_cast<CommunicationPeer *>(this)->onDisconnect();

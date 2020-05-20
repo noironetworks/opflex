@@ -87,8 +87,6 @@ MessageFactory::InboundMessage(
         }
 
         /* id must be an array for replies, and its first element must be a string */
-        assert(id.IsArray());
-        assert(id[rapidjson::SizeType(0)].IsString());
         if (!id.IsArray() || !id[rapidjson::SizeType(0)].IsString()) {
             LOG(ERROR) << &peer << " Received frame with an id that is not an array of strings.";
             goto error;

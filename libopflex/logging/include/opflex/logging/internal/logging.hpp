@@ -143,14 +143,4 @@ private:
                                           __FUNCTION__)                 \
             .stream()                                                   \
 
-/* quick and dirty compatibility with glog's verbose logging */
-#define VLOG_TO_LEVEL(integer) \
-    (opflex::logging::OFLogHandler::Level(INFO-TRACE-1-(integer)))
-
-#define VLOG(integer) \
-    LOG(VLOG_TO_LEVEL(integer))
-
-#define VLOG_IS_ON(integer) \
-    LOG_SHOULD_EMIT(VLOG_TO_LEVEL(integer))
-
 #endif /* _INCLUDE__OPFLEX__LOGGING_HPP */

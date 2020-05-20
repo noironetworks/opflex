@@ -20,7 +20,7 @@
 
 namespace {
 
-    void prepareAgainCB(uv_timer_t *) { VLOG(6); }
+    void prepareAgainCB(uv_timer_t *) { }
 
 }
 
@@ -101,10 +101,7 @@ prepared:
         /* We need to make sure we unblock */
 
         if (!uv_is_active((uv_handle_t *)&prepareAgain_)) {
-            VLOG(4)
-                << " Starting prepareAgain_ @"
-                << reinterpret_cast<void *>(&prepareAgain_)
-            ;
+            LOG(DEBUG4) << " Starting prepareAgain_ @" << reinterpret_cast<void *>(&prepareAgain_);
         } // else we are just pushing it out in time :)
         uv_timer_start(&prepareAgain_, prepareAgainCB, 1250, 0);
     }
@@ -215,13 +212,13 @@ void Peer::LoopData::RetryPeer::operator () (Peer *peer)
 
 void Peer::LoopData::PeerDeleter::operator () (Peer *peer)
 {
-    VLOG(1) << peer << " deleting abruptedly";
+    LOG(DEBUG1) << peer << " deleting abruptedly";
     assert(!"peers should never get deleted this way");
     delete peer;
 }
 
 void Peer::LoopData::up() {
-    VLOG(2)
+    LOG(DEBUG2)
         << this
         << " LoopRefCnt: "
         << refCount_
@@ -246,7 +243,7 @@ void Peer::LoopData::down() {
 
 Peer::LoopData::~LoopData() {
 
-    VLOG(1) << this << " is being deleted" ;
+    LOG(DEBUG1) << this << " is being deleted" ;
 
     for (size_t i=0; i < Peer::LoopData::TOTAL_STATES; ++i) {
         assert(peers[Peer::LoopData::PeerState(i)].empty());

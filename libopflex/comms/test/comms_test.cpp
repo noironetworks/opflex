@@ -287,10 +287,7 @@ class CommsFixture {
 
         if (oldDbgLog != newDbgLog) {
             oldDbgLog = newDbgLog;
-
-            VLOG(3)
-                << newDbgLog
-            ;
+            LOG(DEBUG3)  << newDbgLog;
         }
 
         return std::make_pair(final_peers, transient_peers);
