@@ -21,11 +21,6 @@ namespace yajr {
         namespace internal {
 
 void ActivePeer::destroy(bool now) {
-
-    VLOG(6)
-        << this
-    ;
-
     bool alreadyBeingDestroyed = destroying_;
 
     if (!alreadyBeingDestroyed || now) {
@@ -33,17 +28,10 @@ void ActivePeer::destroy(bool now) {
     }
 
     if (alreadyBeingDestroyed) {
-        VLOG(1)
-            << this
-            << " multiple destroy()s detected"
-        ;
+        VLOG(1) << this << " multiple destroy()s detected";
         return;
     }
 
-    VLOG(5)
-        << this
-        << " down() for destruction"
-    ;
     down();
 }
 

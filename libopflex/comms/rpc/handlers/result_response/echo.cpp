@@ -20,12 +20,6 @@ namespace yajr {
 
 template<>
 void InbRes<&yajr::rpc::method::echo>::process() const {
-
-    VLOG(6)
-        << "Got echo reply at "
-        << getReceived()
-    ;
-
 }
 
 }

@@ -19,9 +19,6 @@ namespace yajr {
 
 template<>
 void InbReq<&yajr::rpc::method::endpoint_unresolve>::process() const {
-
-    VLOG(6);
-
 }
 
 } /* yajr::rpc namespace */

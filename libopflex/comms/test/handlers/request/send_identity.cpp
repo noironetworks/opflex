@@ -19,9 +19,6 @@ namespace yajr {
 
 template<>
 void InbReq<&yajr::rpc::method::send_identity>::process() const {
-
-    VLOG(6);
-
 }
 
 } /* yajr::rpc namespace */

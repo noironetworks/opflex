@@ -106,10 +106,6 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToDecrypt(
 #  undef tryRead
 
         if (nread > 0) {
-            VLOG(6) << peer << " just decrypted " << nread
-                << " bytes into buffer starting @"
-                << reinterpret_cast<void*>(buffer)
-                << " (" << std::string(buffer, nread) << ")";
             peer->readBuffer(buffer, nread, true);
             totalRead += nread;
         }
@@ -336,9 +332,6 @@ void Cb< ZeroCopyOpenSSL >::on_read(
     }
 
     if (nread > 0) {
-
-        VLOG(5) << peer << " read " << nread << " into buffer of size " << buf->len;
-
         ZeroCopyOpenSSL * e = peer
             ->getEngine<ZeroCopyOpenSSL>();
 
