@@ -59,7 +59,7 @@ class SourceEndpoint {
          * gets the direction of spanned traffic
          * @return a value from DirectionEnumT.
          */
-        const unsigned char getDirection() const { return dir; };
+        unsigned char getDirection() const { return dir; };
 
     private:
         string name;
@@ -136,7 +136,7 @@ class SessionState {
          * are there any src endpoints
          * @return has src endpoints
          */
-        bool hasSrcEndpoints();
+        bool hasSrcEndpoints() const;
 
         /**
          * get a copy of the source end points
@@ -162,13 +162,13 @@ class SessionState {
          * gets the name string for this object
          * @return the name attribute string.
          */
-        const string& getName() { return name; };
+        const string& getName() const { return name; };
 
         /**
          * get session admin state
          * @returns admin state of session
          */
-        const uint8_t getAdminState() { return adminState;};
+        uint8_t getAdminState() const { return adminState;};
 
         /**
          * set session admin state
@@ -179,7 +179,7 @@ class SessionState {
         * get ERSPAN version setting
         * @return ERSPAN version
         */
-       const uint8_t getVersion() { return version; };
+       uint8_t getVersion() const { return version; };
        /**
         * set ERSPAN version
         * @param ver ERSPAN version

@@ -160,7 +160,6 @@ void CommunicationPeer::onDisconnect() {
             uv_close((uv_handle_t*)&keepAliveTimer_, on_close);
         }
 
-        /* FIXME: might be called too many times? */
         connectionHandler_(this, data_, ::yajr::StateChange::DISCONNECT, 0);
     }
 
@@ -392,7 +391,6 @@ int comms::internal::CommunicationPeer::choke() const {
     }
 
     int rc;
-
     if ((rc = uv_read_stop((uv_stream_t*) getHandle()))) {
 
         LOG(WARNING)
@@ -402,11 +400,8 @@ int comms::internal::CommunicationPeer::choke() const {
             << uv_strerror(rc)
         ;
 
-        /* FIXME: this might even not be a big issue if SSL is not involved */
-
         onError(rc);
         const_cast<CommunicationPeer *>(this)->onDisconnect();
-
     } else {
         choked_ = 1;
     }

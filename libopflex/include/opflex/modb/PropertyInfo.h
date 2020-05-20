@@ -137,18 +137,18 @@ public:
     /**
      * Get the type of this property
      */
-    const property_type_t getType() const { return prop_type; }
+    property_type_t getType() const { return prop_type; }
 
     /**
      * Get the class ID for this property.  This is valid only when
      * property_type_t == COMPOSITE
      */
-    const class_id_t getClassId() const { return class_id; }
+    class_id_t getClassId() const { return class_id; }
 
     /**
      * Get the cardinality for this type.
      */
-    const cardinality_t getCardinality() const { return cardinality; }
+    cardinality_t getCardinality() const { return cardinality; }
 
     /**
      * Get the associated enum info for this property if it is an enum.

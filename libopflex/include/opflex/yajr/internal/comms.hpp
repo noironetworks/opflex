@@ -347,7 +347,7 @@ class Peer : public SafeListBaseHook {
               nullTermination(true)
             {
                 getHandle()->data = this;
-                /* FIXME: this hack is filthy and unix-only */
+                // this hack is filthy and unix-only
                 getHandle()->flags = 0x02 /* UV_CLOSED */;
             }
 

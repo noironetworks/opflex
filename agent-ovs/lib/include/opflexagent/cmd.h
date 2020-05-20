@@ -9,6 +9,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#ifndef AGENT_CMD_H
+#define AGENT_CMD_H
+
 namespace opflexagent {
 
 /**
@@ -17,3 +20,5 @@ namespace opflexagent {
 void daemonize();
 
 } /* namespace opflexagent */
+
+#endif /* AGENT_CMD_H */
