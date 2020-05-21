@@ -172,7 +172,7 @@ static FlowEntryPtr flowEmptySecGroup(uint32_t emptySecGrpSetId) {
     return noSecGrp.build();
 }
 
-static const uint64_t getPushVlanMeta(std::shared_ptr<const Endpoint>& ep) {
+static uint64_t getPushVlanMeta(std::shared_ptr<const Endpoint>& ep) {
     return ep->isAccessAllowUntagged() ?
         flow::meta::access_out::UNTAGGED_AND_PUSH_VLAN :
         flow::meta::access_out::PUSH_VLAN;
@@ -364,8 +364,8 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
         std::unordered_set<std::string> lbiUuids;
         lbMgr.getLBIfaceByIface(ep->getInterfaceName().get(), lbiUuids);
 
-        for (auto& uuid : lbiUuids) {
-            auto iface = lbMgr.getLBIface(uuid);
+        for (auto& lbiUuid : lbiUuids) {
+            auto iface = lbMgr.getLBIface(lbiUuid);
             if (!iface) continue;
 
             for (auto& range : iface->getTrunkVlans()) {
@@ -786,8 +786,8 @@ void AccessFlowManager::lbIfaceUpdated(const std::string& uuid) {
         std::unordered_set<std::string> epUuids;
         epMgr.getEndpointsByIface(iface->getInterfaceName().get(), epUuids);
 
-        for (auto& uuid : epUuids) {
-            endpointUpdated(uuid);
+        for (auto& epUuid : epUuids) {
+            endpointUpdated(epUuid);
         }
     }
 }
