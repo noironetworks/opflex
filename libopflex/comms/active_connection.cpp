@@ -320,7 +320,6 @@ void swap_stack_on_close(uv_handle_t * h) {
     ActiveTcpPeer * peer = Peer::get<ActiveTcpPeer>(h);  // can't possibly crash yet
 
     int rc;
-    /* FIXME: pass the loop along */
     if ((rc = peer->tcpInit())) {
 
         peer->down();
