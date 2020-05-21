@@ -48,8 +48,8 @@ static string ep_family_names[] =
   "opflex_endpoint_rx_ucast_packets",
   "opflex_endpoint_rx_mcast_packets",
   "opflex_endpoint_rx_bcast_packets",
-  "opflex_endpoint_tx_packets",
   "opflex_endpoint_tx_bytes",
+  "opflex_endpoint_tx_packets",
   "opflex_endpoint_tx_drop_packets",
   "opflex_endpoint_tx_ucast_packets",
   "opflex_endpoint_tx_mcast_packets",
@@ -64,8 +64,8 @@ static string ep_family_help[] =
   "Local endpoint rx unicast packets",
   "Local endpoint rx multicast packets",
   "Local endpoint rx broadcast packets",
-  "Local endpoint tx packets",
   "Local endpoint tx bytes",
+  "Local endpoint tx packets",
   "Local endpoint tx drop packets",
   "Local endpoint tx unicast packets",
   "Local endpoint tx multicast packets",
@@ -1602,6 +1602,12 @@ bool PrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
     gauge_check.add(&gauge);
 
     ep_gauge_map[metric][uuid] = make_pair(hash, &gauge);
+
+    // If the gauge is already present and if we created last new metric due to
+    // attribute change, then return false so that the active ep count and total
+    // created ep count dont change
+    if (hgauge && (metric == (EP_METRICS_MAX-1)))
+        return false;
 
     return true;
 }
