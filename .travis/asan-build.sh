@@ -22,6 +22,7 @@ sudo make install &> /dev/null
 popd
 popd
 
+git apply .travis/agent_test_log.patch
 pushd agent-ovs
 ./autogen.sh &> /dev/null
 ./configure --enable-asan &> /dev/null
