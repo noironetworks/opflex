@@ -1,0 +1,13 @@
+diff --git a/agent-ovs/lib/logging.cpp b/agent-ovs/lib/logging.cpp
+index d1574012..3f3107d3 100644
+--- a/agent-ovs/lib/logging.cpp
++++ b/agent-ovs/lib/logging.cpp
+@@ -31,7 +31,7 @@ namespace opflexagent {
+
+ AgentLogHandler logHandler(OFLogHandler::NO_LOGGING);
+
+-LogLevel logLevel = DEBUG;
++LogLevel logLevel = INFO;
+
+ /**
+  * Log sink to write log messages to a standard output stream, such as
