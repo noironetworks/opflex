@@ -34,16 +34,6 @@ public class TransitionTable
 
     public static Transition[][] get()
     {
-        if (null == transitionTable)
-        {
-            synchronized (TransitionTable.class)
-            {
-                if (null == transitionTable)
-                {
-                    transitionTable = initTransitionTable();
-                }
-            }
-        }
         return transitionTable;
     }
 
@@ -72,5 +62,5 @@ public class TransitionTable
         aInTbl[aIn.getFromState().getIdx()][aIn.getToState().getIdx()] = aIn;
     }
 
-    private static Transition[][] transitionTable = null;
+    private static Transition[][] transitionTable = initTransitionTable();
 }
