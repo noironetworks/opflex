@@ -26,10 +26,9 @@ namespace opflexagent {
 using namespace opflex::jsonrpc;
 using namespace rapidjson;
 
-void JsonRpc::handleTransaction(uint64_t reqId, const Document& payload) {
-    pResp.reset(new Response(reqId, payload));
+void JsonRpc::handleTransaction(uint64_t reqId, const Document& payload_) {
+    setResponsePayload(payload_);
     // TODO - generically check payload of response for errors and log
-    responseReceived = true;
     conn->ready.notify_all();
 }
 
@@ -175,7 +174,7 @@ bool JsonRpc::getOvsdbMirrorConfig(const string& sessionName, mirror& mir) {
         LOG(DEBUG) << "Error sending message";
         return false;
     }
-    if (!handleMirrorConfig(pResp->payload, mir)) {
+    if (!handleMirrorConfig(getResponsePayload(), mir)) {
         return false;
     }
     // collect all port UUIDs in a set and query
@@ -194,7 +193,7 @@ bool JsonRpc::getOvsdbMirrorConfig(const string& sessionName, mirror& mir) {
         return false;
     }
     unordered_map<string, string> portMap;
-    if (!getPortList(pResp->payload, portMap)) {
+    if (!getPortList(getResponsePayload(), portMap)) {
         LOG(DEBUG) << "Unable to get port list";
         return false;
     }
@@ -222,7 +221,7 @@ bool JsonRpc::getCurrentErspanParams(const string& portName, ErspanParams& param
         LOG(DEBUG) << "Error sending message";
         return false;
     }
-    if (!getErspanOptions(pResp->payload, params)) {
+    if (!getErspanOptions(getResponsePayload(), params)) {
         LOG(DEBUG) << "failed to get ERSPAN options";
         return false;
     }
@@ -336,7 +335,7 @@ void JsonRpc::getUuid(OvsdbTable table, const string& name, string& uuid) {
     if (!sendRequestAndAwaitResponse(requests)) {
         LOG(DEBUG) << "Error sending message";
     }
-    getUuidByNameFromResp(pResp->payload, uuidColumn, uuid);
+    getUuidByNameFromResp(getResponsePayload(), uuidColumn, uuid);
 }
 
 void JsonRpc::getUuidByNameFromResp(const Document& payload, const string& uuidName, string& uuid) {

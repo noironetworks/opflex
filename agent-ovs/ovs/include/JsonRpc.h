@@ -229,12 +229,6 @@ public:
      */
     bool isConnected();
 
-    /**
-     * get rpc connection pointer
-     * @return pointer to OVSDB connection
-     */
-    OvsdbConnection* getConnection() { return conn; }
-
 private:
 
     /**
@@ -275,21 +269,23 @@ private:
 
     static void substituteSet(set<string>& s, const unordered_map<string, string>& portMap);
 
-    class Response {
-    public:
-        uint64_t reqId;
-        rapidjson::Document payload;
+    mutex respMutex;
 
-        Response(uint64_t reqId, const rapidjson::Document& payload_) :
-            reqId(reqId) {
-            payload.CopyFrom(payload_, payload.GetAllocator());
-        }
-    };
+    const rapidjson::Document& getResponsePayload() {
+        unique_lock<mutex> lock(respMutex);
+        return payload;
+    }
+
+    void setResponsePayload(const rapidjson::Document& payload_) {
+        unique_lock<mutex> lock(respMutex);
+        payload.CopyFrom(payload_, payload.GetAllocator());
+        responseReceived = true;
+    }
 
     bool responseReceived = false;
     const int WAIT_TIMEOUT = 5000;
     OvsdbConnection* conn;
-    shared_ptr<Response> pResp;
+    rapidjson::Document payload;
 };
 
 }
