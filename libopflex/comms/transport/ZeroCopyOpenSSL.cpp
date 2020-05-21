@@ -544,21 +544,13 @@ ZeroCopyOpenSSL::ZeroCopyOpenSSL(ZeroCopyOpenSSL::Ctx * ctx, bool passive)
         ready_(false)
     {
 
-                           bioInternal_                       &&
-    BIO_set_write_buf_size(bioInternal_, 24576)               &&
-
-                           bioExternal_                       &&
-    BIO_set_write_buf_size(bioExternal_, 24576)               &&
-
-    BIO_make_bio_pair     (bioInternal_, bioExternal_)        &&
-
-                           bioSSL_                            &&
-
-    (ssl_               = SSL_new(ctx->getSslCtx()))          &&
-
-    BIO_set_ssl           (bioSSL_, ssl_, BIO_CLOSE)          &&
-
-    (ready_             = true);
+    if(bioInternal_ && BIO_set_write_buf_size(bioInternal_, 24576) &&
+       bioExternal_ && BIO_set_write_buf_size(bioExternal_, 24576) &&
+       BIO_make_bio_pair(bioInternal_, bioExternal_) && bioSSL_ &&
+       (ssl_ = SSL_new(ctx->getSslCtx())) &&
+       BIO_set_ssl(bioSSL_, ssl_, BIO_CLOSE)) {
+        ready_ = true;
+    }
 
     if (!ready_) {
         LOG(ERROR) << "Fatal failure: " << ZeroCopyOpenSSL::dumpOpenSslErrorStackAsString();

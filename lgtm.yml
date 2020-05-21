@@ -1,5 +1,39 @@
 path_classifiers:
   docs: "docs"
+queries:
+  - include: cpp/offset-use-before-range-check
+  - include: cpp/incomplete-parity-check
+  - include: cpp/mistyped-function-arguments
+  - include: cpp/leap-year/adding-365-days-per-year
+  - include: cpp/user-controlled-bypass
+  - include: cpp/cleartext-storage-database
+  - include: cpp/cleartext-storage-buffer
+  - include: cpp/cleartext-storage-file
+  - include: cpp/inconsistent-call-on-result
+  - include: cpp/incorrect-not-operator-usage
+  - include: cpp/stack-address-escape
+  - include: cpp/lossy-function-result-cast
+  - include: cpp/missing-case-in-switch
+  - include: cpp/nested-loops-with-same-variable
+  - include: cpp/suspicious-allocation-size
+  - include: cpp/allocation-too-small
+  - include: cpp/bad-strncpy-size
+  - include: cpp/uninitialized-local
+  - include: cpp/unsafe-strncat
+  - include: cpp/unsafe-strcat
+  - include: cpp/static-buffer-overflow
+  - include: cpp/suspicious-sizeof
+  - include: cpp/suspicious-pointer-scaling
+  - include: cpp/suspicious-pointer-scaling-void
+  - include: cpp/toctou-race-condition
+  - include: cpp/uncontrolled-arithmetic
+  - include: cpp/path-injection
+  - include: cpp/tainted-format-string
+  - include: cpp/tainted-format-string-through-global
+  - include: cpp/uncontrolled-process-operation
+  - include: cpp/unterminated-variadic-call
+  - include: cpp/tainted-permissions-check
+  - include: cpp/integer-used-for-enum
 extraction:
   cpp:
     prepare:

@@ -243,6 +243,12 @@ TableState::~TableState() {
     delete pimpl;
 }
 
+const TableState& TableState::operator=(const TableState& ts) {
+    delete pimpl;
+    pimpl = new TableStateImpl(*ts.pimpl);
+    return ts;
+}
+
 void TableState::diffSnapshot(const FlowEntryList& oldEntries,
                               FlowEdit& diffs) const {
     typedef std::pair<bool, FlowEntryPtr> visited_fe_t;
