@@ -96,7 +96,7 @@ public:
         std::unordered_set<std::string> eps;
         epMgr.getEndpointsByIface("interface-name", eps);
         for (auto& uuid : eps) {
-            opflexagent::EndpointManager::EpCounters counters;
+            opflexagent::EpCounters counters;
             memset(&counters, 0, sizeof(counters));
             uint64_t c = ++intCounter;
             counters.txPackets = c;

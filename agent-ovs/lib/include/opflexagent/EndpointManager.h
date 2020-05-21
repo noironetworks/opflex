@@ -43,6 +43,71 @@ typedef std::unordered_map<std::string,
                         std::shared_ptr<const Endpoint>> ip_ep_map_t;
 
 /**
+ * Counter values for endpoint stats
+ */
+struct EpCounters {
+    /**
+     * Number of packets sent
+     */
+    uint64_t txPackets;
+
+    /**
+     * Number of packets received
+     */
+    uint64_t rxPackets;
+
+    /**
+     * the number of dropped packets sent
+     */
+    uint64_t txDrop;
+
+    /**
+     * the number of dropped packets received
+     */
+    uint64_t rxDrop;
+
+    /**
+     * the number of multicast packets sent
+     */
+    uint64_t txMulticast;
+
+    /**
+     * the number of multicast packets received
+     */
+    uint64_t rxMulticast;
+
+    /**
+     * the number of broadcast packets sent
+     */
+    uint64_t txBroadcast;
+
+    /**
+     * the number of broadcast packets received
+     */
+    uint64_t rxBroadcast;
+
+    /**
+     * the number of unicast packets sent
+     */
+    uint64_t txUnicast;
+
+    /**
+     * the number of unicast packets received
+     */
+    uint64_t rxUnicast;
+
+    /**
+     * the number of bytes sent
+     */
+    uint64_t txBytes;
+
+    /**
+     * the number of bytes received
+     */
+    uint64_t rxBytes;
+};
+
+/**
  * The endpoint manager is responsible for maintaining the state
  * related to endpoints.  It discovers new endpoints on the system and
  * write the appropriate objects and references into the endpoint
@@ -237,71 +302,6 @@ public:
     * @param uri string uri reference to the platform/config object that changed.
     */
     void configUpdated(const opflex::modb::URI& uri);
-
-    /**
-     * Counter values for endpoint stats
-     */
-    struct EpCounters {
-        /**
-         * Number of packets sent
-         */
-        uint64_t txPackets;
-
-        /**
-         * Number of packets received
-         */
-        uint64_t rxPackets;
-
-        /**
-         * the number of dropped packets sent
-         */
-        uint64_t txDrop;
-
-        /**
-         * the number of dropped packets received
-         */
-        uint64_t rxDrop;
-
-        /**
-         * the number of multicast packets sent
-         */
-        uint64_t txMulticast;
-
-        /**
-         * the number of multicast packets received
-         */
-        uint64_t rxMulticast;
-
-        /**
-         * the number of broadcast packets sent
-         */
-        uint64_t txBroadcast;
-
-        /**
-         * the number of broadcast packets received
-         */
-        uint64_t rxBroadcast;
-
-        /**
-         * the number of unicast packets sent
-         */
-        uint64_t txUnicast;
-
-        /**
-         * the number of unicast packets received
-         */
-        uint64_t rxUnicast;
-
-        /**
-         * the number of bytes sent
-         */
-        uint64_t txBytes;
-
-        /**
-         * the number of bytes received
-         */
-        uint64_t rxBytes;
-    };
 
     /**
      * Update the counters for an endpoint to the specified values
