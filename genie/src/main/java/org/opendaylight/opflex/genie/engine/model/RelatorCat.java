@@ -188,8 +188,6 @@ public class RelatorCat extends Cat
             Cat aInToCat,
             String aInToGName)
     {
-        //System.out.println("#### Relator.doAdd(" + aInFromRelatorCat + "," + aInFromCat + ", " + aInFromGName + ", "  + ", " + aInToRelatorCat + ", " + aInToCat + ", " + aInToGName + ")");
-
         Relator lFromRelator = aInFromRelatorCat.getRelator(aInFromGName);//aInFromRelatorCat.getNodes().getItem(aInFromGName);
 
         if (null == lFromRelator)
@@ -202,8 +200,6 @@ public class RelatorCat extends Cat
                     aInFromCat,
                     aInToCat,
                     aInFromGName); // YES, FROM.
-
-            //System.out.println("#### Relator.doAdd() added from: " + lFromRelator);
         }
         else if (aInFromRelatorCat.getCardinality() != lFromRelator.getCardinality())
         {
@@ -225,21 +221,17 @@ public class RelatorCat extends Cat
                     aInToCat,
                     aInFromCat,
                     aInToGName);
-
-            //System.out.println("#### Relator.doAdd() added to: " + lToRelator);
         }
         else if (aInToRelatorCat.getCardinality() != lToRelator.getCardinality())
         {
             Severity.DEATH.report(lToRelator.toString(), "register reln", "duplicate dest", "for source: " + aInFromGName + "; CARDINALITY MISMATCH");
         }
-        else if (RelatorCat.Type.TO != lFromRelator.getType())
+        else if (RelatorCat.Type.TO != lToRelator.getType())
         {
             Severity.DEATH.report(lToRelator.toString(), "register reln", "duplicate dest", "for source: " + aInFromGName + "; TYPE MISMATCH");
         }
-        //System.out.println("#### Relator.doAdd() : END\n\n");
         return lToRelator;
     }
-
 
     /**
      * Category registration.

@@ -33,10 +33,13 @@ public class Lister
             if (aInFile.isDirectory())
             {
                 File[] lFiles = aInFile.listFiles();
-                Arrays.sort(lFiles);
-                for (File lThisF : lFiles)
+                if (null != lFiles)
                 {
-                    explore(lThisF, aInSuffix);
+                    Arrays.sort(lFiles);
+                    for (File lThisF : lFiles)
+                    {
+                       explore(lThisF, aInSuffix);
+                    }
                 }
             }
             else if (aInFile.isFile())

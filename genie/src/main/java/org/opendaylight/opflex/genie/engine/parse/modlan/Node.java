@@ -141,6 +141,15 @@ public class Node
         {
             lProc = aInParentProcessor.getChild(name);
         }
+        else
+        {
+            Severity.DEATH.report(
+                this.toString(),
+                "PARSE",
+                "parent processor is null",
+                "\"" + name + "\" processor has a null parent processor"
+                 );
+        }
 
         if (null == lProc)
         {

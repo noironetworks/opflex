@@ -108,10 +108,10 @@ public class Cat extends Ident {
             if (null != lPGId)
             {
                 lSb.append(lPGId.getName());
-            }
-            if (!lPGId.getName().endsWith("/"))
-            {
-                lSb.append('/');
+                if (!lPGId.getName().endsWith("/"))
+                {
+                    lSb.append('/');
+                }
             }
         }
         lSb.append(null != aInLName ? aInLName : getName());
