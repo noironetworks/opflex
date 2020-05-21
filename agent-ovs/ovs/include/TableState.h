@@ -286,6 +286,13 @@ public:
     ~TableState();
 
     /**
+     * Assignment operator
+     * @param ts the object to copy from
+     * @return return argument for chaining
+     */
+    const TableState& operator=(const TableState& ts);
+
+    /**
      * Update cached entry-list corresponding to given object-id
      */
     void apply(const std::string& objId,

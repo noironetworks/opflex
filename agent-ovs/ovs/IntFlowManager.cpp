@@ -85,9 +85,9 @@ namespace pt = boost::property_tree;
 using namespace modelgbp::gbp;
 using namespace modelgbp::gbpe;
 
-std::random_device rng;
-std::mt19937 urng(rng());
-basic_random_generator<std::mt19937> uuidGen(urng);
+std::random_device randomDevice;
+std::mt19937 randomSeed(randomDevice());
+basic_random_generator<std::mt19937> uuidGen(randomSeed);
 
 namespace opflexagent {
 
