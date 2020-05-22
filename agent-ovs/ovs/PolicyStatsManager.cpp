@@ -305,13 +305,13 @@ on_timer_base(const error_code& ec,
                     .setStateReports(peerStat.second->getStateReports())
                     .setStateReportResps(peerStat.second->getStateReportResps())
                     .setStateReportErrs(peerStat.second->getStateReportErrs());
+#ifdef HAVE_PROMETHEUS_SUPPORT
+            prometheusManager.addNUpdateOFPeerStats(peerStat.first, peerStat.second);
+#endif
         }
     }
 
     mutator.commit();
-#ifdef HAVE_PROMETHEUS_SUPPORT
-    prometheusManager.addNUpdateOFPeerStats();
-#endif
 }
 
 void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,

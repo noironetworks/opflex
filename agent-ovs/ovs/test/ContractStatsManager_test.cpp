@@ -93,6 +93,8 @@ public:
                             uint32_t bytes,
                             bool isTx=false) override;
     void verifyRdDropPromMetrics(uint32_t pkts, uint32_t bytes);
+    void updateOFPeerStats(OF_SHARED_PTR<OFStats> opflexStats);
+    void verifyOFPeerMetrics(const std::string& peer, uint32_t count);
 #endif
     IntFlowManager  intFlowManager;
     MockContractStatsManager contractStatsManager;
@@ -102,6 +104,116 @@ private:
 };
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
+void ContractStatsManagerFixture::
+updateOFPeerStats (OF_SHARED_PTR<OFStats> opflexStats)
+{
+    opflexStats->incrIdentReqs();
+    opflexStats->incrIdentResps();
+    opflexStats->incrPolResolves();
+    opflexStats->incrPolResolveResps();
+    opflexStats->incrPolUnresolves();
+    opflexStats->incrPolUnresolveResps();
+    opflexStats->incrPolUpdates();
+    opflexStats->incrEpDeclares();
+    opflexStats->incrEpDeclareResps();
+    opflexStats->incrEpUndeclares();
+    opflexStats->incrEpUndeclareResps();
+    opflexStats->incrStateReports();
+    opflexStats->incrStateReportResps();
+}
+
+void ContractStatsManagerFixture::
+verifyOFPeerMetrics (const std::string& peer, uint32_t count)
+{
+    const std::string& output = BaseFixture::getOutputFromCommand(cmd);
+    size_t pos = std::string::npos;
+    const auto& val1 = boost::lexical_cast<std::string>(count) + ".000000";
+    const auto& val2 = "0.000000";
+
+    const std::string& ident_req = "opflex_peer_identity_req_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(ident_req);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string ident_resp = "opflex_peer_identity_resp_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(ident_resp);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string ident_err = "opflex_peer_identity_err_count{peer=\""
+                                   + peer + "\"} " + val2;
+    pos = output.find(ident_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+
+    const std::string& res_req = "opflex_peer_policy_resolve_req_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(res_req);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& res_resp = "opflex_peer_policy_resolve_resp_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(res_resp);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& res_err = "opflex_peer_policy_resolve_err_count{peer=\""
+                                   + peer + "\"} " + val2;
+    pos = output.find(res_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+
+    const std::string& unres_req = "opflex_peer_policy_unresolve_req_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(unres_req);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& unres_resp = "opflex_peer_policy_unresolve_resp_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(unres_resp);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& unres_err = "opflex_peer_policy_unresolve_err_count{peer=\""
+                                   + peer + "\"} " + val2;
+    pos = output.find(unres_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+
+    const std::string& pol_upd = "opflex_peer_policy_update_receive_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(pol_upd);
+    BOOST_CHECK_NE(pos, std::string::npos);
+
+    const std::string& epd_req = "opflex_peer_ep_declare_req_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(epd_req);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& epd_resp = "opflex_peer_ep_declare_resp_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(epd_resp);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& epd_err = "opflex_peer_ep_declare_err_count{peer=\""
+                                   + peer + "\"} " + val2;
+    pos = output.find(epd_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+
+    const std::string& epud_req = "opflex_peer_ep_undeclare_req_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(epud_req);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& epud_resp = "opflex_peer_ep_undeclare_resp_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(epud_resp);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& epud_err = "opflex_peer_ep_undeclare_err_count{peer=\""
+                                   + peer + "\"} " + val2;
+    pos = output.find(epud_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+
+    const std::string& rep_req = "opflex_peer_state_report_req_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(rep_req);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& rep_resp = "opflex_peer_state_report_resp_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(rep_resp);
+    BOOST_CHECK_NE(pos, std::string::npos);
+    const std::string& rep_err = "opflex_peer_state_report_err_count{peer=\""
+                                   + peer + "\"} " + val2;
+    pos = output.find(rep_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+}
+
 void ContractStatsManagerFixture::
 verifyPromMetrics (shared_ptr<L24Classifier> classifier,
                    uint32_t pkts,
@@ -499,6 +611,29 @@ BOOST_FIXTURE_TEST_CASE(testrDSEpgDelete, ContractStatsManagerFixture) {
     LOG(DEBUG) << "### Contract DEPG Delete End";
     contractStatsManager.stop();
 }
+
+#ifdef HAVE_PROMETHEUS_SUPPORT
+// Note: OFPeer stats are currently updated as part of PolicyStatsManager.cpp
+// there is a plan to move this code outside PolicyStatsManager.cpp. While thats
+// done, the below test also will be moved out from this file.
+BOOST_FIXTURE_TEST_CASE(testOFPeer, ContractStatsManagerFixture) {
+
+    LOG(DEBUG) << "### OfPeer start";
+    OF_SHARED_PTR<OFStats> opflexStats = OF_MAKE_SHARED<OFStats>();
+    const std::string peer = "127.0.0.1:8009";
+
+    updateOFPeerStats(opflexStats);
+    agent.getPrometheusManager().addNUpdateOFPeerStats("127.0.0.1:8009",
+                                                       opflexStats);
+    verifyOFPeerMetrics(peer, 1);
+
+    updateOFPeerStats(opflexStats);
+    agent.getPrometheusManager().addNUpdateOFPeerStats("127.0.0.1:8009",
+                                                       opflexStats);
+    verifyOFPeerMetrics(peer, 2);
+    LOG(DEBUG) << "### OFPeer end";
+}
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
 
