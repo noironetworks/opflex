@@ -18,11 +18,11 @@ namespace opflexagent {
 
 using opflex::logging::OFLogHandler;
 
-AgentLogHandler::AgentLogHandler(Level logLevel): OFLogHandler(logLevel) { }
+AgentLogHandler::AgentLogHandler(Level loggerLevel): OFLogHandler(loggerLevel) { }
 AgentLogHandler::~AgentLogHandler() { }
 
-void AgentLogHandler::setLevel(Level logLevel) {
-    logLevel_ = logLevel;
+void AgentLogHandler::setLevel(Level loggerLevel) {
+    logLevel_ = loggerLevel;
 }
 
 void AgentLogHandler::setLevelString(const std::string &levelstr) {
@@ -38,12 +38,11 @@ void AgentLogHandler::handleMessage(const std::string& file,
                                    const std::string& function,
                                    const Level level,
                                    const std::string& message) {
-    opflexagent::LogLevel agentLevel = opflexagent::INFO;
+    opflexagent::LogLevel agentLevel;
     switch (level) {
     case OFLogHandler::TRACE:
         agentLevel = opflexagent::TRACE;
         break;
-    case OFLogHandler::DEBUG5:
     case OFLogHandler::DEBUG4:
     case OFLogHandler::DEBUG3:
     case OFLogHandler::DEBUG2:
