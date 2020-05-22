@@ -272,7 +272,6 @@ private:
     mutex respMutex;
 
     const rapidjson::Document& getResponsePayload() {
-        unique_lock<mutex> lock(respMutex);
         return payload;
     }
 

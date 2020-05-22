@@ -174,8 +174,11 @@ bool JsonRpc::getOvsdbMirrorConfig(const string& sessionName, mirror& mir) {
         LOG(DEBUG) << "Error sending message";
         return false;
     }
-    if (!handleMirrorConfig(getResponsePayload(), mir)) {
-        return false;
+    {
+        unique_lock<mutex> lock(respMutex);
+        if (!handleMirrorConfig(getResponsePayload(), mir)) {
+            return false;
+        }
     }
     // collect all port UUIDs in a set and query
     // OVSDB for names.
@@ -193,9 +196,12 @@ bool JsonRpc::getOvsdbMirrorConfig(const string& sessionName, mirror& mir) {
         return false;
     }
     unordered_map<string, string> portMap;
-    if (!getPortList(getResponsePayload(), portMap)) {
-        LOG(DEBUG) << "Unable to get port list";
-        return false;
+    {
+        unique_lock<mutex> lock(respMutex);
+        if (!getPortList(getResponsePayload(), portMap)) {
+            LOG(DEBUG) << "Unable to get port list";
+            return false;
+        }
     }
     //replace port UUIDs with names in the mirror struct
     substituteSet(mir.src_ports, portMap);
@@ -221,6 +227,8 @@ bool JsonRpc::getCurrentErspanParams(const string& portName, ErspanParams& param
         LOG(DEBUG) << "Error sending message";
         return false;
     }
+
+    unique_lock<mutex> lock(respMutex);
     if (!getErspanOptions(getResponsePayload(), params)) {
         LOG(DEBUG) << "failed to get ERSPAN options";
         return false;
@@ -335,6 +343,7 @@ void JsonRpc::getUuid(OvsdbTable table, const string& name, string& uuid) {
     if (!sendRequestAndAwaitResponse(requests)) {
         LOG(DEBUG) << "Error sending message";
     }
+    unique_lock<mutex> lock(respMutex);
     getUuidByNameFromResp(getResponsePayload(), uuidColumn, uuid);
 }
 
