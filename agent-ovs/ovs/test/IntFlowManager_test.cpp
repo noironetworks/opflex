@@ -41,6 +41,12 @@
 #include "FlowBuilder.h"
 #include "ovs-shim.h"
 #include "eth.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#ifdef HAVE_PROMETHEUS_SUPPORT
+#include <opflexagent/PrometheusManager.h>
+#endif
 
 using namespace boost::assign;
 using namespace opflex::modb;
@@ -1351,6 +1357,31 @@ void BaseIntFlowManagerFixture::remoteEndpointTest() {
     initExpEp(ep2, epg0);
     initExpRemoteEp();
     WAIT_FOR_TABLES("remoteep", 500);
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9612/metrics 2>&1;";
+    const string& output1 = BaseFixture::getOutputFromCommand(cmd);
+    size_t pos = std::string::npos;
+    pos = output1.find("opflex_remote_endpoint_count 1.000000");
+    BOOST_CHECK_NE(pos, std::string::npos);
+#endif
+
+    rep1->remove();
+    m.commit();
+    intFlowManager.remoteEndpointUpdated("ep1");
+    clearExpFlowTables();
+    initExpStatic();
+    initExpEpg(epg0);
+    initExpBd();
+    initExpRd();
+    initExpEp(ep0, epg0);
+    initExpEp(ep2, epg0);
+    WAIT_FOR_TABLES("cleanup", 500);
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    const string& output2 = BaseFixture::getOutputFromCommand(cmd);
+    pos = std::string::npos;
+    pos = output2.find("opflex_remote_endpoint_count 0.000000");
+    BOOST_CHECK_NE(pos, std::string::npos);
+#endif
 }
 
 BOOST_FIXTURE_TEST_CASE(remoteEndpoint_vxlan, VxlanIntFlowManagerFixture) {
