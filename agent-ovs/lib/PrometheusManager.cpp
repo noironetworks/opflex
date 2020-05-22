@@ -9,7 +9,6 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-#include <opflex/modb/Mutator.h>
 #include <opflexagent/logging.h>
 #include <opflexagent/Agent.h>
 #include <opflexagent/PrometheusManager.h>
@@ -2028,7 +2027,7 @@ bool PrometheusManager::removeDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
     if (pgauge) {
         gauge_remote_ep_family_ptr[metric]->Remove(pgauge);
     } else {
-        LOG(DEBUG) << "remove dynamic gauge RemoteEp not found";
+        LOG(TRACE) << "remove dynamic gauge RemoteEp not found";
         return false;
     }
     return true;
@@ -2923,104 +2922,93 @@ void PrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
 }
 
 /* Function called from PolicyStatsManager to update OFPeerStats */
-void PrometheusManager::addNUpdateOFPeerStats (void)
+void PrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
+                                               const OF_SHARED_PTR<OFStats> stats)
 {
     RETURN_IF_DISABLED
-    using namespace modelgbp::observer;
-
     const lock_guard<mutex> lock(ofpeer_stats_mutex);
-    Mutator mutator(framework, "policyelement");
-    optional<shared_ptr<SysStatUniverse> > su =
-                            SysStatUniverse::resolve(framework);
-    std::unordered_map<string, OF_SHARED_PTR<OFStats>> stats;
-    agent.getFramework().getOpflexPeerStats(stats);
-    if (su) {
-        for (const auto& peerStat : stats) {
-            optional<shared_ptr<OpflexCounter>> counter =
-                       su.get()->resolveObserverOpflexCounter(peerStat.first);
-            if (!counter)
-                continue;
 
-            // Create gauge metrics if they arent present already
-            for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
-                    metric <= OFPEER_METRICS_MAX;
-                        metric = OFPEER_METRICS(metric+1))
-                createDynamicGaugeOFPeer(metric, peerStat.first);
+    if (!stats)
+        return;
 
-            // Update the metrics
-            for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
-                    metric <= OFPEER_METRICS_MAX;
-                        metric = OFPEER_METRICS(metric+1)) {
-                Gauge *pgauge = getDynamicGaugeOFPeer(metric, peerStat.first);
-                optional<uint64_t>   metric_opt;
-                switch (metric) {
-                case OFPEER_IDENT_REQS:
-                    metric_opt = counter.get()->getIdentReqs();
-                    break;
-                case OFPEER_IDENT_RESPS:
-                    metric_opt = counter.get()->getIdentResps();
-                    break;
-                case OFPEER_IDENT_ERRORS:
-                    metric_opt = counter.get()->getIdentErrs();
-                    break;
-                case OFPEER_POL_RESOLVES:
-                    metric_opt = counter.get()->getPolResolves();
-                    break;
-                case OFPEER_POL_RESOLVE_RESPS:
-                    metric_opt = counter.get()->getPolResolveResps();
-                    break;
-                case OFPEER_POL_RESOLVE_ERRS:
-                    metric_opt = counter.get()->getPolResolveErrs();
-                    break;
-                case OFPEER_POL_UNRESOLVES:
-                    metric_opt = counter.get()->getPolUnresolves();
-                    break;
-                case OFPEER_POL_UNRESOLVE_RESPS:
-                    metric_opt = counter.get()->getPolUnresolveResps();
-                    break;
-                case OFPEER_POL_UNRESOLVE_ERRS:
-                    metric_opt = counter.get()->getPolUnresolveErrs();
-                    break;
-                case OFPEER_POL_UPDATES:
-                    metric_opt = counter.get()->getPolUpdates();
-                    break;
-                case OFPEER_EP_DECLARES:
-                    metric_opt = counter.get()->getEpDeclares();
-                    break;
-                case OFPEER_EP_DECLARE_RESPS:
-                    metric_opt = counter.get()->getEpDeclareResps();
-                    break;
-                case OFPEER_EP_DECLARE_ERRS:
-                    metric_opt = counter.get()->getEpDeclareErrs();
-                    break;
-                case OFPEER_EP_UNDECLARES:
-                    metric_opt = counter.get()->getEpUndeclares();
-                    break;
-                case OFPEER_EP_UNDECLARE_RESPS:
-                    metric_opt = counter.get()->getEpUndeclareResps();
-                    break;
-                case OFPEER_EP_UNDECLARE_ERRS:
-                    metric_opt = counter.get()->getEpUndeclareErrs();
-                    break;
-                case OFPEER_STATE_REPORTS:
-                    metric_opt = counter.get()->getStateReports();
-                    break;
-                case OFPEER_STATE_REPORT_RESPS:
-                    metric_opt = counter.get()->getStateReportResps();
-                    break;
-                case OFPEER_STATE_REPORT_ERRS:
-                    metric_opt = counter.get()->getStateReportErrs();
-                    break;
-                default:
-                    LOG(ERROR) << "Unhandled ofpeer metric: " << metric;
-                }
-                if (metric_opt && pgauge)
-                    pgauge->Set(static_cast<double>(metric_opt.get()));
-                if (!pgauge) {
-                    LOG(ERROR) << "Invalid ofpeer update peer: " << peerStat.first;
-                    break;
-                }
-            }
+    // Create gauge metrics if they arent present already
+    for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
+            metric <= OFPEER_METRICS_MAX;
+                metric = OFPEER_METRICS(metric+1))
+        createDynamicGaugeOFPeer(metric, peer);
+
+    // Update the metrics
+    for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
+            metric <= OFPEER_METRICS_MAX;
+                metric = OFPEER_METRICS(metric+1)) {
+        Gauge *pgauge = getDynamicGaugeOFPeer(metric, peer);
+        optional<uint64_t>   metric_opt;
+        switch (metric) {
+        case OFPEER_IDENT_REQS:
+            metric_opt = stats->getIdentReqs();
+            break;
+        case OFPEER_IDENT_RESPS:
+            metric_opt = stats->getIdentResps();
+            break;
+        case OFPEER_IDENT_ERRORS:
+            metric_opt = stats->getIdentErrs();
+            break;
+        case OFPEER_POL_RESOLVES:
+            metric_opt = stats->getPolResolves();
+            break;
+        case OFPEER_POL_RESOLVE_RESPS:
+            metric_opt = stats->getPolResolveResps();
+            break;
+        case OFPEER_POL_RESOLVE_ERRS:
+            metric_opt = stats->getPolResolveErrs();
+            break;
+        case OFPEER_POL_UNRESOLVES:
+            metric_opt = stats->getPolUnresolves();
+            break;
+        case OFPEER_POL_UNRESOLVE_RESPS:
+            metric_opt = stats->getPolUnresolveResps();
+            break;
+        case OFPEER_POL_UNRESOLVE_ERRS:
+            metric_opt = stats->getPolUnresolveErrs();
+            break;
+        case OFPEER_POL_UPDATES:
+            metric_opt = stats->getPolUpdates();
+            break;
+        case OFPEER_EP_DECLARES:
+            metric_opt = stats->getEpDeclares();
+            break;
+        case OFPEER_EP_DECLARE_RESPS:
+            metric_opt = stats->getEpDeclareResps();
+            break;
+        case OFPEER_EP_DECLARE_ERRS:
+            metric_opt = stats->getEpDeclareErrs();
+            break;
+        case OFPEER_EP_UNDECLARES:
+            metric_opt = stats->getEpUndeclares();
+            break;
+        case OFPEER_EP_UNDECLARE_RESPS:
+            metric_opt = stats->getEpUndeclareResps();
+            break;
+        case OFPEER_EP_UNDECLARE_ERRS:
+            metric_opt = stats->getEpUndeclareErrs();
+            break;
+        case OFPEER_STATE_REPORTS:
+            metric_opt = stats->getStateReports();
+            break;
+        case OFPEER_STATE_REPORT_RESPS:
+            metric_opt = stats->getStateReportResps();
+            break;
+        case OFPEER_STATE_REPORT_ERRS:
+            metric_opt = stats->getStateReportErrs();
+            break;
+        default:
+            LOG(ERROR) << "Unhandled ofpeer metric: " << metric;
+        }
+        if (metric_opt && pgauge)
+            pgauge->Set(static_cast<double>(metric_opt.get()));
+        if (!pgauge) {
+            LOG(ERROR) << "Invalid ofpeer update peer: " << peer;
+            break;
         }
     }
 }
