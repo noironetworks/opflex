@@ -19,11 +19,6 @@
 #include <boost/optional.hpp>
 #include <boost/algorithm/string.hpp>
 #include <regex>
-
-#include <prometheus/gauge.h>
-#include <prometheus/counter.h>
-#include <prometheus/exposer.h>
-#include <prometheus/registry.h>
 #include <prometheus/detail/utils.h>
 
 namespace opflexagent {
@@ -3034,107 +3029,82 @@ void PrometheusManager::addNUpdateOFPeerStats (void)
 void PrometheusManager::addNUpdateEpCounter (const string& uuid,
                                              const string& ep_name,
                                              const size_t& attr_hash,
-                  const unordered_map<string, string>&    attr_map)
+                  const unordered_map<string, string>&    attr_map,
+                                             const EpCounters& counters)
 {
     RETURN_IF_DISABLED
-    using namespace opflex::modb;
-    using namespace modelgbp::gbpe;
-    using namespace modelgbp::observer;
 
     const lock_guard<mutex> lock(ep_counter_mutex);
-    Mutator mutator(framework, "policyelement");
-    optional<shared_ptr<EpStatUniverse> > su =
-                            EpStatUniverse::resolve(framework);
-    if (su) {
-        optional<shared_ptr<EpCounter>> ep_counter =
-                            su.get()->resolveGbpeEpCounter(uuid);
-        if (ep_counter) {
 
-            // Create the gauge counters if they arent present already
-            for (EP_METRICS metric=EP_RX_BYTES;
-                    metric < EP_METRICS_MAX;
-                        metric = EP_METRICS(metric+1)) {
-                if (!createDynamicGaugeEp(metric,
-                                          uuid,
-                                          ep_name,
-                                          attr_hash,
-                                          attr_map)) {
-                    break;
-                }
+    // Create the gauge counters if they arent present already
+    for (EP_METRICS metric=EP_RX_BYTES;
+            metric < EP_METRICS_MAX;
+                metric = EP_METRICS(metric+1)) {
+        if (!createDynamicGaugeEp(metric,
+                                  uuid,
+                                  ep_name,
+                                  attr_hash,
+                                  attr_map)) {
+            break;
+        }
 
-                if (metric == (EP_METRICS_MAX-1)) {
-                    incStaticCounterEpCreate();
-                    updateStaticGaugeEpTotal(true);
-                }
-            }
-
-            // Update the metrics
-            for (EP_METRICS metric=EP_RX_BYTES;
-                    metric < EP_METRICS_MAX;
-                        metric = EP_METRICS(metric+1)) {
-                hgauge_pair_t hgauge = getDynamicGaugeEp(metric, uuid);
-                optional<uint64_t>   metric_opt;
-                switch (metric) {
-                case EP_RX_BYTES:
-                    metric_opt = ep_counter.get()->getRxBytes();
-                    break;
-                case EP_RX_PKTS:
-                    metric_opt = ep_counter.get()->getRxPackets();
-                    break;
-                case EP_RX_DROPS:
-                    metric_opt = ep_counter.get()->getRxDrop();
-                    break;
-                case EP_RX_UCAST:
-                    metric_opt = ep_counter.get()->getRxUnicast();
-                    break;
-                case EP_RX_MCAST:
-                    metric_opt = ep_counter.get()->getRxMulticast();
-                    break;
-                case EP_RX_BCAST:
-                    metric_opt = ep_counter.get()->getRxBroadcast();
-                    break;
-                case EP_TX_BYTES:
-                    metric_opt = ep_counter.get()->getTxBytes();
-                    break;
-                case EP_TX_PKTS:
-                    metric_opt = ep_counter.get()->getTxPackets();
-                    break;
-                case EP_TX_DROPS:
-                    metric_opt = ep_counter.get()->getTxDrop();
-                    break;
-                case EP_TX_UCAST:
-                    metric_opt = ep_counter.get()->getTxUnicast();
-                    break;
-                case EP_TX_MCAST:
-                    metric_opt = ep_counter.get()->getTxMulticast();
-                    break;
-                case EP_TX_BCAST:
-                    metric_opt = ep_counter.get()->getTxBroadcast();
-                    break;
-                default:
-                    LOG(ERROR) << "Unhandled metric: " << metric;
-                }
-                if (metric_opt && hgauge)
-                    hgauge.get().second->Set(static_cast<double>(metric_opt.get()));
-                if (!hgauge) {
-                    LOG(ERROR) << "ep stats invalid update for uuid: " << uuid;
-                    break;
-                }
-            }
+        if (metric == (EP_METRICS_MAX-1)) {
+            incStaticCounterEpCreate();
+            updateStaticGaugeEpTotal(true);
         }
     }
-}
 
-void PrometheusManager::dumpPodSvcState ()
-{
-    LOG(DEBUG) << "######### PODSVC STATE: #########";
-    for (PODSVC_METRICS metric=PODSVC_METRICS_MIN;
-            metric <= PODSVC_METRICS_MAX;
-                metric = PODSVC_METRICS(metric+1)) {
-        for (auto &p : podsvc_gauge_map[metric]) {
-            LOG(DEBUG) << "   metric: " << podsvc_family_names[metric]
-                       << "   uuid: " << p.first
-                       << "   gauge_ptr: " << p.second.get().second;
+    // Update the metrics
+    for (EP_METRICS metric=EP_RX_BYTES;
+            metric < EP_METRICS_MAX;
+                metric = EP_METRICS(metric+1)) {
+        hgauge_pair_t hgauge = getDynamicGaugeEp(metric, uuid);
+        optional<uint64_t>   metric_opt;
+        switch (metric) {
+        case EP_RX_BYTES:
+            metric_opt = counters.rxBytes;
+            break;
+        case EP_RX_PKTS:
+            metric_opt = counters.rxPackets;
+            break;
+        case EP_RX_DROPS:
+            metric_opt = counters.rxDrop;
+            break;
+        case EP_RX_UCAST:
+            metric_opt = counters.rxUnicast;
+            break;
+        case EP_RX_MCAST:
+            metric_opt = counters.rxMulticast;
+            break;
+        case EP_RX_BCAST:
+            metric_opt = counters.rxBroadcast;
+            break;
+        case EP_TX_BYTES:
+            metric_opt = counters.txBytes;
+            break;
+        case EP_TX_PKTS:
+            metric_opt = counters.txPackets;
+            break;
+        case EP_TX_DROPS:
+            metric_opt = counters.txDrop;
+            break;
+        case EP_TX_UCAST:
+            metric_opt = counters.txUnicast;
+            break;
+        case EP_TX_MCAST:
+            metric_opt = counters.txMulticast;
+            break;
+        case EP_TX_BCAST:
+            metric_opt = counters.txBroadcast;
+            break;
+        default:
+            LOG(ERROR) << "Unhandled metric: " << metric;
+        }
+        if (metric_opt && hgauge)
+            hgauge.get().second->Set(static_cast<double>(metric_opt.get()));
+        if (!hgauge) {
+            LOG(ERROR) << "ep stats invalid update for uuid: " << uuid;
+            break;
         }
     }
 }

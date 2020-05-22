@@ -1439,7 +1439,8 @@ void EndpointManager::updateEndpointCounters(const std::string& uuid,
         if (ep_name)
             prometheusManager.addNUpdateEpCounter(uuid, ep_name.get(),
                                                   es.endpoint->getAttributeHash(),
-                                                  es.endpoint->getAttributes());
+                                                  es.endpoint->getAttributes(),
+                                                  newVals);
         else
             LOG(ERROR) << "ep name not found for uuid:" << uuid;
     }

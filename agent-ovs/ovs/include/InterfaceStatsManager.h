@@ -113,8 +113,8 @@ private:
      * Counters for endpoints.
      */
     struct IntfCounters {
-        boost::optional<EndpointManager::EpCounters> intCounters;
-        boost::optional<EndpointManager::EpCounters> accessCounters;
+        boost::optional<EpCounters> intCounters;
+        boost::optional<EpCounters> accessCounters;
     };
     typedef std::unordered_map<std::string, IntfCounters> intf_counter_map_t;
 
@@ -124,7 +124,7 @@ private:
     void on_timer(const boost::system::error_code& ec);
     void updateEndpointCounters(const std::string& uuid,
                                 SwitchConnection *swConn,
-                                EndpointManager::EpCounters& counters);
+                                EpCounters& counters);
 
     std::atomic<bool> stopping;
 };

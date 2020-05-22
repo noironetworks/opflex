@@ -31,7 +31,7 @@ void SimStats::updateInterfaceCounters() {
     std::unordered_set<std::string> eps;
     epMgr.getEndpointUUIDs(eps);
     for (auto& uuid : eps) {
-        opflexagent::EndpointManager::EpCounters counters{};
+        opflexagent::EpCounters counters{};
         uint64_t c = ++intCounter;
         counters.txPackets = c;
         counters.rxPackets = c;

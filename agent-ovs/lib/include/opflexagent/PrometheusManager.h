@@ -38,6 +38,7 @@ using boost::optional;
 using namespace prometheus;
 
 class Agent;
+struct EpCounters;
 
 // Optional pair of label attr hash and Gauge ptr
 typedef optional<pair<size_t, Gauge *> >  hgauge_pair_t;
@@ -96,11 +97,13 @@ public:
      * @param ep_name     the name of the ep
      * @param attr_hash   hash of prometheus compatible ep attr
      * @param attr_map    map of all ep attributes
+     * @param counters    struct holding all the counters of an EP
      */
     void addNUpdateEpCounter(const string& uuid,
                              const string& ep_name,
                              const size_t& attr_hash,
-        const unordered_map<string, string>&    attr_map);
+        const unordered_map<string, string>& attr_map,
+                             const EpCounters& counters);
     /**
      * Remove EpCounter metric given the ep name
      */

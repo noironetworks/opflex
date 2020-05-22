@@ -137,7 +137,7 @@ void InterfaceStatsManager::on_timer(const error_code& ec) {
 void InterfaceStatsManager::
 updateEndpointCounters(const std::string& uuid,
                        SwitchConnection * connection,
-                       EndpointManager::EpCounters& counters) {
+                       EpCounters& counters) {
     EndpointManager& epMgr = agent->getEndpointManager();
     if (!accessConnection) {
         epMgr.updateEndpointCounters(uuid, counters);
@@ -152,7 +152,7 @@ updateEndpointCounters(const std::string& uuid,
     }
 
     if (epIntfCounters.accessCounters && epIntfCounters.intCounters) {
-        EndpointManager::EpCounters epCount =
+        EpCounters epCount =
                       epIntfCounters.accessCounters.get();
         epCount.txDrop += epIntfCounters.intCounters.get().txDrop;
         epCount.rxDrop += epIntfCounters.intCounters.get().rxDrop;
@@ -181,7 +181,7 @@ void InterfaceStatsManager::Handle(SwitchConnection* connection,
         int error_flg = ofputil_decode_port_stats(&ps, &b);
         if (error_flg)
             break;
-        EndpointManager::EpCounters counters;
+        EpCounters counters;
         memset(&counters, 0, sizeof(counters));
 
         counters.txPackets = ps.stats.tx_packets;
