@@ -10,6 +10,7 @@
 #ifndef _COMMS__INCLUDE__OPFLEX__RPC__MESSAGE_FACTORY_HPP
 #define _COMMS__INCLUDE__OPFLEX__RPC__MESSAGE_FACTORY_HPP
 
+#include <opflex/yajr/rpc/rpc.hpp>
 #include <opflex/yajr/rpc/send_handler.hpp>
 #include <opflex/yajr/internal/comms.hpp>
 
@@ -24,20 +25,10 @@ class Peer;
 
 namespace rpc {
 
-                class InboundMessage;
-                class InboundRequest;
-                class InboundResult;
-                class InboundError;
-
-                typedef rapidjson::Value::StringRefType const
-                    MethodName;
-                typedef rapidjson::Writer< ::yajr::internal::StringQueue >
-                    SendHandler;
-                typedef boost::function< bool (::yajr::rpc::SendHandler &) >
-                    PayloadGenerator;
-
-                template <MethodName * M>
-                class OutReq;
+class InboundMessage;
+class InboundRequest;
+class InboundResult;
+class InboundError;
 
 /**
  * Message factory

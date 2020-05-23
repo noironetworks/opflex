@@ -17,7 +17,6 @@
 
 #include <rapidjson/document.h>
 #include <opflex/rpc/JsonRpcMessage.h>
-#include <opflexagent/logging.h>
 #include <unordered_map>
 
 namespace opflexagent {
@@ -163,12 +162,15 @@ public:
     /**
      * Construct a transact request
      */
-    JsonRpcTransactMessage(OvsdbOperation operation_, OvsdbTable table_);
+    JsonRpcTransactMessage(OvsdbOperation operation_, OvsdbTable table_) : JsonRpcMessage("transact", REQUEST),
+                                                                           operation(operation_), table(table_) {}
 
     /**
      * Copy constructor
      */
-     JsonRpcTransactMessage(const JsonRpcTransactMessage& copy);
+     JsonRpcTransactMessage(const JsonRpcTransactMessage& copy) : JsonRpcMessage("transact", REQUEST),
+         conditions(copy.conditions), columns(copy.columns), rowData(copy.rowData), mutateRowData(copy.mutateRowData), kvPairs(copy.kvPairs),
+         operation(copy.getOperation()), table(copy.getTable()) {}
 
      /**
       * Destructor
@@ -180,13 +182,6 @@ public:
      * @param writer writer
      */
     virtual void serializePayload(yajr::rpc::SendHandler& writer);
-
-    /**
-     * Clone the transact message
-     */
-    virtual JsonRpcTransactMessage* clone(){
-        return new JsonRpcTransactMessage(*this);
-    }
 
     /**
      * Operator to serialize a payload to a writer
@@ -259,14 +254,6 @@ public:
      * @param writer writer
      */
     virtual void serializePayload(yajr::rpc::SendHandler& writer);
-
-    /**
-     * Clone a request
-     * @return clone
-     */
-    virtual TransactReq* clone(){
-        return new TransactReq(*this);
-    }
 
     /**
      * Get request ID

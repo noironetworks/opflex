@@ -15,15 +15,9 @@
 #endif
 
 #include "JsonRpcTransactMessage.h"
+#include <opflexagent/logging.h>
 
 namespace opflexagent {
-
-JsonRpcTransactMessage::JsonRpcTransactMessage(OvsdbOperation operation_, OvsdbTable table_) : JsonRpcMessage("transact", REQUEST),
-    operation(operation_), table(table_) {}
-
-JsonRpcTransactMessage::JsonRpcTransactMessage(const JsonRpcTransactMessage& copy) : JsonRpcMessage("transact", REQUEST),
-    conditions(copy.conditions), columns(copy.columns), rowData(copy.rowData), mutateRowData(copy.mutateRowData), kvPairs(copy.kvPairs),
-    operation(copy.getOperation()), table(copy.getTable()) {}
 
 void JsonRpcTransactMessage::serializePayload(yajr::rpc::SendHandler& writer) {
     (*this)(writer);
