@@ -85,7 +85,7 @@ struct CommsTests {
 
 };
 
-opflex::logging::StdOutLogHandler CommsTests::commsTestLogger_(DEBUG5);
+opflex::logging::StdOutLogHandler CommsTests::commsTestLogger_(DEBUG4);
 
 BOOST_GLOBAL_FIXTURE( CommsTests );
 
