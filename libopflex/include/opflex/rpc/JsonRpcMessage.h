@@ -58,11 +58,6 @@ public:
     virtual ~JsonRpcMessage() {}
 
     /**
-     * Clone the JSON-RPC message
-     */
-    virtual JsonRpcMessage* clone() = 0;
-
-    /**
      * Get the request method for this message
      * @return the method for the message
      */

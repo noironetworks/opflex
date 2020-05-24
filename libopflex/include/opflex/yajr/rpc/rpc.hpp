@@ -243,14 +243,6 @@ class InboundMessage : public Message {
     virtual void process() const = 0;
 
     /**
-     * When was the message received
-     * @return timestamp msg was received
-     */
-    uint64_t getReceived() const {
-        return received_;
-    }
-
-    /**
      * Get the payload (params, result, error) for this request.
      *
      * @return The payload as a rapidjson::Value const &
@@ -574,10 +566,8 @@ class OutboundRequest : public OutboundMessage,
      * @return success or not
      */
     virtual bool emitMethod(yajr::rpc::SendHandler& handler) {
-
         return handler.String("method")
             && handler.String(requestMethod());
-
     }
 
   private:
@@ -608,14 +598,6 @@ class OutboundRequest : public OutboundMessage,
  */
 class InboundResponse : public InboundMessage,
                         public LocalIdentifier {
-
-  public:
-    /**
-     * Tell if this response is an error (or a result)
-     *
-     * @return true on error, false on result
-     */
-    virtual bool isError() = 0;
 
   protected:
 
@@ -658,15 +640,6 @@ class InboundError : public InboundResponse {
         : InboundResponse(peer, error, id)
         {}
 
-    /**
-     * Tell if this response is an error (or a result)
-     *
-     * @return true, since this is an error
-     */
-    bool isError() {
-      return true;
-    }
-
 };
 
 /**
@@ -689,15 +662,6 @@ class InboundResult : public InboundResponse {
             )
         : InboundResponse(peer, result, id)
         {}
-
-    /**
-     * Tell if this response is an error (or a result)
-     *
-     * @return false, since this is a result
-     */
-    bool isError() {
-      return false;
-    }
 
 };
 

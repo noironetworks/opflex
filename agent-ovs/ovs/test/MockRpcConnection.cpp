@@ -8,6 +8,7 @@
  */
 
 #include "MockRpcConnection.h"
+#include <opflexagent/logging.h>
 
 namespace opflexagent {
 
