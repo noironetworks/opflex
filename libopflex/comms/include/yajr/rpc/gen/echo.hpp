@@ -20,7 +20,7 @@ class EchoGen {
   public:
     explicit EchoGen(CommunicationPeer const & peer) : peer_(peer) {}
 
-    bool operator()(rpc::SendHandler & handler);
+    bool operator()(rpc::SendHandler& handler) const;
 
   private:
     CommunicationPeer const & peer_;

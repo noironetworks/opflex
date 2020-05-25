@@ -211,7 +211,7 @@ public:
     PayloadWrapper(OpflexMessage* message_)
         : message(message_) { }
 
-    bool operator()(yajr::rpc::SendHandler& handler) {
+    virtual bool operator()(yajr::rpc::SendHandler& handler) const {
         message->serializePayload(handler);
         return true;
     }

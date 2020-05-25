@@ -191,7 +191,7 @@ public:
           merge_children(merge_children_),
           del(del_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -199,8 +199,7 @@ public:
         return new PolicyUpdateReq(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = server.getSerializer();
         modb::mointernal::StoreClient* client = server.getSystemClient();
 
@@ -209,7 +208,7 @@ public:
 
         writer.String("replace");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, replace) {
+        BOOST_FOREACH(const modb::reference_t& p, replace) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  true);
@@ -218,7 +217,7 @@ public:
 
         writer.String("merge_children");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, merge_children) {
+        BOOST_FOREACH(const modb::reference_t& p, merge_children) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  false);
@@ -227,7 +226,7 @@ public:
 
         writer.String("delete");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, del) {
+        BOOST_FOREACH(const modb::reference_t& p, del) {
             const modb::ClassInfo& ci =
                 server.getStore().getClassInfo(p.first);
             writer.StartObject();
@@ -278,7 +277,7 @@ public:
           replace(replace_),
           del(del_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -286,8 +285,7 @@ public:
         return new EndpointUpdateReq(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = server.getSerializer();
         modb::mointernal::StoreClient* client = server.getSystemClient();
 
@@ -296,7 +294,7 @@ public:
 
         writer.String("replace");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, replace) {
+        BOOST_FOREACH(const modb::reference_t& p, replace) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  true);
@@ -305,7 +303,7 @@ public:
 
         writer.String("delete");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, del) {
+        BOOST_FOREACH(const modb::reference_t& p, del) {
             const modb::ClassInfo& ci =
                 server.getStore().getClassInfo(p.first);
             writer.StartObject();

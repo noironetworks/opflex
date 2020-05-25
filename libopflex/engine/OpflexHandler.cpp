@@ -98,7 +98,7 @@ public:
 
     }
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -106,8 +106,7 @@ public:
         return new ErrorRes(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & handler) {
+    virtual bool operator()(yajr::rpc::SendHandler& handler) const {
         handler.StartObject();
         handler.String("code");
         handler.String(code.c_str());

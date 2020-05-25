@@ -46,9 +46,6 @@ public:
      * destructor
      */
     virtual ~MockRpcConnection() {}
-    virtual void start() {}
-    virtual void stop() {}
-
 };
 
 

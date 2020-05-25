@@ -19,7 +19,7 @@
 
 namespace opflexagent {
 
-void JsonRpcTransactMessage::serializePayload(yajr::rpc::SendHandler& writer) {
+void JsonRpcTransactMessage::serializePayload(yajr::rpc::SendHandler& writer) const {
     (*this)(writer);
 }
 
@@ -41,8 +41,7 @@ static const char* toString(OvsdbFunction function) {
     return OvsdbFunctionStrings[static_cast<uint32_t>(function)];
 }
 
-template<typename T>
-void writePair(rapidjson::Writer<T>& writer, const TupleData& bPtr, bool kvPair) {
+void writePair(yajr::rpc::SendHandler& writer, const TupleData& bPtr, bool kvPair) {
     const string& key = bPtr.getKey();
     if (bPtr.getType() == Dtype::INTEGER) {
         if (kvPair) {
@@ -89,10 +88,9 @@ void writePair(rapidjson::Writer<T>& writer, const TupleData& bPtr, bool kvPair)
     }
 }
 
-template <typename T>
-bool JsonRpcTransactMessage::operator()(rapidjson::Writer<T> & writer) {
+bool JsonRpcTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
     for (auto& pair : kvPairs) {
-        writePair<T>(writer, pair, true);
+        writePair(writer, pair, true);
     }
 
     if (getOperation() != OvsdbOperation::INSERT) {
@@ -147,7 +145,7 @@ bool JsonRpcTransactMessage::operator()(rapidjson::Writer<T> & writer) {
                 LOG(DEBUG) << "label " << tdsPtr.label;
 
                 for (auto& val : tdsPtr.tuples) {
-                    writePair<T>(writer, val, false);
+                    writePair(writer, val, false);
                 }
                 writer.EndArray();
                 writer.EndArray();
@@ -181,7 +179,7 @@ TransactReq::TransactReq(const list<JsonRpcTransactMessage>& msgs, uint64_t reqI
     transList = msgs;
 }
 
-void TransactReq::serializePayload(yajr::rpc::SendHandler& writer) {
+void TransactReq::serializePayload(yajr::rpc::SendHandler& writer) const {
     LOG(DEBUG) << "serializePayload send handler - reqId " << std::to_string(reqId);
     (*this)(writer);
 }

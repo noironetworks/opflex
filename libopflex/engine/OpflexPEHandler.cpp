@@ -62,7 +62,7 @@ public:
           name(name_), domain(domain_), location(location_), roles(roles_),
           mac(mac_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -70,8 +70,7 @@ public:
         return new SendIdentityReq(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
         writer.StartObject();
         writer.String("proto_version");

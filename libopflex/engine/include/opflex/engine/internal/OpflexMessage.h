@@ -58,7 +58,7 @@ public:
      */
     virtual OpflexMessage* clone() = 0;
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) = 0;
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const = 0;
 
     /**
      * Get a transaction ID for a request.  If nonzero, allocate a
@@ -90,7 +90,7 @@ public:
         return new GenericOpflexMessage(*this);
     }
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer);
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const;
 
 };
 

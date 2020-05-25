@@ -81,14 +81,13 @@ public:
      * Serialize payload
      * @param writer writer
      */
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) = 0;
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const = 0;
 
     /**
      * Operator to serialize a generic empty payload to any writer
      * @param writer the writer to serialize to
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         switch (type) {
         case REQUEST:
             writer.StartArray();
@@ -134,7 +133,7 @@ public:
      * Operator to serialize a generic a payload
      * @param handler handler
      */
-    bool operator()(yajr::rpc::SendHandler& handler) {
+    virtual bool operator()(yajr::rpc::SendHandler& handler) const {
         message->serializePayload(handler);
         return true;
     }

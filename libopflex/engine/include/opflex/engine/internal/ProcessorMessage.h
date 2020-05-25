@@ -68,7 +68,7 @@ public:
         : ProcessorMessage("policy_resolve", REQUEST, xid, processor),
           policies(policies_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -81,10 +81,9 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, policies) {
+        BOOST_FOREACH(const modb::reference_t& p, policies) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -124,7 +123,7 @@ public:
         : ProcessorMessage("policy_unresolve", REQUEST, xid, processor),
           policies(policies_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -137,10 +136,9 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, policies) {
+        BOOST_FOREACH(const modb::reference_t& p, policies) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -179,7 +177,7 @@ public:
         : ProcessorMessage("endpoint_resolve", REQUEST, xid, processor),
           endpoints(endpoints_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -192,10 +190,9 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, endpoints) {
+        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -236,7 +233,7 @@ public:
         : ProcessorMessage("endpoint_unresolve", REQUEST, xid, processor),
           endpoints(endpoints_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -249,10 +246,9 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, endpoints) {
+        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -292,7 +288,7 @@ public:
         : ProcessorMessage("endpoint_declare", REQUEST, xid, processor),
           endpoints(endpoints_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -305,8 +301,7 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = processor->getSerializer();
         modb::mointernal::StoreClient* client = processor->getSystemClient();
 
@@ -315,7 +310,7 @@ public:
 
         writer.String("endpoint");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, endpoints) {
+        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -355,7 +350,7 @@ public:
         : ProcessorMessage("endpoint_undeclare", REQUEST, xid, processor),
           endpoints(endpoints_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -368,11 +363,10 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
 
-        BOOST_FOREACH(modb::reference_t& p, endpoints) {
+        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -413,7 +407,7 @@ public:
         : ProcessorMessage("state_report", REQUEST, xid, processor),
           observables(observables_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -426,8 +420,7 @@ public:
      *
      * @param writer the rapidjson writer
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = processor->getSerializer();
         modb::mointernal::StoreClient* client = processor->getSystemClient();
 
@@ -436,7 +429,7 @@ public:
 
         writer.String("observable");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, observables) {
+        BOOST_FOREACH(const modb::reference_t& p, observables) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
