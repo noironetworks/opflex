@@ -405,6 +405,7 @@ private:
     boost::asio::ip::address_v4 ipv6_proxy;
     boost::asio::ip::address_v4 mac_proxy;
     opflex::modb::MAC tunnelMac;
+    std::pair<std::string, int> peerName;
 
     uv_loop_t* client_loop;
     uv_async_t conn_async;
