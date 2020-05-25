@@ -371,6 +371,8 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
             const Value& mo = *it;
             serializer.deserialize(mo, *client, true, &notifs);
         }
+        const Value& uriv = mo["uri"];
+        getProcessor()->removePendingItem(conn, uriv.GetString());
     }
     client->deliverNotifications(notifs);
 }

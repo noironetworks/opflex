@@ -134,6 +134,7 @@ static string ofpeer_family_names[] =
   "opflex_peer_ep_undeclare_err_count",
   "opflex_peer_state_report_req_count",
   "opflex_peer_state_report_resp_count",
+  "opflex_peer_unresolved_policy_count",
   "opflex_peer_state_report_err_count"
 };
 
@@ -157,6 +158,7 @@ static string ofpeer_family_help[] =
   "number of endpoint undeclare error responses from opflex peer",
   "number of state reports sent to opflex peer",
   "number of state reports responses received from opflex peer",
+  "number of unresolved policies from the opflex peer",
   "number of state reports error repsonses from opflex peer"
 };
 
@@ -2997,6 +2999,9 @@ void PrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
             break;
         case OFPEER_STATE_REPORT_RESPS:
             metric_opt = stats->getStateReportResps();
+            break;
+        case OFPEER_UNRESOLVED_POL:
+            metric_opt = counter.get()->getPolUnresolveCount();
             break;
         case OFPEER_STATE_REPORT_ERRS:
             metric_opt = stats->getStateReportErrs();

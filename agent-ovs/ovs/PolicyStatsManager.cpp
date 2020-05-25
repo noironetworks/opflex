@@ -296,6 +296,7 @@ on_timer_base(const error_code& ec,
                     .setPolUnresolveResps(peerStat.second->getPolUnresolveResps())
                     .setPolUnresolveErrs(peerStat.second->getPolUnresolveErrs())
                     .setPolUpdates(peerStat.second->getPolUpdates())
+                    .setPolUnresolveCount(peerStat.second->getPolUnresolveCount())
                     .setEpDeclares(peerStat.second->getEpDeclares())
                     .setEpDeclareResps(peerStat.second->getEpDeclareResps())
                     .setEpDeclareErrs(peerStat.second->getEpDeclareErrs())

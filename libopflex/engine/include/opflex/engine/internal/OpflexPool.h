@@ -335,6 +335,20 @@ public:
     opflex::modb::MAC getTunnelMac() {
         return tunnelMac;
     }
+ 
+    /**
+     * Set the peer hostname and port number
+     */
+    void setPeername(const std::string hostname, int port) {
+       peerName = std::make_pair(hostname,port);
+    }
+
+    /**
+     * Get the peer hostname and port number
+     */
+    std::pair<std::string, int> getPeername(){
+       return peerName;
+    }
 
     /**
      * Retrieve OpFlex client stats for each available peer

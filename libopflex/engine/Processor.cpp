@@ -20,6 +20,7 @@
 #include <limits>
 #include <cmath>
 #include <random>
+#include <fstream>
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/foreach.hpp>
@@ -78,6 +79,20 @@ Processor::~Processor() {
 // get the current time in milliseconds since something
 inline uint64_t now(uv_loop_t* loop) {
     return uv_now(loop);
+}
+
+void Processor::setPendingItem(std::pair<std::string, int> peerName, std::string uri) {
+     std::map<std::string, std::set<std::string>>::iterator it;
+     pendingResolution[peerName.first].insert(uri);
+}
+
+void Processor::removePendingItem(OpflexClientConnection* conn, std::string uri) {
+     std::string hostname = conn->getHostname();
+     std::set<std::string>::iterator rem = pendingResolution[hostname].find(uri);
+     if (rem != pendingResolution[hostname].end())
+         pendingResolution[hostname].erase(rem);
+     unResolvedItem = pendingResolution[hostname].size();
+     conn->getOpflexStats()->setPolUnresolveCount(unResolvedItem);
 }
 
 Processor::change_expiration::change_expiration(uint64_t new_exp_)
@@ -279,6 +294,8 @@ bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
             PolicyResolveReq* req =
                 new PolicyResolveReq(this, nextXid++, refs);
             sendToRole(i, newexp, req, OFConstants::POLICY_REPOSITORY);
+            std::pair<std::string, int> peerName = pool.getPeername();
+            setPendingItem(peerName, i.uri.toString());
             return true;
         }
         break;

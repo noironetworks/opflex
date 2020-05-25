@@ -209,6 +209,26 @@ public:
      */
     uint64_t getPrrTimerDuration() { return prrTimerDuration; }
 
+    /**
+     * Map of pending unresolved policies and the peer associated with it
+     */
+    std::map<std::string, std::set<std::string>> pendingResolution;
+
+    /**
+     * Count of unresolved policies
+     */
+    std::atomic_ullong unResolvedItem{};
+
+    /**
+     * Set the pending unresolved policies
+     */
+    void setPendingItem(std::pair<std::string, int> peerName, std::string uri);
+
+    /**
+     * Remove resolved policies
+     */
+    void removePendingItem(internal::OpflexClientConnection* conn, std::string uri);
+
     // See HandlerFactory::newHandler
     virtual
     internal::OpflexHandler* newHandler(internal::OpflexConnection* conn);
