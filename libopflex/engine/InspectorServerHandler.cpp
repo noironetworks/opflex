@@ -52,7 +52,7 @@ public:
           inspector(inspector_),
           mos(mos_), recursive(recursive_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -60,8 +60,7 @@ public:
         return new PolicyQueryRes(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = inspector->getSerializer();
         modb::mointernal::StoreClient& client =
             inspector->getStore().getReadOnlyStoreClient();
@@ -73,7 +72,7 @@ public:
         writer.StartObject();
         writer.String("policy");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, mos) {
+        BOOST_FOREACH(const modb::reference_t& p, mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      client, writer,

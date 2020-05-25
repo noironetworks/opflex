@@ -26,7 +26,7 @@ OpflexMessage::OpflexMessage(const std::string& method_, MessageType type_,
     : jsonrpc::JsonRpcMessage(method_, type_, id_) {
 }
 
-void GenericOpflexMessage::serializePayload(yajr::rpc::SendHandler& writer) {
+void GenericOpflexMessage::serializePayload(yajr::rpc::SendHandler& writer) const {
     (*this)(writer);
 }
 

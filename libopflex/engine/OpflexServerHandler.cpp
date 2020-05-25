@@ -64,7 +64,7 @@ public:
           name(name_), domain(domain_), your_location(your_location_),
           roles(roles_), peers(peers_), proxies(proxies_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -72,8 +72,7 @@ public:
         return new SendIdentityRes(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartObject();
         writer.String("name");
         writer.String(name.c_str());
@@ -155,7 +154,7 @@ public:
           server(server_),
           mos(mos_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -163,15 +162,14 @@ public:
         return new PolicyResolveRes(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = server.getSerializer();
         modb::mointernal::StoreClient* client = server.getSystemClient();
 
         writer.StartObject();
         writer.String("policy");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, mos) {
+        BOOST_FOREACH(const modb::reference_t& p, mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -199,7 +197,7 @@ public:
           server(server_),
           mos(mos_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -207,15 +205,14 @@ public:
         return new EndpointResolveRes(*this);
     }
 
-    template <typename T>
-    bool operator()(Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         MOSerializer& serializer = server.getSerializer();
         modb::mointernal::StoreClient* client = server.getSystemClient();
 
         writer.StartObject();
         writer.String("endpoint");
         writer.StartArray();
-        BOOST_FOREACH(modb::reference_t& p, mos) {
+        BOOST_FOREACH(const modb::reference_t& p, mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,

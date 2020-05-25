@@ -19,10 +19,7 @@
 #include <uv.h>
 
 #include <boost/functional/hash.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/function.hpp>
-
-#include <deque>
 
 namespace yajr {
 
@@ -45,7 +42,7 @@ class GeneratorFromValue {
     GeneratorFromValue(rapidjson::Value const & v) : v_(v) {}
 
     /** () operator */
-    bool operator()(yajr::rpc::SendHandler & h) {
+    virtual bool operator()(yajr::rpc::SendHandler& h) {
         return v_.Accept(h);
     }
 
@@ -430,17 +427,6 @@ class OutboundError : public OutboundResponse {
      * @brief Constructor for an outbound error message.
      */
     explicit OutboundError(
-        InboundRequest const * inbReq,          /**< [in] request we reply to */
-        PayloadGenerator const & error    /**< [in] the error value to return */
-        )
-        : OutboundResponse(inbReq, error)
-        {
-        }
-
-    /**
-     * @brief Constructor for an outbound error message.
-     */
-    explicit OutboundError(
         yajr::Peer& peer,                   /**< [in] where to send to */
         PayloadGenerator const & error,   /**< [in] the error value to return */
         rapidjson::Value const & id /**< [in] the desired id for this message */
@@ -569,24 +555,6 @@ class OutboundRequest : public OutboundMessage,
         return handler.String("method")
             && handler.String(requestMethod());
     }
-
-  private:
-    /**
-     * Set the communication peer for this message.
-     *
-     * Set the communication peer for this message. Can be set any number of
-     * times for an Outbound message. Useful to send the same message to multiple
-     * peers. FIXME: handle reference counting!!!
-     *
-     * @return this message.
-     */
-    void setPeer(
-        yajr::Peer* peer                     /**< [in] the peer to set */
-        ) {
-        peer_ = peer;
-    }
-
-
 };
 
 /**

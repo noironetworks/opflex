@@ -124,7 +124,7 @@ public:
         : InspectorMessage("custom", REQUEST, client),
           query(query_) {}
 
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) {
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const {
         (*this)(writer);
     }
 
@@ -132,8 +132,7 @@ public:
         return new PolicyQueryReq(*this);
     }
 
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
         writer.StartObject();
         writer.String("method");

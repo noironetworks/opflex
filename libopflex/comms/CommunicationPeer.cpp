@@ -11,6 +11,8 @@
 #  include <config.h>
 #endif
 
+#include <boost/scoped_ptr.hpp>
+
 #include <yajr/rpc/gen/echo.hpp>
 #include <yajr/rpc/internal/json_stream_wrappers.hpp>
 #include <yajr/rpc/methods.hpp>
@@ -336,7 +338,7 @@ int CommunicationPeer::writeIOV(std::vector<iovec>& iov) const {
 
 }
 
-bool EchoGen::operator () (rpc::SendHandler & handler) {
+bool EchoGen::operator() (rpc::SendHandler & handler) const {
 
     if (!handler.StartArray()) {
         return false;

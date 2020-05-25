@@ -181,14 +181,13 @@ public:
      * Serialize payload
      * @param writer writer
      */
-    virtual void serializePayload(yajr::rpc::SendHandler& writer);
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const;
 
     /**
      * Operator to serialize a payload to a writer
      * @param writer the writer to serialize to
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer);
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const;
 
 
     /**
@@ -253,7 +252,7 @@ public:
      * Serialize payload
      * @param writer writer
      */
-    virtual void serializePayload(yajr::rpc::SendHandler& writer);
+    virtual void serializePayload(yajr::rpc::SendHandler& writer) const;
 
     /**
      * Get request ID
@@ -269,8 +268,7 @@ public:
      * @param writer writer
      * @return
      */
-    template <typename T>
-    bool operator()(rapidjson::Writer<T> & writer) const {
+    virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
         writer.String("Open_vSwitch");
         for (auto tr : transList) {
