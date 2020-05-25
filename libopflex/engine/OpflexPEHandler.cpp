@@ -370,9 +370,9 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
             serializer.deserialize(mo, *client, true, &notifs);
+            const Value& uriv = mo["uri"];
+            getProcessor()->removePendingItem(conn, uriv.GetString());
         }
-        const Value& uriv = mo["uri"];
-        getProcessor()->removePendingItem(conn, uriv.GetString());
     }
     client->deliverNotifications(notifs);
 }
