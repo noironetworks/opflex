@@ -130,6 +130,18 @@ namespace internal {
 
                                                                      (Callbacks)
 */
+void retry_later(ActivePeer * peer) {
+
+    if (peer->destroying_) {
+        LOG(INFO) << peer << " peer is being destroyed. not inserting in RETRY_TO_CONNECT";
+        return;
+    }
+
+    peer->unlink();
+    peer->insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
+
+    assert(peer->uvRefCnt_ > 0);
+}
 
 void on_active_connection(uv_connect_t *req, int status) {
 
@@ -148,8 +160,6 @@ void on_active_connection(uv_connect_t *req, int status) {
         peer->down();
         return;
     }
-
-    void retry_later(ActivePeer * peer);
 
     if (status < 0) {
         LOG(WARNING)
@@ -186,8 +196,6 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
 
     ActiveTcpPeer * peer = Peer::get(req);
     assert(!peer->passive_);
-
-    void retry_later(ActivePeer * peer);
 
     if (peer->destroying_) {
         LOG(INFO) << peer << " peer is being destroyed. down() it";
@@ -300,19 +308,6 @@ void debug_address(struct addrinfo const * ai, size_t m = 0) {
         << (ai->ai_canonname ?: "")
     ;
 
-}
-
-void retry_later(ActivePeer * peer) {
-
-    if (peer->destroying_) {
-        LOG(INFO) << peer << " peer is being destroyed. not inserting in RETRY_TO_CONNECT";
-        return;
-    }
-
-    peer->unlink();
-    peer->insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
-
-    assert(peer->uvRefCnt_ > 0);
 }
 
 void swap_stack_on_close(uv_handle_t * h) {
