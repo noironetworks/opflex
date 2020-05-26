@@ -489,7 +489,7 @@ void IntFlowManager::egDomainUpdated(const opflex::modb::URI& egURI) {
                        [=]() { handleEndpointGroupDomainUpdate(egURI); });
 }
 
-void IntFlowManager::domainUpdated(class_id_t cid, const URI& domURI) {
+void IntFlowManager::domainUpdated(opflex::modb::class_id_t cid, const URI& domURI) {
     if (stopping) return;
 
     taskQueue.dispatch(domURI.toString(),
@@ -5478,7 +5478,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
 }
 
 void
-IntFlowManager::handleDomainUpdate(class_id_t cid, const URI& domURI) {
+IntFlowManager::handleDomainUpdate(opflex::modb::class_id_t cid, const URI& domURI) {
 
     switch (cid) {
     case RoutingDomain::CLASS_ID:
@@ -6040,7 +6040,7 @@ void IntFlowManager::cleanup() {
             });
 }
 
-const char * IntFlowManager::getIdNamespace(class_id_t cid) {
+const char * IntFlowManager::getIdNamespace(opflex::modb::class_id_t cid) {
     const char *nmspc = NULL;
     switch (cid) {
     case RoutingDomain::CLASS_ID:   nmspc = ID_NMSPC_RD; break;
@@ -6059,7 +6059,7 @@ const char * IntFlowManager::getIdNamespace(class_id_t cid) {
 }
 
 
-uint32_t IntFlowManager::getId(class_id_t cid, const URI& uri) {
+uint32_t IntFlowManager::getId(opflex::modb::class_id_t cid, const URI& uri) {
     return idGen.getId(getIdNamespace(cid), uri.toString());
 }
 

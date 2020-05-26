@@ -369,7 +369,7 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
     optional<shared_ptr<EndpointRetention> > newl3epretpolicy;
     optional<URI> nEpRetURI;
 
-    optional<class_id_t> domainClass = boost::none;
+    optional<opflex::modb::class_id_t> domainClass = boost::none;
     optional<URI> domainURI = boost::none;
     optional<shared_ptr<EpGroupToNetworkRSrc> > ref =
         epg.get()->resolveGbpEpGroupToNetworkRSrc();

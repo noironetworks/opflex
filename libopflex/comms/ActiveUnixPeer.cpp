@@ -20,9 +20,9 @@ namespace yajr {
     namespace comms {
         namespace internal {
 
-void ::yajr::comms::internal::ActiveUnixPeer::onFailedConnect(int rc) {
+extern void retry_later(ActivePeer * peer);
 
-    void retry_later(ActivePeer * peer);
+void ::yajr::comms::internal::ActiveUnixPeer::onFailedConnect(int rc) {
 
     onError(rc);
 
