@@ -251,7 +251,8 @@ public:
 
         // generate flow removed message for the first flow
         // found in the flow entry list
-        for (const FlowEntryPtr& fe : entryList) {
+        const FlowEntryPtr& fe = entryList.front();
+        if (fe) {
 
             fs = &fstat;
             bzero(fs, sizeof(struct ofputil_flow_removed));
@@ -336,6 +337,7 @@ public:
         BOOST_REQUIRE(res_msg!=0);
         ofp_header *msgHdr = (ofp_header *)res_msg->data;
         cStatsManager* pSM = dynamic_cast<cStatsManager*>(statsManager);
+        BOOST_CHECK(pSM);
         pSM->testInjectTxnId(msgHdr->xid);
 
         // send first flow stats reply message
@@ -422,6 +424,7 @@ public:
         BOOST_REQUIRE(res_msg!=0);
         ofp_header *msgHdr = (ofp_header *)res_msg->data;
         cStatsManager* pSM = dynamic_cast<cStatsManager*>(statsManager);
+        BOOST_CHECK(pSM);
         pSM->testInjectTxnId(msgHdr->xid);
 
         // send first flow stats reply message

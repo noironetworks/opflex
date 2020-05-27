@@ -275,11 +275,6 @@ static void handleNDPktIn(Agent& agent,
                                             &flow.ipv6_src);
     } else if (icmp->icmp6_type == ND_ROUTER_SOLICIT && egUri) {
         /* Router solicitation */
-        struct nd_router_solicit* router_sol =
-            (struct nd_router_solicit*) dpp_l4(pkt);
-        if (l4_size < sizeof(*router_sol))
-            return;
-
         LOG(DEBUG) << "Handling ICMPv6 router solicitation";
 
         b = packets::compose_icmp6_router_ad(mac,
