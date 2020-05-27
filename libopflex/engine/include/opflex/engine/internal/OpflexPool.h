@@ -257,7 +257,7 @@ public:
      */
     size_t sendToRole(OpflexMessage* message,
                       ofcore::OFConstants::OpflexRole role,
-                      bool sync = false);
+                      bool sync = false, std::string uri = "");
 
     /**
      * Get the number of connections in a particular role
