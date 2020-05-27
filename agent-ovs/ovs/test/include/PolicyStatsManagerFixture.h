@@ -251,9 +251,8 @@ public:
 
         // generate flow removed message for the first flow
         // found in the flow entry list
-        const FlowEntryPtr& fe = entryList.front();
-        if (fe) {
-
+        if (!entryList.empty()) {
+            const FlowEntryPtr& fe = entryList.front();
             fs = &fstat;
             bzero(fs, sizeof(struct ofputil_flow_removed));
             fs->table_id = table_id;
