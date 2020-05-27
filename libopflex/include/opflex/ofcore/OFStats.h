@@ -114,6 +114,13 @@ public:
     uint64_t getStateReportErrs() { return stateReportErrs; }
     /** increment the number of errors receieved in state_report responses */
     void incrStateReportErrs() { stateReportErrs++; }
+    /** increment the number of policies requested by the client */
+    void incrPolUnresolvedCount() { polUnresolvedCount++; }
+    /** decrement the number of policies requested by the client which is received */
+    void decrPolUnresolvedCount() { polUnresolvedCount--; }
+    /** get the number of policies requested by the client which is not yet received */
+    uint64_t getPolUnresolvedCount() { return polUnresolvedCount; }
+
 
 private:
 
@@ -142,6 +149,8 @@ private:
     std::atomic_ullong stateReports{};
     std::atomic_ullong stateReportResps{};
     std::atomic_ullong stateReportErrs{};
+ 
+    std::atomic_ullong polUnresolvedCount{};
 };
 
 #endif //OPFLEX_OFSTATS_H

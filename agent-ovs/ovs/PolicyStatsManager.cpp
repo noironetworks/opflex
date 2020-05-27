@@ -304,7 +304,8 @@ on_timer_base(const error_code& ec,
                     .setEpUndeclareErrs(peerStat.second->getEpUndeclareErrs())
                     .setStateReports(peerStat.second->getStateReports())
                     .setStateReportResps(peerStat.second->getStateReportResps())
-                    .setStateReportErrs(peerStat.second->getStateReportErrs());
+                    .setStateReportErrs(peerStat.second->getStateReportErrs())
+                    .setPolUnresolvedCount(peerStat.second->getPolUnresolvedCount());
 #ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.addNUpdateOFPeerStats(peerStat.first, peerStat.second);
 #endif

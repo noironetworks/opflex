@@ -92,5 +92,8 @@ module[observer]
 
         # the number of state reports error repsonses
         member[stateReportErrs; type=scalar/UInt64]
+ 
+        # the number of unresolved policies 
+        member[polUnresolvedCount; type=scalar/UInt64]
     }
 }

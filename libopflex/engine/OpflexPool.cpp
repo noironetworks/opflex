@@ -50,6 +50,24 @@ OpflexPool::~OpflexPool() {
     uv_mutex_destroy(&conn_mutex);
 }
 
+void OpflexPool::addPendingItem(OpflexClientConnection* conn, std::string uri) {
+    std::string hostName = conn->getHostname();
+    std::unique_lock<std::mutex> lock(modify_uri_mutex);
+    if(pendingResolution[hostName].insert(uri).second == true) {
+    conn->getOpflexStats()->incrPolUnresolvedCount();
+    }
+}
+
+void OpflexPool::removePendingItem(OpflexClientConnection* conn, std::string uri) {
+     std::string hostName = conn->getHostname();
+     std::unique_lock<std::mutex> lock(modify_uri_mutex);
+     std::set<std::string>::iterator rem = pendingResolution[hostName].find(uri);
+     if (rem != pendingResolution[hostName].end()) {
+         pendingResolution[hostName].erase(rem);
+         conn->getOpflexStats()->decrPolUnresolvedCount();
+     }
+}
+
 boost::optional<string> OpflexPool::getLocation() {
     util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
     return location;
@@ -395,7 +413,7 @@ void incrementMsgCounter(OpflexClientConnection* conn, OpflexMessage* msg)
 
 size_t OpflexPool::sendToRole(OpflexMessage* message,
                            OFConstants::OpflexRole role,
-                           bool sync) {
+                           bool sync, std::string uri) {
 #ifdef HAVE_CXX11
     std::unique_ptr<OpflexMessage> messagep(message);
 #else
@@ -426,6 +444,9 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
         }
         incrementMsgCounter(conn, m_copy);
         conn->sendMessage(m_copy, sync);
+        if (message->getMethod() == "policy_resolve" && uri != "") {
+           addPendingItem(conn, uri);
+        }
         i += 1;
     }
     // all allocated buffers should have been dispatched to
