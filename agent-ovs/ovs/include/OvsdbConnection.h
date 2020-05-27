@@ -41,8 +41,11 @@ public:
     /**
      * pure virtual method for handling transactions
      */
-    virtual void handleTransaction(uint64_t reqId,
-            const rapidjson::Document& payload) = 0;
+    virtual void handleTransaction(uint64_t reqId, const rapidjson::Document& payload) = 0;
+    /**
+     * pure virtual method for handling transaction errors
+     */
+    virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload) = 0;
 };
 
 /**
@@ -145,8 +148,14 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      * @param[in] reqId request ID of the request for this response.
      * @param[in] payload rapidjson::Value reference of the response body.
      */
-    virtual void handleTransaction(uint64_t reqId,
-                const rapidjson::Document& payload);
+    virtual void handleTransaction(uint64_t reqId, const rapidjson::Document& payload);
+
+    /**
+     * call back for transaction error response
+     * @param[in] reqId request ID of the request for this response.
+     * @param[in] payload rapidjson::Value reference of the response body.
+     */
+    virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload);
 
     /**
      * condition variable used for synchronizing JSON/RPC

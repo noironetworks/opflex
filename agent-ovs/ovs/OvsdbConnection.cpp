@@ -64,7 +64,7 @@ void OvsdbConnection::start() {
 
 void OvsdbConnection::connect_cb(uv_async_t* handle) {
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
-    OvsdbConnection* ocp = (OvsdbConnection*)handle->data;
+    auto* ocp = (OvsdbConnection*)handle->data;
     if (ocp->ovsdbUseLocalTcpPort) {
         ocp->peer = yajr::Peer::create("127.0.0.1",
                                        "6640",
@@ -134,7 +134,7 @@ void OvsdbConnection::disconnect() {
     // TODO
 }
 
-void OvsdbConnection::handleTransaction(uint64_t reqId,  const rapidjson::Document& payload) {
+void OvsdbConnection::handleTransaction(uint64_t reqId, const rapidjson::Document& payload) {
     unique_lock<mutex> lock(transactionMutex);
     auto iter = transactions.find(reqId);
     if (iter != transactions.end()) {
@@ -145,4 +145,21 @@ void OvsdbConnection::handleTransaction(uint64_t reqId,  const rapidjson::Docume
     }
 }
 
+void OvsdbConnection::handleTransactionError(uint64_t reqId, const rapidjson::Document& payload) {
+    unique_lock<mutex> lock(transactionMutex);
+    auto iter = transactions.find(reqId);
+    if (iter != transactions.end()) {
+        iter->second->handleTransaction(reqId, payload);
+        transactions.erase(iter);
+    }
+
+    if (payload.HasMember("error")) {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        payload.Accept(writer);
+        LOG(WARNING) << "Received error response for reqId " << reqId << " - " << buffer.GetString();
+    } else {
+        LOG(WARNING) << "Received error response with no error element";
+    }
+}
 }

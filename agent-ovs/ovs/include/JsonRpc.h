@@ -88,6 +88,15 @@ public:
     void handleTransaction(uint64_t reqId, const Document& payload);
 
     /**
+     * callback for handling transaction errors
+     * @param[in] reqId request ID of the request for this response.
+     * @param[in] payload Document reference of the response body.
+     */
+    void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload) {
+        // no-op
+    }
+
+    /**
      * update the port list for the bridge
      * @param[in] brUuid bridge UUID
      * @param[in] portUuid port UUID to be added or removed.

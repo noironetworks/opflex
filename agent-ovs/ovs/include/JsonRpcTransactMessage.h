@@ -177,6 +177,11 @@ public:
          conditions(copy.conditions), columns(copy.columns), rowData(copy.rowData), mutateRowData(copy.mutateRowData), kvPairs(copy.kvPairs),
          operation(copy.getOperation()), table(copy.getTable()) {}
 
+    /**
+     * Assignment operator
+     */
+    JsonRpcTransactMessage& operator=(const JsonRpcTransactMessage& rhs) = default;
+
      /**
       * Destructor
       */
