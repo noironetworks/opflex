@@ -93,13 +93,18 @@ MessageFactory::InboundMessage(
         }
 
         if (doc.HasMember(Message::kPayloadKey.result)) {
-            const rapidjson::Value & result = doc[Message::kPayloadKey.result];
-            return MessageFactory::InboundResult(peer, result, id);
+            const rapidjson::Value& result = doc[Message::kPayloadKey.result];
+            // OVSDB returns an error key inside the result instead of using the top-level error
+            if (result.IsArray() && result.Size() > 0 && result[0].IsObject() &&
+                result[0].HasMember("error")) {
+                return MessageFactory::InboundError(peer, result[0], id);
+            } else {
+                return MessageFactory::InboundResult(peer, result, id);
+            }
         }
 
         if (doc.HasMember("error")) {
-            const rapidjson::Value & error = doc["error"];
-
+            const rapidjson::Value& error = doc["error"];
             if (!error.IsObject()) {
                 LOG(ERROR) << &peer << " Received error frame with an error that is not an object.";
                 goto error;

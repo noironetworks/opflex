@@ -335,6 +335,8 @@ void InbReq<&yajr::rpc::method::transact>::process() const {
 
 template<>
 void InbErr<&yajr::rpc::method::transact>::process() const {
+    ((opflex::jsonrpc::RpcConnection*)getPeer()->getData())
+        ->handleTransactionError(getLocalId().id_, (rapidjson::Document&)getPayload());
 }
 
 
