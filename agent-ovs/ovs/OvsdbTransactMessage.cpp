@@ -14,32 +14,10 @@
 #  include <config.h>
 #endif
 
-#include "JsonRpcTransactMessage.h"
 #include <opflexagent/logging.h>
+#include "OvsdbTransactMessage.h"
 
 namespace opflexagent {
-
-void JsonRpcTransactMessage::serializePayload(yajr::rpc::SendHandler& writer) const {
-    (*this)(writer);
-}
-
-static const char* OvsdbOperationStrings[] = {"select", "insert", "update", "mutate", "delete"};
-
-static const char* toString(OvsdbOperation operation) {
-    return OvsdbOperationStrings[static_cast<uint32_t>(operation)];
-}
-
-static const char* OvsdbTableStrings[] = {"Port", "Interface", "Bridge", "IPFIX", "NetFlow", "Mirror"};
-
-static const char* toString(OvsdbTable table) {
-    return OvsdbTableStrings[static_cast<uint32_t>(table)];
-}
-
-static const char* OvsdbFunctionStrings[] = {"=="};
-
-static const char* toString(OvsdbFunction function) {
-    return OvsdbFunctionStrings[static_cast<uint32_t>(function)];
-}
 
 void writePair(yajr::rpc::SendHandler& writer, const TupleData& bPtr, bool kvPair) {
     const string& key = bPtr.getKey();
@@ -88,7 +66,7 @@ void writePair(yajr::rpc::SendHandler& writer, const TupleData& bPtr, bool kvPai
     }
 }
 
-bool JsonRpcTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
+bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
     for (auto& pair : kvPairs) {
         writePair(writer, pair, true);
     }
@@ -172,16 +150,6 @@ bool JsonRpcTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
         writer.EndArray();
     }
     return true;
-}
-
-TransactReq::TransactReq(const list<JsonRpcTransactMessage>& msgs, uint64_t reqId)
-    : JsonRpcMessage("transact", REQUEST), reqId(reqId) {
-    transList = msgs;
-}
-
-void TransactReq::serializePayload(yajr::rpc::SendHandler& writer) const {
-    LOG(DEBUG) << "serializePayload send handler - reqId " << std::to_string(reqId);
-    (*this)(writer);
 }
 
 }

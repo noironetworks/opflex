@@ -1,6 +1,6 @@
 /* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
 /*!
- * @file JsonRpcTransactMessage.h
+ * @file OvsdbTransactMessage.h
  * @brief Interface definition for JSON-RPC transact messages used by the
  * engine
  */
@@ -12,11 +12,11 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-#ifndef OPFLEX_JSONRPCTRANSACTMESSAGE_H
-#define OPFLEX_JSONRPCTRANSACTMESSAGE_H
+#ifndef OPFLEX_OVSDBTRANSACTMESSAGE_H
+#define OPFLEX_OVSDBTRANSACTMESSAGE_H
 
 #include <rapidjson/document.h>
-#include <opflex/rpc/JsonRpcMessage.h>
+#include "OvsdbMessage.h"
 #include <unordered_map>
 
 namespace opflexagent {
@@ -28,21 +28,6 @@ using namespace rapidjson;
  * enum for data types to be sent over JSON/RPC
  */
 enum class Dtype {STRING, INTEGER, BOOL};
-
-/**
- * OVSDB operations
- */
-enum class OvsdbOperation {SELECT, INSERT, UPDATE, MUTATE, DELETE};
-
-/**
- * OVSDB tables
- */
-enum class OvsdbTable {PORT, INTERFACE, BRIDGE, IPFIX, NETFLOW, MIRROR};
-
-/**
- * OVSDB functions
- */
-enum class OvsdbFunction {EQ};
 
 /**
  * Class to represent JSON/RPC tuple data.
@@ -162,43 +147,36 @@ public:
 /**
  * Transact message
  */
-class JsonRpcTransactMessage : public opflex::jsonrpc::JsonRpcMessage {
+class OvsdbTransactMessage : public OvsdbMessage {
 public:
     /**
      * Construct a transact request
      */
-    JsonRpcTransactMessage(OvsdbOperation operation_, OvsdbTable table_) : JsonRpcMessage("transact", REQUEST),
-                                                                           operation(operation_), table(table_) {}
+    OvsdbTransactMessage(OvsdbOperation operation_, OvsdbTable table_) : OvsdbMessage("transact", REQUEST),
+                                                                         operation(operation_), table(table_) {}
 
     /**
      * Copy constructor
      */
-     JsonRpcTransactMessage(const JsonRpcTransactMessage& copy) : JsonRpcMessage("transact", REQUEST),
+     OvsdbTransactMessage(const OvsdbTransactMessage& copy) : OvsdbMessage("transact", REQUEST),
          conditions(copy.conditions), columns(copy.columns), rowData(copy.rowData), mutateRowData(copy.mutateRowData), kvPairs(copy.kvPairs),
          operation(copy.getOperation()), table(copy.getTable()) {}
 
     /**
      * Assignment operator
      */
-    JsonRpcTransactMessage& operator=(const JsonRpcTransactMessage& rhs) = default;
-
-     /**
-      * Destructor
-      */
-     virtual ~JsonRpcTransactMessage() {};
+    OvsdbTransactMessage& operator=(OvsdbTransactMessage& rhs) = default;
 
     /**
-     * Serialize payload
-     * @param writer writer
+     * Destructor
      */
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) const;
+    virtual ~OvsdbTransactMessage() {};
 
     /**
      * Operator to serialize a payload to a writer
      * @param writer the writer to serialize to
      */
     virtual bool operator()(yajr::rpc::SendHandler& writer) const;
-
 
     /**
      * operation type, E.g select, insert.
@@ -244,33 +222,21 @@ private:
 /**
  * JSON/RPC transaction message
  */
-class TransactReq : public opflex::jsonrpc::JsonRpcMessage {
+class TransactReq : public OvsdbMessage {
 public:
     /**
      * Construct a TransactReq instance
      * @param tl transaction data
      * @param reqId request ID
      */
-    TransactReq(const list<JsonRpcTransactMessage>& tl, uint64_t reqId);
+    TransactReq(const list<OvsdbTransactMessage>& tl, uint64_t reqId)
+        : OvsdbMessage("transact", REQUEST, reqId) , transList(tl) {
+    }
 
     /**
      * Destructor
      */
-    virtual ~TransactReq() {};
-
-    /**
-     * Serialize payload
-     * @param writer writer
-     */
-    virtual void serializePayload(yajr::rpc::SendHandler& writer) const;
-
-    /**
-     * Get request ID
-     * @return request ID
-     */
-    uint64_t getReqId() {
-        return reqId;
-    }
+    virtual ~TransactReq() {}
 
     /**
      * Operator to serialize OVSDB transaction
@@ -291,10 +257,9 @@ public:
     }
 
 private:
-    list<JsonRpcTransactMessage> transList;
-    uint64_t reqId;
+    list<OvsdbTransactMessage> transList;
 };
 
 }
 
-#endif //OPFLEX_JSONRPCTRANSACTMESSAGE_H
+#endif //OPFLEX_OVSDBTRANSACTMESSAGE_H
