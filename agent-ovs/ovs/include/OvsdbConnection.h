@@ -23,7 +23,7 @@
 #include <opflex/rpc/JsonRpcConnection.h>
 #include <opflex/rpc/JsonRpcMessage.h>
 
-#include "JsonRpcTransactMessage.h"
+#include "OvsdbTransactMessage.h"
 
 #include <rapidjson/document.h>
 #include <opflex/util/ThreadManager.h>
@@ -141,7 +141,7 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      * @param[in] requests list of Transact messages
      * @param[in] trans callback
      */
-    virtual void sendTransaction(const list<JsonRpcTransactMessage>& requests, Transaction* trans);
+    virtual void sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans);
 
     /**
      * call back for transaction response
@@ -192,7 +192,7 @@ private:
     yajr::Peer* peer;
 
     typedef struct req_cb_data_ {
-        shared_ptr<TransactReq> req;
+        shared_ptr<OvsdbMessage> req;
         yajr::Peer* peer;
     } req_cb_data;
 

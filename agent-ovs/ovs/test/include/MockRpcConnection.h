@@ -40,7 +40,7 @@ public:
      * @param[in] requests list of Transact messages
      * @param[in] trans callback
      */
-    virtual void sendTransaction(const list<JsonRpcTransactMessage>& requests, Transaction* trans);
+    virtual void sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans);
 
     /**
      * destructor

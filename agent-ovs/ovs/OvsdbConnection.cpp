@@ -28,7 +28,7 @@ mutex OvsdbConnection::ovsdbMtx;
 void OvsdbConnection::send_req_cb(uv_async_t* handle) {
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
     auto* reqCbd = (req_cb_data*)handle->data;
-    shared_ptr<TransactReq>& req = reqCbd->req;
+    const shared_ptr<OvsdbMessage>& req = reqCbd->req;
     yajr::rpc::MethodName method(req->getMethod().c_str());
     opflex::jsonrpc::PayloadWrapper wrapper(req.get());
     yajr::rpc::OutboundRequest outr =
@@ -37,7 +37,7 @@ void OvsdbConnection::send_req_cb(uv_async_t* handle) {
     delete(reqCbd);
 }
 
-void OvsdbConnection::sendTransaction(const list<JsonRpcTransactMessage>& requests, Transaction* trans) {
+void OvsdbConnection::sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans) {
     uint64_t reqId = 0;
     {
         unique_lock<mutex> lock(transactionMutex);

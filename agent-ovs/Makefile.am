@@ -164,14 +164,15 @@ noinst_HEADERS = \
 	ovs/include/arp.h \
 	ovs/include/eth.h \
 	ovs/include/JsonRpcRenderer.h \
-	ovs/include/JsonRpcTransactMessage.h \
 	ovs/include/NetFlowRenderer.h \
 	ovs/include/SpanRenderer.h \
 	ovs/include/JsonRpc.h \
 	ovs/include/PacketLogHandler.h \
 	ovs/include/PacketDecoder.h \
 	ovs/include/PacketDecoderLayers.h \
-	ovs/include/OvsdbConnection.h
+	ovs/include/OvsdbConnection.h \
+	ovs/include/OvsdbMessage.h \
+	ovs/include/OvsdbTransactMessage.h
 
 libopflex_agent_la_SOURCES = \
 	lib/AgentLogHandler.cpp \
@@ -265,14 +266,15 @@ if RENDERER_OVS
 	ovs/FlowConstants.cpp \
 	ovs/ovs-shim.c \
 	ovs/JsonRpcRenderer.cpp \
-	ovs/JsonRpcTransactMessage.cpp \
 	ovs/NetFlowRenderer.cpp \
 	ovs/SpanRenderer.cpp \
 	ovs/JsonRpc.cpp \
 	ovs/PacketLogHandler.cpp \
 	ovs/PacketDecoder.cpp \
 	ovs/PacketDecoderLayers.cpp \
-	ovs/OvsdbConnection.cpp
+	ovs/OvsdbConnection.cpp \
+	ovs/OvsdbTransactMessage.cpp \
+	ovs/OvsdbMessage.cpp
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
 	$(libofproto_CFLAGS)

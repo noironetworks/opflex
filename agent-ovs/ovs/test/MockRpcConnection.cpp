@@ -36,7 +36,7 @@ ResponseDict& ResponseDict::Instance() {
     return inst;
 }
 
-void MockRpcConnection::sendTransaction(const list<JsonRpcTransactMessage>& requests, Transaction* trans) {
+void MockRpcConnection::sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans) {
     // prepare request
     uint64_t reqId = getNextId();
     std::shared_ptr<TransactReq> transactReq = std::make_shared<TransactReq>(requests, reqId);
