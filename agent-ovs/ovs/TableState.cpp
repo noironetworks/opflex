@@ -246,7 +246,7 @@ TableState::~TableState() {
 const TableState& TableState::operator=(const TableState& ts) {
     delete pimpl;
     pimpl = new TableStateImpl(*ts.pimpl);
-    return ts;
+    return *this;
 }
 
 void TableState::diffSnapshot(const FlowEntryList& oldEntries,
