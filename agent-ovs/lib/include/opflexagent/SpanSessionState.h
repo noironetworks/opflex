@@ -46,6 +46,11 @@ class SourceEndpoint {
         SourceEndpoint(const SourceEndpoint& copy) : name(copy.name), port(copy.port), dir(copy.dir) {}
 
         /**
+         * Assignment operator
+         */
+        SourceEndpoint& operator=(SourceEndpoint& rhs) = default;
+
+        /**
          * gets the name of the source end point
          * @return name of source end point
          */
@@ -211,6 +216,11 @@ public:
      * Copy constructor
      */
     ErspanParams(const ErspanParams& copy) : ver(copy.ver), remoteIp(copy.remoteIp), portName(copy.portName) {}
+
+    /**
+     * Assignment operator
+     */
+    ErspanParams& operator=(ErspanParams& rhs) = default;
 
     /**
      * Get the ERSPAN version

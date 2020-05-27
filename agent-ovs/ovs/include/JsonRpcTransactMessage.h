@@ -142,6 +142,11 @@ public:
      */
     TupleDataSet(const vector<TupleData>& m, string l = "") : label(l), tuples(m) {}
 
+    /**
+     * Assignment operator
+     */
+    TupleDataSet& operator=(TupleDataSet& rhs) = default;
+
     virtual ~TupleDataSet() {}
 
     /**
