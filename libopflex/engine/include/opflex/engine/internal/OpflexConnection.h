@@ -23,7 +23,6 @@
 
 #include "opflex/yajr/yajr.hpp"
 #include "opflex/yajr/rpc/message_factory.hpp"
-#include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/rpc/JsonRpcConnection.h"
 
 #pragma once

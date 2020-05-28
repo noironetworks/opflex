@@ -13,11 +13,10 @@
 
 #include <string>
 
-#include <boost/thread/mutex.hpp>
-#include <boost/noncopyable.hpp>
 #include <rapidjson/document.h>
 
 #include "opflex/ofcore/OFConstants.h"
+#include "opflex/rpc/JsonRpcHandler.h"
 
 #pragma once
 #ifndef OPFLEX_ENGINE_OPFLEXHANDLER_H
@@ -32,69 +31,22 @@ class OpflexConnection;
 /**
  * Abstract base class for implementing the Opflex protocol
  */
-class OpflexHandler : private boost::noncopyable  {
+class OpflexHandler : public opflex::jsonrpc::JsonRpcHandler {
 public:
     /**
      * Construct a new handler associated with the given Opflex
      * connection
      *
-     * @param conn_ the opflex connection
+     * @param conn the opflex connection
      */
-    OpflexHandler(OpflexConnection* conn_)
-        : conn(conn_), state(DISCONNECTED) {}
+    OpflexHandler(OpflexConnection* conn) : opflex::jsonrpc::JsonRpcHandler((opflex::jsonrpc::RpcConnection*)conn) {}
 
     /**
      * Destroy the handler
      */
     virtual ~OpflexHandler() {}
 
-    /**
-     * Get the Opflex connection associated with this handler
-     *
-     * @return the OpflexConnection pointer
-     */
-    OpflexConnection* getConnection() { return conn; }
-
-    /**
-     * The state of the connection
-     */
-    enum ConnectionState {
-        DISCONNECTED,
-        CONNECTED,
-        READY,
-        FAILED
-    };
-
-    /**
-     * Check whether the connection is ready to accept requests.  This
-     * means that the server handshake is complete and the connection
-     * is active.
-     *
-     * @return true if the connection is ready
-     */
-    bool isReady();
-
-    // *************************
-    // Connection state handlers
-    // *************************
-
-    /**
-     * Called when the connection is connected.  Note that the same
-     * connection may disconnect and reconnect multiple times.
-     */
-    virtual void connected() {}
-
-    /**
-     * Called when the connection is disconnected.  Note that the same
-     * connection may disconnect and reconnect multiple times.
-     */
-    virtual void disconnected() {}
-
-    /**
-     * Called when the connection handshake is complete and the
-     * connection is ready to handle requests.
-     */
-    virtual void ready() {}
+    virtual OpflexConnection* getConnection() const { return (OpflexConnection*)conn; }
 
     // *************************
     // Protocol Message Handlers
@@ -530,28 +482,6 @@ public:
     virtual bool requireReadyRes(uint64_t reqId,
                                  const std::string& method);
 
-protected:
-    /**
-     * Set the connection state for the connection
-     *
-     * @param state the new connection state
-     */
-    void setState(ConnectionState state);
-
-    /**
-     * The OpflexConnection associated with the handler
-     */
-    OpflexConnection* conn;
-
-    /**
-     * The current connection state
-     */
-    ConnectionState state;
-
-    /**
-     * Mutex to ensure access to connection state is controlled
-     */
-    boost::mutex stateMutex;
 };
 
 

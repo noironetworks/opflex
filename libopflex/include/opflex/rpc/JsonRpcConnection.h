@@ -104,6 +104,13 @@ class RpcConnection : private boost::noncopyable {
      * connection type supports it.
      */
     virtual void disconnect() = 0;
+
+private:
+
+    virtual void notifyReady() {};
+    virtual void notifyFailed() {}
+
+    friend class JsonRpcHandler;
 };
 
 }
