@@ -162,11 +162,6 @@ protected:
     virtual void messagesReady() = 0;
 
     /**
-     * Get the peer for this connection
-     */
-    virtual yajr::Peer* getPeer() = 0;
-
-    /**
      * Clean up write queue
      */
     virtual void cleanup();

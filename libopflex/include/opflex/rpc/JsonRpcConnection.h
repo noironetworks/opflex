@@ -54,7 +54,7 @@ private:
  * class for managing RPC connection to a server.
  */
 class RpcConnection : private boost::noncopyable {
-    public:
+public:
     /**
      * Create a new JSON-RPC connection
      */
@@ -104,6 +104,13 @@ class RpcConnection : private boost::noncopyable {
      * connection type supports it.
      */
     virtual void disconnect() = 0;
+
+protected:
+
+    /**
+     * Get the peer for this connection
+     */
+    virtual yajr::Peer* getPeer() = 0;
 
 private:
 
