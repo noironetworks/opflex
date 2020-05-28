@@ -45,7 +45,7 @@ OpflexConnection::OpflexConnection(HandlerFactory& handlerFactory)
     ,requestId(1) ,connGeneration(0)
 {
     uv_mutex_init(&queue_mutex);
-    connect();
+    OpflexConnection::connect();
 }
 
 OpflexConnection::~OpflexConnection() {
