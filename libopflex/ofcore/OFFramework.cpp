@@ -61,7 +61,7 @@ OFFramework::OFFramework() : pimpl(new OFFrameworkImpl()) {
 }
 
 OFFramework::~OFFramework() {
-    OFFramework::stop();
+    stop();
     uv_key_delete(&pimpl->mutator_key);
     delete pimpl;
 }
