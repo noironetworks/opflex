@@ -93,7 +93,7 @@ void OpflexConnection::notifyReady() {
 void OpflexConnection::doWrite(OpflexMessage* message) {
     if (getPeer() == NULL) return;
 
-    PayloadWrapper wrapper(message);
+    jsonrpc::PayloadWrapper wrapper(message);
     switch (message->getType()) {
     case OpflexMessage::REQUEST:
         {

@@ -339,6 +339,23 @@ void InbErr<&yajr::rpc::method::transact>::process() const {
         ->handleTransactionError(getLocalId().id_, (rapidjson::Document&)getPayload());
 }
 
+template<>
+void InbRes<&yajr::rpc::method::monitor>::process() const {
+    ((opflex::jsonrpc::RpcConnection*)getPeer()->getData())
+            ->handleMonitor(getLocalId().id_, (rapidjson::Document&)getPayload());
+}
+
+template<>
+void InbReq<&yajr::rpc::method::monitor>::process() const {
+    LOG(ERROR) << "received monitor req";
+    // unsupported
+}
+
+template<>
+void InbErr<&yajr::rpc::method::monitor>::process() const {
+    ((opflex::jsonrpc::RpcConnection*)getPeer()->getData())
+        ->handleMonitorError(getLocalId().id_, (rapidjson::Document&)getPayload());
+}
 
 } /* namespace rpc */
 } /* namespace yajr */

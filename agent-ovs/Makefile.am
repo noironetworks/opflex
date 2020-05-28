@@ -172,6 +172,7 @@ noinst_HEADERS = \
 	ovs/include/PacketDecoderLayers.h \
 	ovs/include/OvsdbConnection.h \
 	ovs/include/OvsdbMessage.h \
+	ovs/include/OvsdbMonitorMessage.h \
 	ovs/include/OvsdbTransactMessage.h
 
 libopflex_agent_la_SOURCES = \
@@ -274,7 +275,8 @@ if RENDERER_OVS
 	ovs/PacketDecoderLayers.cpp \
 	ovs/OvsdbConnection.cpp \
 	ovs/OvsdbTransactMessage.cpp \
-	ovs/OvsdbMessage.cpp
+	ovs/OvsdbMessage.cpp \
+	ovs/OvsdbMonitorMessage.cpp
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
 	$(libofproto_CFLAGS)

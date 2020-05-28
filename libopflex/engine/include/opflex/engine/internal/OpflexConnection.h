@@ -138,7 +138,7 @@ public:
      * Get the peer handshake timeout (in ms)
      * @return timeout
      */
-    uint32_t getHandshakeTimeout() {
+    uint32_t getHandshakeTimeout() const {
         return handshakeTimeout;
     }
 
@@ -203,20 +203,6 @@ public:
      * connection
      */
     virtual OpflexHandler* newHandler(OpflexConnection* conn) = 0;
-};
-
-
-class PayloadWrapper {
-public:
-    PayloadWrapper(OpflexMessage* message_)
-        : message(message_) { }
-
-    virtual bool operator()(yajr::rpc::SendHandler& handler) const {
-        message->serializePayload(handler);
-        return true;
-    }
-
-    OpflexMessage* message;
 };
 
 } /* namespace internal */
