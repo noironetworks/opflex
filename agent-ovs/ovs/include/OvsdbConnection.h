@@ -158,6 +158,20 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
     virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload);
 
     /**
+     * call back for monitor response
+     * @param[in] reqId request ID of the request for this response.
+     * @param[in] payload rapidjson::Value reference of the response body.
+     */
+    virtual void handleMonitor(uint64_t reqId, const rapidjson::Document& payload);
+
+    /**
+     * call back for monitor error response
+     * @param[in] reqId request ID of the request for this response.
+     * @param[in] payload rapidjson::Value reference of the response body.
+     */
+    virtual void handleMonitorError(uint64_t reqId, const rapidjson::Document& payload);
+
+    /**
      * condition variable used for synchronizing JSON/RPC
      * request and response
      */

@@ -162,4 +162,22 @@ void OvsdbConnection::handleTransactionError(uint64_t reqId, const rapidjson::Do
         LOG(WARNING) << "Received error response with no error element";
     }
 }
+
+void OvsdbConnection::handleMonitor(uint64_t reqId, const rapidjson::Document& payload) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    payload.Accept(writer);
+    //LOG(WARNING) << "received monitor response with payload " << buffer.GetString();
+}
+
+void OvsdbConnection::handleMonitorError(uint64_t reqId, const rapidjson::Document& payload) {
+    if (payload.HasMember("error")) {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        payload.Accept(writer);
+        LOG(WARNING) << "Received error response for reqId " << reqId << " - " << buffer.GetString();
+    } else {
+        LOG(WARNING) << "Received error response with no error element";
+    }
+}
 }

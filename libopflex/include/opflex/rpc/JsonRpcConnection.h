@@ -20,8 +20,35 @@
 
 #include <rapidjson/document.h>
 
+#include "JsonRpcMessage.h"
+
 namespace opflex {
 namespace jsonrpc {
+
+/**
+ * Payload wrapper
+ */
+class PayloadWrapper {
+public:
+    /**
+     * Construct a payload wrapper
+     * @param message_ RPC message
+     */
+    PayloadWrapper(JsonRpcMessage* message_)
+        : message(message_) { }
+
+    /**
+     * Operator to serialize a generic a payload
+     * @param handler handler
+     */
+    virtual bool operator()(yajr::rpc::SendHandler& handler) const {
+        message->serializePayload(handler);
+        return true;
+    }
+
+private:
+    JsonRpcMessage* message;
+};
 
 /**
  * class for managing RPC connection to a server.
@@ -29,7 +56,7 @@ namespace jsonrpc {
 class RpcConnection : private boost::noncopyable {
     public:
     /**
-     * constructor that takes a pointer to a Transaction object
+     * Create a new JSON-RPC connection
      */
     RpcConnection() {}
 
@@ -46,6 +73,20 @@ class RpcConnection : private boost::noncopyable {
      * @param[in] payload rapidjson::Value reference of the response body.
      */
     virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload) {};
+
+    /**
+     * call back for monitor response
+     * @param[in] reqId request ID of the request for this response.
+     * @param[in] payload rapidjson::Value reference of the response body.
+     */
+    virtual void handleMonitor(uint64_t reqId, const rapidjson::Document& payload) {};
+
+    /**
+     * call back for monitor error response
+     * @param[in] reqId request ID of the request for this response.
+     * @param[in] payload rapidjson::Value reference of the response body.
+     */
+    virtual void handleMonitorError(uint64_t reqId, const rapidjson::Document& payload) {};
 
     /**
      * destructor

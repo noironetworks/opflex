@@ -41,7 +41,7 @@ public:
         : OpflexMessage(method, type),
           processor(processor_), xid(xid_) {}
     virtual ~ProcessorMessage() {};
-    virtual uint64_t getReqXid() { return xid; }
+    virtual uint64_t getReqXid() const { return xid; }
 
 protected:
     /**

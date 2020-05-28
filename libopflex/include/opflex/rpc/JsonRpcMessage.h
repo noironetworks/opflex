@@ -117,31 +117,6 @@ private:
     const rapidjson::Value* id;
 };
 
-/**
- * Payload wrapper
- */
-class PayloadWrapper {
-public:
-    /**
-     * Construct a payload wrapper
-     * @param message_ RPC message
-     */
-    PayloadWrapper(JsonRpcMessage* message_)
-        : message(message_) { }
-
-    /**
-     * Operator to serialize a generic a payload
-     * @param handler handler
-     */
-    virtual bool operator()(yajr::rpc::SendHandler& handler) const {
-        message->serializePayload(handler);
-        return true;
-    }
-
-private:
-    JsonRpcMessage* message;
-};
-
 } /* namespace rpc */
 } /* namespace opflex */
 
