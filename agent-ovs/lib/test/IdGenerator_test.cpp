@@ -9,6 +9,7 @@
  */
 
 #include <opflexagent/IdGenerator.h>
+#include <opflexagent/logging.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -78,7 +79,8 @@ BOOST_AUTO_TEST_CASE(get_erase) {
         u1_id_1 = idgen1.getId(nmspc, u1);
         BOOST_CHECK(u1_id_1 != 0);
 
-        remove(idgen1.getNamespaceFile(nmspc).c_str());
+        if (!remove(idgen1.getNamespaceFile(nmspc).c_str()))
+            LOG(ERROR) << "unable to remove " << idgen1.getNamespaceFile(nmspc);
     }
 
     {
@@ -205,7 +207,8 @@ BOOST_AUTO_TEST_CASE(persist_range) {
     {
         IdGenerator idgen(std::chrono::milliseconds(15));
         idgen.setPersistLocation(dir);
-        remove(idgen.getNamespaceFile(nmspc).c_str());
+        if (!remove(idgen.getNamespaceFile(nmspc).c_str()))
+            LOG(ERROR) << "unable to remove " << idgen.getNamespaceFile(nmspc);
         idgen.initNamespace(nmspc, 1, 20);
 
         BOOST_CHECK_EQUAL(20, idgen.getRemainingIds(nmspc));
@@ -296,7 +299,8 @@ BOOST_AUTO_TEST_CASE(persist_range) {
         BOOST_CHECK_EQUAL(19, idgen.getRemainingIds(nmspc));
         BOOST_CHECK_EQUAL(2, idgen.getFreeRangeCount(nmspc));
 
-        remove(idgen.getNamespaceFile(nmspc).c_str());
+        if (!remove(idgen.getNamespaceFile(nmspc).c_str()))
+            LOG(ERROR) << "unable to remove " << idgen.getNamespaceFile(nmspc);
     }
 
 }

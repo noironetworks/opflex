@@ -54,7 +54,7 @@ void SwitchManager::start(const std::string& swName) {
 
 void SwitchManager::connect() {
     connection->RegisterOnConnectListener(this);
-    connection->Connect(OFP13_VERSION);
+    (void)(connection->Connect(OFP13_VERSION));
 }
 
 void SwitchManager::stop() {

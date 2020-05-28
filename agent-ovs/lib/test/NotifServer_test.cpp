@@ -39,7 +39,8 @@ static const std::string SOCK_NAME("/tmp/notif_test.sock");
 class NotifFixture {
 public:
     NotifFixture() : notif(io) {
-        std::remove(SOCK_NAME.c_str());
+        if (!std::remove(SOCK_NAME.c_str()))
+            LOG(ERROR) << "unable to remove " << SOCK_NAME;
         notif.setSocketName(SOCK_NAME);
         notif.start();
         io_service_thread.reset(new std::thread([this]() { io.run(); }));
@@ -52,7 +53,8 @@ public:
             io_service_thread->join();
             io_service_thread.reset();
         }
-        std::remove(SOCK_NAME.c_str());
+        if (!std::remove(SOCK_NAME.c_str()))
+            LOG(ERROR) << "unable to remove " << SOCK_NAME;
     }
 
     ba::io_service io;

@@ -283,7 +283,8 @@ void NotifServer::start() {
     if (notifSocketPath.length() == 0) return;
 
     running = true;
-    std::remove(notifSocketPath.c_str());
+    if (!std::remove(notifSocketPath.c_str()))
+        LOG(ERROR) << "unable to remove " << notifSocketPath;
     stream_protocol::endpoint ep(notifSocketPath);
     acceptor.reset(new stream_protocol::acceptor(io_service, ep));
     if (boost::filesystem::exists(notifSocketPath)) {
@@ -324,7 +325,8 @@ void NotifServer::start() {
             ss << std::oct << notifSocketPerms;
             ss >> perms;
 
-            chmod(notifSocketPath.c_str(), perms);
+            if (!chmod(notifSocketPath.c_str(), perms))
+                LOG(ERROR) << "unable to chmod " << notifSocketPath;
         }
 
         if (uid != 0 || gid != 0) {
