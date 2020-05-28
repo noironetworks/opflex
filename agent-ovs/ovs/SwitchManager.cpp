@@ -54,8 +54,7 @@ void SwitchManager::start(const std::string& swName) {
 
 void SwitchManager::connect() {
     connection->RegisterOnConnectListener(this);
-    if (!connection->Connect(OFP13_VERSION))
-        LOG(ERROR) << "unable to connect with ovs";
+    (void)(!connection->Connect(OFP13_VERSION));
 }
 
 void SwitchManager::stop() {
