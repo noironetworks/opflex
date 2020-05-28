@@ -168,7 +168,7 @@ private:
     TaskQueue taskQueue;
 
     bool conntrackEnabled;
-    bool stopping;
+    std::atomic<bool> stopping;
     std::string dropLogIface;
     boost::asio::ip::address dropLogDst;
     uint16_t dropLogRemotePort;
