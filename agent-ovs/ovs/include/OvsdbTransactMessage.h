@@ -62,6 +62,11 @@ public:
     TupleData(const TupleData& copy) : key(copy.key), type(copy.type), sVal(copy.sVal), iVal(copy.iVal), bVal(copy.bVal) {}
 
     /**
+     * Assignment operator
+     */
+    TupleData& operator=(const TupleData& rhs) = default;
+
+    /**
      * Destructor
      */
     virtual ~TupleData() {}
