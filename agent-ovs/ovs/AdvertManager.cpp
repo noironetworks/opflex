@@ -91,14 +91,18 @@ void AdvertManager::stop() {
     stopping = true;
 
     lock_guard<recursive_mutex> guard(timer_mutex);
-    if (routerAdvTimer)
-        routerAdvTimer->cancel();
-    if (endpointAdvTimer)
-        endpointAdvTimer->cancel();
-    if (allEndpointAdvTimer)
-        allEndpointAdvTimer->cancel();
-    if(tunnelEpAdvTimer)
-        tunnelEpAdvTimer->cancel();
+    try {
+        if (routerAdvTimer)
+            routerAdvTimer->cancel();
+        if (endpointAdvTimer)
+            endpointAdvTimer->cancel();
+        if (allEndpointAdvTimer)
+            allEndpointAdvTimer->cancel();
+        if(tunnelEpAdvTimer)
+            tunnelEpAdvTimer->cancel();
+    } catch(const std::exception &e) {
+        LOG(WARNING) << "Failed to cancel advertisement timer: " << e.what();
+    }
 }
 
 void AdvertManager::scheduleInitialRouterAdv() {
