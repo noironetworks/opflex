@@ -59,33 +59,38 @@ int main(int argc, char** argv) {
 
     // Parse command line options
     po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help,h", "Print this help message")
-        ("version,v", "print version information and git hash")
-        ("log", po::value<string>()->default_value(""),
-         "Log to the specified file (default standard out)")
-        ("level", po::value<string>()->default_value("warning"),
-         "Use the specified log level (default warning)")
-        ("syslog", "Log to syslog instead of file or standard out")
-        ("socket", po::value<string>()->default_value(DEF_SOCKET),
-         "Connect to the specified UNIX domain socket (default " DEF_SOCKET ")")
-        ("query,q", po::value<std::vector<string> >(),
-         "Query for a specific object with subjectname,uri or all objects "
-         "of a specific type with subjectname")
-        ("unresolved,u", "Retrieve all unresolved relations")
-        ("recursive,r", "Retrieve the whole subtree for each returned object")
-        ("follow-refs,f", "Follow references in returned objects")
-        ("load", po::value<std::string>()->default_value(""),
-         "Load managed objects from the specified file into the MODB view")
-        ("output,o", po::value<std::string>()->default_value(""),
-         "Output the results to the specified file (default standard out)")
-        ("type,t", po::value<std::string>()->default_value("tree"),
-         "Specify the output format: tree, asciitree, list, or dump "
-         "(default tree)")
-        ("props,p", "Include object properties in output")
-        ("width,w", po::value<int>()->default_value(w.ws_col - 1),
-         "Truncate output to the specified number of characters")
-        ;
+    try {
+        desc.add_options()
+            ("help,h", "Print this help message")
+            ("version,v", "print version information and git hash")
+            ("log", po::value<string>()->default_value(""),
+             "Log to the specified file (default standard out)")
+            ("level", po::value<string>()->default_value("warning"),
+             "Use the specified log level (default warning)")
+            ("syslog", "Log to syslog instead of file or standard out")
+            ("socket", po::value<string>()->default_value(DEF_SOCKET),
+             "Connect to the specified UNIX domain socket (default " DEF_SOCKET ")")
+            ("query,q", po::value<std::vector<string> >(),
+             "Query for a specific object with subjectname,uri or all objects "
+             "of a specific type with subjectname")
+            ("unresolved,u", "Retrieve all unresolved relations")
+            ("recursive,r", "Retrieve the whole subtree for each returned object")
+            ("follow-refs,f", "Follow references in returned objects")
+            ("load", po::value<std::string>()->default_value(""),
+             "Load managed objects from the specified file into the MODB view")
+            ("output,o", po::value<std::string>()->default_value(""),
+             "Output the results to the specified file (default standard out)")
+            ("type,t", po::value<std::string>()->default_value("tree"),
+             "Specify the output format: tree, asciitree, list, or dump "
+             "(default tree)")
+            ("props,p", "Include object properties in output")
+            ("width,w", po::value<int>()->default_value(w.ws_col - 1),
+             "Truncate output to the specified number of characters")
+            ;
+    } catch (const boost::bad_lexical_cast& e) {
+        LOG(ERROR) << "exception while processing description: " << e.what();
+        return 1;
+    }
 
     bool log_to_syslog = false;
     string log_file;

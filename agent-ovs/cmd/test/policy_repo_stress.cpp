@@ -37,6 +37,7 @@ using boost::asio::deadline_timer;
 using boost::posix_time::milliseconds;
 using opflexagent::INFO;
 using opflexagent::ERROR;
+using opflexagent::WARNING;
 namespace po = boost::program_options;
 
 std::random_device rng;
@@ -341,11 +342,15 @@ int main(int argc, char** argv) {
 
     std::vector<TestAgent> agents;
     for (uint32_t i = 0; i < num_agents; i++) {
-        std::string identity =
-            boost::replace_all_copy(identity_template, "<agent_id>",
-                                    boost::lexical_cast<std::string>(i));
-        LOG(INFO) << "Creating agent " << identity;
-        agents.emplace_back(domain, identity);
+        try {
+            std::string identity =
+                boost::replace_all_copy(identity_template, "<agent_id>",
+                                        boost::lexical_cast<std::string>(i));
+            LOG(INFO) << "Creating agent " << identity;
+            agents.emplace_back(domain, identity);
+        } catch (const boost::bad_lexical_cast& e) {
+            LOG(WARNING) << "unable to create identity: " << e.what();
+        }
     }
 
     if (agents.size() == 0) {

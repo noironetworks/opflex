@@ -714,7 +714,11 @@ void Agent::stop() {
         r.second->stop();
     }
 
-    fsWatcher.stop();
+    try {
+        fsWatcher.stop();
+    } catch (const std::runtime_error& e) {
+        LOG(WARNING) << "failed to stop fswatcher: " << e.what();
+    }
 
     notifServer.stop();
     endpointManager.stop();
