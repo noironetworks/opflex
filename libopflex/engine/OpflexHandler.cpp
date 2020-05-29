@@ -24,10 +24,8 @@
 #include "opflex/engine/internal/OpflexConnection.h"
 #include "opflex/engine/internal/OpflexHandler.h"
 #include "opflex/engine/internal/OpflexMessage.h"
-#include "opflex/rpc/JsonRpcConnection.h"
 
 #include "opflex/logging/internal/logging.hpp"
-#include <opflex/yajr/rpc/rpc.hpp>
 #include <yajr/rpc/methods.hpp>
 
 namespace opflex {
@@ -38,22 +36,6 @@ using std::string;
 using rapidjson::Value;
 using rapidjson::Writer;
 
-bool OpflexHandler::isReady() {
-    boost::unique_lock<boost::mutex> guard(stateMutex);
-    return state == READY;
-}
-
-void OpflexHandler::setState(ConnectionState state_) {
-    boost::unique_lock<boost::mutex> guard(stateMutex);
-    state = state_;
-    if (state == READY) {
-        guard.unlock();
-        conn->notifyReady();
-    } else if (state == FAILED) {
-        guard.unlock();
-        conn->notifyFailed();
-    }
-}
 
 void OpflexHandler::handleUnexpected(const string& type) {
     LOG(ERROR) << "Unexpected message of type " << type;

@@ -14,17 +14,10 @@
 #  include <config.h>
 #endif
 
-
-#include <boost/scoped_ptr.hpp>
-
 #include "opflex/engine/internal/OpflexConnection.h"
 #include "opflex/engine/internal/OpflexHandler.h"
-#include "opflex/engine/internal/OpflexMessage.h"
-#include "opflex/logging/internal/logging.hpp"
-#include "opflex/util/LockGuard.h"
 
 #include "yajr/transport/ZeroCopyOpenSSL.hpp"
-#include "opflex/yajr/rpc/message_factory.hpp"
 
 static uv_once_t ssl_once = UV_ONCE_INIT;
 
@@ -34,17 +27,14 @@ namespace internal {
 
 using rapidjson::Value;
 using std::string;
-using boost::scoped_ptr;
 using yajr::rpc::OutboundRequest;
 using yajr::rpc::OutboundResult;
 using yajr::rpc::OutboundError;
 using yajr::transport::ZeroCopyOpenSSL;
 
 OpflexConnection::OpflexConnection(HandlerFactory& handlerFactory)
-    : handler(handlerFactory.newHandler(this))
-    ,requestId(1) ,connGeneration(0)
+    : RpcConnection(), handler(handlerFactory.newHandler(this))
 {
-    uv_mutex_init(&queue_mutex);
     connect();
 }
 
@@ -52,7 +42,6 @@ OpflexConnection::~OpflexConnection() {
     cleanup();
     if (handler)
         delete handler;
-    uv_mutex_destroy(&queue_mutex);
 }
 
 static void init_ssl() {
@@ -64,15 +53,6 @@ void OpflexConnection::initSSL() {
 }
 
 void OpflexConnection::connect() {}
-
-void OpflexConnection::cleanup() {
-    util::LockGuard guard(&queue_mutex);
-    connGeneration += 1;
-    while (!write_queue.empty()) {
-        delete write_queue.front().first;
-        write_queue.pop_front();
-    }
-}
 
 void OpflexConnection::disconnect() {
     cleanup();
@@ -88,62 +68,6 @@ bool OpflexConnection::isReady() {
 
 void OpflexConnection::notifyReady() {
 
-}
-
-void OpflexConnection::doWrite(OpflexMessage* message) {
-    if (getPeer() == NULL) return;
-
-    jsonrpc::PayloadWrapper wrapper(message);
-    switch (message->getType()) {
-    case OpflexMessage::REQUEST:
-        {
-            yajr::rpc::MethodName method(message->getMethod().c_str());
-            uint64_t xid = message->getReqXid();
-            if (xid == 0) xid = requestId++;
-            OutboundRequest outm(wrapper, &method, xid, getPeer());
-            outm.send();
-        }
-        break;
-    case OpflexMessage::RESPONSE:
-        {
-            OutboundResult outm(*getPeer(), wrapper, message->getId());
-            outm.send();
-        }
-        break;
-    case OpflexMessage::ERROR_RESPONSE:
-        {
-            OutboundError outm(*getPeer(), wrapper, message->getId());
-            outm.send();
-        }
-        break;
-    }
-}
-
-void OpflexConnection::processWriteQueue() {
-    util::LockGuard guard(&queue_mutex);
-    while (!write_queue.empty()) {
-        const write_queue_item_t& qi = write_queue.front();
-        // Avoid writing messages from a previous reconnect attempt
-        if (qi.second < connGeneration) {
-            LOG(DEBUG) << "Ignoring " << qi.first->getMethod()
-                       << " of type " << qi.first->getType();
-            continue;
-        }
-        scoped_ptr<OpflexMessage> message(qi.first);
-        write_queue.pop_front();
-        doWrite(message.get());
-    }
-}
-
-void OpflexConnection::sendMessage(OpflexMessage* message, bool sync) {
-    if (sync) {
-        scoped_ptr<OpflexMessage> messagep(message);
-        doWrite(message);
-    } else {
-        util::LockGuard guard(&queue_mutex);
-        write_queue.push_back(std::make_pair(message, connGeneration));
-    }
-    messagesReady();
 }
 
 } /* namespace internal */

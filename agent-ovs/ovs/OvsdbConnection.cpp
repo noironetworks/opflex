@@ -180,4 +180,8 @@ void OvsdbConnection::handleMonitorError(uint64_t reqId, const rapidjson::Docume
         LOG(WARNING) << "Received error response with no error element";
     }
 }
+
+void OvsdbConnection::messagesReady() {
+    // TODO
+}
 }
