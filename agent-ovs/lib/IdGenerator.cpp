@@ -34,6 +34,7 @@ void IdGenerator::setAllocHook(const std::string& nmspc,
     NamespaceMap::iterator nitr = namespaces.find(nmspc);
     if (nitr == namespaces.end()) {
         LOG(ERROR) << "Cannot set hook for uninitialized namespace: " << nmspc;
+        return;
     }
 
     nitr->second.allocHook = allocHook;
