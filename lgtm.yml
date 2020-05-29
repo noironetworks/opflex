@@ -83,9 +83,9 @@ extraction:
       - "git submodule update"
       - "git apply ../3rdparty-debian/prometheus/prometheus-cpp.patch"
       - "mkdir _build && cd _build"
-      - "cmake .. -DBUILD_SHARED_LIBS=ON &> /dev/null"
+      - "cmake .. -DBUILD_SHARED_LIBS=ON"
       - "make -j4"
-      - "make install"
+      - "make DESTDIR=$ROOT install"
       - "popd"
     index:
       build_command:
