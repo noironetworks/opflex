@@ -369,9 +369,14 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
             serializer.deserialize(mo, *client, true, &notifs);
-            const Value& uriv = mo["uri"];
-            OpflexPool& pool = getProcessor()->getPool();
-            pool.removePendingItem(conn, uriv.GetString()); 
+            if (!mo.HasMember("uri")) {
+                LOG(ERROR) << "uri member doesn't exist in the JSON value" ;
+            }
+            else {
+                const Value& uriv = mo["uri"];
+                OpflexPool& pool = getProcessor()->getPool();
+                pool.removePendingItem(conn, uriv.GetString());
+            } 
         }
     }
     client->deliverNotifications(notifs);

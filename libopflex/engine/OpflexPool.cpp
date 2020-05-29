@@ -50,22 +50,22 @@ OpflexPool::~OpflexPool() {
     uv_mutex_destroy(&conn_mutex);
 }
 
-void OpflexPool::addPendingItem(OpflexClientConnection* conn, std::string uri) {
+void OpflexPool::addPendingItem(OpflexClientConnection* conn, const std::string& uri) {
     std::string hostName = conn->getHostname();
     std::unique_lock<std::mutex> lock(modify_uri_mutex);
     if(pendingResolution[hostName].insert(uri).second == true) {
-    conn->getOpflexStats()->incrPolUnresolvedCount();
+       conn->getOpflexStats()->incrPolUnresolvedCount();
     }
 }
 
-void OpflexPool::removePendingItem(OpflexClientConnection* conn, std::string uri) {
-     std::string hostName = conn->getHostname();
-     std::unique_lock<std::mutex> lock(modify_uri_mutex);
-     std::set<std::string>::iterator rem = pendingResolution[hostName].find(uri);
-     if (rem != pendingResolution[hostName].end()) {
-         pendingResolution[hostName].erase(rem);
-         conn->getOpflexStats()->decrPolUnresolvedCount();
-     }
+void OpflexPool::removePendingItem(OpflexClientConnection* conn, const std::string& uri) {
+    std::string hostName = conn->getHostname();
+    std::unique_lock<std::mutex> lock(modify_uri_mutex);
+    std::set<std::string>::iterator rem = pendingResolution[hostName].find(uri);
+    if (rem != pendingResolution[hostName].end()) {
+        pendingResolution[hostName].erase(rem);
+        conn->getOpflexStats()->decrPolUnresolvedCount();
+    }
 }
 
 boost::optional<string> OpflexPool::getLocation() {
@@ -413,7 +413,7 @@ void incrementMsgCounter(OpflexClientConnection* conn, OpflexMessage* msg)
 
 size_t OpflexPool::sendToRole(OpflexMessage* message,
                            OFConstants::OpflexRole role,
-                           bool sync, std::string uri) {
+                           bool sync, const std::string& uri) {
 #ifdef HAVE_CXX11
     std::unique_ptr<OpflexMessage> messagep(message);
 #else

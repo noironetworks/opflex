@@ -212,12 +212,12 @@ public:
     /**
      * Add the number of policies requested by the client
      */
-    void addPendingItem(OpflexClientConnection* conn, std::string uri);
+    void addPendingItem(OpflexClientConnection* conn, const std::string& uri);
 
     /**
      * Remove the policies recieved from the peer
      */
-    void removePendingItem(OpflexClientConnection* conn, std::string uri);
+    void removePendingItem(OpflexClientConnection* conn, const std::string& uri);
 
     /**
      * Register the given peer status listener to get updates on the
@@ -257,7 +257,7 @@ public:
      */
     size_t sendToRole(OpflexMessage* message,
                       ofcore::OFConstants::OpflexRole role,
-                      bool sync = false, std::string uri = "");
+                      bool sync = false, const std::string& uri = "");
 
     /**
      * Get the number of connections in a particular role

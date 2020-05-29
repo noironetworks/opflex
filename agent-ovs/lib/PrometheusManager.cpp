@@ -159,7 +159,7 @@ static string ofpeer_family_help[] =
   "number of state reports sent to opflex peer",
   "number of state reports responses received from opflex peer",
   "number of state reports error repsonses from opflex peer",
-  "number of policies requested by the client which is not yet received"
+  "number of policies requested by the agent which is not yet resolved by opflex peer"
 };
 
 static string remote_ep_family_names[] =
