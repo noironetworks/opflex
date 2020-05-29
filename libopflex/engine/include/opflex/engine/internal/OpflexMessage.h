@@ -60,13 +60,6 @@ public:
 
     virtual void serializePayload(yajr::rpc::SendHandler& writer) const = 0;
 
-    /**
-     * Get a transaction ID for a request.  If nonzero, allocate a
-     * transaction ID using a counter
-     *
-     * @return the transaction ID for the request
-     */
-    virtual uint64_t getReqXid() { return 0; }
 };
 
 /**

@@ -201,6 +201,12 @@ protected:
      */
     uint64_t getNextId() { return ++id; }
 
+    /**
+     * New messages are ready to be written to the socket.
+     * processWriteQueue() must be called.
+     */
+    virtual void messagesReady();
+
 private:
 
     yajr::Peer* peer;

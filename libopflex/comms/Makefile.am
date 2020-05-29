@@ -63,6 +63,7 @@ libcomms_la_SOURCES  =
 libcomms_la_SOURCES += active_connection.cpp
 libcomms_la_SOURCES += passive_listener.cpp
 libcomms_la_SOURCES += common.cpp
+libcomms_la_SOURCES += rpc/JsonRpcConnection.cpp
 libcomms_la_SOURCES += rpc/JsonRpcHandler.cpp
 libcomms_la_SOURCES += transport/PlainText.cpp
 libcomms_la_SOURCES += transport/ZeroCopyOpenSSL.cpp

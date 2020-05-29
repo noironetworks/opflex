@@ -58,7 +58,7 @@ public:
     /**
      * Create a new JSON-RPC connection
      */
-    RpcConnection() {}
+    RpcConnection();
 
     /**
      * call back for transaction response
@@ -91,7 +91,7 @@ public:
     /**
      * destructor
      */
-    virtual ~RpcConnection() {}
+    virtual ~RpcConnection();
 
     /**
      * create a tcp connection to peer
@@ -105,6 +105,23 @@ public:
      */
     virtual void disconnect() = 0;
 
+    /**
+     * Process the write queue for the connection from within the
+     * libuv loop thread
+     */
+    void processWriteQueue();
+
+    /**
+     * Send the JSON-RPC message to the remote peer.  This can be called
+     * from any thread.
+     *
+     * @param message the message to send.  Ownership of the object
+     * passes to the connection.
+     * @param sync if true, send the message synchronously.  This can
+     * only be called if it's called from the uv loop thread.
+     */
+    virtual void sendMessage(JsonRpcMessage* message, bool sync = false);
+
 protected:
 
     /**
@@ -112,10 +129,28 @@ protected:
      */
     virtual yajr::Peer* getPeer() = 0;
 
+    /**
+     * Clean up write queue
+     */
+    void cleanup();
+
+    /**
+     * New messages are ready to be written to the socket.
+     * processWriteQueue() must be called.
+     */
+    virtual void messagesReady() = 0;
+
 private:
+    uint64_t requestId;
+    uint64_t connGeneration;
+    typedef std::pair<JsonRpcMessage*, uint64_t> write_queue_item_t;
+    typedef std::list<write_queue_item_t> write_queue_t;
+    write_queue_t write_queue;
+    uv_mutex_t queue_mutex;
 
     virtual void notifyReady() {};
     virtual void notifyFailed() {}
+    void doWrite(JsonRpcMessage* message);
 
     friend class JsonRpcHandler;
 };

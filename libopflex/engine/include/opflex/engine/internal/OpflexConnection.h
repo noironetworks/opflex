@@ -42,7 +42,7 @@ class OpflexMessage;
  * Maintain the connection state information for a connection to an
  * opflex peer
  */
-class OpflexConnection : opflex::jsonrpc::RpcConnection {
+class OpflexConnection : public opflex::jsonrpc::RpcConnection {
 public:
 
     /**
@@ -110,28 +110,11 @@ public:
     virtual const std::string& getRemotePeer() = 0;
 
     /**
-     * Send the opflex message to the remote peer.  This can be called
-     * from any thread.
-     *
-     * @param message the message to send.  Ownership of the object
-     * passes to the connection.
-     * @param sync if true, send the message synchronously.  This can
-     * only be called if it's called from the uv loop thread.
-     */
-    virtual void sendMessage(OpflexMessage* message, bool sync = false);
-
-    /**
      * Get the handler associated with this connection
      *
      * @return the OpflexHandler for the connection.
      */
     virtual OpflexHandler* getHandler() { return handler; }
-
-    /**
-     * Process the write queue for the connection from within the
-     * libuv loop thread
-     */
-    void processWriteQueue();
 
     /**
      * Get the peer handshake timeout (in ms)
@@ -155,28 +138,8 @@ protected:
      */
     OpflexHandler* handler;
 
-    /**
-     * New messages are ready to be written to the socket.
-     * processWriteQueue() must be called.
-     */
-    virtual void messagesReady() = 0;
-
-    /**
-     * Clean up write queue
-     */
-    virtual void cleanup();
-
 private:
-    uint64_t requestId;
-
-    uint64_t connGeneration;
-    typedef std::pair<OpflexMessage*, uint64_t> write_queue_item_t;
-    typedef std::list<write_queue_item_t> write_queue_t;
-    write_queue_t write_queue;
-    uv_mutex_t queue_mutex;
     uint32_t handshakeTimeout;
-
-    void doWrite(OpflexMessage* message);
 
     virtual void notifyReady();
     virtual void notifyFailed() {}

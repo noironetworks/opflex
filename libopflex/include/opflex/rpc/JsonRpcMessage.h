@@ -100,6 +100,14 @@ public:
         return true;
     }
 
+    /**
+     * Get a transaction ID for a request.  If nonzero, allocate a
+     * transaction ID using a counter
+     *
+     * @return the transaction ID for the request
+     */
+    virtual uint64_t getReqXid() const { return 0; }
+
 private:
     /**
      * The request method associated with the message
