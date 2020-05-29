@@ -51,8 +51,6 @@ extraction:
       - "python-six"
     configure:
       command:
-      - "git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth\
-        \ 1"
       - "mkdir -p $LGTM_WORKSPACE/lib/pkgconfig"
       - "mkdir -p $LGTM_WORKSPACE/bin"
       - "mkdir -p $LGTM_WORKSPACE/sbin"
@@ -62,6 +60,8 @@ extraction:
       - "mkdir -p $LGTM_WORKSPACE/etc"
       - "ROOT=$LGTM_WORKSPACE"
       - "export PATH=$PATH:$LGTM_WORKSPACE/bin"
+      - "git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth\
+        \ 1"
       - "pushd ovs"
       - "./boot.sh"
       - "./configure --prefix=$ROOT --enable-shared"
@@ -74,6 +74,18 @@ extraction:
       - "cp -t \"$ROOT/include/openvswitch/\" include/*.h"
       - "find lib -name \"*.h\" -exec cp --parents -t \"$ROOT/include/openvswitch/\"\
         \ {} \\;"
+      - "popd"
+      - "git clone https://github.com/noironetworks/3rdparty-debian.git"
+      - "git clone https://github.com/jupp0r/prometheus-cpp.git"
+      - "pushd prometheus-cpp"
+      - "git checkout 9effb90b0c266316358680cbf862a8564eb2c2d4"
+      - "git submodule init"
+      - "git submodule update"
+      - "git apply ../3rdparty-debian/prometheus/prometheus-cpp.patch"
+      - "mkdir _build && cd _build"
+      - "cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$ROOT"
+      - "make -j4"
+      - "make install"
       - "popd"
     index:
       build_command:
@@ -100,6 +112,6 @@ extraction:
       - "./autogen.sh"
       - "export CPPFLAGS=-I$ROOT/include"
       - "export LDFLAGS=-L$ROOT/lib"
-      - "./configure --prefix=$ROOT --enable-prometheus=no"
+      - "./configure --prefix=$ROOT"
       - "make -j2"
       - "popd"
