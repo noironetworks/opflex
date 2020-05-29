@@ -67,8 +67,12 @@ void SwitchManager::stop() {
         connection->UnregisterOnConnectListener(this);
     }
 
-    if (connectTimer) {
-        connectTimer->cancel();
+    try {
+        if (connectTimer) {
+            connectTimer->cancel();
+        }
+    } catch(const std::exception &e) {
+        LOG(WARNING) << "Failed to cancel connect timer: " << e.what();
     }
 }
 

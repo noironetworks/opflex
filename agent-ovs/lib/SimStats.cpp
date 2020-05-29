@@ -185,14 +185,18 @@ void SimStats::start() {
 void SimStats::stop() {
     stopping = true;
 
-    if (contract_timer) {
-        contract_timer->cancel();
-    }
-    if (security_group_timer) {
-        security_group_timer->cancel();
-    }
-    if (interface_timer) {
-        interface_timer->cancel();
+    try {
+        if (contract_timer) {
+            contract_timer->cancel();
+        }
+        if (security_group_timer) {
+            security_group_timer->cancel();
+        }
+        if (interface_timer) {
+            interface_timer->cancel();
+        }
+    } catch(const std::exception &e) {
+        LOG(WARNING) << "Failed to cancel stats timer: " << e.what();
     }
     if (io_service_thread) {
         io_service_thread->join();

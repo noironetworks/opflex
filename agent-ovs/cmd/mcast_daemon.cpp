@@ -117,18 +117,23 @@ int main(int argc, char** argv) {
 
     // Parse command line options
     po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help,h", "Print this help message")
-        ("version,v", "print version information and git hash")
-        ("watch,d", po::value<string>()->default_value(""),
-         "Watch the specified directory for multicast address files")
-        ("log", po::value<string>()->default_value(""),
-         "Log to the specified file (default standard out)")
-        ("level", po::value<string>()->default_value("info"),
-         "Use the specified log level (default info).")
-        ("syslog", "Log to syslog instead of file or standard out")
-        ("daemon", "Run the multicast daemon as a daemon")
-        ;
+    try {
+        desc.add_options()
+            ("help,h", "Print this help message")
+            ("version,v", "print version information and git hash")
+            ("watch,d", po::value<string>()->default_value(""),
+             "Watch the specified directory for multicast address files")
+            ("log", po::value<string>()->default_value(""),
+             "Log to the specified file (default standard out)")
+            ("level", po::value<string>()->default_value("info"),
+             "Use the specified log level (default info).")
+            ("syslog", "Log to syslog instead of file or standard out")
+            ("daemon", "Run the multicast daemon as a daemon")
+            ;
+    } catch (const boost::bad_lexical_cast& e) {
+        LOG(ERROR) << "exception while processing description: " << e.what();
+        return 1;
+    }
 
     bool daemon = false;
     bool logToSyslog = false;
