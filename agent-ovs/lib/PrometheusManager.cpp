@@ -134,7 +134,8 @@ static string ofpeer_family_names[] =
   "opflex_peer_ep_undeclare_err_count",
   "opflex_peer_state_report_req_count",
   "opflex_peer_state_report_resp_count",
-  "opflex_peer_state_report_err_count"
+  "opflex_peer_state_report_err_count",
+  "opflex_peer_unresolved_policy_count"
 };
 
 static string ofpeer_family_help[] =
@@ -157,7 +158,8 @@ static string ofpeer_family_help[] =
   "number of endpoint undeclare error responses from opflex peer",
   "number of state reports sent to opflex peer",
   "number of state reports responses received from opflex peer",
-  "number of state reports error repsonses from opflex peer"
+  "number of state reports error repsonses from opflex peer",
+  "number of policies requested by the agent which is not yet resolved by opflex peer"
 };
 
 static string remote_ep_family_names[] =
@@ -3000,6 +3002,9 @@ void PrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
             break;
         case OFPEER_STATE_REPORT_ERRS:
             metric_opt = stats->getStateReportErrs();
+            break;
+        case OFPEER_UNRESOLVED_POLS:
+            metric_opt = stats->getPolUnresolvedCount();
             break;
         default:
             LOG(ERROR) << "Unhandled ofpeer metric: " << metric;

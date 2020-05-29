@@ -227,7 +227,7 @@ void Processor::sendToRole(const item& i, uint64_t& newexp,
                            OpflexMessage* req,
                            ofcore::OFConstants::OpflexRole role) {
     uint64_t xid = req->getReqXid();
-    size_t pending = pool.sendToRole(req, role);
+    size_t pending = pool.sendToRole(req, role, false, i.uri.toString());
     i.details->pending_reqs = pending;
 
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();

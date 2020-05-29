@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <mutex>
 
 #include <boost/atomic.hpp>
 #include <boost/noncopyable.hpp>
@@ -202,6 +203,21 @@ public:
     OpflexClientConnection* getPeer(const std::string& hostname, int port);
 
     void resetAllPeers();
+          
+    /**
+     * A map of hostname and pending unresolved policies 
+     */
+    std::map<std::string, std::set<std::string>> pendingResolution;
+
+    /**
+     * Add the number of policies requested by the client
+     */
+    void addPendingItem(OpflexClientConnection* conn, const std::string& uri);
+
+    /**
+     * Remove the policies recieved from the peer
+     */
+    void removePendingItem(OpflexClientConnection* conn, const std::string& uri);
 
     /**
      * Register the given peer status listener to get updates on the
@@ -241,7 +257,7 @@ public:
      */
     size_t sendToRole(OpflexMessage* message,
                       ofcore::OFConstants::OpflexRole role,
-                      bool sync = false);
+                      bool sync = false, const std::string& uri = "");
 
     /**
      * Get the number of connections in a particular role
@@ -362,6 +378,7 @@ private:
 
     uv_mutex_t conn_mutex;
     uv_key_t conn_mutex_key;
+    std::mutex modify_uri_mutex;
 
     class ConnData {
     public:
