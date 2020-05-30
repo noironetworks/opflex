@@ -88,8 +88,8 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
 
     optional<shared_ptr<RoutingDomain> > rd = polMgr.getRDForGroup(egUri);
     if (!rd) return OfpBuf((struct ofpbuf*)NULL);
-    /*Ideally get MTU of egress interface*/
-    uint32_t mtu = 0;
+    /*Ideally get MTU of egress interface
+    uint32_t mtu = 0;*/
 
     PolicyManager::subnet_vector_t subnets;
     PolicyManager::subnet_vector_t ipv6Subnets;
@@ -110,7 +110,8 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
 
     uint16_t payloadLen = sizeof(struct nd_router_advert) +
         sizeof(struct nd_opt_hdr) + 6 +
-        + (mtu == 0 ? 0 : sizeof(struct nd_opt_mtu)) +
+	// Not setting MTU option for now.
+       // + (mtu == 0 ? 0 : sizeof(struct nd_opt_mtu)) +
         sizeof(struct nd_opt_prefix_info) * ipv6Subnets.size() +
         sizeof(struct nd_opt_def_route_info);
     size_t len = sizeof(eth::eth_header) +
@@ -227,14 +228,14 @@ OfpBuf compose_icmp6_router_ad(const uint8_t* srcMac,
     // compute checksum
     uint32_t chksum = 0;
     // pseudoheader
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_src,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_src),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_dst,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_dst),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_plen, 2);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_plen), 2);
     chksum += (uint16_t)htons(58);
     // payload
-    chksum_accum(chksum, (uint16_t*)router_ad, payloadLen);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(router_ad), payloadLen);
     uint16_t fchksum = chksum_finalize(chksum);
     memcpy(&router_ad->nd_ra_hdr.icmp6_cksum, &fchksum, sizeof(fchksum));
 
@@ -308,11 +309,11 @@ OfpBuf compose_icmp6_neigh_ad(uint32_t naFlags,
     // compute checksum
     uint32_t chksum = 0;
     // pseudoheader
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_src,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_src),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_dst,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_dst),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_plen, 2);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_plen), 2);
     chksum += (uint16_t)htons(58);
     // payload
     chksum_accum(chksum, payload, payloadLen);
@@ -389,11 +390,11 @@ OfpBuf compose_icmp6_neigh_solit(const uint8_t* srcMac,
     // compute checksum
     uint32_t chksum = 0;
     // pseudoheader
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_src,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_src),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_dst,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_dst),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_plen, 2);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_plen), 2);
     chksum += (uint16_t)htons(58);
     // payload
     chksum_accum(chksum, payload, payloadLen);
@@ -588,7 +589,7 @@ OfpBuf compose_dhcpv4_reply(uint8_t message_type,
 
     // compute IP header checksum
     uint32_t chksum = 0;
-    chksum_accum(chksum, (uint16_t*)&tmpIp, sizeof(struct iphdr));
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp), sizeof(struct iphdr));
     tmpIp.check = chksum_finalize(chksum);
     memcpy(ip, &tmpIp, sizeof(tmpIp));
 
@@ -692,15 +693,15 @@ OfpBuf compose_dhcpv4_reply(uint8_t message_type,
     // compute UDP checksum
     chksum = 0;
     // pseudoheader
-    chksum_accum(chksum, (uint16_t*)&tmpIp.saddr, 4);
-    chksum_accum(chksum, (uint16_t*)&tmpIp.daddr, 4);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp.saddr), 4);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp.daddr), 4);
     struct {uint8_t zero; uint8_t proto;} proto;
     proto.zero = 0;
     proto.proto = tmpIp.protocol;
-    chksum_accum(chksum, (uint16_t*)&proto, 2);
-    chksum_accum(chksum, (uint16_t*)&udp->len, 2);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&proto), 2);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&udp->len), 2);
     // payload
-    chksum_accum(chksum, (uint16_t*)udp,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(udp),
                  payloadLen + sizeof(struct udp_hdr));
     udp->chksum = chksum_finalize(chksum);
 
@@ -951,18 +952,18 @@ OfpBuf compose_dhcpv6_reply(uint8_t message_type,
     // compute checksum
     uint32_t chksum = 0;
     // pseudoheader
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_src,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_src),
                  sizeof(struct in6_addr));
-    chksum_accum(chksum, (uint16_t*)&tmpIp6.ip6_dst,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&tmpIp6.ip6_dst),
                  sizeof(struct in6_addr));
     uint32_t udpLen = htonl(payloadLen + sizeof(udp_hdr));
-    chksum_accum(chksum, (uint16_t*)&udpLen, 4);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&udpLen), 4);
     struct {uint8_t zero[3]; uint8_t nh;} nh;
     memset(&nh.zero, 0, 3);
     nh.nh = tmpIp6.ip6_nxt;
-    chksum_accum(chksum, (uint16_t*)&nh, 4);
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(&nh), 4);
     // payload
-    chksum_accum(chksum, (uint16_t*)udp,
+    chksum_accum(chksum, reinterpret_cast<uint16_t*>(udp),
                  payloadLen + sizeof(struct udp_hdr));
     udp->chksum = chksum_finalize(chksum);
 

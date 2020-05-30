@@ -1262,9 +1262,15 @@ void ServiceStatsManagerFixture::checkPodSvcObsObj (bool add)
 
     optional<shared_ptr<SvcStatUniverse> > su =
         SvcStatUniverse::resolve(agent.getFramework());
-
-    auto aUuid =
-        boost::lexical_cast<std::string>(agent.getUuid());
+    std::string aUuid;
+    try {
+        aUuid =
+            boost::lexical_cast<std::string>(agent.getUuid());
+    } catch (const boost::bad_lexical_cast &e){
+        LOG(ERROR) << "Failed to get agent uuid " <<e.what();
+        BOOST_CHECK(false);
+        return;
+    };
 
     LOG(DEBUG) << "Checking presence of"
                << " agentUuid: " << aUuid
