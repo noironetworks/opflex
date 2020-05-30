@@ -354,8 +354,12 @@ void NotifServer::do_stop() {
 void NotifServer::stop() {
     if (!running) return;
     running = false;
-    if (acceptor)
-        acceptor->close();
+    try {
+        if (acceptor)
+            acceptor->close();
+    } catch(const boost::system::system_error &e) {
+        LOG(WARNING) << "Failed to close notifserver socket: " << e.what();
+    }
     io_service.dispatch([this]() { NotifServer::do_stop(); });
 }
 
