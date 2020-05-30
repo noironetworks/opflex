@@ -163,6 +163,33 @@ Opflex-agent declares and resolves policies with peer agent. These metrics are a
  | opflex_peer_state_report_err_count | number of state reports error repsonses from opflex peer |
 
 # Grafana
+Following are a few graphs created in grafana using the exported opflex metrics.
+### Endpoint
+![][grafana-endpoint-1]
+![][grafana-endpoint-2]
+### Services
+##### Top 5 Services (ClusterIP)
+![][grafana-services-1]
+##### Per-Service and Per-Pod Load-Balancing of All Services (ClusterIP)
+![][grafana-services-2]
+##### Per-Service and Per-Pod Load-Balancing of Kube-dns (ClusterIP)
+![][grafana-services-3]
+##### Per-Service and Per-Pod Load-Balancing of Nginx (LoadBalancer)
+![][grafana-services-4]
+##### Endpoint(Pod) <--> Service
+![][grafana-services-5]
+![][grafana-services-6]
+### Drops
+![][grafana-drops]
+### Contracts
+![][grafana-contracts]
+### Security-Groups
+![][grafana-sg]
+### Opflex Peer
+![][grafana-ofpeer-1]
+![][grafana-ofpeer-2]
+![][grafana-ofpeer-3]
+
 Sample [grafana-json-templates] for opflex-agent metrics can be imported in grafana.
 
 # Disclaimer
@@ -175,4 +202,17 @@ Opflex-agent exports a number of metrics based on the current implementation cho
    [agent.conf]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/opflex-agent-ovs.conf.in>
    [grafana-json-templates]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana>
    [drop-logs]: <https://github.com/noironetworks/opflex/blob/master/docs/drop_logs.md>
-
+   [grafana-endpoint-1]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Endpoint-1.png?raw=true>
+   [grafana-endpoint-2]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Endpoint-2.png?raw=true>
+   [grafana-services-1]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Service-EW-LB-Top5.png?raw=true>
+   [grafana-services-2]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Service-EW-PerPodLB-all.png?raw=true>
+   [grafana-services-3]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Service-EW-PerPodLB-kubedns.png?raw=true>
+   [grafana-services-4]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Service-ExtLB-PerPodLB-nginx.png?raw=true>
+   [grafana-services-5]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/PodService.png?raw=true>
+   [grafana-services-6]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/PodService-ServiceUsagePerPod.png?raw=true>
+   [grafana-drops]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Drop.png?raw=true>
+   [grafana-contracts]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/Contract.png?raw=true>
+   [grafana-sg]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/SecurityGroup.png?raw=true>
+   [grafana-ofpeer-1]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/OFPeer-1.png?raw=true>
+   [grafana-ofpeer-2]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/OFPeer-2.png?raw=true>
+   [grafana-ofpeer-3]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana/images/OFPeer-PolicyUpdateReceived.png?raw=true>
