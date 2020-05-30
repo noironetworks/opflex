@@ -347,7 +347,11 @@ int main(int argc, char** argv) {
                 boost::replace_all_copy(identity_template, "<agent_id>",
                                         boost::lexical_cast<std::string>(i));
             LOG(INFO) << "Creating agent " << identity;
-            agents.emplace_back(domain, identity);
+            try {
+                agents.emplace_back(domain, identity);
+            } catch (const boost::asio::invalid_service_owner &e) {
+                LOG(WARNING) << "unable to add test agent: " << e.what();
+            }
         } catch (const boost::bad_lexical_cast& e) {
             LOG(WARNING) << "unable to create identity: " << e.what();
         }

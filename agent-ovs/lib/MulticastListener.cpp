@@ -88,8 +88,11 @@ void MulticastListener::stop() {
     running = false;
 
     LOG(INFO) << "Shutting down";
-
-    io_service.dispatch([this]() { MulticastListener::do_stop(); });
+    try {
+        io_service.dispatch([this]() { MulticastListener::do_stop(); });
+    } catch (const boost::system::system_error &e) {
+        LOG(WARNING) << "Failed to shutdown multicast socket cleanly: " << e.what();
+    }
 }
 
 void MulticastListener::join(const std::string& mcast_address) {
