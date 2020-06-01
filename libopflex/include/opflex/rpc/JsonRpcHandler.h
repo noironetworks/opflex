@@ -11,6 +11,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#pragma once
 #ifndef OPFLEX_TEST_JSONRPCHANDLER_H
 #define OPFLEX_TEST_JSONRPCHANDLER_H
 

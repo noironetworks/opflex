@@ -13,7 +13,6 @@
 
 
 #include <yajr/rpc/methods.hpp>
-#include <opflex/yajr/rpc/rpc.hpp>
 
 namespace yajr {
 
@@ -36,38 +35,18 @@ MessageFactory::InboundMessage(
      * Robustness Principle: "Be liberal in what you accept,
      * and conservative in what you send".
      */
-
-    /* There is a bug in HasMember() in recent versions of rapidjson, such that
-     * with a malformed input it might seldomly crash
-     */
-
     if (!doc.IsObject()) {
         LOG(ERROR) << &peer << " Received frame that is not a JSON object.";
         goto error;
     }
 
     /* we don't accept any notifications */
-    if (!doc.HasMember("id") || doc["id"].IsNull()) {
-        LOG(ERROR)
-            << &peer
-            << " Received frame with"
-            << (doc.HasMember("id") ? " null" : "out")
-            << " id."
-        ;
+    if (!doc.HasMember("id")) {
+        LOG(ERROR) << &peer << " Received frame without id.";
         goto error;
     }
 
     {
-        /* Stale comment below. We used not to check that doc.HasMember("id"),
-         * and the above branch was performed after the below aliasing of the
-         * id value. This behavior was slowing down QA with debug builds so we
-         * changed it. Keeping the comment for reference.
-         *
-         * NOTA BENE: this might assert() in debug builds, and
-         * yield a NullValue in final builds. That's exactly what
-         * we want and it allow us to write much simpler code ;-) */
-        const rapidjson::Value& id = doc["id"]; // <-- READ COMMENT ABOVE!!!
-
         if (doc.HasMember("method")) {
             const rapidjson::Value& methodValue = doc["method"];
 
@@ -83,10 +62,15 @@ MessageFactory::InboundMessage(
              * unacceptable to have no parameters for the invoked method.
              */
             const rapidjson::Value& params = doc[Message::kPayloadKey.params];
-            return MessageFactory::InboundRequest(peer, params, method, id);
+            return MessageFactory::InboundRequest(peer, params, method, doc["id"]);
         }
 
         /* id must be an array for replies, and its first element must be a string */
+        if (doc["id"].IsNull()) {
+            LOG(ERROR) << &peer << " Received frame with null id.";
+            goto error;
+        }
+        const rapidjson::Value& id = doc["id"];
         if (!id.IsArray() || !id[rapidjson::SizeType(0)].IsString()) {
             LOG(ERROR) << &peer << " Received frame with an id that is not an array of strings.";
             goto error;

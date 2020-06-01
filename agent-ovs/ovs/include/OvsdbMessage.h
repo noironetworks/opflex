@@ -12,6 +12,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#pragma once
 #ifndef OPFLEX_OVSDBMESSAGE_H
 #define OPFLEX_OVSDBMESSAGE_H
 
@@ -78,6 +79,13 @@ public:
      */
     virtual bool operator()(yajr::rpc::SendHandler& writer) const = 0;
 
+    /**
+     * Convert table to string
+     * @param table OVSDB table
+     * @return table as string
+     */
+    static const char* toString(OvsdbTable table);
+
 protected:
     /**
      * Convert operation to string
@@ -85,13 +93,6 @@ protected:
      * @return operation as string
      */
     static const char* toString(OvsdbOperation operation);
-
-    /**
-     * Convert table to string
-     * @param table OVSDB table
-     * @return table as string
-     */
-    static const char* toString(OvsdbTable table);
 
     /**
      * Convert function to string

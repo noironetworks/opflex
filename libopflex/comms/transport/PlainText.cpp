@@ -76,16 +76,9 @@ void Cb< PlainText >::on_read(uv_stream_t * h, ssize_t nread, uv_buf_t const * b
 
     if (nread < 0) {
         LOG(DEBUG2)
-            << peer
-            << " nread = "
-            <<   nread
-            << " ["
-            << uv_err_name(nread)
-            << "] "
-            << uv_strerror(nread)
-            << " => closing"
-        ;
-
+            << peer << " nread = " <<  nread << " ["
+            << uv_err_name(nread) << "] "
+            << uv_strerror(nread) << " => closing";
         peer->onDisconnect();
     }
 

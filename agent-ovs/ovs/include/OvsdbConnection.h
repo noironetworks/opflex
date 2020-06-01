@@ -46,6 +46,10 @@ public:
      * pure virtual method for handling transaction errors
      */
     virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload) = 0;
+    /**
+     * pure virtual method for handling updates
+     */
+    virtual void handleUpdate(const rapidjson::Document& payload) {}
 };
 
 /**
@@ -172,6 +176,11 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
     virtual void handleMonitorError(uint64_t reqId, const rapidjson::Document& payload);
 
     /**
+     * method for handling async updates
+     */
+    virtual void handleUpdate(const rapidjson::Document& payload);
+
+    /**
      * condition variable used for synchronizing JSON/RPC
      * request and response
      */
@@ -192,6 +201,13 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
         unique_lock<mutex> lock(transactionMutex);
         id = id_;
     }
+
+    /**
+     * Get a human-readable view of the name of the remote peer
+     *
+     * @return the string name
+     */
+    virtual const std::string& getRemotePeer() { return remote_peer; }
 
 protected:
 
@@ -225,6 +241,7 @@ private:
     mutex transactionMutex;
     bool ovsdbUseLocalTcpPort;
     uint64_t id = 0;
+    std::string remote_peer;
 };
 
 

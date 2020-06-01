@@ -82,16 +82,7 @@ void CommunicationPeer::startKeepAlive(
         uint64_t begin,
         uint64_t repeat,
         uint64_t interval) {
-
-    LOG(DEBUG1)
-        << this
-        << " interval="
-        <<   interval
-        << " begin="
-        <<   begin
-        << " repeat="
-        <<   repeat
-    ;
+    LOG(DEBUG1) << this << " interval=" << interval << " begin=" << begin << " repeat=" << repeat;
 
     sendEchoReq();
     bumpLastHeard();
@@ -129,27 +120,18 @@ void CommunicationPeer::onConnect() {
     /* some transports, like for example SSL/TLS, need to start talking
      * before there's anything to say */
     (void) write();
-
 }
 
 void CommunicationPeer::onDisconnect() {
-
-    LOG(DEBUG1)
-        << this
-        << " connected_ = "
-        << static_cast< bool >(connected_)
-    ;
-
+    LOG(DEBUG1) << this << " connected_ = " << static_cast< bool >(connected_);
     if (!uv_is_closing(getHandle())) {
         uv_close(getHandle(), on_close);
     }
 
     if (connected_) {
-
         /* wipe deque out and reset pendingBytes_ */
         s_.deque_.clear();
         pendingBytes_ = 0;
-
         connected_ = 0;
 
         resetSsIn();
@@ -161,7 +143,6 @@ void CommunicationPeer::onDisconnect() {
         if (!uv_is_closing((uv_handle_t*)&keepAliveTimer_)) {
             uv_close((uv_handle_t*)&keepAliveTimer_, on_close);
         }
-
         connectionHandler_(this, data_, ::yajr::StateChange::DISCONNECT, 0);
     }
 
@@ -311,7 +292,6 @@ int CommunicationPeer::write() {
 }
 
 int CommunicationPeer::writeIOV(std::vector<iovec>& iov) const {
-
     assert(iov.size());
 
     int rc;
@@ -321,13 +301,7 @@ int CommunicationPeer::writeIOV(std::vector<iovec>& iov) const {
                     (uv_buf_t*)&iov[0],
                     iov.size(),
                     on_write))) {
-        LOG(ERROR)
-            << this
-            << "uv_write: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
+        LOG(ERROR) << this << "uv_write: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
         onError(rc);
         const_cast<CommunicationPeer *>(this)->onDisconnect();
     } else {
@@ -335,11 +309,9 @@ int CommunicationPeer::writeIOV(std::vector<iovec>& iov) const {
     }
 
     return rc;
-
 }
 
 bool EchoGen::operator() (rpc::SendHandler & handler) const {
-
     if (!handler.StartArray()) {
         return false;
     }
@@ -352,13 +324,11 @@ bool EchoGen::operator() (rpc::SendHandler & handler) const {
 }
 
 void CommunicationPeer::sendEchoReq() {
-
     yajr::rpc::OutReq< &rpc::method::echo > (
             EchoGen(*this),
             this
         )
         . send();
-
 }
 
 void CommunicationPeer::timeout() {
@@ -386,7 +356,6 @@ void CommunicationPeer::timeout() {
 }
 
 int comms::internal::CommunicationPeer::choke() const {
-
     if (choked_) {
         LOG(WARNING) << this << " already choked";
         return 0;
@@ -394,14 +363,7 @@ int comms::internal::CommunicationPeer::choke() const {
 
     int rc;
     if ((rc = uv_read_stop((uv_stream_t*) getHandle()))) {
-
-        LOG(WARNING)
-            << "uv_read_stop: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
-
+        LOG(WARNING) << "uv_read_stop: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
         onError(rc);
         const_cast<CommunicationPeer *>(this)->onDisconnect();
     } else {
@@ -418,23 +380,14 @@ int comms::internal::CommunicationPeer::unchoke() const {
     }
 
     int rc;
-
     if ((rc = uv_read_start(
                     (uv_stream_t*) getHandle(),
                     transport_.callbacks_->allocCb_,
                     transport_.callbacks_->onRead_)
     )) {
-
-        LOG(WARNING)
-            << "uv_read_start: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
-
+        LOG(WARNING) << "uv_read_start: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
         onError(rc);
         const_cast<CommunicationPeer *>(this)->onDisconnect();
-
     } else {
         choked_ = 0;
     }
@@ -461,38 +414,28 @@ yajr::rpc::InboundMessage * comms::internal::CommunicationPeer::parseFrame() {
         size_t o = docIn_.GetErrorOffset();
 
         LOG(ERROR)
-            << "Error: "
-            << rapidjson::GetParseError_En(e)
-            << " at offset "
-            << o
-            << " of message: ("
-            << ssIn_.str()
-            << ")"
-        ;
+            << "Error: " << rapidjson::GetParseError_En(e) << " at offset "
+            << o << " of message: (" << ssIn_.str() << ")";
 
         if (ssIn_.str().data()) {
             onError(UV_EPROTO);
-            const_cast<CommunicationPeer *>(this)->onDisconnect();
+            onDisconnect();
         }
 
         // ret stays set to NULL
-
     } else {
-
         /* don't clean up ssIn_ yet. yes, it's technically a "dead" variable here,
          * but we might need to inspect it from gdb to make our life easier when
          * getInboundMessage() isn't happy :)
          */
         ret = yajr::rpc::MessageFactory::getInboundMessage(*this, docIn_);
-
         if (!ret) {
             onError(UV_EPROTO);
-            const_cast<CommunicationPeer *>(this)->onDisconnect();
+            onDisconnect();
         }
     }
 
     resetSsIn();
-
     return ret;
 }
 

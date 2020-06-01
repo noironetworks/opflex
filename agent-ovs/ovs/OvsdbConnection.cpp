@@ -70,11 +70,13 @@ void OvsdbConnection::connect_cb(uv_async_t* handle) {
                                        "6640",
                                        on_state_change,
                                        ocp, loop_selector, false);
+        ocp->remote_peer = "127.0.0.1:6640";
     } else {
         std::string swPath;
         swPath.append(ovs_rundir()).append("/db.sock");
         ocp->peer = yajr::Peer::create(swPath, on_state_change,
                                        ocp, loop_selector, false);
+        ocp->remote_peer = swPath;
     }
     assert(ocp->peer);
 }
@@ -119,8 +121,8 @@ void OvsdbConnection::stop() {
 }
 
 uv_loop_t* OvsdbConnection::loop_selector(void* data) {
-    auto* jRpc = (OvsdbConnection*)data;
-    return jRpc->client_loop;
+    auto* conn = (OvsdbConnection*)data;
+    return conn->client_loop;
 }
 
 void OvsdbConnection::connect() {
@@ -149,7 +151,6 @@ void OvsdbConnection::handleTransactionError(uint64_t reqId, const rapidjson::Do
     unique_lock<mutex> lock(transactionMutex);
     auto iter = transactions.find(reqId);
     if (iter != transactions.end()) {
-        iter->second->handleTransaction(reqId, payload);
         transactions.erase(iter);
     }
 
@@ -179,6 +180,10 @@ void OvsdbConnection::handleMonitorError(uint64_t reqId, const rapidjson::Docume
     } else {
         LOG(WARNING) << "Received error response with no error element";
     }
+}
+
+void OvsdbConnection::handleUpdate(const rapidjson::Document& payload) {
+    // TODO
 }
 
 void OvsdbConnection::messagesReady() {

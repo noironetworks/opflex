@@ -12,6 +12,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#pragma once
 #ifndef OPFLEX_OVSDBTRANSACTMESSAGE_H
 #define OPFLEX_OVSDBTRANSACTMESSAGE_H
 

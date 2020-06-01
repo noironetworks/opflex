@@ -103,13 +103,6 @@ public:
     virtual bool isReady();
 
     /**
-     * Get a human-readable view of the name of the remote peer
-     *
-     * @return the string name
-     */
-    virtual const std::string& getRemotePeer() = 0;
-
-    /**
      * Get the handler associated with this connection
      *
      * @return the OpflexHandler for the connection.

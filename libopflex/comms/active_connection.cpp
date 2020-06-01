@@ -50,11 +50,7 @@
         bool nullTermination_
     ) {
 
-    LOG(INFO)
-        << host
-        << ":"
-        << service
-    ;
+    LOG(INFO) << host << ":" << service;
 
     ::yajr::comms::internal::ActiveTcpPeer * peer = NULL;
 #if __cpp_exceptions || __EXCEPTIONS
@@ -72,9 +68,7 @@
 #endif
 
     if (!peer) {
-        LOG(WARNING)
-            << ": out of memory, dropping new peer on the floor"
-        ;
+        LOG(WARNING) << ": out of memory, dropping new peer on the floor";
         return NULL;
     }
 
