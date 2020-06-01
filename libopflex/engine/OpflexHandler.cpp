@@ -339,5 +339,20 @@ void InbErr<&yajr::rpc::method::monitor>::process() const {
         ->handleMonitorError(getLocalId().id_, (rapidjson::Document&)getPayload());
 }
 
+template<>
+void InbReq<&yajr::rpc::method::update>::process() const {
+    ((opflex::jsonrpc::RpcConnection*)getPeer()->getData())
+        ->handleUpdate((rapidjson::Document&)getPayload());
+}
+
+template<>
+void InbRes<&yajr::rpc::method::update>::process() const {
+}
+
+
+template<>
+void InbErr<&yajr::rpc::method::update>::process() const {
+}
+
 } /* namespace rpc */
 } /* namespace yajr */

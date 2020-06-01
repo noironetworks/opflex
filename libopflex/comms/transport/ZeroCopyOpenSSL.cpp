@@ -109,7 +109,7 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToDecrypt(
         IF_SSL_ERROR(sslErr) {
             LOG(ERROR) << peer << " Failed to decrypt input: " << sslErr;
         }
-        const_cast<CommunicationPeer *>(peer)->onDisconnect();
+        peer->onDisconnect();
     }
 
     LOG(totalRead ? DEBUG4 : DEBUG3) << peer << " Returning: " << (totalRead ?: nread);

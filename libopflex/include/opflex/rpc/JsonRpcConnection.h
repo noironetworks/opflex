@@ -89,6 +89,12 @@ public:
     virtual void handleMonitorError(uint64_t reqId, const rapidjson::Document& payload) {};
 
     /**
+     * call back for update request
+     * @param[in] payload rapidjson::Value reference of the response body.
+     */
+    virtual void handleUpdate(const rapidjson::Document& payload) {};
+
+    /**
      * destructor
      */
     virtual ~RpcConnection();
@@ -121,6 +127,13 @@ public:
      * only be called if it's called from the uv loop thread.
      */
     virtual void sendMessage(JsonRpcMessage* message, bool sync = false);
+
+    /**
+     * Get a human-readable view of the name of the remote peer
+     *
+     * @return the string name
+     */
+    virtual const std::string& getRemotePeer() = 0;
 
 protected:
 

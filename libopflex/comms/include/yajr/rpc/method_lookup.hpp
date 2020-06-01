@@ -59,6 +59,10 @@
             return PERFECT_RET_VAL(yajr::rpc::method::monitor);
             break;
 
+        case fnv_1a_64::hash_const("update"):
+            return PERFECT_RET_VAL(yajr::rpc::method::update);
+            break;
+
         case fnv_1a_64::hash_const("custom"):
             return PERFECT_RET_VAL(yajr::rpc::method::custom);
             break;
