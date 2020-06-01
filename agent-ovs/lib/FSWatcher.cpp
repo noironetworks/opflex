@@ -115,7 +115,11 @@ void FSWatcher::stop() {
 }
 
 FSWatcher::~FSWatcher() {
-    stop();
+    try {
+        stop();
+    } catch (const std::runtime_error& e) {
+        LOG(WARNING) << "failed to stop fswatcher: " << e.what();
+    }
 }
 
 void FSWatcher::scanPath(const WatchState* ws,
