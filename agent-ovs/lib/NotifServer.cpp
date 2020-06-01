@@ -357,10 +357,10 @@ void NotifServer::stop() {
     try {
         if (acceptor)
             acceptor->close();
+        io_service.dispatch([this]() { NotifServer::do_stop(); });
     } catch(const boost::system::system_error &e) {
-        LOG(WARNING) << "Failed to close notifserver socket: " << e.what();
+        LOG(WARNING) << "Failed to shutdown notifserver cleanly: " << e.what();
     }
-    io_service.dispatch([this]() { NotifServer::do_stop(); });
 }
 
 static void do_dispatch(shared_ptr<StringBuffer> buffer,
