@@ -120,6 +120,7 @@ updateOFPeerStats (OF_SHARED_PTR<OFStats> opflexStats)
     opflexStats->incrEpUndeclareResps();
     opflexStats->incrStateReports();
     opflexStats->incrStateReportResps();
+    opflexStats->incrPolUnresolvedCount();
 }
 
 void ContractStatsManagerFixture::
@@ -211,6 +212,11 @@ verifyOFPeerMetrics (const std::string& peer, uint32_t count)
     const std::string& rep_err = "opflex_peer_state_report_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(rep_err);
+    BOOST_CHECK_NE(pos, std::string::npos);
+ 
+    const std::string& unres_count = "opflex_peer_unresolved_policy_count{peer=\""
+                                   + peer + "\"} " + val1;
+    pos = output.find(unres_count);
     BOOST_CHECK_NE(pos, std::string::npos);
 }
 
