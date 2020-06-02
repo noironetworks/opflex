@@ -60,6 +60,10 @@ bool JsonRpc::createNetFlow(const string& brUuid, const string& target, const in
     tuples.emplace_back("named-uuid", uuid_name);
     TupleDataSet tdSet4(tuples);
     msg2.rowData.emplace("netflow", tdSet4);
+    // make sure there is no ipfix config
+    tuples.clear();
+    TupleDataSet emptySet(tuples, "set");
+    msg2.rowData.emplace("ipfix", emptySet);
 
     const list<OvsdbTransactMessage> requests = {msg1, msg2};
     if (!sendRequestAndAwaitResponse(requests)) {
@@ -99,6 +103,10 @@ bool JsonRpc::createIpfix(const string& brUuid, const string& target, const int&
     tuples.emplace_back("named-uuid", uuid_name);
     TupleDataSet tdSet4(tuples);
     msg2.rowData.emplace("ipfix", tdSet4);
+    // make sure there is no netflow config
+    tuples.clear();
+    TupleDataSet emptySet(tuples, "set");
+    msg2.rowData.emplace("netflow", emptySet);
 
     const list<OvsdbTransactMessage> requests = {msg1, msg2};
     if (!sendRequestAndAwaitResponse(requests)) {

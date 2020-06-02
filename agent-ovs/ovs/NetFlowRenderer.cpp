@@ -122,7 +122,6 @@ namespace opflexagent {
     bool NetFlowRenderer::createNetFlow(const string &targets, int timeout) {
         // ensure any previous netflow/ipfix destinations are removed first
         jRpc->deleteNetFlow(switchName);
-        jRpc->deleteIpfix(switchName);
         string brUuid;
         jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
@@ -132,7 +131,6 @@ namespace opflexagent {
 
     bool NetFlowRenderer::createIpfix(const string &targets, int sampling) {
         // ensure any previous netflow/ipfix destinations are removed first
-        jRpc->deleteNetFlow(switchName);
         jRpc->deleteIpfix(switchName);
         string brUuid;
         jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
