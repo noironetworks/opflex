@@ -260,9 +260,14 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
 
     string modbFilename("/tmp/mo.db");
     serializer.dumpMODB(modbFilename);
-    //string unresolvedModbFilename("/tmp/unresolvedmo.db");
-    //FILE* unresolvedMoFile = fopen(unresolvedModbFilename.c_str(), "rw");
-    //serializer.dumpUnResolvedMODB(unresolvedMoFile);
+    string unresolvedModbFilename("/tmp/unresolvedmo.db");
+    FILE* unresolvedMoFile = fopen(unresolvedModbFilename.c_str(), "w");
+    if (unresolvedMoFile == NULL) {
+        LOG(ERROR) << "Could not open MODB file " << unresolvedModbFilename << " for writing";
+    }
+    else { 
+      serializer.dumpUnResolvedMODB(unresolvedMoFile);
+    }
     FILE* moFile = fopen(modbFilename.c_str(), "r");
     serializer.readMOs(moFile, sysClient);
 }
