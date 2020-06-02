@@ -127,7 +127,11 @@ void AdvertManager::scheduleInitialEndpointAdv(uint64_t delay) {
 
 void AdvertManager::doScheduleEpAdv(uint64_t time) {
     lock_guard<recursive_mutex> guard(timer_mutex);
-    endpointAdvTimer->expires_from_now(milliseconds(time));
+    try {
+        endpointAdvTimer->expires_from_now(milliseconds(time));
+    } catch (const boost::system::system_error &e) {
+        LOG(WARNING) << "Failed to schedule epadv timer: " << e.what();
+    }
     endpointAdvTimer->
         async_wait(bind(&AdvertManager::onEndpointAdvTimer,
                         this, error));
