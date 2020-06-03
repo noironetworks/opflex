@@ -131,6 +131,8 @@ void AdvertManager::doScheduleEpAdv(uint64_t time) {
         endpointAdvTimer->expires_from_now(milliseconds(time));
     } catch (const boost::system::system_error &e) {
         LOG(WARNING) << "Failed to schedule epadv timer: " << e.what();
+    } catch (const boost::gregorian::bad_day_of_month &e) {
+        LOG(WARNING) << "Failed to schedule epadv timer: " << e.what();
     }
     endpointAdvTimer->
         async_wait(bind(&AdvertManager::onEndpointAdvTimer,
