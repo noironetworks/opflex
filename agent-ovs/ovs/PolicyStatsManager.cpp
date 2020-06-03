@@ -94,12 +94,14 @@ void PolicyStatsManager::stop(bool unregister_listener) {
     if(unregister_listener) {
         L24Classifier::unregisterListener(agent->getFramework(),this);
     }
-    {
+    try {
         std::lock_guard<std::mutex> lock(timer_mutex);
         if (timer) {
             LOG(DEBUG) << "timer cancelled";
             timer->cancel();
         }
+    } catch (const boost::system::system_error &e ) {
+        LOG(DEBUG) << "Failed to cancel timer: " << e.what();
     }
 }
 
