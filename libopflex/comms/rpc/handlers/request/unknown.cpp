@@ -19,7 +19,22 @@ namespace yajr {
 
 template<>
 void InbReq<&yajr::rpc::method::unknown>::process() const {
-
+    if (getPayload().IsArray()) {
+        for (rapidjson::Value::ConstMemberIterator
+                 itr = getPayload().MemberBegin(); itr != getPayload().MemberEnd(); ++itr) {
+            if (itr->value.IsString()) {
+                LOG(INFO) << "String " << itr->value.GetString();
+            } else if (itr->value.IsObject()) {
+                LOG(INFO) << "IsObject";
+                if (itr->value.HasMember("method") && itr->value["method"].IsString()) {
+                    LOG(WARNING) << "Received method name " << itr->value["method"].GetString();
+                }
+            }
+        }
+        LOG(WARNING) << "Finished iterating";
+    } else {
+        LOG(WARNING) << "Received unknown method request";
+    }
 }
 
 }

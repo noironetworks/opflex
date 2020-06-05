@@ -110,8 +110,6 @@ namespace opflexagent {
     }
 
     void NetFlowRenderer::createNetFlow(const string &targets, int timeout) {
-        // ensure any previous netflow/ipfix destinations are removed first
-        jRpc->deleteNetFlow(switchName);
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
@@ -119,8 +117,6 @@ namespace opflexagent {
     }
 
     void NetFlowRenderer::createIpfix(const string &targets, int sampling) {
-        // ensure any previous netflow/ipfix destinations are removed first
-        jRpc->deleteIpfix(switchName);
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid << "sampling rate is " << sampling;

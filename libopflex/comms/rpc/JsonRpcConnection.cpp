@@ -1,6 +1,6 @@
 /* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
 /*
- * Implementation of JSON-RPC handler
+ * Implementation of JSON-RPC connection
  *
  * Copyright (c) 2020 Cisco Systems, Inc. and others.  All rights reserved.
  *
@@ -53,6 +53,7 @@ void RpcConnection::sendMessage(JsonRpcMessage* message, bool sync) {
 
 void RpcConnection::processWriteQueue() {
     util::LockGuard guard(&queue_mutex);
+    LOG(DEBUG) << "Processing write queue of size " << write_queue.size();
     while (!write_queue.empty()) {
         const write_queue_item_t& qi = write_queue.front();
         // Avoid writing messages from a previous reconnect attempt
