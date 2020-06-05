@@ -155,6 +155,7 @@ uv_loop_t* OvsdbConnection::loop_selector(void* data) {
 }
 
 void OvsdbConnection::connect() {
+    unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
     if (!connected) {
         connect_async.data = this;
         uv_async_send(&connect_async);
