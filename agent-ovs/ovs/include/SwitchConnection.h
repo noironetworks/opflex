@@ -68,6 +68,12 @@ public:
  */
 class SwitchConnection {
 public:
+    /**	
+     * In containers, sometimes with OVS restarts, agent fails to	
+     * connect to OVS with the failure being ENOENT, set the	
+     * maximum value for such retries. Amounts to 30s.	
+     */	
+    static const uint32_t maxSocketFileMissingFailure = 6;
     /**
      * Parse the received flow_removed message and notify listeners.
      * This message requires central handling since this is
