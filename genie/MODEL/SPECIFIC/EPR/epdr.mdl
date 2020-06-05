@@ -31,6 +31,14 @@ module[epdr]
                 cardinality=many;
                 ]
         }
+
+        dependency[qos;
+                   cardinality=single;]
+        {
+            to[class=qos/Requirement;
+               cardinality=many;]
+        }
+
         member[dom; type=reference/URI]
         member[extEncapType; type=gbpe/EncapType]
         member[extEncapId; type=gbpe/EncapId]
