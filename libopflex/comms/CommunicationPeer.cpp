@@ -16,7 +16,6 @@
 #include <yajr/rpc/gen/echo.hpp>
 #include <yajr/rpc/internal/json_stream_wrappers.hpp>
 #include <yajr/rpc/methods.hpp>
-#include <opflex/yajr/internal/comms.hpp>
 
 #include <rapidjson/error/en.h>
 
@@ -72,7 +71,6 @@ namespace yajr {
                         std::isalnum(c)        // alphanumeric values are GOOD
                     );
             }
-
         }
     }
     namespace comms {
@@ -167,73 +165,84 @@ void CommunicationPeer::onDisconnect() {
 }
 
 void CommunicationPeer::destroy(bool now) {
-
     destroying_ = true;
     onDisconnect();
 }
 
 int CommunicationPeer::tcpInit() {
-
     int rc;
-
     if ((rc = uv_tcp_init(getUvLoop(), reinterpret_cast<uv_tcp_t *>(getHandle())))) {
-        LOG(WARNING)
-            << "uv_tcp_init: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
+        LOG(WARNING) << "uv_tcp_init: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
         return rc;
     }
 
     if ((rc = uv_tcp_keepalive(reinterpret_cast<uv_tcp_t *>(getHandle()), 1, 60))) {
-        LOG(WARNING)
-            << "uv_tcp_keepalive: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
+        LOG(WARNING) << "uv_tcp_keepalive: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
     }
 
     if ((rc = uv_tcp_nodelay(reinterpret_cast<uv_tcp_t *>(getHandle()), 1))) {
-        LOG(WARNING)
-            << "uv_tcp_nodelay: ["
-            << uv_err_name(rc)
-            << "] "
-            <<
-            uv_strerror(rc)
-        ;
+        LOG(WARNING) << "uv_tcp_nodelay: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
     }
 
     return 0;
 }
 
 void CommunicationPeer::readBufNoNull(char* buffer, size_t nread) {
-    ssIn_.write(buffer, nread);
-
-    boost::scoped_ptr<yajr::rpc::InboundMessage> msg(parseFrame());
-    if (!msg) {
-        LOG(ERROR) << "skipping inbound message";
-        return;
-    }
-
-    msg->process();
-}
-
-void CommunicationPeer::readBuffer(
-        char * buffer,
-        size_t nread,
-        bool canWriteJustPastTheEnd) {
-    assert(nread);
-
     if (!nread) {
         return;
     }
 
+    buffer[nread++] = '\0';
+
+    size_t chunk_size;
+    while ((--nread > 0) && connected_) {
+        chunk_size = readChunk(buffer);
+        if (chunk_size == 0) {
+            break;
+        }
+        nread -= chunk_size++;
+        buffer += chunk_size;
+
+        bumpLastHeard();
+
+        yajr::comms::internal::wrapper::IStreamWrapper is(ssIn_);
+        while (is.Peek()) {
+            docIn_.GetAllocator().Clear();
+            docIn_.ParseStream<rapidjson::kParseStopWhenDoneFlag>(is);
+            if (docIn_.HasParseError()) {
+                rapidjson::ParseErrorCode e = docIn_.GetParseError();
+                size_t o = docIn_.GetErrorOffset();
+                LOG(ERROR)
+                    << "Error: " << rapidjson::GetParseError_En(e) << " at offset "
+                    << o << " of message: (" << ssIn_.str() << ")";
+                if (ssIn_.str().data()) {
+                    onError(UV_EPROTO);
+                    onDisconnect();
+                }
+            } else {
+                auto inb = yajr::rpc::MessageFactory::getInboundMessage(*this, docIn_);
+                if (!inb) {
+                    onError(UV_EPROTO);
+                    onDisconnect();
+                }
+                boost::scoped_ptr<yajr::rpc::InboundMessage> msg(inb);
+                if (!msg) {
+                    LOG(ERROR) << "skipping inbound message";
+                    continue;
+                }
+                msg->process();
+            }
+        }
+    }
+    resetSsIn();
+}
+
+void CommunicationPeer::readBuffer(char * buffer, size_t nread, bool canWriteJustPastTheEnd) {
+    if (!nread) {
+        return;
+    }
     char lastByte[2];
-
     if (!canWriteJustPastTheEnd) {
-
         lastByte[0] = buffer[nread-1];
 
         if (nread > 1) {  /* just as an optimization */
@@ -243,36 +252,32 @@ void CommunicationPeer::readBuffer(
 
         nread = 1;
         buffer = lastByte;
-
     }
 
     buffer[nread++] = '\0';
     readBufferZ(buffer, nread);
-
 }
 
 void CommunicationPeer::readBufferZ(char const * buffer, size_t nread) {
     size_t chunk_size;
-
+    if (!connected_) {
+        LOG(WARNING) << "skipping read as not connected";
+    }
     while ((--nread > 0) && connected_) {
         chunk_size = readChunk(buffer);
         nread -= chunk_size++;
 
-        if(!nread) {
+        if (!nread) {
             break;
         }
 
         buffer += chunk_size;
-
-        boost::scoped_ptr<yajr::rpc::InboundMessage> msg(
-                parseFrame()
-            );
+        boost::scoped_ptr<yajr::rpc::InboundMessage> msg(parseFrame());
 
         if (!msg) {
             LOG(ERROR) << "skipping inbound message";
             continue;
         }
-
         msg->process();
     }
 }
@@ -292,7 +297,7 @@ int CommunicationPeer::write() {
 }
 
 int CommunicationPeer::writeIOV(std::vector<iovec>& iov) const {
-    assert(iov.size());
+    assert(!iov.empty());
 
     int rc;
     if ((rc = uv_write(
