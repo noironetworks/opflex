@@ -99,43 +99,32 @@ namespace opflexagent {
         }
     }
 
-    bool NetFlowRenderer::deleteNetFlow() {
+    void NetFlowRenderer::deleteNetFlow() {
         LOG(DEBUG) << "deleting netflow";
-        if (!jRpc->deleteNetFlow(switchName))
-        {
-            LOG(DEBUG) << "Unable to delete netflow";
-            return false;
-        }
-        return true;
+        jRpc->deleteNetFlow(switchName);
     }
 
-    bool NetFlowRenderer::deleteIpfix() {
+    void NetFlowRenderer::deleteIpfix() {
         LOG(DEBUG) << "deleting IPFIX";
-        if (!jRpc->deleteIpfix(switchName))
-        {
-            LOG(DEBUG) << "Unable to delete ipfix";
-            return false;
-        }
-        return true;
+        jRpc->deleteIpfix(switchName);
     }
 
-    bool NetFlowRenderer::createNetFlow(const string &targets, int timeout) {
+    void NetFlowRenderer::createNetFlow(const string &targets, int timeout) {
         // ensure any previous netflow/ipfix destinations are removed first
         jRpc->deleteNetFlow(switchName);
         string brUuid;
-        jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
+        conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
         jRpc->createNetFlow(brUuid, targets, timeout);
-        return true;
     }
 
-    bool NetFlowRenderer::createIpfix(const string &targets, int sampling) {
+    void NetFlowRenderer::createIpfix(const string &targets, int sampling) {
         // ensure any previous netflow/ipfix destinations are removed first
         jRpc->deleteIpfix(switchName);
         string brUuid;
-        jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
+        conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid << "sampling rate is " << sampling;
-        return jRpc->createIpfix(brUuid, targets, sampling);
+        jRpc->createIpfix(brUuid, targets, sampling);
     }
 
     void NetFlowRenderer::updateConnectCb(const boost::system::error_code& ec,

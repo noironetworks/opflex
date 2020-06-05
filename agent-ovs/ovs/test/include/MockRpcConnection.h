@@ -27,7 +27,10 @@ public:
     /**
      * establish mock connection
      */
-    virtual void connect() { setConnected(true);}
+    virtual void connect() {
+        setConnected(true);
+        setSyncComplete(true);
+    }
 
     /**
      * disconnect mock connection
@@ -123,7 +126,7 @@ private:
     string request3 {"[\"Open_vSwitch\",{\"where\":[[\"name\",\"==\",\"erspan\"]],\"table\":\
             \"Port\",\"op\":\"select\"}]"};
             */
-    string response3 {"[{\"rows\":[{\"protected\":false,\"statistics\":[\"map\",[]],\
+    string getErspanPortDetails {"[{\"rows\":[{\"protected\":false,\"statistics\":[\"map\",[]],\
             \"bond_downdelay\":0,\"name\":\"erspan\",\"mac\":[\"set\",[]],\"fake_bridge\":false,\
             \"trunks\":[\"set\",[]],\"_uuid\":[\"uuid\",\"fff42dce-44cb-4b6a-8920-dfc32d88ec07\"],\
             \"rstp_status\":[\"map\",[]],\"tag\":[\"set\",[]],\"_version\":[\"uuid\",\
@@ -212,7 +215,7 @@ private:
 
     /* NetFlow request/responses end */
 
-    string response[no_of_span_msgs + no_of_netflow_msgs] = {selectMirrorResp, selectPortsResp, response3,
+    string response[no_of_span_msgs + no_of_netflow_msgs] = {selectMirrorResp, selectPortsResp, getErspanPortDetails,
             updateBridgePortsResp, getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
             selectPortsResp, selectPortsResp, selectPortsResp, createMirrorResp, interfaceInsertResp,
             selectPortsResp, updateBridgePortsResp, getMirrorUuidResp, updateBridgePortsResp,

@@ -68,28 +68,26 @@ public:
     /**
      * Delete the netflow exporter
     */
-    bool deleteNetFlow();
+    void deleteNetFlow();
 
     /**
      * Create netflow
      * @param targets netflow target
      * @param timeout timeout
-     * @return success/failure
      */
-    bool createNetFlow(const string& targets, int timeout);
+    void createNetFlow(const string& targets, int timeout);
 
     /**
      * Delete the ipfix exporter
     */
-    bool deleteIpfix();
+    void deleteIpfix();
 
     /**
      * Create ipfix
      * @param targets netflow target
      * @param sample sample
-     * @return success/failure
      */
-    bool createIpfix(const string& targets, int sample);
+    void createIpfix(const string& targets, int sample);
 
 private:
     void updateConnectCb(const boost::system::error_code& ec, const opflex::modb::URI& uri);
