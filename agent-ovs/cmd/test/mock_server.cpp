@@ -54,29 +54,41 @@ int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
     // Parse command line options
     po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help,h", "Print this help message")
-        ("log", po::value<string>()->default_value(""),
-         "Log to the specified file (default standard out)")
-        ("level", po::value<string>()->default_value("info"),
-         "Use the specified log level (default info)")
-        ("sample", po::value<string>()->default_value(""),
-         "Output a sample policy to the given file then exit")
-        ("daemon", "Run the mock server as a daemon")
-        ("policy,p", po::value<string>()->default_value(""),
-         "Read the specified policy file to seed the MODB")
-        ("ssl_castore", po::value<string>()->default_value("/etc/ssl/certs/"),
-         "Use the specified path or certificate file as the SSL CA store")
-        ("ssl_key", po::value<string>()->default_value(""),
-         "Enable SSL and use the private key specified")
-        ("ssl_pass", po::value<string>()->default_value(""),
-         "Use the specified password for the private key")
-        ("peer", po::value<std::vector<string> >(),
-         "A peer specified as hostname:port to return in identity response")
-        ("transport_mode_proxies", po::value<std::vector<string> >(),
-         "3 transport_mode_proxy IPv4 addresses specified to return "
-         "in identity response")
-        ;
+    try {
+        desc.add_options()
+            ("help,h", "Print this help message")
+            ("log", po::value<string>()->default_value(""),
+             "Log to the specified file (default standard out)")
+            ("level", po::value<string>()->default_value("info"),
+             "Use the specified log level (default info)")
+            ("sample", po::value<string>()->default_value(""),
+             "Output a sample policy to the given file then exit")
+            ("daemon", "Run the opflex server as a daemon")
+            ("policy,p", po::value<string>()->default_value(""),
+             "Read the specified policy file to seed the MODB")
+            ("ssl_castore", po::value<string>()->default_value("/etc/ssl/certs/"),
+             "Use the specified path or certificate file as the SSL CA store")
+            ("ssl_key", po::value<string>()->default_value(""),
+             "Enable SSL and use the private key specified")
+            ("ssl_pass", po::value<string>()->default_value(""),
+             "Use the specified password for the private key")
+            ("peer", po::value<std::vector<string> >(),
+             "A peer specified as hostname:port to return in identity response")
+            ("transport_mode_proxies", po::value<std::vector<string> >(),
+             "3 transport_mode_proxy IPv4 addresses specified to return "
+             "in identity response")
+            ("grpc_address", po::value<string>()->default_value("localhost:19999"),
+             "GRPC server address for policy updates")
+            ("grpc_conf", po::value<string>()->default_value(""),
+             "GRPC config file, should be in same directory as policy file")
+            ("prr_interval_secs", po::value<int>()->default_value(60),
+             "How often to wakeup prr thread to check for prr timeouts")
+            ("server_port", po::value<int>()->default_value(8009),
+             "Port on which server passively listens");
+    } catch (const boost::bad_lexical_cast& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 
     bool daemon = false;
     std::string log_file;
@@ -148,7 +160,8 @@ int main(int argc, char** argv) {
         for (const std::string& pstr : peers)
             peer_vec.push_back(make_pair(SERVER_ROLES, pstr));
         if (peer_vec.size() == 0)
-            peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":8009"));
+            peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":"
+                                         +std::to_string(server_port)));
 
         MockOpflexServer server(8009, SERVER_ROLES, peer_vec,
                                 transport_mode_proxies,
