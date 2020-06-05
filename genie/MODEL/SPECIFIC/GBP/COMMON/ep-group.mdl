@@ -78,6 +78,13 @@ module[gbp]
                cardinality=many;]
         }
 
+        dependency[qos;
+                   cardinality=single;]
+        {
+            to[class=qos/Requirement;
+               cardinality=many;]
+        }
+
         contained
         {
             parent[class=policy/Space]
