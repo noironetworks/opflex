@@ -236,16 +236,6 @@ public:
     void setRoles(OpflexClientConnection* conn, uint8_t roles);
 
     /**
-     * Get the primary connection for the given role.  This will be
-     * the first connection in the set of ready connections with that
-     * role.
-     *
-     * @return the master for the role, or NULL if there is no ready
-     * connection with that role
-     */
-    OpflexClientConnection* getMasterForRole(ofcore::OFConstants::OpflexRole role);
-
-    /**
      * Send a given message to all the connected and ready peers with
      * the given role.  This message can be called from any thread.
      *
@@ -392,7 +382,6 @@ private:
     class RoleData {
     public:
         conn_set_t conns;
-        OpflexClientConnection* curMaster;
     };
 
     typedef std::map<uint8_t, RoleData> role_map_t;

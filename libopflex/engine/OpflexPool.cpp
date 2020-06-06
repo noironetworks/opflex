@@ -308,8 +308,6 @@ void OpflexPool::updateRole(ConnData& cd,
         if (!(newroles & role)) {
             auto it = roles.find(role);
             if (it != roles.end()) {
-                if (it->second.curMaster == cd.conn)
-                    it->second.curMaster = NULL;
                 it->second.conns.erase(cd.conn);
                 if (it->second.conns.empty())
                     roles.erase(it);
@@ -349,24 +347,6 @@ void OpflexPool::doSetRoles(ConnData& cd, uint8_t newroles) {
     updateRole(cd, newroles, OFConstants::POLICY_REPOSITORY);
     updateRole(cd, newroles, OFConstants::ENDPOINT_REGISTRY);
     updateRole(cd, newroles, OFConstants::OBSERVER);
-}
-
-OpflexClientConnection*
-OpflexPool::getMasterForRole(OFConstants::OpflexRole role) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
-
-    auto it = roles.find(role);
-    if (it == roles.end())
-        return NULL;
-    if (it->second.curMaster != NULL && it->second.curMaster->isReady())
-        return it->second.curMaster;
-    BOOST_FOREACH(OpflexClientConnection* conn, it->second.conns) {
-        if (conn->isReady()) {
-            it->second.curMaster = conn;
-            return conn;
-        }
-    }
-    return NULL;
 }
 
 void OpflexPool::connectionClosed(OpflexClientConnection* conn) {
