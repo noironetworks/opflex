@@ -27,7 +27,10 @@ public:
     /**
      * establish mock connection
      */
-    virtual void connect() { setConnected(true);}
+    virtual void connect() {
+        setConnected(true);
+        setSyncComplete(true);
+    }
 
     /**
      * disconnect mock connection
@@ -41,6 +44,12 @@ public:
      * @param[in] trans callback
      */
     virtual void sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans);
+
+    /**
+     * New messages are ready to be written to the socket.
+     * No-op with mock connection
+     */
+    virtual void messagesReady() {};
 
     /**
      * destructor
@@ -93,7 +102,7 @@ public:
     /**
      * number of netflow responses to send
      */
-    static const unsigned int no_of_netflow_msgs = 14;
+    static const unsigned int no_of_netflow_msgs = 5;
 
     /**
      * rapidjson Document object array
@@ -123,7 +132,7 @@ private:
     string request3 {"[\"Open_vSwitch\",{\"where\":[[\"name\",\"==\",\"erspan\"]],\"table\":\
             \"Port\",\"op\":\"select\"}]"};
             */
-    string response3 {"[{\"rows\":[{\"protected\":false,\"statistics\":[\"map\",[]],\
+    string getErspanPortDetails {"[{\"rows\":[{\"protected\":false,\"statistics\":[\"map\",[]],\
             \"bond_downdelay\":0,\"name\":\"erspan\",\"mac\":[\"set\",[]],\"fake_bridge\":false,\
             \"trunks\":[\"set\",[]],\"_uuid\":[\"uuid\",\"fff42dce-44cb-4b6a-8920-dfc32d88ec07\"],\
             \"rstp_status\":[\"map\",[]],\"tag\":[\"set\",[]],\"_version\":[\"uuid\",\
@@ -212,8 +221,11 @@ private:
 
     /* NetFlow request/responses end */
 
-    string response[no_of_span_msgs + no_of_netflow_msgs] = {selectMirrorResp, selectPortsResp, response3,
-            updateBridgePortsResp, getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
+    string response[no_of_span_msgs + no_of_netflow_msgs] = {
+            selectMirrorResp, selectPortsResp, // getOvsdbMirrorConfig
+            getErspanPortDetails, // getUuid
+            updateBridgePortsResp, // updateBridgePorts
+            getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
             selectPortsResp, selectPortsResp, selectPortsResp, createMirrorResp, interfaceInsertResp,
             selectPortsResp, updateBridgePortsResp, getMirrorUuidResp, updateBridgePortsResp,
             getUuidResp, updateBridgePortsResp, selectInterfaceResp, selectMirrorResp, selectPortsResp,
@@ -223,9 +235,8 @@ private:
             getUuidResp, deleteMirrorResp, getUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
             deleteMirrorResp, getUuidResp, createMirrorResp, updateBridgePortsResp,
 
-            deleteResp, deleteResp, getUuidResp, createNetflowResp, deleteResp,
-            deleteResp, deleteResp, getUuidResp, createIpFixResp,
-            deleteResp, deleteResp, getUuidResp, createIpFixResp, deleteResp};
+            createNetflowResp, deleteResp,
+            createIpFixResp, createIpFixResp, deleteResp};
 
 };
 

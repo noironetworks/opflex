@@ -31,7 +31,7 @@ void JsonRpc::handleTransaction(uint64_t reqId, const Document& payload_) {
     conn->ready.notify_all();
 }
 
-bool JsonRpc::createNetFlow(const string& brUuid, const string& target, const int& timeout, bool addidtointerface ) {
+void JsonRpc::createNetFlow(const string& brUuid, const string& target, const int& timeout, bool addidtointerface ) {
     vector<TupleData> tuples;
     tuples.emplace_back("", target);
     TupleDataSet tdSet(tuples);
@@ -60,16 +60,16 @@ bool JsonRpc::createNetFlow(const string& brUuid, const string& target, const in
     tuples.emplace_back("named-uuid", uuid_name);
     TupleDataSet tdSet4(tuples);
     msg2.rowData.emplace("netflow", tdSet4);
+    // make sure there is no ipfix config
+    tuples.clear();
+    TupleDataSet emptySet(tuples, "set");
+    msg2.rowData.emplace("ipfix", emptySet);
 
     const list<OvsdbTransactMessage> requests = {msg1, msg2};
-    if (!sendRequestAndAwaitResponse(requests)) {
-        LOG(DEBUG) << "Error sending message";
-        return false;
-    }
-    return true;
+    sendAsyncTransactRequests(requests);
 }
 
-bool JsonRpc::createIpfix(const string& brUuid, const string& target, const int& sampling) {
+void JsonRpc::createIpfix(const string& brUuid, const string& target, const int& sampling) {
     vector<TupleData> tuples;
     tuples.emplace_back("", target);
     TupleDataSet tdSet(tuples);
@@ -99,49 +99,41 @@ bool JsonRpc::createIpfix(const string& brUuid, const string& target, const int&
     tuples.emplace_back("named-uuid", uuid_name);
     TupleDataSet tdSet4(tuples);
     msg2.rowData.emplace("ipfix", tdSet4);
+    // make sure there is no netflow config
+    tuples.clear();
+    TupleDataSet emptySet(tuples, "set");
+    msg2.rowData.emplace("netflow", emptySet);
 
     const list<OvsdbTransactMessage> requests = {msg1, msg2};
-    if (!sendRequestAndAwaitResponse(requests)) {
-        LOG(DEBUG) << "Error sending message";
-        return false;
-    }
-    return true;
+    sendAsyncTransactRequests(requests);
 }
 
-bool JsonRpc::deleteNetFlow(const string& brName) {
-    OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+void JsonRpc::deleteNetFlow(const string& brName) {
+    OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
     set<tuple<string, OvsdbFunction, string>> condSet;
     condSet.emplace("name", OvsdbFunction::EQ, brName);
-    msg1.conditions = condSet;
+    msg.conditions = condSet;
 
     vector<TupleData> tuples;
     TupleDataSet tdSet(tuples, "set");
-    msg1.rowData.emplace("netflow", tdSet);
+    msg.rowData.emplace("netflow", tdSet);
 
-    list<OvsdbTransactMessage> requests = {msg1};
-    if (!sendRequestAndAwaitResponse(requests)) {
-        LOG(DEBUG) << "Error sending message";
-        return false;
-    }
-    return true;
+    list<OvsdbTransactMessage> msgs = {msg};
+    sendAsyncTransactRequests(msgs);
 }
 
-bool JsonRpc::deleteIpfix(const string& brName) {
-    OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+void JsonRpc::deleteIpfix(const string& brName) {
+    OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
     set<tuple<string, OvsdbFunction, string>> condSet;
     condSet.emplace("name", OvsdbFunction::EQ, brName);
-    msg1.conditions = condSet;
+    msg.conditions = condSet;
 
     vector<TupleData> tuples;
     TupleDataSet tdSet(tuples, "set");
-    msg1.rowData.emplace("ipfix", tdSet);
+    msg.rowData.emplace("ipfix", tdSet);
 
-    const list<OvsdbTransactMessage> requests = {msg1};
-    if (!sendRequestAndAwaitResponse(requests)) {
-        LOG(DEBUG) << "Error sending message";
-        return false;
-    }
-    return true;
+    const list<OvsdbTransactMessage> requests = {msg};
+    sendAsyncTransactRequests(requests);
 }
 
 bool JsonRpc::updateBridgePorts(const string& brName, const string& portUuid, bool addToList) {
@@ -573,7 +565,7 @@ void JsonRpc::connect() {
 bool JsonRpc::isConnected() {
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
     if (!conn->ready.wait_for(lock, milliseconds(WAIT_TIMEOUT),
-        [=]{return conn->isConnected();})) {
+        [=]{return conn->isSyncComplete();})) {
         LOG(DEBUG) << "lock timed out, no connection";
         return false;
     }

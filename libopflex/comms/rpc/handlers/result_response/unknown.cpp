@@ -18,7 +18,12 @@ namespace yajr { namespace rpc {
 
 template<>
 void InbRes<&yajr::rpc::method::unknown>::process() const {
-
+    if (getPayload().HasMember("method")) {
+        std::string methodName = getPayload()["method"].GetString();
+        LOG(WARNING) << "Received method name " << methodName;
+    } else {
+        LOG(WARNING) << "Received unknown method response";
+    }
 }
 
 }}

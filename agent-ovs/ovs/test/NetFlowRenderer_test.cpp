@@ -32,6 +32,14 @@ public:
         conn.reset(new MockRpcConnection());
         nfr->start("br-int", conn.get());
         nfr->connect();
+
+        // simulate results of monitor
+        OvsdbRowDetails rowDetails;
+        std::string uuid = " 9b7295f4-07a8-41ac-a681-e0ee82560262";
+        rowDetails["uuid"] = TupleData("", uuid);
+        OvsdbTableDetails tableDetails;
+        tableDetails["br-int"] = rowDetails;
+        conn->getOvsdbState().fullUpdate(OvsdbTable::BRIDGE, tableDetails);
     }
 
     virtual ~NetFlowRendererFixture() {
@@ -52,13 +60,13 @@ bool verifyCreateDestroy(Agent& agent, const shared_ptr<NetFlowRenderer>& nfr) {
     auto exporterConfig = platform->addNetflowExporterConfig("exporter");
     URI exporterURI = exporterConfig->getURI();
 
-    bool result = nfr->createNetFlow("5.5.5.6", 10);
+    nfr->createNetFlow("5.5.5.6", 10);
     ExporterConfigState state(exporterURI, "test");
     state.setVersion(1); // modelgbp::netflow::CollectorVersionEnumT::CONST_V5
     shared_ptr<ExporterConfigState> statePtr = make_shared<ExporterConfigState>(state);
     nfr->exporterDeleted(statePtr);
 
-    result = result && nfr->createIpfix("5.5.5.5", 500);
+    nfr->createIpfix("5.5.5.5", 500);
     statePtr->setVersion(2); // modelgbp::netflow::CollectorVersionEnumT::CONST_V9
 
     exporterConfig->setDscp(99);
@@ -69,7 +77,7 @@ bool verifyCreateDestroy(Agent& agent, const shared_ptr<NetFlowRenderer>& nfr) {
     nfr->exporterUpdated(exporterURI);
 
     nfr->exporterDeleted(statePtr);
-    return result;
+    return true;
 }
 
 BOOST_FIXTURE_TEST_CASE( verify_createdestroy, NetFlowRendererFixture ) {

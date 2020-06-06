@@ -23,6 +23,7 @@
 #include <opflex/rpc/JsonRpcConnection.h>
 #include <opflex/rpc/JsonRpcMessage.h>
 
+#include "OvsdbState.h"
 #include "OvsdbTransactMessage.h"
 
 #include <rapidjson/document.h>
@@ -41,15 +42,15 @@ public:
     /**
      * pure virtual method for handling transactions
      */
-    virtual void handleTransaction(uint64_t reqId, const rapidjson::Document& payload) = 0;
+    virtual void handleTransaction(uint64_t reqId, const Document& payload) = 0;
     /**
      * pure virtual method for handling transaction errors
      */
-    virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload) = 0;
+    virtual void handleTransactionError(uint64_t reqId, const Document& payload) = 0;
     /**
      * pure virtual method for handling updates
      */
-    virtual void handleUpdate(const rapidjson::Document& payload) {}
+    virtual void handleUpdate(const Document& payload) {}
 };
 
 /**
@@ -60,7 +61,7 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
     /**
      * Construct an OVSDB connection
      */
-    OvsdbConnection(bool useLocalTcpPort) : opflex::jsonrpc::RpcConnection(), peer(nullptr), connected(false), ovsdbUseLocalTcpPort(useLocalTcpPort) {}
+    OvsdbConnection(bool useLocalTcpPort) : opflex::jsonrpc::RpcConnection(), peer(nullptr), connected(false), syncComplete(false), ovsdbUseLocalTcpPort(useLocalTcpPort) {}
 
     /**
      * destructor
@@ -95,6 +96,27 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      */
     void setConnected(bool state) {
         connected = state;
+        // clear OVSDB state on disconnect
+        // monitor calls will be made on reconnect
+        if (!connected) {
+            syncComplete = false;
+            ovsdbState.clear();
+        }
+    }
+
+    bool isSyncComplete() {
+        return syncComplete;
+    }
+
+    void setSyncComplete(bool isSyncComplete) {
+        syncComplete = isSyncComplete;
+    }
+
+    void decrSyncMsgsRemaining() {
+        syncMsgsRemaining--;
+        if (syncMsgsRemaining == 0) {
+            syncComplete = true;
+        }
     }
 
     /**
@@ -140,6 +162,12 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
     static void send_req_cb(uv_async_t* handle);
 
     /**
+     * callback for sending queued requests
+     * @param[in] handle pointer to uv_async_t
+     */
+    static void on_writeq_async(uv_async_t* handle);
+
+    /**
      * send transaction request
      *
      * @param[in] requests list of Transact messages
@@ -152,33 +180,33 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      * @param[in] reqId request ID of the request for this response.
      * @param[in] payload rapidjson::Value reference of the response body.
      */
-    virtual void handleTransaction(uint64_t reqId, const rapidjson::Document& payload);
+    virtual void handleTransaction(uint64_t reqId, const Document& payload);
 
     /**
      * call back for transaction error response
      * @param[in] reqId request ID of the request for this response.
      * @param[in] payload rapidjson::Value reference of the response body.
      */
-    virtual void handleTransactionError(uint64_t reqId, const rapidjson::Document& payload);
+    virtual void handleTransactionError(uint64_t reqId, const Document& payload);
 
     /**
      * call back for monitor response
      * @param[in] reqId request ID of the request for this response.
      * @param[in] payload rapidjson::Value reference of the response body.
      */
-    virtual void handleMonitor(uint64_t reqId, const rapidjson::Document& payload);
+    virtual void handleMonitor(uint64_t reqId, const Document& payload);
 
     /**
      * call back for monitor error response
      * @param[in] reqId request ID of the request for this response.
      * @param[in] payload rapidjson::Value reference of the response body.
      */
-    virtual void handleMonitorError(uint64_t reqId, const rapidjson::Document& payload);
+    virtual void handleMonitorError(uint64_t reqId, const Document& payload);
 
     /**
      * method for handling async updates
      */
-    virtual void handleUpdate(const rapidjson::Document& payload);
+    virtual void handleUpdate(const Document& payload);
 
     /**
      * condition variable used for synchronizing JSON/RPC
@@ -209,13 +237,21 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      */
     virtual const std::string& getRemotePeer() { return remote_peer; }
 
-protected:
+    /**
+     * Get current OVSDB state
+     * @return OVSDB state
+     */
+    OvsdbState& getOvsdbState() {
+        return ovsdbState;
+    }
 
     /**
      * Get the next req ID
      * @return req ID
      */
     uint64_t getNextId() { return ++id; }
+
+protected:
 
     /**
      * New messages are ready to be written to the socket.
@@ -236,12 +272,16 @@ private:
     opflex::util::ThreadManager threadManager;
     uv_async_t connect_async;
     uv_async_t send_req_async;
+    uv_async_t writeq_async;
     unordered_map<uint64_t, Transaction*> transactions;
     std::atomic<bool> connected;
+    std::atomic<bool> syncComplete;
+    std::atomic<int> syncMsgsRemaining;
     mutex transactionMutex;
     bool ovsdbUseLocalTcpPort;
     uint64_t id = 0;
     std::string remote_peer;
+    OvsdbState ovsdbState;
 };
 
 

@@ -105,5 +105,131 @@ private:
     uint64_t reqId;
 };
 
+/**
+ * enum for data types to be sent over JSON/RPC
+ */
+enum class Dtype {STRING, INTEGER, BOOL};
+
+/**
+ * Class to represent JSON/RPC tuple data.
+ */
+class TupleData {
+public:
+    TupleData() : type(Dtype::STRING), iVal(-1), bVal(false) {}
+    /**
+     * constructor
+     * @param key_ the key string
+     * @param val value
+     */
+    TupleData(const std::string& key_, const std::string& val) : key(key_), type(Dtype::STRING), sVal(val), iVal(-1), bVal(false) {}
+
+    /**
+     * constructor
+     * @param key_ the key string
+     * @param val value
+     */
+    TupleData(const std::string& key_, bool val) : key(key_), type(Dtype::BOOL), iVal(-1), bVal(val) {}
+    /**
+     * constructor
+     * @param key_ the key string
+     * @param val value
+     */
+    TupleData(const std::string& key_, int val) : key(key_), type(Dtype::INTEGER), iVal(val), bVal(false) {}
+
+    /**
+     * Copy constructor
+     *
+     * @param copy Object to copy from
+     */
+    TupleData(const TupleData& copy) : key(copy.key), type(copy.type), sVal(copy.sVal), iVal(copy.iVal), bVal(copy.bVal) {}
+
+    /**
+     * Assignment operator
+     */
+    TupleData& operator=(const TupleData& rhs) = default;
+
+    /**
+     * Destructor
+     */
+    virtual ~TupleData() {}
+
+    /** Get key */
+    const std::string& getKey() const {
+        return key;
+    }
+
+    /**
+     * get the data type
+     * @return enum Dtype
+     */
+     Dtype getType() const {
+        return type;
+    }
+
+    /**
+     * Get the value when set to string type
+     */
+    const std::string& getStringValue() const {
+         return sVal;
+     }
+
+    /**
+     * Get the value when set to bool type
+     */
+     bool getBoolValue() const {
+         return bVal;
+     }
+
+    /**
+     * Get the value when set to int type
+     */
+     int getIntValue() const {
+         return iVal;
+     }
+
+private:
+    std::string key;
+    Dtype type;
+    std::string sVal;
+    int iVal;
+    bool bVal;
+};
+
+/**
+ * class for representing JSON/RPC tuple data set
+ */
+class TupleDataSet {
+public:
+    /**
+     * Default constructor
+     */
+    TupleDataSet() {}
+    /**
+     * Copy constructor
+     */
+    TupleDataSet(const TupleDataSet& s) : label(s.label), tuples(s.tuples) {}
+
+    /**
+     * constructor that takes a tuple
+     */
+    TupleDataSet(const std::vector<TupleData>& m, std::string l = "") : label(l), tuples(m) {}
+
+    /**
+     * Assignment operator
+     */
+    TupleDataSet& operator=(TupleDataSet& rhs) = default;
+
+    virtual ~TupleDataSet() {}
+
+    /**
+     * label for collection type, viz. map, set
+     */
+    std::string label;
+    /**
+     * tuple data
+     */
+    std::vector<TupleData> tuples;
+};
+
 }
 #endif //OPFLEX_OVSDBMESSAGE_H

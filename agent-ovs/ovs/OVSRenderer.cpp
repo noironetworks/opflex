@@ -238,6 +238,7 @@ void OVSRenderer::start() {
 
     ovsdbConnection.reset(new OvsdbConnection(ovsdbUseLocalTcpPort));
     ovsdbConnection->start();
+    ovsdbConnection->connect();
 
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
         spanRenderer.start(intBridgeName, ovsdbConnection.get());

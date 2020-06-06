@@ -166,32 +166,28 @@ public:
      * @param[in] target target of netflow
      * @param[in] timeout timeout of netflow
      * @param[in] addidtointerface add id to interface of netflow
-     * @return bool true if created successfully, false otherwise.
     */
-    bool createNetFlow(const string& brUuid, const string& target, const int& timeout, bool addidtointerface = false);
+    void createNetFlow(const string& brUuid, const string& target, const int& timeout, bool addidtointerface = false);
 
      /**
      * deletes netflow on OVSDB bridge.
      * @param[in] brName name of bridge that the netflow is associated with
-     * @return true if success, false otherwise.
     */
-    bool deleteNetFlow(const string& brName);
+    void deleteNetFlow(const string& brName);
 
     /**
      * createNetFlow
      * @param[in] brUuid uuid of the bridge to add the ipfix to.
      * @param[in] target target of ipfix
      * @param[in] sampling sampling of ipfix
-     * @return bool true if created successfully, false otherwise.
     */
-    bool createIpfix(const string& brUuid, const string& target, const int& sampling);
+    void createIpfix(const string& brUuid, const string& target, const int& sampling);
 
      /**
      * deletes ipfix on OVSDB bridge.
      * @param[in] brName name of bridge that the ipfix is associated with
-     * @return true if success, false otherwise.
     */
-    bool deleteIpfix(const string& brName);
+    void deleteIpfix(const string& brName);
 
     /**
      * retrieve uuid from response
@@ -274,6 +270,11 @@ private:
         } else {
             return true;
         }
+    }
+
+    void sendAsyncTransactRequests(const list<OvsdbTransactMessage>& list) {
+        auto* req = new TransactReq(list, conn->getNextId());
+        conn->sendMessage(req, false);
     }
 
     static void substituteSet(set<string>& s, const unordered_map<string, string>& portMap);
