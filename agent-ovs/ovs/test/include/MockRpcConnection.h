@@ -46,6 +46,12 @@ public:
     virtual void sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans);
 
     /**
+     * New messages are ready to be written to the socket.
+     * No-op with mock connection
+     */
+    virtual void messagesReady() {};
+
+    /**
      * destructor
      */
     virtual ~MockRpcConnection() {}
@@ -215,8 +221,11 @@ private:
 
     /* NetFlow request/responses end */
 
-    string response[no_of_span_msgs + no_of_netflow_msgs] = {selectMirrorResp, selectPortsResp, getErspanPortDetails,
-            updateBridgePortsResp, getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
+    string response[no_of_span_msgs + no_of_netflow_msgs] = {
+            selectMirrorResp, selectPortsResp, // getOvsdbMirrorConfig
+            getErspanPortDetails, // getUuid
+            updateBridgePortsResp, // updateBridgePorts
+            getMirrorUuidResp, deleteMirrorResp, interfaceInsertResp, getUuidResp,
             selectPortsResp, selectPortsResp, selectPortsResp, createMirrorResp, interfaceInsertResp,
             selectPortsResp, updateBridgePortsResp, getMirrorUuidResp, updateBridgePortsResp,
             getUuidResp, updateBridgePortsResp, selectInterfaceResp, selectMirrorResp, selectPortsResp,
