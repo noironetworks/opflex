@@ -54,8 +54,7 @@ public:
                   opflex::test::GbpOpflexServer& server) :
         stub_(GBP::NewStub(channel)),
         server_(server),
-        stopping(false),
-        client_(nullptr) {
+        stopping(false) {
         thread_ = std::thread(&GbpClientImpl::ListObjects, this);
     }
 
@@ -188,7 +187,7 @@ private:
 
 GbpClient::GbpClient(const std::string& address,
                      opflex::test::GbpOpflexServer& server) :
-    server_(server), stopping(false) {
+    server_(server), stopping(false), client_(nullptr) {
     thread_ = std::thread(&GbpClient::Start, this, address);
 }
 
