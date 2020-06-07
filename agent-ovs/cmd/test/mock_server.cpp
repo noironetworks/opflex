@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> peers;
     std::vector<std::string> transport_mode_proxies;
     char buf[EVENT_BUF_LEN];
-    int fd, wd;
+    int fd, wd, server_port;
 
     po::variables_map vm;
     try {
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
             peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":"
                                          +std::to_string(server_port)));
 
-        MockOpflexServer server(8009, SERVER_ROLES, peer_vec,
+        MockOpflexServer server(server_port, SERVER_ROLES, peer_vec,
                                 transport_mode_proxies,
                                 modelgbp::getMetadata());
 
