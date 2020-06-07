@@ -173,7 +173,8 @@ noinst_HEADERS = \
 	ovs/include/OvsdbConnection.h \
 	ovs/include/OvsdbMessage.h \
 	ovs/include/OvsdbMonitorMessage.h \
-	ovs/include/OvsdbTransactMessage.h
+	ovs/include/OvsdbTransactMessage.h \
+	ovs/include/OvsdbState.h
 
 libopflex_agent_la_SOURCES = \
 	lib/AgentLogHandler.cpp \
