@@ -104,6 +104,7 @@ public:
     }
 
     void testBootstrap(bool ssl, bool transport_mode);
+    void testPeerSwap(void);
 
     ThreadManager threadManager;
     Processor processor;
@@ -241,10 +242,56 @@ static void initServerSSL(GbpOpflexServerImpl& server) {
                      "password123", true);
 }
 
+// Test swapping opflex peers
+void BasePFixture::testPeerSwap(void) {
+    LOG(DEBUG) << "#### Starting peer-swap ####";
+    GbpOpflexServer::peer_t p1 =
+        make_pair(SERVER_ROLES, "127.0.0.1:8009");
+    GbpOpflexServer::peer_t p2 =
+        make_pair(SERVER_ROLES, "127.0.0.1:8010");
+
+    GbpOpflexServerImpl anycastServer(8011, 0, list_of(p1),
+                                      vector<std::string>(),
+                                      md, 60);
+    GbpOpflexServerImpl peer1(8009, SERVER_ROLES, list_of(p2),
+                              vector<std::string>(), md, 60);
+    GbpOpflexServerImpl peer2(8010, SERVER_ROLES, list_of(p1),
+                              vector<std::string>(), md, 60);
+
+    anycastServer.start();
+    peer1.start();
+    peer2.start();
+    LOG(DEBUG) << "### all peers started ####";
+    WAIT_FOR(anycastServer.getListener().isListening(), 1000);
+    WAIT_FOR(peer1.getListener().isListening(), 1000);
+    WAIT_FOR(peer2.getListener().isListening(), 1000);
+
+    processor.addPeer(LOCALHOST, 8011);
+
+    // client should connect to anycast server, get a list of peers
+    // and try to connect to those, then disconnect from the anycast server
+    WAIT_FOR(!connReady(processor.getPool(), LOCALHOST, 8009), 1000);
+    WAIT_FOR(!connReady(processor.getPool(), LOCALHOST, 8010), 1000);
+    WAIT_FOR(processor.getPool().getPeer(LOCALHOST, 8011) == NULL, 1000);
+
+    peer1.stop();
+    peer2.stop();
+    anycastServer.stop();
+    LOG(DEBUG) << "#### Ending peer-swap tests";
+}
+
+BOOST_FIXTURE_TEST_CASE(peerSwap, Fixture) {
+    testPeerSwap();
+}
+
 // test bootstrapping of Opflex connection
 void BasePFixture::testBootstrap(bool ssl, bool transport_mode) {
 typedef OFConstants::OpflexTransportModeState AgentState;
 using boost::asio::ip::address_v4;
+
+    LOG(DEBUG) << "#### Starting bootstrap tests"
+               << " ssl:" << ssl
+               << " transport_mode:" << transport_mode;
     GbpOpflexServer::peer_t p1 =
         make_pair(SERVER_ROLES, "127.0.0.1:8009");
     GbpOpflexServer::peer_t p2 =
@@ -313,6 +360,7 @@ using boost::asio::ip::address_v4;
              1000);
 
     anycastServer.stop();
+    LOG(DEBUG) << "#### Ending bootstrap tests";
 }
 
 BOOST_FIXTURE_TEST_CASE( bootstrap, Fixture ) {
