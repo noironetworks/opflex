@@ -19,11 +19,16 @@ bool OvsdbMonitorMessage::operator()(yajr::rpc::SendHandler& writer) const {
     writer.String(toString(table));
     writer.StartObject();
     writer.String(toString(table));
+    writer.StartArray();
     writer.StartObject();
+    writer.String("columns");
+    writer.StartArray();
     for (const std::string& column : columns) {
         writer.String(column.c_str());
     }
+    writer.EndArray();
     writer.EndObject();
+    writer.EndArray();
     writer.EndObject();
     writer.EndArray();
     return true;

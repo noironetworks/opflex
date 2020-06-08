@@ -256,7 +256,7 @@ namespace opflexagent {
     bool SpanRenderer::createMirror(const string& sess, const set<string>& srcPorts,
             const set<string>& dstPorts) {
         string brUuid;
-        jRpc->getUuid(OvsdbTable::BRIDGE, switchName, brUuid);
+        conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
         jRpc->createMirror(brUuid, sess, srcPorts, dstPorts);
         return true;

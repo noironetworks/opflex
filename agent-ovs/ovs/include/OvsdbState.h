@@ -26,8 +26,9 @@ using std::string;
 using std::unique_lock;
 using std::unordered_map;
 
-// row key to prop map
+/** Contents of a row in an OVSDB table */
 typedef unordered_map<string, TupleData> OvsdbRowDetails;
+/** Contents of an OVSDB table */
 typedef unordered_map<string, OvsdbRowDetails> OvsdbTableDetails;
 
 /**
@@ -35,23 +36,49 @@ typedef unordered_map<string, OvsdbRowDetails> OvsdbTableDetails;
  */
 class OvsdbState {
 public:
-    OvsdbState() {}
+    /** Constructor */
+    OvsdbState() = default;
+
+    /** Destructor */
+    virtual ~OvsdbState() = default;
 
     /**
-     * Destructor
+     * Replace the local view of a table in OVSDB
+     * @param table affected table
+     * @param fields fields in table
      */
-    virtual ~OvsdbState() {};
-
     void fullUpdate(OvsdbTable table, const OvsdbTableDetails& fields) {
         unique_lock<mutex> lock(stateMutex);
         ovsdbState[table] = fields;
     }
 
+    /**
+     * Update row in cache
+     */
+    void updateRow(OvsdbTable table, const string& key, const OvsdbRowDetails& row) {
+        unique_lock<mutex> lock(stateMutex);
+        ovsdbState[table][key] = row;
+    }
+
+    /**
+     * Delete row in cache
+     */
+    void deleteRow(OvsdbTable table, const string& key) {
+        unique_lock<mutex> lock(stateMutex);
+        ovsdbState[table].erase(key);
+    }
+
+    /** Clear the state */
     void clear() {
         unique_lock<mutex> lock(stateMutex);
         ovsdbState.clear();
     }
 
+    /**
+     * Get the bridge UUID
+     * @param bridgeName bridge name
+     * @param uuid bridge UUID
+     */
     void getBridgeUuid(const string& bridgeName, string& uuid) {
         unique_lock<mutex> lock(stateMutex);
         auto bridgeRows = ovsdbState[OvsdbTable::BRIDGE];
