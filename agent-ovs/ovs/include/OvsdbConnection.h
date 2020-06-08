@@ -104,19 +104,14 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
         }
     }
 
+    /** Has the initial sync with OVSDB completed */
     bool isSyncComplete() {
         return syncComplete;
     }
 
+    /** set that the sync with OVSDB has completed */
     void setSyncComplete(bool isSyncComplete) {
         syncComplete = isSyncComplete;
-    }
-
-    void decrSyncMsgsRemaining() {
-        syncMsgsRemaining--;
-        if (syncMsgsRemaining == 0) {
-            syncComplete = true;
-        }
     }
 
     /**
@@ -260,6 +255,13 @@ protected:
     virtual void messagesReady();
 
 private:
+
+    void decrSyncMsgsRemaining() {
+        syncMsgsRemaining--;
+        if (syncMsgsRemaining == 0) {
+            syncComplete = true;
+        }
+    }
 
     yajr::Peer* peer;
 

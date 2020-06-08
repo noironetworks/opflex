@@ -149,6 +149,11 @@ public:
     TupleData& operator=(const TupleData& rhs) = default;
 
     /**
+     * Move operator
+     */
+    TupleData& operator=(TupleData&&) = default;
+
+    /**
      * Destructor
      */
     virtual ~TupleData() {}

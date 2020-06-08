@@ -22,11 +22,17 @@ namespace opflexagent {
 /**
  * Represents an OVSDB monitor message
  *
- * The initial implementation will construct a single monitor message for all
- * tables and columns that we are interested in
+ * Represents a single monitor message for an OVSDB table
+ * and columns of that table that we are interested in
  */
 class OvsdbMonitorMessage : public OvsdbMessage {
 public:
+    /**
+     * Constructor
+     * @param table_ Table to be monitored
+     * @param columns_ Columns to monitor (all columns if empty)
+     * @param reqId Req ID for the message
+     */
     OvsdbMonitorMessage(OvsdbTable table_, const std::list<std::string>& columns_, uint64_t reqId) : OvsdbMessage("monitor", REQUEST, reqId), table(table_), columns(columns_) {}
 
     /**
