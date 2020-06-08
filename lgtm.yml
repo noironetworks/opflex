@@ -94,7 +94,7 @@ extraction:
       - "make install"
       - "cd third-party/protobuf"
       - "./autogen.sh"
-      - "./configure"
+      - "./configure --prefix=$ROOT"
       - "make -j4"
       - "make install"
       - "popd"
