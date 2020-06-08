@@ -91,7 +91,7 @@ extraction:
       - "pushd grpc"
       - "git submodule update --init"
       - "make -j4"
-      - "make install"
+      - "make install --prefix=$ROOT"
       - "cd third-party/protobuf"
       - "./autogen.sh"
       - "./configure --prefix=$ROOT"
