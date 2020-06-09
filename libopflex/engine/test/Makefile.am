@@ -69,6 +69,7 @@ engine_test_LDADD = \
 	../../modb/libmodb.la \
 	../../comms/libcomms.la \
 	../../logging/liblogging.la \
+	-lpthread \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LIB) \
         $(BOOST_ASIO_LIB) \
         $(BOOST_SYSTEM_LIB) \
