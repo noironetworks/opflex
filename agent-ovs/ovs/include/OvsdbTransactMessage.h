@@ -40,8 +40,8 @@ public:
      * Copy constructor
      */
      OvsdbTransactMessage(const OvsdbTransactMessage& copy) : OvsdbMessage("transact", REQUEST),
-         conditions(copy.conditions), columns(copy.columns), rowData(copy.rowData), mutateRowData(copy.mutateRowData), kvPairs(copy.kvPairs),
-         operation(copy.getOperation()), table(copy.getTable()) {}
+         conditions(copy.conditions), columns(copy.columns), rowData(copy.rowData), mutateRowData(copy.mutateRowData),
+         externalKey(copy.externalKey), operation(copy.getOperation()), table(copy.getTable()) {}
 
     /**
      * Assignment operator
@@ -85,15 +85,15 @@ public:
     /**
      * map of row data
      */
-    unordered_map<string, TupleDataSet> rowData;
+    unordered_map<string, OvsdbValues> rowData;
     /**
      * mutate row data
      */
-    unordered_map<string, std::pair<OvsdbOperation, TupleDataSet>> mutateRowData;
+    unordered_map<string, std::pair<OvsdbOperation, OvsdbValues>> mutateRowData;
     /**
-     * key value pairs
+     * generated key name to value
      */
-    vector<TupleData> kvPairs;
+    pair<string, string> externalKey;
 
 private:
     OvsdbOperation operation;
@@ -128,7 +128,7 @@ public:
     virtual bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
         writer.String("Open_vSwitch");
-        for (auto tr : transList) {
+        for (auto& tr : transList) {
             writer.StartObject();
             tr.serializePayload(writer);
             writer.EndObject();

@@ -192,7 +192,7 @@ void OvsdbConnection::handleTransactionError(uint64_t reqId, const Document& pay
     }
 }
 
-void populateValues(const Value& value, map<string, string>& values) {
+void populateValues(const Value& value, string& type, map<string, string>& values) {
     assert(value.IsArray());
     if (value.GetArray().Size() == 2) {
         if (value[0].IsString()) {
@@ -200,6 +200,7 @@ void populateValues(const Value& value, map<string, string>& values) {
             if (arrayType == "uuid" && value[1].IsString()) {
                 values[value[1].GetString()];
             } else if (arrayType == "set" && value[1].IsArray()) {
+                type = arrayType;
                 for (Value::ConstValueIterator memberItr = value[1].GetArray().Begin();
                      memberItr != value[1].GetArray().End(); ++memberItr) {
                     if (memberItr->IsArray()) {
@@ -213,6 +214,7 @@ void populateValues(const Value& value, map<string, string>& values) {
                     }
                 }
             } else if (arrayType == "map") {
+                type = arrayType;
                 for (Value::ConstValueIterator memberItr = value[1].GetArray().Begin();
                      memberItr != value[1].GetArray().End(); ++memberItr) {
                     if (memberItr->IsArray()) {
@@ -260,16 +262,19 @@ bool processRowUpdate(const Value& value, OvsdbRowDetails& rowDetails) {
                     const std::string propName = propItr->name.GetString();
                     if (propItr->value.IsString()) {
                         std::string stringValue = propItr->value.GetString();
-                        rowDetails[propName] = TupleData("", stringValue);
+                        rowDetails[propName] = OvsdbValue(stringValue);
                     } else if (propItr->value.IsArray()) {
                         map<string, string> items;
-                        populateValues(propItr->value, items);
+                        string type;
+                        populateValues(propItr->value, type, items);
+                        opflexagent::Dtype dataType = type.empty() ? opflexagent::Dtype::STRING : (type == "map" ? Dtype::MAP : Dtype::SET);
+                        rowDetails[propName] = OvsdbValue(dataType, type, items);
                     } else if (propItr->value.IsInt()) {
                         int intValue = propItr->value.GetInt();
-                        rowDetails[propName] = TupleData("", intValue);
+                        rowDetails[propName] = OvsdbValue(intValue);
                     } else if (propItr->value.IsBool()) {
                         bool boolValue = propItr->value.GetBool();
-                        rowDetails[propName] = TupleData("", boolValue);
+                        rowDetails[propName] = OvsdbValue(boolValue);
                     }
                 }
             }
@@ -292,7 +297,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         OvsdbRowDetails rowDetails;
                         std::string uuid = itr->name.GetString();
-                        rowDetails["uuid"] = TupleData("", uuid);
+                        rowDetails["uuid"] = OvsdbValue(uuid);
                         std::string bridgeName;
                         processRowUpdate(itr->value, rowDetails);
                         if (rowDetails.find("name") != rowDetails.end()) {
@@ -314,7 +319,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         std::string uuid = itr->name.GetString();
                         OvsdbRowDetails rowDetails;
-                        rowDetails["uuid"] = TupleData("", uuid);
+                        rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
                         tableState[uuid] = rowDetails;
                     }
@@ -329,7 +334,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         std::string uuid = itr->name.GetString();
                         OvsdbRowDetails rowDetails;
-                        rowDetails["uuid"] = TupleData("", uuid);
+                        rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
                         tableState[uuid] = rowDetails;
                     }
@@ -344,7 +349,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         std::string uuid = itr->name.GetString();
                         OvsdbRowDetails rowDetails;
-                        rowDetails["uuid"] = TupleData("", uuid);
+                        rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
                         tableState[uuid] = rowDetails;
                     }
@@ -359,7 +364,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         OvsdbRowDetails rowDetails;
                         std::string uuid = itr->name.GetString();
-                        rowDetails["uuid"] = TupleData("", uuid);
+                        rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
                         tableState[uuid] = rowDetails;
                     }
@@ -374,7 +379,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         OvsdbRowDetails rowDetails;
                         std::string uuid = itr->name.GetString();
-                        rowDetails["uuid"] = TupleData("", uuid);
+                        rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
                         tableState[uuid] = rowDetails;
                     }
@@ -415,7 +420,7 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             string rowUuid = itr->name.GetString();
                             LOG(WARNING) << "bridge uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
-                            rowDetails["uuid"] = TupleData("", rowUuid);
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
                                 LOG(WARNING) << "received updated row for bridge " << rowUuid;
@@ -435,7 +440,7 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             string rowUuid = itr->name.GetString();
                             LOG(WARNING) << "mirror uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
-                            rowDetails["uuid"] = TupleData("", rowUuid);
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
                                 LOG(WARNING) << "received updated row for mirror " << rowUuid;
@@ -456,7 +461,7 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             string rowUuid = itr->name.GetString();
                             LOG(WARNING) << "ipfix uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
-                            rowDetails["uuid"] = TupleData("", rowUuid);
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
                                 LOG(WARNING) << "received updated row for ipfix " << rowUuid;
@@ -477,7 +482,7 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             string rowUuid = itr->name.GetString();
                             LOG(WARNING) << "netflow uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
-                            rowDetails["uuid"] = TupleData("", rowUuid);
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
                                 LOG(WARNING) << "received updated row for netflow " << rowUuid;
@@ -498,7 +503,7 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             string rowUuid = itr->name.GetString();
                             LOG(WARNING) << "port uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
-                            rowDetails["uuid"] = TupleData("", rowUuid);
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
                                 LOG(WARNING) << "received updated row for port " << rowUuid;
@@ -518,7 +523,7 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             string rowUuid = itr->name.GetString();
                             LOG(WARNING) << "interface uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
-                            rowDetails["uuid"] = TupleData("", rowUuid);
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
                                 LOG(WARNING) << "received updated row for interface " << rowUuid;

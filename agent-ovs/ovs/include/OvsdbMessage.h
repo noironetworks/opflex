@@ -108,55 +108,69 @@ private:
 /**
  * enum for data types to be sent over JSON/RPC
  */
-enum class Dtype {STRING, INTEGER, BOOL};
+enum class Dtype {STRING, INTEGER, BOOL, SET, MAP};
 
 /**
- * Class to represent JSON/RPC tuple data.
+ * Class to represent an OVSDB value
  */
-class TupleData {
+class OvsdbValue {
 public:
-    TupleData() : type(Dtype::STRING), iVal(-1), bVal(false) {}
+    /** Default constructor */
+    OvsdbValue() : type(Dtype::STRING), iVal(-1), bVal(false) {}
+
     /**
      * constructor
-     * @param key_ the key string
      * @param val value
      */
-    TupleData(const std::string& key_, const std::string& val) : key(key_), type(Dtype::STRING), sVal(val), iVal(-1), bVal(false) {}
+    OvsdbValue(const std::string& val) : type(Dtype::STRING), sVal(val), iVal(-1), bVal(false) {}
 
     /**
      * constructor
      * @param key_ the key string
      * @param val value
      */
-    TupleData(const std::string& key_, bool val) : key(key_), type(Dtype::BOOL), iVal(-1), bVal(val) {}
+    OvsdbValue(const std::string& key_, const std::string& val) : key(key_), type(Dtype::STRING), sVal(val), iVal(-1), bVal(false) {}
+
+    /**
+     * constructor
+     * @param val value
+     */
+    OvsdbValue(bool val) : type(Dtype::BOOL), iVal(-1), bVal(val) {}
+
+    /**
+     * constructor
+     * @param val value
+     */
+    OvsdbValue(int val) : type(Dtype::INTEGER), iVal(val), bVal(false) {}
+
     /**
      * constructor
      * @param key_ the key string
      * @param val value
      */
-    TupleData(const std::string& key_, int val) : key(key_), type(Dtype::INTEGER), iVal(val), bVal(false) {}
+    OvsdbValue(Dtype type_, const std::string& key_, const std::map<std::string, std::string>& val) : key(key_), type(type_), iVal(-1), bVal(false), collection(val) {}
 
     /**
      * Copy constructor
      *
      * @param copy Object to copy from
      */
-    TupleData(const TupleData& copy) : key(copy.key), type(copy.type), sVal(copy.sVal), iVal(copy.iVal), bVal(copy.bVal) {}
+    OvsdbValue(const OvsdbValue& copy) : key(copy.key), type(copy.type), sVal(copy.sVal), iVal(copy.iVal), bVal(copy.bVal), collection(copy.collection) {}
 
     /**
      * Assignment operator
      */
-    TupleData& operator=(const TupleData& rhs) = default;
+    OvsdbValue& operator=(const OvsdbValue& rhs) = default;
 
     /**
      * Move operator
      */
-    TupleData& operator=(TupleData&&) = default;
+    OvsdbValue& operator=(OvsdbValue&&) = default;
 
     /**
      * Destructor
      */
-    virtual ~TupleData() {}
+    virtual ~OvsdbValue() {}
 
     /** Get key */
     const std::string& getKey() const {
@@ -192,48 +206,62 @@ public:
          return iVal;
      }
 
+     /**
+      * Get the value when set to a collection type
+      * @return collection by value
+      */
+     std::map<std::string, std::string> getCollectionValue() const {
+         return collection;
+     }
+
 private:
     std::string key;
     Dtype type;
     std::string sVal;
     int iVal;
     bool bVal;
+    std::map<std::string, std::string> collection;
 };
 
 /**
- * class for representing JSON/RPC tuple data set
+ * class for representing OVSDB values
  */
-class TupleDataSet {
+class OvsdbValues {
 public:
     /**
      * Default constructor
      */
-    TupleDataSet() {}
+    OvsdbValues() {}
     /**
      * Copy constructor
      */
-    TupleDataSet(const TupleDataSet& s) : label(s.label), tuples(s.tuples) {}
+    OvsdbValues(const OvsdbValues& s) : label(s.label), values(s.values) {}
 
     /**
-     * constructor that takes a tuple
+     * constructor that takes a label and set of values
      */
-    TupleDataSet(const std::vector<TupleData>& m, std::string l = "") : label(l), tuples(m) {}
+    OvsdbValues(const std::string& l, const std::vector<OvsdbValue>& m) : label(l), values(m) {}
+
+    /**
+     * constructor that takes a set of values
+     */
+    OvsdbValues(const std::vector<OvsdbValue>& m) : values(m) {}
 
     /**
      * Assignment operator
      */
-    TupleDataSet& operator=(TupleDataSet& rhs) = default;
+    OvsdbValues& operator=(OvsdbValues& rhs) = default;
 
-    virtual ~TupleDataSet() {}
+    virtual ~OvsdbValues() {}
 
     /**
-     * label for collection type, viz. map, set
+     * label if this is a collection type
      */
     std::string label;
     /**
      * tuple data
      */
-    std::vector<TupleData> tuples;
+    std::vector<OvsdbValue> values;
 };
 
 }
