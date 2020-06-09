@@ -19,58 +19,28 @@
 
 namespace opflexagent {
 
-void writePair(yajr::rpc::SendHandler& writer, const TupleData& bPtr, bool kvPair) {
-    const string& key = bPtr.getKey();
-    if (bPtr.getType() == Dtype::INTEGER) {
-        if (kvPair) {
-            writer.String(key.c_str());
-            writer.Int(bPtr.getIntValue());
-        } else {
-            if (!key.empty()) {
-                writer.StartArray();
-                writer.String(key.c_str());
-            }
-            writer.Int(bPtr.getIntValue());
-            if (!key.empty()) {
-                writer.EndArray();
-            }
+void writeValue(yajr::rpc::SendHandler& writer, const OvsdbValue& value) {
+    if (value.getType() == Dtype::INTEGER) {
+        writer.Int(value.getIntValue());
+    } else if (value.getType() == Dtype::STRING) {
+        if (!value.getKey().empty()) {
+            writer.StartArray();
+            writer.String(value.getKey().c_str());
         }
-    } else if (bPtr.getType() == Dtype::STRING) {
-        if (kvPair) {
-            writer.String(key.c_str());
-            writer.String(bPtr.getStringValue().c_str());
-        } else {
-            if (!key.empty()) {
-                writer.StartArray();
-                writer.String(key.c_str());
-            }
-            writer.String(bPtr.getStringValue().c_str());
-            if (!key.empty()) {
-                writer.EndArray();
-            }
+        writer.String(value.getStringValue().c_str());
+        if (!value.getKey().empty()) {
+            writer.EndArray();
         }
-    } else if (bPtr.getType() == Dtype::BOOL) {
-        if (kvPair) {
-            writer.String(key.c_str());
-            writer.Bool(bPtr.getBoolValue());
-        } else {
-            if (!key.empty()) {
-                writer.StartArray();
-                writer.String(key.c_str());
-            }
-            writer.Bool(bPtr.getBoolValue());
-            if (!key.empty()) {
-                writer.EndArray();
-            }
-        }
+    } else if (value.getType() == Dtype::BOOL) {
+        writer.Bool(value.getBoolValue());
     }
 }
 
 bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
-    for (auto& pair : kvPairs) {
-        writePair(writer, pair, true);
+    if (!externalKey.first.empty()) {
+        writer.String(externalKey.first.c_str());
+        writer.String(externalKey.second.c_str());
     }
-
     if (getOperation() != OvsdbOperation::INSERT) {
         writer.String("where");
         writer.StartArray();
@@ -115,20 +85,19 @@ bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
             string col = rowEntry.first;
             LOG(DEBUG) << "row label " << col;
             writer.String(col.c_str());
-            const TupleDataSet& tdsPtr = rowEntry.second;
+            const OvsdbValues& tdsPtr = rowEntry.second;
             if (!tdsPtr.label.empty()) {
                 writer.StartArray();
                 writer.String(tdsPtr.label.c_str());
                 writer.StartArray();
                 LOG(DEBUG) << "label " << tdsPtr.label;
-
-                for (auto& val : tdsPtr.tuples) {
-                    writePair(writer, val, false);
+                for (auto& val : tdsPtr.values) {
+                    writeValue(writer, val);
                 }
                 writer.EndArray();
                 writer.EndArray();
             } else {
-                writePair(writer, *(tdsPtr.tuples.begin()), false);
+                writeValue(writer, *(tdsPtr.values.begin()));
             }
         }
         writer.EndObject();
@@ -143,8 +112,8 @@ bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
             writer.String(col.c_str());
             string mutateRowOperation = toString(rowEntry.second.first);
             writer.String(mutateRowOperation.c_str());
-            const TupleDataSet &tdsPtr = rowEntry.second.second;
-            writePair(writer, *(tdsPtr.tuples.begin()), false);
+            const OvsdbValues &tdsPtr = rowEntry.second.second;
+            writeValue(writer, *(tdsPtr.values.begin()));
             writer.EndArray();
         }
         writer.EndArray();

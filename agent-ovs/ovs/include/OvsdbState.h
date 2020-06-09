@@ -27,7 +27,7 @@ using std::unique_lock;
 using std::unordered_map;
 
 /** Contents of a row in an OVSDB table */
-typedef unordered_map<string, TupleData> OvsdbRowDetails;
+typedef unordered_map<string, OvsdbValue> OvsdbRowDetails;
 /** Contents of an OVSDB table */
 typedef unordered_map<string, OvsdbRowDetails> OvsdbTableDetails;
 
