@@ -1021,8 +1021,11 @@ BOOST_FIXTURE_TEST_CASE(mcast, VxlanIntFlowManagerFixture) {
     string mcast3 = "224.5.1.1";
     string mcast4 = "224.5.1.2";
 
+    // Both mcast1 and mcast3 will get programmed as part of
+    // IntFlowManager.configUpdated()
     unordered_set<string> expected;
     expected.insert(mcast1);
+    expected.insert(mcast3);
 
     intFlowManager.configUpdated(config->getURI());
     setConnected();
