@@ -568,7 +568,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
          .isCtState("-new+est-rel+rpl-inv+trk").tcp().reg(SEPG, setId)
          .actions().go(OUT).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128).cookie(ruleId)
-         .isCtState("-new-est+rel-inv+trk").tcp().reg(SEPG, setId)
+         .isCtState("-new-est+rel+rpl-inv+trk").ip().reg(SEPG, setId)
          .actions().go(OUT).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128)
          .isCtState("-trk").tcp().reg(SEPG, setId)
