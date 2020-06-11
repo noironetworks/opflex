@@ -26,35 +26,9 @@ namespace opflexagent {
 
 mutex OvsdbConnection::ovsdbMtx;
 
-void OvsdbConnection::send_req_cb(uv_async_t* handle) {
-    unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
-    auto* reqCbd = (req_cb_data*)handle->data;
-    const shared_ptr<OvsdbMessage>& req = reqCbd->req;
-    yajr::rpc::MethodName method(req->getMethod().c_str());
-    opflex::jsonrpc::PayloadWrapper wrapper(req.get());
-    yajr::rpc::OutboundRequest outr =
-        yajr::rpc::OutboundRequest(wrapper, &method, req->getReqId(), reqCbd->peer);
-    outr.send();
-    delete(reqCbd);
-}
-
 void OvsdbConnection::on_writeq_async(uv_async_t* handle) {
     auto* conn = (OvsdbConnection*)handle->data;
     conn->processWriteQueue();
-}
-
-void OvsdbConnection::sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans) {
-    uint64_t reqId = 0;
-    {
-        unique_lock<mutex> lock(transactionMutex);
-        reqId = getNextId();
-        transactions[reqId] = trans;
-    }
-    auto* reqCbd = new req_cb_data();
-    reqCbd->req = std::make_shared<TransactReq>(requests, reqId);
-    reqCbd->peer = getPeer();
-    send_req_async.data = (void*)reqCbd;
-    uv_async_send(&send_req_async);
 }
 
 void OvsdbConnection::start() {
@@ -63,7 +37,6 @@ void OvsdbConnection::start() {
     client_loop = threadManager.initTask("OvsdbConnection");
     yajr::initLoop(client_loop);
     uv_async_init(client_loop,&connect_async, connect_cb);
-    uv_async_init(client_loop, &send_req_async, send_req_cb);
     writeq_async.data = this;
     uv_async_init(client_loop, &writeq_async, on_writeq_async);
 
@@ -91,7 +64,6 @@ void OvsdbConnection::connect_cb(uv_async_t* handle) {
 
 void OvsdbConnection::stop() {
     uv_close((uv_handle_t*)&connect_async, nullptr);
-    uv_close((uv_handle_t*)&send_req_async, nullptr);
     uv_close((uv_handle_t*)&writeq_async, nullptr);
     if (peer) {
         peer->destroy();
@@ -113,13 +85,13 @@ void OvsdbConnection::stop() {
             list<string> bridgeColumns = {"name", "ports", "netflow", "ipfix", "mirrors"};
             auto message = new OvsdbMonitorMessage(OvsdbTable::BRIDGE, bridgeColumns, conn->getNextId());
             conn->sendMessage(message, false);
-            list<string> portColumns = {"interfaces"};
+            list<string> portColumns = {"name", "interfaces"};
             message = new OvsdbMonitorMessage(OvsdbTable::PORT, portColumns, conn->getNextId());
             conn->sendMessage(message, false);
-            list<string> interfaceColumns = {"type", "options"};
+            list<string> interfaceColumns = {"name", "type", "options"};
             message = new OvsdbMonitorMessage(OvsdbTable::INTERFACE, interfaceColumns, conn->getNextId());
             conn->sendMessage(message, false);
-            list<string> mirrorColumns = {"select_src_port", "select_dst_port", "output_port"};
+            list<string> mirrorColumns = {"name", "select_src_port", "select_dst_port", "output_port"};
             message = new OvsdbMonitorMessage(OvsdbTable::MIRROR, mirrorColumns, conn->getNextId());
             conn->sendMessage(message, false);
             list<string> netflowColumns = {"targets", "active_timeout", "add_id_to_interface"};
@@ -167,21 +139,10 @@ void OvsdbConnection::disconnect() {
 }
 
 void OvsdbConnection::handleTransaction(uint64_t reqId, const Document& payload) {
-    unique_lock<mutex> lock(transactionMutex);
-    auto iter = transactions.find(reqId);
-    if (iter != transactions.end()) {
-        iter->second->handleTransaction(reqId, payload);
-        transactions.erase(iter);
-    }
+    LOG(DEBUG) << "Received response for transaction with reqId " << reqId;
 }
 
 void OvsdbConnection::handleTransactionError(uint64_t reqId, const Document& payload) {
-    unique_lock<mutex> lock(transactionMutex);
-    auto iter = transactions.find(reqId);
-    if (iter != transactions.end()) {
-        transactions.erase(iter);
-    }
-
     if (payload.HasMember("error")) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -198,7 +159,8 @@ void populateValues(const Value& value, string& type, map<string, string>& value
         if (value[0].IsString()) {
             std::string arrayType = value[0].GetString();
             if (arrayType == "uuid" && value[1].IsString()) {
-                values[value[1].GetString()];
+                const string strVal = value[1].GetString();
+                values[strVal];
             } else if (arrayType == "set" && value[1].IsArray()) {
                 type = arrayType;
                 for (Value::ConstValueIterator memberItr = value[1].GetArray().Begin();
@@ -305,7 +267,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                             // use bridge name as key as that's the most common lookup
                             tableState[bridgeName] = rowDetails;
                         } else {
-                             LOG(WARNING) << "Dropping bridge with no name";
+                            LOG(WARNING) << "Dropping bridge with no name";
                         }
                     }
                 }
@@ -412,124 +374,121 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
         if (payload[0].IsString()) {
             if (payload[1].IsObject()) {
                 if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::BRIDGE))) {
-                    LOG(WARNING) << "OVSDB update for bridge table";
+                    LOG(DEBUG) << "OVSDB update for bridge table";
                     const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::BRIDGE)];
                     if (value.IsObject()) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(WARNING) << "bridge uuid " << rowUuid;
+                            LOG(DEBUG) << "bridge uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
-                                LOG(WARNING) << "received updated row for bridge " << rowUuid;
+                                LOG(DEBUG) << "received updated row for bridge " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::BRIDGE, rowUuid, rowDetails);
                             } else {
-                                LOG(WARNING) << "received deleted row for bridge " << rowUuid;
+                                LOG(DEBUG) << "received deleted row for bridge " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::BRIDGE, rowUuid);
                             }
                         }
                     }
                 } else if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::MIRROR))) {
-                    LOG(WARNING) << "OVSDB update for mirror table";
+                    LOG(DEBUG) << "OVSDB update for mirror table";
                     const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::MIRROR)];
                     if (value.IsObject()) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(WARNING) << "mirror uuid " << rowUuid;
+                            LOG(DEBUG) << "mirror uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
-                                LOG(WARNING) << "received updated row for mirror " << rowUuid;
+                                LOG(DEBUG) << "received updated row for mirror " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::MIRROR, rowUuid, rowDetails);
                             } else {
-                                LOG(WARNING) << "received deleted row for mirror " << rowUuid;
+                                LOG(DEBUG) << "received deleted row for mirror " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::MIRROR, rowUuid);
                             }
                         }
                     }
-
                 } else if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::IPFIX))) {
-                    LOG(WARNING) << "OVSDB update for ipfix table";
+                    LOG(DEBUG) << "OVSDB update for ipfix table";
                     const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::IPFIX)];
                     if (value.IsObject()) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(WARNING) << "ipfix uuid " << rowUuid;
+                            LOG(DEBUG) << "ipfix uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
-                                LOG(WARNING) << "received updated row for ipfix " << rowUuid;
+                                LOG(DEBUG) << "received updated row for ipfix " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::IPFIX, rowUuid, rowDetails);
                             } else {
-                                LOG(WARNING) << "received deleted row for ipfix " << rowUuid;
+                                LOG(DEBUG) << "received deleted row for ipfix " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::IPFIX, rowUuid);
                             }
                         }
                     }
-
                 } else if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::NETFLOW))) {
-                    LOG(WARNING) << "OVSDB update for netflow table";
+                    LOG(DEBUG) << "OVSDB update for netflow table";
                     const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::NETFLOW)];
                     if (value.IsObject()) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(WARNING) << "netflow uuid " << rowUuid;
+                            LOG(DEBUG) << "netflow uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
-                                LOG(WARNING) << "received updated row for netflow " << rowUuid;
+                                LOG(DEBUG) << "received updated row for netflow " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::NETFLOW, rowUuid, rowDetails);
                             } else {
-                                LOG(WARNING) << "received deleted row for netflow " << rowUuid;
+                                LOG(DEBUG) << "received deleted row for netflow " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::NETFLOW, rowUuid);
                             }
                         }
                     }
-
                 } else if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::PORT))) {
-                    LOG(WARNING) << "OVSDB update for port table";
+                    LOG(DEBUG) << "OVSDB update for port table";
                     const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::PORT)];
                     if (value.IsObject()) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(WARNING) << "port uuid " << rowUuid;
+                            LOG(DEBUG) << "port uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
-                                LOG(WARNING) << "received updated row for port " << rowUuid;
+                                LOG(DEBUG) << "received updated row for port " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::PORT, rowUuid, rowDetails);
                             } else {
-                                LOG(WARNING) << "received deleted row for port " << rowUuid;
+                                LOG(DEBUG) << "received deleted row for port " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::PORT, rowUuid);
                             }
                         }
                     }
                 } else if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::INTERFACE))) {
-                    LOG(WARNING) << "OVSDB update for interface table";
+                    LOG(DEBUG) << "OVSDB update for interface table";
                     const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::INTERFACE)];
                     if (value.IsObject()) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(WARNING) << "interface uuid " << rowUuid;
+                            LOG(DEBUG) << "interface uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
                             if (addRow) {
-                                LOG(WARNING) << "received updated row for interface " << rowUuid;
+                                LOG(DEBUG) << "received updated row for interface " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::INTERFACE, rowUuid, rowDetails);
                             } else {
-                                LOG(WARNING) << "received deleted row for interface " << rowUuid;
+                                LOG(DEBUG) << "received deleted row for interface " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::INTERFACE, rowUuid);
                             }
                         }

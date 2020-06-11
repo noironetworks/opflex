@@ -19,6 +19,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <chrono>
 
 #include <opflex/rpc/JsonRpcConnection.h>
 #include <opflex/rpc/JsonRpcMessage.h>
@@ -33,25 +34,6 @@ namespace opflexagent {
 
 using namespace std;
 using namespace rapidjson;
-
-/**
- * JSON/RPC transaction base class
- */
-class Transaction {
-public:
-    /**
-     * pure virtual method for handling transactions
-     */
-    virtual void handleTransaction(uint64_t reqId, const Document& payload) = 0;
-    /**
-     * pure virtual method for handling transaction errors
-     */
-    virtual void handleTransactionError(uint64_t reqId, const Document& payload) = 0;
-    /**
-     * pure virtual method for handling updates
-     */
-    virtual void handleUpdate(const Document& payload) {}
-};
 
 /**
  * Used to establish a connection to OVSDB
@@ -88,7 +70,20 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      * get state of connection
      * @return true if connected, false otherwise
      */
-    bool isConnected() { return connected;};
+    bool isConnected() {
+        if (!connected) {
+            return false;
+        } else {
+            LOG(WARNING) << "Check if sync is complete";
+            unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
+            if (!ready.wait_for(lock, std::chrono::milliseconds(WAIT_TIMEOUT),
+                                [=] { return isSyncComplete(); })) {
+                LOG(DEBUG) << "lock timed out, no connection";
+                return false;
+            }
+            return true;
+        }
+    };
 
     /**
      * set connection state
@@ -163,14 +158,6 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
     static void on_writeq_async(uv_async_t* handle);
 
     /**
-     * send transaction request
-     *
-     * @param[in] requests list of Transact messages
-     * @param[in] trans callback
-     */
-    virtual void sendTransaction(const list<OvsdbTransactMessage>& requests, Transaction* trans);
-
-    /**
      * call back for transaction response
      * @param[in] reqId request ID of the request for this response.
      * @param[in] payload rapidjson::Value reference of the response body.
@@ -215,15 +202,6 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      * static for now as we only have a single OVSDB connection
      */
     static mutex ovsdbMtx;
-
-    /**
-     * set the next request ID
-     * @param id_ request id
-     */
-    void setNextId(uint64_t id_) {
-        unique_lock<mutex> lock(transactionMutex);
-        id = id_;
-    }
 
     /**
      * Get a human-readable view of the name of the remote peer
@@ -275,15 +253,15 @@ private:
     uv_async_t connect_async;
     uv_async_t send_req_async;
     uv_async_t writeq_async;
-    unordered_map<uint64_t, Transaction*> transactions;
     std::atomic<bool> connected;
     std::atomic<bool> syncComplete;
     std::atomic<int> syncMsgsRemaining;
-    mutex transactionMutex;
     bool ovsdbUseLocalTcpPort;
     uint64_t id = 0;
     std::string remote_peer;
     OvsdbState ovsdbState;
+
+    const int WAIT_TIMEOUT = 5000;
 };
 
 

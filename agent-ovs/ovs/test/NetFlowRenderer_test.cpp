@@ -51,8 +51,6 @@ public:
 };
 
 bool verifyCreateDestroy(Agent& agent, const shared_ptr<NetFlowRenderer>& nfr) {
-    nfr->setNextId(2000);
-
     Mutator mutator(agent.getFramework(), "policyreg");
     auto root = modelgbp::dmtree::Root::createRootElement(agent.getFramework());
     auto pu = root->addPolicyUniverse();

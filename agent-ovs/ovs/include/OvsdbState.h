@@ -18,10 +18,13 @@
 #include <unordered_map>
 #include <boost/optional.hpp>
 #include "OvsdbMessage.h"
+#include <opflexagent/SpanSessionState.h>
+#include <opflexagent/logging.h>
 
 namespace opflexagent {
 
 using std::mutex;
+using std::set;
 using std::string;
 using std::unique_lock;
 using std::unordered_map;
@@ -30,6 +33,28 @@ using std::unordered_map;
 typedef unordered_map<string, OvsdbValue> OvsdbRowDetails;
 /** Contents of an OVSDB table */
 typedef unordered_map<string, OvsdbRowDetails> OvsdbTableDetails;
+
+/**
+  * struct for managing mirror data
+  */
+typedef struct mirror_ {
+    /**
+      * UUID of the mirror
+      */
+    string uuid;
+    /**
+     * set of source port UUIDs
+     */
+    set<string> src_ports;
+    /**
+     * set of destination port UUIDs
+     */
+    set<string> dst_ports;
+    /**
+      * set of erspan ports
+      */
+    string out_port;
+} mirror;
 
 /**
  * Local representation of the OVSDB state
@@ -81,13 +106,121 @@ public:
      */
     void getBridgeUuid(const string& bridgeName, string& uuid) {
         unique_lock<mutex> lock(stateMutex);
-        auto bridgeRows = ovsdbState[OvsdbTable::BRIDGE];
+        auto& bridgeRows = ovsdbState[OvsdbTable::BRIDGE];
         if (bridgeRows.find(bridgeName) != bridgeRows.end()) {
             auto bridgeParams = bridgeRows[bridgeName];
             if (bridgeParams.find("uuid") != bridgeParams.end()) {
                 uuid = bridgeParams["uuid"].getStringValue();
             }
         }
+    }
+
+    /**
+     * Get the UUID for port with the specified name
+     *
+     * @param table table to pull UUID from
+     * @param name name of port
+     * @param uuid Corresponding UUID
+     */
+    void getUuidForName(OvsdbTable table, const string& name, string& uuid) {
+        unique_lock<mutex> lock(stateMutex);
+        auto& portRows = ovsdbState[table];
+        for (auto& row : portRows) {
+            if (row.second.find("name") != row.second.end()) {
+                if (row.second["name"].getStringValue() == name) {
+                    LOG(DEBUG) << "Found mapping from " << name << " to " << row.second["uuid"].getStringValue();
+                    uuid = row.second["uuid"].getStringValue();
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the mirror state
+     * @param name mirror name
+     * @param mir Mirror struct to fill with details of mirror
+     * @return True is mirror is present
+     */
+    bool getMirrorState(const string& name, mirror& mir) {
+        bool found = false;
+        unique_lock<mutex> lock(stateMutex);
+        auto mirrorRows = ovsdbState[OvsdbTable::MIRROR];
+        for (auto& row : mirrorRows) {
+            if (row.second.find("name") != row.second.end()) {
+                if (row.second["name"].getStringValue() == name) {
+                    LOG(DEBUG) << "Found mirror with name " << name;
+                    if (row.second.find("uuid") != row.second.end()) {
+                        mir.uuid = row.second["uuid"].getStringValue();
+                        found = true;
+                    } else {
+                        LOG(WARNING) << "Unable to find UUID for mirror named " << name;
+                    }
+                    mir.src_ports.clear();
+                    if (row.second.find("select_src_port") != row.second.end()) {
+                        if (row.second["select_src_port"].getType() == Dtype::SET) {
+                            auto ports = row.second["select_src_port"].getCollectionValue();
+                            for (auto& port : ports) {
+                                mir.src_ports.emplace(port.first);
+                                LOG(DEBUG) << "add src port " << port.first;
+                            }
+                        } else if (row.second["select_src_port"].getType() == Dtype::STRING) {
+                            auto& port = row.second["select_src_port"].getStringValue();
+                            mir.src_ports.emplace(port);
+                            LOG(DEBUG) << "add src port " << port;
+                        }
+                    }
+                    mir.dst_ports.clear();
+                    if (row.second.find("select_dst_port") != row.second.end()) {
+                        if (row.second["select_dst_port"].getType() == Dtype::SET) {
+                            auto ports = row.second["select_dst_port"].getCollectionValue();
+                            for (auto& port : ports) {
+                                mir.dst_ports.emplace(port.first);
+                                LOG(DEBUG) << "add dest port " << port.first;
+                            }
+                        } else if (row.second["select_dst_port"].getType() == Dtype::STRING) {
+                            auto& port = row.second["select_dst_port"].getStringValue();
+                            mir.dst_ports.emplace(port);
+                            LOG(DEBUG) << "add dest port " << port;
+                        }
+                    }
+                    if (row.second.find("out_port") != row.second.end()) {
+                        auto& port = row.second["out_port"].getStringValue();
+                        mir.out_port = port;
+                        LOG(DEBUG) << "add out port " << port;
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Get ERSPAN interface params
+     */
+    bool getErspanParams(const string& interfaceName, ErspanParams& params) {
+        unique_lock<mutex> lock(stateMutex);
+        auto interfaceRows = ovsdbState[OvsdbTable::INTERFACE];
+        for (auto& row : interfaceRows) {
+            if (row.second.find("name") != row.second.end()) {
+                if (row.second["name"].getStringValue() == interfaceName) {
+                    LOG(DEBUG) << "found erspan params for interface " << interfaceName;
+                    params.setPortName(interfaceName);
+                    if (row.second.find("options") != row.second.end()) {
+                        auto options = row.second["options"].getCollectionValue();
+                        if (options.find("erspan_ver") != options.end()) {
+                            LOG(DEBUG) << "setting version to " << options["erspan_ver"];
+                            params.setVersion(stoi(options["erspan_ver"]));
+                        }
+                        if (options.find("remote_ip") != options.end()) {
+                            LOG(DEBUG) << "Setting remote IP to " << options["remote_ip"];
+                            params.setRemoteIp(options["remote_ip"]);
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 private:
