@@ -13,13 +13,12 @@
 namespace opflexagent {
 
     JsonRpcRenderer::JsonRpcRenderer(Agent& agent_) :
-        jRpc(nullptr), agent(agent_), timerStarted(false), conn(nullptr) {
+        agent(agent_), timerStarted(false), conn(nullptr) {
     }
 
     void JsonRpcRenderer::start(const std::string& swName, OvsdbConnection* conn_) {
         switchName = swName;
         conn = conn_;
-        jRpc = unique_ptr<JsonRpc>(new JsonRpc(conn));
     }
 
     bool JsonRpcRenderer::connect() {
@@ -32,11 +31,11 @@ namespace opflexagent {
             connection_timer->cancel();
             timerStarted = false;
         }
-        if (!jRpc) {
+        if (!conn) {
             LOG(ERROR) << "Must call start before connect";
             return false;
         }
-        jRpc->connect();
-        return jRpc->isConnected();
+        conn->connect();
+        return conn->isConnected();
     }
 }

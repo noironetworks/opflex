@@ -166,7 +166,6 @@ noinst_HEADERS = \
 	ovs/include/JsonRpcRenderer.h \
 	ovs/include/NetFlowRenderer.h \
 	ovs/include/SpanRenderer.h \
-	ovs/include/JsonRpc.h \
 	ovs/include/PacketLogHandler.h \
 	ovs/include/PacketDecoder.h \
 	ovs/include/PacketDecoderLayers.h \
@@ -270,7 +269,6 @@ if RENDERER_OVS
 	ovs/JsonRpcRenderer.cpp \
 	ovs/NetFlowRenderer.cpp \
 	ovs/SpanRenderer.cpp \
-	ovs/JsonRpc.cpp \
 	ovs/PacketLogHandler.cpp \
 	ovs/PacketDecoder.cpp \
 	ovs/PacketDecoderLayers.cpp \
@@ -472,7 +470,6 @@ if RENDERER_OVS
 	ovs/test/include/PolicyStatsManagerFixture.h \
 	ovs/test/include/MockPacketLogHandler.h \
 	ovs/test/MockFlowExecutor.cpp \
-	ovs/test/MockRpcConnection.cpp \
 	ovs/test/FlowManagerFixture.cpp \
 	ovs/test/IntFlowManager_test.cpp \
 	ovs/test/AccessFlowManager_test.cpp \

@@ -145,6 +145,7 @@ public:
 
     /**
      * constructor
+     * @param type_ type of collection
      * @param key_ the key string
      * @param val value
      */

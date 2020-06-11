@@ -101,26 +101,115 @@ namespace opflexagent {
 
     void NetFlowRenderer::deleteNetFlow() {
         LOG(DEBUG) << "deleting netflow";
-        jRpc->deleteNetFlow(switchName);
+        OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("name", OvsdbFunction::EQ, switchName);
+        msg.conditions = condSet;
+
+        vector<OvsdbValue> values;
+        OvsdbValues tdSet("set", values);
+        msg.rowData.emplace("netflow", tdSet);
+
+        list<OvsdbTransactMessage> msgs = {msg};
+        sendAsyncTransactRequests(msgs);
     }
 
     void NetFlowRenderer::deleteIpfix() {
         LOG(DEBUG) << "deleting IPFIX";
-        jRpc->deleteIpfix(switchName);
+        OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("name", OvsdbFunction::EQ, switchName);
+        msg.conditions = condSet;
+
+        vector<OvsdbValue> values;
+        OvsdbValues tdSet("set", values);
+        msg.rowData.emplace("ipfix", tdSet);
+
+        const list<OvsdbTransactMessage> requests = {msg};
+        sendAsyncTransactRequests(requests);
     }
 
-    void NetFlowRenderer::createNetFlow(const string &targets, int timeout) {
+    void NetFlowRenderer::createNetFlow(const string& targets, int timeout) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
-        jRpc->createNetFlow(brUuid, targets, timeout);
+        vector<OvsdbValue> values;
+        values.emplace_back(targets);
+        OvsdbValues tdSet(values);
+        OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::NETFLOW);
+        msg1.rowData["targets"] = tdSet;
+
+        values.clear();
+        values.emplace_back(timeout);
+        OvsdbValues tdSet2(values);
+        msg1.rowData["active_timeout"] = tdSet2;
+
+        values.clear();
+        values.emplace_back(false);
+        OvsdbValues tdSet3(values);
+        msg1.rowData["add_id_to_interface"] = tdSet3;
+
+        const string uuid_name = "netflow1";
+        msg1.externalKey = make_pair("uuid-name", uuid_name);
+
+        OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
+        msg2.conditions = condSet;
+
+        values.clear();
+        values.emplace_back("named-uuid", uuid_name);
+        OvsdbValues tdSet4(values);
+        msg2.rowData.emplace("netflow", tdSet4);
+        // make sure there is no ipfix config
+        values.clear();
+        OvsdbValues emptySet("set", values);
+        msg2.rowData.emplace("ipfix", emptySet);
+
+        const list<OvsdbTransactMessage> requests = {msg1, msg2};
+        sendAsyncTransactRequests(requests);
     }
 
-    void NetFlowRenderer::createIpfix(const string &targets, int sampling) {
+    void NetFlowRenderer::createIpfix(const string& targets, int sampling) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid << "sampling rate is " << sampling;
-        jRpc->createIpfix(brUuid, targets, sampling);
+        vector<OvsdbValue> values;
+        values.emplace_back(targets);
+        OvsdbValues tdSet(values);
+        OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::IPFIX);
+        msg1.rowData.emplace("targets", tdSet);
+        if (sampling != 0) {
+            values.clear();
+            values.emplace_back(sampling);
+            OvsdbValues tdSet2(values);
+            msg1.rowData.emplace("sampling", tdSet2);
+        }
+
+        values.clear();
+        static const string enabled("true");
+        values.emplace_back("enable-tunnel-sampling", enabled);
+        OvsdbValues tdSet3("map", values);
+        msg1.rowData.emplace("other_config", tdSet3);
+        const string uuid_name = "ipfix1";
+        msg1.externalKey = make_pair("uuid-name", uuid_name);
+
+        OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
+        msg2.conditions = condSet;
+
+        values.clear();
+        values.emplace_back("named-uuid", uuid_name);
+        OvsdbValues tdSet4(values);
+        msg2.rowData.emplace("ipfix", tdSet4);
+        // make sure there is no netflow config
+        values.clear();
+        OvsdbValues emptySet("set", values);
+        msg2.rowData.emplace("netflow", emptySet);
+
+        const list<OvsdbTransactMessage> requests = {msg1, msg2};
+        sendAsyncTransactRequests(requests);
     }
 
     void NetFlowRenderer::updateConnectCb(const boost::system::error_code& ec,

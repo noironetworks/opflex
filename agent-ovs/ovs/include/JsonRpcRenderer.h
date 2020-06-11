@@ -16,7 +16,7 @@
 #include <atomic>
 #include <boost/asio.hpp>
 #include <opflexagent/Agent.h>
-#include "JsonRpc.h"
+#include "OvsdbConnection.h"
 
 namespace opflexagent {
 
@@ -45,18 +45,17 @@ public:
      */
     virtual bool connect();
 
-    /**
-     * unipue pointer to a JsonRpc object instance
-     */
-    unique_ptr<JsonRpc> jRpc;
-
-    /**
-     * set the next request ID
-     * @param id request id
-     */
-    void setNextId(uint64_t id) { conn->setNextId(id);}
-
 protected:
+
+    /**
+     * Send the list of transact messages asynchronously to OVSDB
+     * @param list List of transact requests
+     */
+    void sendAsyncTransactRequests(const list<OvsdbTransactMessage>& list) {
+        auto* req = new TransactReq(list, conn->getNextId());
+        conn->sendMessage(req, false);
+    }
+
     /**
      * reference to instance of Agent
      */

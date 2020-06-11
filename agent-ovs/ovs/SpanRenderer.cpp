@@ -8,6 +8,7 @@
  */
 
 #include "SpanRenderer.h"
+#include "OvsdbState.h"
 #include <opflexagent/logging.h>
 #include <opflexagent/SpanManager.h>
 #include <boost/optional.hpp>
@@ -105,10 +106,11 @@ namespace opflexagent {
         }
 
         // get mirror artifacts from OVSDB if provisioned
-        JsonRpc::mirror mir;
-        bool isMirProv = false;
-        if (jRpc->getOvsdbMirrorConfig(seSt.get()->getName(), mir)) {
-            isMirProv = true;
+        opflexagent::mirror mir;
+        bool isMirProv = conn->getOvsdbState().getMirrorState(seSt.get()->getName(), mir);
+        if (isMirProv) {
+            LOG(DEBUG) << "mirror state for " << seSt.get()->getName() << " uuid " << mir.uuid;
+            LOG(DEBUG) << "src ports = " << mir.src_ports.size() << ", dst ports = " << mir.dst_ports.size();
         }
 
         // There should be at least one source and the destination should be set
@@ -140,6 +142,9 @@ namespace opflexagent {
                 dstPort.emplace(src.getPort());
             }
         }
+
+        LOG(DEBUG) << "src port count = " << srcPort.size();
+        LOG(DEBUG) << "dest port count = " << dstPort.size();
 
         // check if the number of source and dest ports are the
         // same as provisioned.
@@ -182,10 +187,11 @@ namespace opflexagent {
 
         // get ERSPAN interface params if configured
         ErspanParams params;
-        if (!jRpc->getCurrentErspanParams(ERSPAN_PORT_PREFIX + seSt.get()->getName(), params)) {
+        if (!conn->getOvsdbState().getErspanParams(ERSPAN_PORT_PREFIX + seSt.get()->getName(), params)) {
             LOG(DEBUG) << "Unable to get ERSPAN parameters";
             return;
         }
+
         // check for change in config, push it if there is a change.
         if (params.getRemoteIp() != seSt.get()->getDestination().to_string() ||
             params.getVersion() != seSt.get()->getVersion()) {
@@ -211,6 +217,7 @@ namespace opflexagent {
                 dstPort.emplace(src.getPort());
             }
         }
+        LOG(DEBUG) << "Updating mirror config with srcport count = " << srcPort.size() << " and dstport count = " << dstPort.size();
 
         deleteErspanPort(ERSPAN_PORT_PREFIX + seSt->getName());
         addErspanPort(ERSPAN_PORT_PREFIX + seSt->getName(), seSt->getDestination().to_string(), seSt->getVersion());
@@ -219,46 +226,179 @@ namespace opflexagent {
         createMirror(seSt->getName(), srcPort, dstPort);
     }
 
-    bool SpanRenderer::deleteMirror(const string& sessionName) {
+    void SpanRenderer::deleteMirror(const string& sessionName) {
         LOG(DEBUG) << "deleting mirror " << sessionName;
-        if (!jRpc->deleteMirror(switchName, sessionName)) {
-            LOG(DEBUG) << "Unable to delete mirror";
-            return false;
+        string sessionUuid;
+        conn->getOvsdbState().getUuidForName(OvsdbTable::MIRROR, sessionName, sessionUuid);
+        if (sessionUuid.empty()) {
+            LOG(INFO) << "Unable to find session " << sessionName << " to delete";
+            return;
         }
-        return true;
+        OvsdbTransactMessage msg(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("name", OvsdbFunction::EQ, switchName);
+        msg.conditions = condSet;
+
+        vector<OvsdbValue> values;
+        values.emplace_back("uuid", sessionUuid);
+        OvsdbValues tdSet = OvsdbValues(values);
+        msg.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::DELETE, tdSet));
+
+        list<OvsdbTransactMessage> requests = {msg};
+        sendAsyncTransactRequests(requests);
     }
 
-    bool SpanRenderer::addErspanPort(const string& portName, const string &ipAddr, const uint8_t version) {
-        LOG(DEBUG) << "adding erspan port " << portName << " IP " << ipAddr << " and version " << std::to_string(version);
-        ErspanParams params;
-        params.setVersion(version);
-        params.setPortName(portName);
-        params.setRemoteIp(ipAddr);
-        if (!jRpc->addErspanPort(switchName, params)) {
-            LOG(DEBUG) << "add erspan port failed";
-            return false;
-        }
-        return true;
+    void SpanRenderer::addErspanPort(const string& portName, const string& remoteIp, const uint8_t version) {
+        LOG(DEBUG) << "adding erspan port " << portName << " IP " << remoteIp << " and version " << std::to_string(version);
+
+        OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::PORT);
+        vector<OvsdbValue> values;
+        values.emplace_back(portName);
+        OvsdbValues tdSet(values);
+        msg1.rowData.emplace("name", tdSet);
+
+        // uuid-name
+        const string uuid_name = "port1";
+        msg1.externalKey = make_pair("uuid-name", uuid_name);
+
+        // interfaces
+        values.clear();
+        const string named_uuid = "interface1";
+        values.emplace_back("named-uuid", named_uuid);
+        OvsdbValues tdSet2(values);
+        msg1.rowData.emplace("interfaces", tdSet2);
+
+        // uuid-name
+        OvsdbTransactMessage msg2(OvsdbOperation::INSERT, OvsdbTable::INTERFACE);
+        msg2.externalKey = make_pair("uuid-name", named_uuid);
+
+        // row entries
+        // name
+        values.clear();
+        values.emplace_back(portName);
+        OvsdbValues tdSet3(values);
+        msg2.rowData.emplace("name", tdSet3);
+
+        values.clear();
+        const string typeString("erspan");
+        OvsdbValue typeData(typeString);
+        values.push_back(typeData);
+        OvsdbValues tdSet4(values);
+        msg2.rowData.emplace("type", tdSet4);
+
+        values.clear();
+        values.emplace_back("erspan_ver", std::to_string(version));
+        values.emplace_back("remote_ip", remoteIp);
+        OvsdbValues tdSet5("map", values);
+        msg2.rowData.emplace("options", tdSet5);
+
+        OvsdbTransactMessage msg3(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
+        values.clear();
+        values.emplace_back("named-uuid", uuid_name);
+        OvsdbValues tdSet6(values);
+        msg3.mutateRowData.emplace("ports", std::make_pair(OvsdbOperation::INSERT, tdSet6));
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("name", OvsdbFunction::EQ, switchName);
+        msg3.conditions = condSet;
+
+        const list<OvsdbTransactMessage> requests = {msg1, msg2, msg3};
+        sendAsyncTransactRequests(requests);
     }
 
-    bool SpanRenderer::deleteErspanPort(const string& name) {
+    void SpanRenderer::deleteErspanPort(const string& name) {
         LOG(DEBUG) << "deleting erspan port " << name;
         string erspanUuid;
-        jRpc->getUuid(OvsdbTable::PORT, name, erspanUuid);
+        conn->getOvsdbState().getUuidForName(OvsdbTable::PORT, name, erspanUuid);
         if (erspanUuid.empty()) {
             LOG(DEBUG) << "Port is not present in OVSDB: " << name;
-            return false;
+            return;
         }
         LOG(DEBUG) << name << " port uuid: " << erspanUuid;
-        jRpc->updateBridgePorts(switchName, erspanUuid, false);
-        return true;
+        OvsdbTransactMessage msg1(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("name", OvsdbFunction::EQ, switchName);
+        msg1.conditions = condSet;
+
+        vector<OvsdbValue> values;
+        values.emplace_back("uuid", erspanUuid);
+        OvsdbValues tdSet = OvsdbValues(values);
+        msg1.mutateRowData.emplace("ports", std::make_pair(OvsdbOperation::DELETE, tdSet));
+        LOG(DEBUG) << "deleting " << erspanUuid;
+        const list<OvsdbTransactMessage> requests = {msg1};
+        sendAsyncTransactRequests(requests);
     }
-    bool SpanRenderer::createMirror(const string& sess, const set<string>& srcPorts,
-            const set<string>& dstPorts) {
+
+    void SpanRenderer::createMirror(const string& sess, const set<string>& srcPorts, const set<string>& dstPorts) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
-        jRpc->createMirror(brUuid, sess, srcPorts, dstPorts);
-        return true;
+
+        OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::MIRROR);
+        vector<OvsdbValue> srcPortUuids;
+        for (auto &srcPort : srcPorts) {
+            string srcPortUuid;
+            LOG(DEBUG) << "Looking up port " << srcPort;
+            conn->getOvsdbState().getUuidForName(OvsdbTable::PORT, srcPort, srcPortUuid);
+            if (!srcPortUuid.empty()) {
+                LOG(DEBUG) << "uuid for port " << srcPort << " is " << srcPortUuid;
+                srcPortUuids.emplace_back("uuid", srcPortUuid);
+            } else {
+                LOG(DEBUG) << "Unable to find uuid for port " << srcPort;
+            }
+        }
+
+        LOG(INFO) << "mirror src_port size " << srcPortUuids.size();
+        OvsdbValues tdSet("set", srcPortUuids);
+        msg1.rowData.emplace("select_src_port", tdSet);
+
+        // dst ports
+        vector<OvsdbValue> dstPortUuids;
+        for (auto &dstPort : dstPorts) {
+            string dstPortUuid;
+            conn->getOvsdbState().getUuidForName(OvsdbTable::PORT, dstPort, dstPortUuid);
+            if (!dstPortUuid.empty()) {
+                dstPortUuids.emplace_back("uuid", dstPortUuid);
+            } else {
+                LOG(WARNING) << "Unable to find uuid for port " << dstPort;
+            }
+        }
+        LOG(INFO) << "mirror dst_port size " << dstPortUuids.size();
+        OvsdbValues tdSet2("set", dstPortUuids);
+        msg1.rowData.emplace("select_dst_port", tdSet2);
+
+        // output ports
+        string outputPortUuid;
+        conn->getOvsdbState().getUuidForName(OvsdbTable::PORT, ERSPAN_PORT_PREFIX + sess, outputPortUuid);
+        LOG(INFO) << "output port uuid " << outputPortUuid;
+
+        if (!outputPortUuid.empty()) {
+            vector<OvsdbValue> outputPort;
+            OvsdbValue outPort("uuid", outputPortUuid);
+            outputPort.emplace_back(outPort);
+            OvsdbValues tdSet3(outputPort);
+            msg1.rowData.emplace("output_port", tdSet3);
+        }
+
+        // name
+        vector<OvsdbValue> values;
+        values.emplace_back(sess);
+        OvsdbValues tdSet4(values);
+        msg1.rowData.emplace("name", tdSet4);
+
+        const string uuid_name = "mirror1";
+        msg1.externalKey = make_pair("uuid-name", uuid_name);
+
+        // msg2
+        values.clear();
+        OvsdbTransactMessage msg2(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
+        set<tuple<string, OvsdbFunction, string>> condSet;
+        condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
+        msg2.conditions = condSet;
+        values.emplace_back("named-uuid", uuid_name);
+        OvsdbValues tdSet5(values);
+        msg2.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::INSERT, tdSet5));
+
+        const list<OvsdbTransactMessage> requests = {msg1, msg2};
+        sendAsyncTransactRequests(requests);
     }
 }
