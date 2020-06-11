@@ -125,6 +125,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
                             /* out */ FlowEntryList& entries) {
+    using modelgbp::l2::EtherTypeEnumT;
     using modelgbp::l4::TcpFlagsEnumT;
 
     ovs_be64 ckbe = ovs_htonll(cookie);
@@ -169,6 +170,38 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
         for (const network::subnet_t& ds : effDestSub) {
             flow_func dst_func(make_flow_functor(ds, &FlowBuilder::ipDst));
 
+            /*
+             * For EtherType IPV4 and IPV6 add related flows based on
+             * EtherType and skip matching on L4 Proto and ports
+             */
+            if (act == flowutils::CA_REFLEX_REV_RELATED) {
+                FlowBuilder f;
+                uint16_t ethT = clsfr.getEtherT(EtherTypeEnumT::CONST_UNSPECIFIED);
+
+                if (ethT == EtherTypeEnumT::CONST_IPV4 ||
+                    ethT == EtherTypeEnumT::CONST_IPV6) {
+                    f.ethType(ethT);
+                } else {
+                    continue;
+                }
+
+                f.cookie(ckbe);
+                f.flags(flags);
+                f.conntrackState(FlowBuilder::CT_TRACKED |
+                                 FlowBuilder::CT_RELATED |
+                                 FlowBuilder::CT_REPLY,
+                                 FlowBuilder::CT_TRACKED |
+                                 FlowBuilder::CT_RELATED |
+                                 FlowBuilder::CT_REPLY |
+                                 FlowBuilder::CT_ESTABLISHED |
+                                 FlowBuilder::CT_INVALID |
+                                 FlowBuilder::CT_NEW);
+                 flowutils::match_group(f, priority, svnid, dvnid);
+                 f.action().go(nextTable);
+                 entries.push_back(f.build());
+                 continue;
+           }
+
             for (const Mask& sm : srcPorts) {
                 for (const Mask& dm : dstPorts) {
                     for (uint32_t flagMask : tcpFlagsVec) {
@@ -191,15 +224,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                                              FlowBuilder::CT_INVALID |
                                              FlowBuilder::CT_NEW |
                                              FlowBuilder::CT_RELATED);
-                            break;
-                        case flowutils::CA_REFLEX_REV_RELATED:
-                            f.conntrackState(FlowBuilder::CT_TRACKED |
-                                             FlowBuilder::CT_RELATED,
-                                             FlowBuilder::CT_TRACKED |
-                                             FlowBuilder::CT_RELATED |
-                                             FlowBuilder::CT_ESTABLISHED |
-                                             FlowBuilder::CT_INVALID |
-                                             FlowBuilder::CT_NEW);
                             break;
                         default:
                             // nothing
@@ -250,7 +274,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                             f.action().go(nextTable);
                             break;
                         case flowutils::CA_REFLEX_REV_ALLOW:
-                        case flowutils::CA_REFLEX_REV_RELATED:
                         case flowutils::CA_ALLOW:
                             f.action().go(nextTable);
                             break;
