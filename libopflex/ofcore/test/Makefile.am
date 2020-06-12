@@ -42,6 +42,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 AM_LDFLAGS = $(BOOST_LDFLAGS)
 
 if ENABLE_TSAN
@@ -58,6 +62,10 @@ endif
 
 if ENABLE_COVERAGE
   AM_LDFLAGS += --coverage
+endif
+
+if ENABLE_GPROF
+  AM_LDFLAGS += -pg
 endif
 
 TESTS = core_test

@@ -30,6 +30,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 SUBDIRS  =
 SUBDIRS += util
 SUBDIRS += logging
@@ -142,6 +146,10 @@ endif
 
 if ENABLE_COVERAGE
   libopflex_la_LDFLAGS += --coverage
+endif
+
+if ENABLE_GPROF
+  libopflex_la_LDFLAGS += -pg
 endif
 
 pkgconfigdir = $(libdir)/pkgconfig

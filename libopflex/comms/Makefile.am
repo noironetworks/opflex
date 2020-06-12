@@ -45,6 +45,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 libcomms_la_CPPFLAGS  = $(AM_CPPFLAGS)
 
 libcomms_la_CXXFLAGS  = $(AM_CXXFLAGS)
@@ -191,6 +195,10 @@ endif
 
 if ENABLE_COVERAGE
   comms_test_LDFLAGS += --coverage
+endif
+
+if ENABLE_GPROF
+  comms_test_LDFLAGS += -pg
 endif
 
 comms_test_LDADD  =

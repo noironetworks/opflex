@@ -35,6 +35,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 liblogging_la_SOURCES = \
 	include/opflex/logging/internal/logging.hpp \
 	OFLogHandler.cpp \

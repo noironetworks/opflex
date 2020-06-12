@@ -33,6 +33,9 @@ endif
 if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
 
 AM_LDFLAGS = $(BOOST_LDFLAGS)
 if ENABLE_TSAN
@@ -46,6 +49,9 @@ if ENABLE_UBSAN
 endif
 if ENABLE_COVERAGE
   AM_LDFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  AM_LDFLAGS += -pg
 endif
 
 noinst_LTLIBRARIES =
@@ -232,6 +238,9 @@ endif
 if ENABLE_COVERAGE
   libopflex_agent_la_LDFLAGS += --coverage
 endif
+if ENABLE_GPROF
+  libopflex_agent_la_LDFLAGS += -pg
+endif
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libopflex_agent.pc
@@ -297,6 +306,9 @@ endif
 if ENABLE_COVERAGE
   librenderer_openvswitch_la_CXXFLAGS += --coverage
 endif
+if ENABLE_GPROF
+  librenderer_openvswitch_la_CXXFLAGS += -pg
+endif
   librenderer_openvswitch_la_LIBADD = \
 	$(libopflex_LIBS) \
 	$(libmodelgbp_LIBS) \
@@ -320,6 +332,9 @@ if ENABLE_UBSAN
 endif
 if ENABLE_COVERAGE
   libopflex_agent_renderer_openvswitch_la_LDFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  libopflex_agent_renderer_openvswitch_la_LDFLAGS += -pg
 endif
 endif
 
@@ -361,6 +376,9 @@ endif
 if ENABLE_COVERAGE
   gbp_inspect_CXXFLAGS += --coverage
 endif
+if ENABLE_GPROF
+  gbp_inspect_CXXFLAGS += -pg
+endif
 
 gbp_inspect_SOURCES = \
 	cmd/gbp_inspect.cpp
@@ -384,6 +402,9 @@ if ENABLE_UBSAN
 endif
 if ENABLE_COVERAGE
   mcast_daemon_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  mcast_daemon_CXXFLAGS += -pg
 endif
 
 mcast_daemon_SOURCES = \
@@ -417,6 +438,9 @@ if ENABLE_UBSAN
 endif
 if ENABLE_COVERAGE
   agent_test_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  agent_test_CXXFLAGS += -pg
 endif
 
 agent_test_includedir = $(includedir)/opflexagent/test
@@ -508,6 +532,9 @@ endif
 if ENABLE_COVERAGE
 opflex_server_CXXFLAGS += --coverage
 endif
+if ENABLE_GPROF
+opflex_server_CXXFLAGS += -pg
+endif
 
 opflex_server_SOURCES = \
 	cmd/test/include/Policies.h \
@@ -561,6 +588,9 @@ if ENABLE_ASAN
 endif
 if ENABLE_COVERAGE
   policy_repo_stress_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  policy_repo_stress_CXXFLAGS += -pg
 endif
 if ENABLE_UBSAN
   policy_repo_stress_CXXFLAGS += -fsanitize=undefined
@@ -632,6 +662,9 @@ if ENABLE_ASAN
 endif
 if ENABLE_COVERAGE
   integration_test_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  integration_test_CXXFLAGS += -pg
 endif
 if ENABLE_UBSAN
   integration_test_CXXFLAGS += -fsanitize=undefined
