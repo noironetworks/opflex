@@ -11,6 +11,7 @@
 #define OPFLEX_MOCKRPCCONNECTION_H
 
 #include "OvsdbConnection.h"
+#include <opflex/rpc/JsonRpcMessage.h>
 
 namespace opflexagent {
 
@@ -47,6 +48,24 @@ public:
      * destructor
      */
     virtual ~MockRpcConnection() {}
+
+    /**
+     * mocked implementation of send message that emulates what the
+     * real implement does
+     *
+     * @param message the message to send.  Ownership of the object
+     * passes to the connection.
+     * @param sync if true, send the message synchronously.  This can
+     * only be called if it's called from the uv loop thread.
+     */
+    virtual void sendMessage(JsonRpcMessage* message, bool sync = false) {
+        boost::scoped_ptr<JsonRpcMessage> messagep(message);
+        opflex::jsonrpc::PayloadWrapper wrapper(message);
+        yajr::internal::GenericStringQueue<rapidjson::UTF8<> > sq;
+        ::yajr::rpc::SendHandler writer;
+        writer.Reset(sq);
+        wrapper(writer);
+    }
 };
 
 }
