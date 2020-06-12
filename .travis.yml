@@ -18,6 +18,10 @@ addons:
       - python-six
       - lcov
 
+# In case we need to run perf, install the below in bionic:
+# linux-tools-common
+# linux-tools-4.15.0-72-generic
+
 before_install:
   - pip install --user cpp-coveralls
 

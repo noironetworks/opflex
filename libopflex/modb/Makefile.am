@@ -35,6 +35,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 noinst_LTLIBRARIES = libmodb.la
 
 libmodb_la_CXXFLAGS = $(UV_CFLAGS)

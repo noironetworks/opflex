@@ -37,6 +37,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 AM_LDFLAGS = $(BOOST_LDFLAGS)
 
 TESTS = cwrapper_test
@@ -60,6 +64,10 @@ endif
 
 if ENABLE_COVERAGE
   cwrapper_test_CXXFLAGS += --coverage
+endif
+
+if ENABLE_GPROF
+  cwrapper_test_CXXFLAGS += -pg
 endif
 
 cwrapper_test_LDADD = ../libcwrapper.la \

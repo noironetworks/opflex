@@ -37,6 +37,10 @@ if ENABLE_COVERAGE
   AM_CPPFLAGS += --coverage
 endif
 
+if ENABLE_GPROF
+  AM_CPPFLAGS += -pg
+endif
+
 noinst_LTLIBRARIES = libengine.la
 
 libengine_la_CXXFLAGS = $(UV_CFLAGS) $(OPENSSL_CFLAGS) $(RAPIDJSON_CFLAGS)

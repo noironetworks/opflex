@@ -107,6 +107,13 @@ AM_COND_IF([ENABLE_COVERAGE],
           [AC_MSG_NOTICE([Code coverage is enabled])],
           [AC_MSG_NOTICE([Code coverage is disabled])])
 
+dnl Create an option to build with gprof enabled
+AC_ARG_ENABLE(gprof, AC_HELP_STRING([--enable-gprof], [Enable gprof]))
+AM_CONDITIONAL(ENABLE_GPROF, [test x$enable_gprof = 'xyes'])
+AM_COND_IF([ENABLE_GPROF],
+          [AC_MSG_NOTICE([gprof is enabled])],
+          [AC_MSG_NOTICE([gprof is disabled])])
+
 dnl Create an option to build unit tests only with make check
 AC_ARG_ENABLE(tests-make-all,
               AC_HELP_STRING([--disable-tests-make-all],
