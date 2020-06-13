@@ -511,7 +511,8 @@ if RENDERER_OVS
 	ovs/test/SpanRenderer_test.cpp \
 	ovs/test/NetFlowRenderer_test.cpp \
 	ovs/test/PacketDecoder_test.cpp \
-	ovs/test/TableDropStatsManager_test.cpp
+	ovs/test/TableDropStatsManager_test.cpp \
+    ovs/test/OvsdbConnection_test.cpp
 endif
 
 opflex_server_CXXFLAGS = \

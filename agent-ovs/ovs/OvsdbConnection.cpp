@@ -81,25 +81,7 @@ void OvsdbConnection::stop() {
             conn->setConnected(true);
             p->startKeepAlive(0, 5000, 60000);
             // OVSDB monitor call
-            conn->syncMsgsRemaining = 6;
-            list<string> bridgeColumns = {"name", "ports", "netflow", "ipfix", "mirrors"};
-            auto message = new OvsdbMonitorMessage(OvsdbTable::BRIDGE, bridgeColumns, conn->getNextId());
-            conn->sendMessage(message, false);
-            list<string> portColumns = {"name", "interfaces"};
-            message = new OvsdbMonitorMessage(OvsdbTable::PORT, portColumns, conn->getNextId());
-            conn->sendMessage(message, false);
-            list<string> interfaceColumns = {"name", "type", "options"};
-            message = new OvsdbMonitorMessage(OvsdbTable::INTERFACE, interfaceColumns, conn->getNextId());
-            conn->sendMessage(message, false);
-            list<string> mirrorColumns = {"name", "select_src_port", "select_dst_port", "output_port"};
-            message = new OvsdbMonitorMessage(OvsdbTable::MIRROR, mirrorColumns, conn->getNextId());
-            conn->sendMessage(message, false);
-            list<string> netflowColumns = {"targets", "active_timeout", "add_id_to_interface"};
-            message = new OvsdbMonitorMessage(OvsdbTable::NETFLOW, netflowColumns, conn->getNextId());
-            conn->sendMessage(message, false);
-            list<string> ipfixColumns = {"targets", "sampling", "other_config"};
-            message = new OvsdbMonitorMessage(OvsdbTable::IPFIX, ipfixColumns, conn->getNextId());
-            conn->sendMessage(message, false);
+            conn->sendMonitorRequests();
         }
             break;
         case yajr::StateChange::DISCONNECT:
@@ -507,6 +489,28 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
 
 void OvsdbConnection::messagesReady() {
     uv_async_send(&writeq_async);
+}
+
+void OvsdbConnection::sendMonitorRequests() {
+    syncMsgsRemaining = 6;
+    list<string> bridgeColumns = {"name", "ports", "netflow", "ipfix", "mirrors"};
+    auto message = new OvsdbMonitorMessage(OvsdbTable::BRIDGE, bridgeColumns, getNextId());
+    sendMessage(message, false);
+    list<string> portColumns = {"name", "interfaces"};
+    message = new OvsdbMonitorMessage(OvsdbTable::PORT, portColumns, getNextId());
+    sendMessage(message, false);
+    list<string> interfaceColumns = {"name", "type", "options"};
+    message = new OvsdbMonitorMessage(OvsdbTable::INTERFACE, interfaceColumns, getNextId());
+    sendMessage(message, false);
+    list<string> mirrorColumns = {"name", "select_src_port", "select_dst_port", "output_port"};
+    message = new OvsdbMonitorMessage(OvsdbTable::MIRROR, mirrorColumns, getNextId());
+    sendMessage(message, false);
+    list<string> netflowColumns = {"targets", "active_timeout", "add_id_to_interface"};
+    message = new OvsdbMonitorMessage(OvsdbTable::NETFLOW, netflowColumns, getNextId());
+    sendMessage(message, false);
+    list<string> ipfixColumns = {"targets", "sampling", "other_config"};
+    message = new OvsdbMonitorMessage(OvsdbTable::IPFIX, ipfixColumns, getNextId());
+    sendMessage(message, false);
 }
 
 }

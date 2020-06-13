@@ -217,6 +217,11 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      */
     uint64_t getNextId() { return ++id; }
 
+    /**
+     * Send OVSDB monitor requests
+     */
+    void sendMonitorRequests();
+
 protected:
 
     /**
