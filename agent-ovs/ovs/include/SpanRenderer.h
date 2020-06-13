@@ -64,31 +64,18 @@ public:
      * @param[in] session name of mirror
      * @param[in] srcPorts source ports
      * @param[in] dstPorts dest ports
+     * @param[in] ipAddr remote destination
+     * @param[in] version erspan version
      */
-    void createMirror(const string& session, const set<string>& srcPorts, const set<string>& dstPorts);
+    void createMirrorAndOutputPort(const string& session, const set<string>& srcPorts,
+        const set<string>& dstPorts, const string& remoteIp, const uint8_t version);
 
     /**
      * deletes mirror session
      * @param[in] session name of session
      * @return true if success, false otherwise.
      */
-    void deleteMirror(const string& session);
-
-    /**
-     * add port used for erspan
-     * @param portName erspan port name
-     * @param ipAddr remote destination
-     * @param version erspan version
-     * @return true if success, false otherwise.
-     */
-    void addErspanPort(const string& portName, const string& ipAddr, const uint8_t version);
-
-    /**
-     * delete port used for erspan
-     * @param name port name
-     * @return true if success, false otherwise.
-     */
-    void deleteErspanPort(const string& name);
+    void deleteMirrorAndOutputPort(const string& session);
 
 private:
     /**

@@ -68,6 +68,18 @@ public:
         portDetail["name"] = OvsdbValue(p2);
         portDetails[p2PortUuid] = portDetail;
 
+        const string erspanPortUuid2 = "f9f42dce-44cb-1234-8920-dfc32d88ec07";
+        portDetail["uuid"] = OvsdbValue(erspanPortUuid2);
+        const string portName2(ERSPAN_PORT_PREFIX + "test");
+        portDetail["name"] = OvsdbValue(portName2);
+        portDetails[erspanPortUuid2] = portDetail;
+
+        const string erspanPortUuid3 = "f9f42dce-44cb-1234-8920-dfc32d88dd07";
+        portDetail["uuid"] = OvsdbValue(erspanPortUuid3);
+        const string portName3(ERSPAN_PORT_PREFIX + "abc");
+        portDetail["name"] = OvsdbValue(portName3);
+        portDetails[erspanPortUuid3] = portDetail;
+
         conn->getOvsdbState().fullUpdate(OvsdbTable::PORT, portDetails);
 
         OvsdbTableDetails mirrorDetails;
@@ -86,6 +98,17 @@ public:
         dstPorts[p2PortUuid];
         mirrorDetail["select_dst_port"] = OvsdbValue(Dtype::SET, "set", dstPorts);
         mirrorDetails[uuid] = mirrorDetail;
+
+        OvsdbRowDetails mirrorDetail2;
+        uuid = "922108c7-ce2d-4d46-a419-1654a5bf47ef";
+        mirrorDetail2["uuid"] = OvsdbValue(uuid);
+        const string mirrorName2("abc");
+        mirrorDetail2["name"] = OvsdbValue(mirrorName2);
+        mirrorDetail2["out_port"] = OvsdbValue(erspanPortUuid2);
+        mirrorDetail2["select_src_port"] = OvsdbValue(Dtype::SET, "set", srcPorts);
+        mirrorDetail2["select_dst_port"] = OvsdbValue(Dtype::SET, "set", dstPorts);
+        mirrorDetails[uuid] = mirrorDetail2;
+
         conn->getOvsdbState().fullUpdate(OvsdbTable::MIRROR, mirrorDetails);
 
         OvsdbTableDetails interfaceDetails;
@@ -122,27 +145,19 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
         LOG(WARNING) << "Unable to find UUID for port erspan";
         return false;
     }
-    spr->deleteErspanPort(ERSPAN_PORT_PREFIX);
 
     string sessionName("abc");
-    spr->deleteMirror(sessionName);
-
-    spr->addErspanPort(ERSPAN_PORT_PREFIX, "10.20.120.240", 1);
+    spr->deleteMirrorAndOutputPort(sessionName);
 
     set<string> src_ports = {"p1-tap", "p2-tap"};
     set<string> dst_ports = {"p1-tap", "p2-tap"};
     set<string> out_ports = {ERSPAN_PORT_PREFIX};
-    spr->createMirror("sess1", src_ports, dst_ports);
+    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1);
     return true;
 }
 
 BOOST_FIXTURE_TEST_CASE( verify_getport, SpanRendererFixture ) {
     BOOST_CHECK_EQUAL(true,verifyCreateDestroy(spr, conn));
-}
-
-BOOST_FIXTURE_TEST_CASE( verify_add_remote_port, SpanRendererFixture ) {
-    spr->addErspanPort(ERSPAN_PORT_PREFIX, "3.3.3.3", 2);
-    spr->deleteErspanPort(ERSPAN_PORT_PREFIX);
 }
 
 BOOST_FIXTURE_TEST_CASE( delete_session, SpanRendererFixture ) {

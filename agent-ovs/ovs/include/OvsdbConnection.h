@@ -74,7 +74,6 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
         if (!connected) {
             return false;
         } else {
-            LOG(WARNING) << "Check if sync is complete";
             unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
             if (!ready.wait_for(lock, std::chrono::milliseconds(WAIT_TIMEOUT),
                                 [=] { return isSyncComplete(); })) {
@@ -144,12 +143,6 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
      * @param[in] handle pointer to uv_async_t
      */
     static void connect_cb(uv_async_t* handle);
-
-    /**
-     * callback for sending requests
-     * @param[in] handle pointer to uv_async_t
-     */
-    static void send_req_cb(uv_async_t* handle);
 
     /**
      * callback for sending queued requests
@@ -242,16 +235,9 @@ private:
     }
 
     yajr::Peer* peer;
-
-    typedef struct req_cb_data_ {
-        shared_ptr<OvsdbMessage> req;
-        yajr::Peer* peer;
-    } req_cb_data;
-
     uv_loop_t* client_loop;
     opflex::util::ThreadManager threadManager;
     uv_async_t connect_async;
-    uv_async_t send_req_async;
     uv_async_t writeq_async;
     std::atomic<bool> connected;
     std::atomic<bool> syncComplete;
