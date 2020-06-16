@@ -84,6 +84,7 @@ void FSEndpointSource::updated(const fs::path& filePath) {
     static const std::string EP_PROVIDER_VLAN_FLAG("provider-vlan");
     static const std::string EP_EXT_ENCAP_TYPE("ext-encap-type");
     static const std::string EP_EXT_ENCAP_ID("ext-encap-id");
+    static const std::string EP_QOS_POL("qos-policy");
 
     static const std::string DHCP4("dhcp4");
     static const std::string DHCP6("dhcp6");
@@ -204,6 +205,26 @@ void FSEndpointSource::updated(const fs::path& filePath) {
                                            .addElement("GbpSecGroup")
                                            .addElement(secGrpName.get())
                                            .build());
+                }
+            }
+        }
+
+        optional<ptree&> qosPol =
+                properties.get_child_optional(EP_QOS_POL);
+        if(qosPol){
+            for (const ptree::value_type &v : qosPol.get()){
+                optional<string> qosPolS =
+                    v.second.get_optional<string>(SEC_GROUP_POLICY_SPACE);
+                optional<string> qosPolName =
+                    v.second.get_optional<string>(SEC_GROUP_NAME);
+                if (qosPolS && qosPolName){
+                    newep.setQosPol(opflex::modb::URIBuilder()
+                                         .addElement("PolicyUniverse")
+                                         .addElement("PolicySpace")
+                                         .addElement(qosPolS.get())
+                                         .addElement("QosRequirement")
+                                         .addElement(qosPolName.get())
+                                         .build());
                 }
             }
         }

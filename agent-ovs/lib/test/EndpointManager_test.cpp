@@ -593,7 +593,10 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
        << "],"
        << "\"attributes\":{"
        << "\"attr1\":\"value1\",\"attr2\":\"value2\""
-       << "}"
+       << "},"
+       <<"\"qos-policy\":["
+       <<"{\"policy-space\":\"sg1-space1\",\"name\":\"bw-limiter\"}"
+       <<"]"
        << "}" << std::endl;
     os.close();
 
@@ -746,6 +749,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
        << "\"endpoint-group-name\":\"epg\","
        << "\"security-group\":["
        << "{\"policy-space\":\"sg1-space1\",\"name\":\"sg1\"}"
+       << "],"
+       << "\"qos-policy\":["
+       << "{\"policy-space\":\"sg1-space1\",\"name\":\"bw-limiter\"}"
        << "],"
        << "\"attributes\":{"
        << "\"vm-name\":\"acc-veth0\""
