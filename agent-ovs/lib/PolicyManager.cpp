@@ -1932,6 +1932,7 @@ void PolicyManager::updateDomain(class_id_t class_id, const URI& uri) {
     uri_set_t notifyRds;
     uri_set_t notifyExtIntfs;
 
+    LOG(DEBUG) << "Updating cid:" << class_id << " uri:" << uri;
     if (class_id == modelgbp::gbp::EpGroup::CLASS_ID) {
         group_map[uri];
     }
