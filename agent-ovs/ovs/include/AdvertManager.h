@@ -199,8 +199,9 @@ private:
     /**
      * Synchronously send GARP for tunnel endpoints
      * @param uuid the UUID of the tunnel ep
+     * @param unicast_mode send unicast/broadcast GARPs
      */
-    void sendTunnelEpGarp(const std::string& uuid);
+    void sendTunnelEpGarp(const std::string& uuid, bool unicast_mode=false);
 
     /**
      * Synchronously send RARP for tunnel endpoints
@@ -214,6 +215,16 @@ private:
      * @param uuid the UUID of the tunnel ep
      */
     void sendTunnelEpAdvs(const std::string& uuid);
+
+    /**
+     * Get the Mac address from the ARP entry of the given IP address
+     *
+     * @param ipAddr IPv4 address of the peer.
+     * @param iface interface on which peer is reachable.
+     * @param mac output MAC address of the given peer.
+     * @return whether successful
+     */
+    int getArpMac(const string& ipAddr, const string& iface, string &mac);
 
     /**
      * Timer callback for gratuitious endpoint advertisements

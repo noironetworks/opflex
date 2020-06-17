@@ -13,6 +13,7 @@
 #include <netpacket/packet.h>
 #include <net/if.h>
 #include <linux/if_ether.h>
+#include <net/if_arp.h>
 #endif
 #include "AdvertManager.h"
 #include "Packets.h"
@@ -645,7 +646,7 @@ void AdvertManager::sendTunnelEpRarp(const string& uuid) {
     string uplinkIface;
     intFlowManager.getTunnelEpManager().getUplinkIface(uplinkIface);
     sa_ll.sll_ifindex = if_nametoindex(uplinkIface.c_str());
-    if(sa_ll.sll_ifindex < 0) {
+    if(sa_ll.sll_ifindex == 0) {
         LOG(ERROR) << "Failed to get ifindex by name " << uplinkIface <<
                 ": " << sa_ll.sll_ifindex;
         return;
@@ -679,7 +680,40 @@ void AdvertManager::sendTunnelEpRarp(const string& uuid) {
 #endif
 }
 
-void AdvertManager::sendTunnelEpGarp(const string& uuid) {
+int AdvertManager::getArpMac(const string& ipAddr, const string& uplinkIface, string &macStr) {
+    int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    struct arpreq arp_req;
+    struct sockaddr_in *sin;
+    boost::system::error_code ec;
+    memset(&arp_req, 0, sizeof(arpreq));
+    address addr = address::from_string(ipAddr, ec);
+    if(ec) {
+        LOG(ERROR) << "Invalid peer address " << ipAddr;
+        return -1;
+    }
+    unsigned addr_v4 =  htonl(addr.to_v4().to_ulong());
+    auto maxSize = strnlen(uplinkIface.c_str(), sizeof(arp_req.arp_dev)-1);
+    strncpy(arp_req.arp_dev, uplinkIface.c_str(), maxSize);
+    arp_req.arp_dev[maxSize] = '\0';
+    sin = (struct sockaddr_in *) &arp_req.arp_pa;
+    sin->sin_family = AF_INET;
+    memcpy(&sin->sin_addr, &addr_v4, 4);
+    sin = (struct sockaddr_in *) &arp_req.arp_ha;
+    sin->sin_family = ARPHRD_ETHER;
+    int err = ioctl(sockfd, SIOCGARP, &arp_req);
+    if(err != 0) {
+        LOG(WARNING) << "ioctl to get ARP failed " << strerror(err);
+        return -1;
+    } else {
+        uint8_t macBytes[ETH_ALEN];
+        memcpy(macBytes,arp_req.arp_ha.sa_data,ETH_ALEN);
+        opflex::modb::MAC opMac(macBytes);
+        macStr = opMac.toString();
+    }
+    return 0;
+}
+
+void AdvertManager::sendTunnelEpGarp(const string& uuid, bool unicast_mode) {
 #ifdef __linux__
     const std::string tunnelIp  =
             intFlowManager.getTunnelEpManager().getTerminationIp(uuid);
@@ -688,65 +722,90 @@ void AdvertManager::sendTunnelEpGarp(const string& uuid) {
     opflex::modb::MAC opMac(tunnelMac);
     uint8_t tunnelMacBytes[ETH_ALEN];
     opMac.toUIntArray(tunnelMacBytes);
-    unsigned char buf[46];
-    int sockfd;
-    ifreq ifReq;
-    memset(&ifReq, 0, sizeof(ifReq));
-    struct sockaddr_ll sa_ll;
-    memset(&sa_ll, 0, sizeof(sa_ll));
-    memset(buf, 0, 46);
-    struct arp::arp_hdr *arp_ptr = (struct arp::arp_hdr *) buf;
-    sa_ll.sll_family = htons(AF_PACKET);
-    sa_ll.sll_hatype = htons(1);
-    sa_ll.sll_halen = htons(ETH_ALEN);
+    vector<std::pair<string,string>> dstEps;
     string uplinkIface;
     intFlowManager.getTunnelEpManager().getUplinkIface(uplinkIface);
-    sa_ll.sll_ifindex = if_nametoindex(uplinkIface.c_str());
-    if(sa_ll.sll_ifindex < 0) {
+    unsigned uplinkIfindex = if_nametoindex(uplinkIface.c_str());
+    if(uplinkIfindex == 0) {
         LOG(ERROR) << "Failed to get ifindex by name " << uplinkIface <<
-                ": " << sa_ll.sll_ifindex;
+                ": " << uplinkIfindex;
         return;
     }
-    memset(sa_ll.sll_addr, 0xff, ETH_ALEN);
-    arp_ptr->htype = htons(1);
-    arp_ptr->ptype = htons(0x0800);
-    arp_ptr->hlen = ETH_ALEN;
-    arp_ptr->plen = 4;
-    unsigned char *ptr = (unsigned char *)((unsigned char *)arp_ptr + sizeof(arp::arp_hdr));
-    boost::system::error_code ec;
-    address addr = address::from_string(tunnelIp, ec);
-    if (ec || !addr.is_v4()) {
-        LOG(ERROR) << "Invalid IPv4 address: " << tunnelIp;
-        if(ec) {
-            LOG(ERROR) << ": " << ec.message();
+    if(unicast_mode) {
+        auto &framework = agent.getFramework();
+        vector<std::string> peers;
+        framework.getOpflexPeers(peers);
+        for (auto &peer:peers) {
+            string macStr;
+            if( getArpMac(peer, uplinkIface, macStr) != 0) {
+                LOG(DEBUG) << "Failed to get ARP Mac " << " for " << peer;
+                continue;
+            }
+            dstEps.push_back(std::make_pair(peer, macStr));
         }
-        return;
-    }
-    uint32_t addrv = htonl(addr.to_v4().to_ulong());
-    sockfd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ARP));
-    if(sockfd < 0) {
-        LOG(ERROR) << "Failed to create socket: " << sockfd;
-        return;
-    }
-    sa_ll.sll_protocol = htons(ETH_P_ARP);
-
-    arp_ptr->op = htons(opflexagent::arp::op::REQUEST);
-    memcpy(ptr, tunnelMacBytes, ETH_ALEN);
-    ptr+=ETH_ALEN;
-    memcpy(ptr, &addrv, 4);
-    ptr += 4;
-    memset(ptr, 0xff, ETH_ALEN);
-    ptr+=ETH_ALEN;
-    memcpy(ptr, &addrv, 4);
-    ssize_t error = sendto(sockfd, buf, 46 , htonl(SO_BROADCAST),
-            (struct sockaddr*)&sa_ll, sizeof(struct sockaddr_ll));
-    if (error < 0) {
-        LOG(ERROR) << "Could not send tunnel advertisement: "
-                   << error;
     } else {
-       LOG(DEBUG) << "Sent GARP advertisement for TunnelEp: " << tunnelMac << " " << tunnelIp;
+        dstEps.push_back(std::make_pair("255.255.255.255","ff:ff:ff:ff:ff:ff"));
     }
-    close(sockfd);
+    for(auto &peer:dstEps) {
+        unsigned char buf[46];
+        int sockfd;
+        ifreq ifReq;
+        memset(&ifReq, 0, sizeof(ifReq));
+        struct sockaddr_ll sa_ll;
+        memset(&sa_ll, 0, sizeof(sa_ll));
+        memset(buf, 0, 46);
+        struct arp::arp_hdr *arp_ptr = (struct arp::arp_hdr *) buf;
+        sa_ll.sll_family = htons(AF_PACKET);
+        sa_ll.sll_hatype = htons(1);
+        sa_ll.sll_halen = htons(ETH_ALEN);
+        sa_ll.sll_ifindex = uplinkIfindex;
+        opflex::modb::MAC peerMac(peer.second);
+        uint8_t peerMacBytes[ETH_ALEN];
+        peerMac.toUIntArray(peerMacBytes);
+        memcpy(sa_ll.sll_addr, peerMacBytes, ETH_ALEN);
+        arp_ptr->htype = htons(1);
+        arp_ptr->ptype = htons(0x0800);
+        arp_ptr->hlen = ETH_ALEN;
+        arp_ptr->plen = 4;
+        unsigned char *ptr = (unsigned char *)((unsigned char *)arp_ptr + sizeof(arp::arp_hdr));
+        boost::system::error_code ec;
+        address addr = address::from_string(tunnelIp, ec);
+        if (ec || !addr.is_v4()) {
+            LOG(ERROR) << "Invalid IPv4 address: " << tunnelIp;
+            if(ec) {
+                LOG(ERROR) << ": " << ec.message();
+            }
+            return;
+        }
+        uint32_t addrv = htonl(addr.to_v4().to_ulong());
+        sockfd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ARP));
+        if(sockfd < 0) {
+            LOG(ERROR) << "Failed to create socket: " << sockfd;
+            return;
+        }
+        sa_ll.sll_protocol = htons(ETH_P_ARP);
+
+        arp_ptr->op = htons(opflexagent::arp::op::REQUEST);
+        memcpy(ptr, tunnelMacBytes, ETH_ALEN);
+        ptr+=ETH_ALEN;
+        memcpy(ptr, &addrv, 4);
+        ptr += 4;
+        memset(ptr, 0xff, ETH_ALEN);
+        ptr+=ETH_ALEN;
+        memcpy(ptr, &addrv, 4);
+        ssize_t error = sendto(sockfd, buf, 46 , htonl(SO_BROADCAST),
+                (struct sockaddr*)&sa_ll, sizeof(struct sockaddr_ll));
+        if (error < 0) {
+            LOG(ERROR) << "Could not send tunnel advertisement: "
+                       << error;
+        } else {
+           LOG(DEBUG) << "Sent "
+                      << (unicast_mode? string("unicast"): string("broadcast"))
+                      << " GARP advertisement for TunnelEp: "
+                      << tunnelMac << " " << tunnelIp;
+        }
+        close(sockfd);
+    }
 #endif
 }
 
@@ -757,6 +816,7 @@ void AdvertManager::sendTunnelEpAdvs(const string& uuid) {
         sendTunnelEpRarp(uuid);
     } else if(tunnelEndpointAdv == AdvertManager::EPADV_GARP_RARP_BROADCAST){
         sendTunnelEpGarp(uuid);
+        sendTunnelEpGarp(uuid, true);
         sendTunnelEpRarp(uuid);
     }
 }

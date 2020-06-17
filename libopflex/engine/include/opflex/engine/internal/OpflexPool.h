@@ -349,6 +349,12 @@ public:
      */
     void getOpflexPeerStats(std::unordered_map<std::string, OF_SHARED_PTR<OFStats>>& stats);
 
+    /**
+     * Retrieve OpFlex peers
+     *
+     * @param peers vector of peer IP address
+     */
+    void getOpflexPeers(std::vector<std::string>& peers);
 private:
     HandlerFactory& factory;
     util::ThreadManager& threadManager;

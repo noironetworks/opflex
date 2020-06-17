@@ -900,6 +900,13 @@ public:
     void getOpflexPeerStats(std::unordered_map<std::string, OF_SHARED_PTR<OFStats>>& stats);
 
     /**
+     * Retrieve OpFlex peers
+     *
+     * @param peers vector of IP addresses
+     */
+    void getOpflexPeers(std::vector<std::string>& peers);
+
+    /**
      * Enable/Disable reporting of observable changes to registered observers
      *
      * @param class_id Observable class ID

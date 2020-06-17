@@ -477,6 +477,12 @@ void OpflexPool::getOpflexPeerStats(std::unordered_map<string, OF_SHARED_PTR<OFS
     }
 }
 
+void OpflexPool::getOpflexPeers(std::vector<std::string>& peers) {
+    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    BOOST_FOREACH(conn_map_t::value_type& v, connections) {
+        peers.emplace_back(v.first.first);
+    }
+}
 
 } /* namespace internal */
 } /* namespace engine */
