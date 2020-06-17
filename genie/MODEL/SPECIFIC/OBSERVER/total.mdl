@@ -1,0 +1,63 @@
+module[observer]
+{
+    # Counter to hold total of MOs
+    class[TotalCounter;
+          super=observer/Observable;
+          concrete;
+          ]
+    {
+        contained
+        {
+            parent[class=observer/SysStatUniverse]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[]
+            }
+        }
+
+        # Total number of local EPs
+        member[localEP; type=scalar/UInt64]
+
+        # Total number of external EPs
+        member[extEP; type=scalar/UInt64]
+
+        # Total number of remote EPs
+        member[remoteEP; type=scalar/UInt64]
+
+        # Total number of EPGs
+        member[EPG; type=scalar/UInt64]
+
+        # Total number of L3 Instp
+        member[L3Instp; type=scalar/UInt64]
+
+        # Total number of FDs
+        member[FD; type=scalar/UInt64]
+
+        # Total number of BDs
+        member[BD; type=scalar/UInt64]
+
+        # Total number of RDs
+        member[RD; type=scalar/UInt64]
+
+        # Total number of L3Outs
+        member[L3Out; type=scalar/UInt64]
+
+        # Total number of LoadBalancer Services
+        member[ServiceLB; type=scalar/UInt64]
+
+        # Total number of NodePort Services
+        member[ServiceNodePort; type=scalar/UInt64]
+
+        # Total number of ClusterIP Services
+        member[ServiceClusterIP; type=scalar/UInt64]
+
+        # Total number of Contracts
+        member[Contract; type=scalar/UInt64]
+
+        # Total number of Security Groups
+        member[SG; type=scalar/UInt64]
+    }
+}
