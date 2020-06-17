@@ -920,15 +920,13 @@ bool EndpointManager::updateEndpointLocal(const std::string& uuid,
 
             const optional<opflex::modb::URI>& qosPol =
                     es.endpoint->getQosPol();
-            if (qosPol){
+            if (qosPol) {
                 l2e->addEpdrEndPointToQosRSrc()
                    ->setTargetRequirement(qosPol.get());
-            }
-            else{
+            } else {
                 optional<shared_ptr<EndPointToQosRSrc>> qosRel =
-                        l2e->resolveEpdrEndPointToQosRSrc();
-                if (qosRel)
-                {
+                    l2e->resolveEpdrEndPointToQosRSrc();
+                if (qosRel) {
                     qosRel.get()->remove();
                 }
             }
