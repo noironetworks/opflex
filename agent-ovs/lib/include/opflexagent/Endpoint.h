@@ -119,6 +119,25 @@ public:
     }
 
     /**
+     * Get the set of qosPolicy labels for this endpoint
+     *
+     * @return the list of qosPolicy policy labels
+     */
+    const boost::optional<opflex::modb::URI>& getQosPol() const {
+        return qosPolicy;
+    }
+
+    /**
+     * Set the security QoSPol policy for this endpoint.  This will
+     * overwrite any existing labels
+     *
+     * @param qosPolicy the set of security labels
+     */
+    void setQosPol(const opflex::modb::URI& qosPolicy) {
+        this->qosPolicy = qosPolicy;
+    }
+
+    /**
      * Get the set of security group labels for this endpoint
      *
      * @return the list of security group labels
@@ -1313,6 +1332,7 @@ private:
     virt_ip_set virtualIps;
     boost::optional<std::string> egMappingAlias;
     boost::optional<opflex::modb::URI> egURI;
+    boost::optional<opflex::modb::URI> qosPolicy;
     /*Properties in this block are relevant for external
      endpoints only*/
     boost::optional<opflex::modb::URI> extInterfaceURI;
