@@ -1030,7 +1030,7 @@ BOOST_FIXTURE_TEST_CASE(mcast, VxlanIntFlowManagerFixture) {
     intFlowManager.configUpdated(config->getURI());
     setConnected();
 #define CHECK_MCAST                                                     \
-    WAIT_FOR_ONFAIL(readMcast(temp.string()) == expected, 500,          \
+    WAIT_FOR_ONFAIL(readMcast(temp.string()) == expected, 1000,         \
             { for (const std::string& ip : readMcast(temp.string()))    \
                     LOG(ERROR) << ip; })
     CHECK_MCAST;
@@ -1223,6 +1223,12 @@ BOOST_FIXTURE_TEST_CASE(ipMapping, VxlanIntFlowManagerFixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(routingDomainUnenforcedMode, BaseIntFlowManagerFixture) {
+    start();
+    intFlowManager.setEncapType(IntFlowManager::ENCAP_VXLAN);
+    intFlowManager.start();
+    setConnected();
+
+    agent.getPolicyManager().registerListener(&intFlowManager);
     {
         Mutator mutator(framework, policyOwner);
 
@@ -1240,12 +1246,6 @@ BOOST_FIXTURE_TEST_CASE(routingDomainUnenforcedMode, BaseIntFlowManagerFixture) 
         mutator.commit();
     }
 
-    start();
-    intFlowManager.setEncapType(IntFlowManager::ENCAP_VXLAN);
-    intFlowManager.start();
-    setConnected();
-
-    intFlowManager.egDomainUpdated(epg0->getURI());
     intFlowManager.domainUpdated(RoutingDomain::CLASS_ID, rd0->getURI());
 
     clearExpFlowTables();
@@ -1258,9 +1258,16 @@ BOOST_FIXTURE_TEST_CASE(routingDomainUnenforcedMode, BaseIntFlowManagerFixture) 
     /* Note: VRF enforced wont have POL table flow entry, which is
      * covered as part of several other tests. Not adding a separate
      * one here */
+    agent.getPolicyManager().unregisterListener(&intFlowManager);
 }
 
 BOOST_FIXTURE_TEST_CASE(remoteInventoryMode, BaseIntFlowManagerFixture) {
+    start();
+    intFlowManager.setEncapType(IntFlowManager::ENCAP_VXLAN);
+    intFlowManager.start();
+    setConnected();
+
+    agent.getPolicyManager().registerListener(&intFlowManager);
     {
         Mutator mutator(framework, policyOwner);
         config = universe->addPlatformConfig("default");
@@ -1278,13 +1285,7 @@ BOOST_FIXTURE_TEST_CASE(remoteInventoryMode, BaseIntFlowManagerFixture) {
         mutator.commit();
     }
 
-    start();
-    intFlowManager.setEncapType(IntFlowManager::ENCAP_VXLAN);
-    intFlowManager.start();
-    setConnected();
-
     /* create */
-    intFlowManager.egDomainUpdated(epg0->getURI());
     intFlowManager.domainUpdated(RoutingDomain::CLASS_ID, rd0->getURI());
 
     clearExpFlowTables();
@@ -1329,7 +1330,7 @@ BOOST_FIXTURE_TEST_CASE(remoteInventoryMode, BaseIntFlowManagerFixture) {
     initExpBd();
     initExpRd(1, false, false);
     WAIT_FOR_TABLES("complete", 500);
-
+    agent.getPolicyManager().unregisterListener(&intFlowManager);
 }
 
 void BaseIntFlowManagerFixture::remoteEndpointTest() {
