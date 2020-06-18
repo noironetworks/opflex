@@ -412,7 +412,8 @@ void OpflexPool::validatePeerSet(const peer_name_set_t& peers) {
     peer_name_set_t to_remove;
     util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
 
-    BOOST_FOREACH(const conn_map_t::value_type& cv, connections) {
+    conn_map_t conns(connections);
+    BOOST_FOREACH(const conn_map_t::value_type& cv, conns) {
         OpflexClientConnection* c = cv.second.conn;
         peer_name_t peer_name = make_pair(c->getHostname(), c->getPort());
         if (peers.find(peer_name) == peers.end() &&
