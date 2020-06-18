@@ -88,7 +88,8 @@ int main(int argc, char** argv) {
          "GRPC config file, should be in same directory as policy file")
         ("prr_interval_secs", po::value<int>()->default_value(60),
          "How often to wakeup prr thread to check for prr timeouts")
-        ;
+        ("server_port", po::value<int>()->default_value(8009),
+         "Port on which server passively listens");
 
     bool daemon = false;
     std::string log_file;
@@ -102,7 +103,7 @@ int main(int argc, char** argv) {
     std::string ssl_pass;
     std::vector<std::string> peers;
     std::vector<std::string> transport_mode_proxies;
-    int prr_interval_secs;
+    int prr_interval_secs, server_port;
 #ifdef HAVE_GRPC_SUPPORT
     std::string grpc_address;
     std::string grpc_conf_file;
@@ -164,6 +165,7 @@ int main(int argc, char** argv) {
             grpc_address = vm["grpc_address"].as<string>();
 #endif
         prr_interval_secs = vm["prr_interval_secs"].as<int>();
+        server_port = vm["server_port"].as<int>();
     } catch (const po::unknown_option& e) {
         std::cerr << e.what() << std::endl;
         return 1;
@@ -195,9 +197,10 @@ int main(int argc, char** argv) {
         for (const std::string& pstr : peers)
             peer_vec.push_back(make_pair(SERVER_ROLES, pstr));
         if (peer_vec.size() == 0)
-            peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":8009"));
+            peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":"
+                                         +std::to_string(server_port)));
 
-        GbpOpflexServer server(8009, SERVER_ROLES, peer_vec,
+        GbpOpflexServer server(server_port, SERVER_ROLES, peer_vec,
                                transport_mode_proxies,
                                modelgbp::getMetadata(),
                                prr_interval_secs);
