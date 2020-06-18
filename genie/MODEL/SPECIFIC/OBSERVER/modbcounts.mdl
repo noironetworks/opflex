@@ -1,7 +1,7 @@
 module[observer]
 {
     # Counter to hold total of MOs
-    class[TotalCounter;
+    class[ModbCounts;
           super=observer/Observable;
           concrete;
           ]
@@ -28,36 +28,36 @@ module[observer]
         member[remoteEP; type=scalar/UInt64]
 
         # Total number of EPGs
-        member[EPG; type=scalar/UInt64]
+        member[epg; type=scalar/UInt64]
 
         # Total number of L3 Instp
-        member[L3Instp; type=scalar/UInt64]
+        member[l3Instp; type=scalar/UInt64]
 
         # Total number of FDs
-        member[FD; type=scalar/UInt64]
+        member[fd; type=scalar/UInt64]
 
         # Total number of BDs
-        member[BD; type=scalar/UInt64]
+        member[bd; type=scalar/UInt64]
 
         # Total number of RDs
-        member[RD; type=scalar/UInt64]
+        member[rd; type=scalar/UInt64]
 
         # Total number of L3Outs
-        member[L3Out; type=scalar/UInt64]
+        member[l3Out; type=scalar/UInt64]
 
         # Total number of LoadBalancer Services
-        member[ServiceLB; type=scalar/UInt64]
+        member[serviceLB; type=scalar/UInt64]
 
         # Total number of NodePort Services
-        member[ServiceNodePort; type=scalar/UInt64]
+        member[serviceNodePort; type=scalar/UInt64]
 
         # Total number of ClusterIP Services
-        member[ServiceClusterIP; type=scalar/UInt64]
+        member[serviceClusterIP; type=scalar/UInt64]
 
         # Total number of Contracts
-        member[Contract; type=scalar/UInt64]
+        member[contract; type=scalar/UInt64]
 
         # Total number of Security Groups
-        member[SG; type=scalar/UInt64]
+        member[sg; type=scalar/UInt64]
     }
 }
