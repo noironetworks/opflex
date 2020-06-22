@@ -47,8 +47,6 @@ public:
     fs::path temp;
 };
 
-
-
 BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
 
     // check already existing snat file
@@ -87,21 +85,19 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
     fs::path path2(temp / "83f18f0b-80f7-46e2-b06c-4d9487b0c754.st");
     fs::ofstream os2(path2);
     os2 << "{"
-    << "\"uuid\":\"83f18f0b-80f7-46e2-b06c-4d9487b0c754\","
-    << "\"mac\":\"10:ff:00:a3:02:01\","
-    << "\"snat-ip\":[\"10.0.0.10\"],"
-    << "\"interface-name\":\"veth1\","
-    //<< "\"policy-space-name\":\"test\","
-    //<< "\"path-attachment\":\"ext_int2\","
-    //<< "\"node-attachment\":\"ext_node2\""
-    << "}" << std::endl;
+        << "\"uuid\":\"83f18f0b-80f7-46e2-b06c-4d9487b0c754\","
+        << "\"mac\":\"10:ff:00:a3:02:01\","
+        << "\"snat-ip\":[\"10.0.0.10\"],"
+        << "\"interface-name\":\"veth1\","
+        //<< "\"policy-space-name\":\"test\","
+        //<< "\"path-attachment\":\"ext_int2\","
+        //<< "\"node-attachment\":\"ext_node2\""
+        << "}" << std::endl;
     os2.close();
     
     auto snat1 = snatMgr.getSnat(uuid1);
     // WAIT_FOR(snatMgr.getSnat(uuid1), 500);
     BOOST_CHECK(snat1->getInterfaceName() == "veth1");
     watcher.stop();
-
-
 }
 }
