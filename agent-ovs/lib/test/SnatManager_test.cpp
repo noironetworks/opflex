@@ -1,5 +1,15 @@
+/* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
+/*
+ * Test suite for Snat manager
+ *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 #include <opflex/modb/ObjectListener.h>
-#include <modelgbp/ascii/StringMatchTypeEnumT.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/test/tools/assertion_result.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -24,9 +34,9 @@ namespace opflexagent {
 
     class FSSnatFixture : public BaseFixture {
     public:
-	    FSSnatFixture()
-                : BaseFixture(),
-		temp(fs::temp_directory_path() / fs::unique_path()) {
+	FSSnatFixture()
+            : BaseFixture(),
+              temp(fs::temp_directory_path() / fs::unique_path()) {
             fs::create_directory(temp);
         }
 
@@ -67,6 +77,9 @@ namespace opflexagent {
 
     close();
 
+    SnatManager& snatMgr = agent.getSnatManager();
+    WAIT_FOR(snatMgr.getSnat(uuid1), 500);
+
     FSWatcher watcher;
     FSSnatSource source(&agent.getSnatManager(), watcher,
                                     temp.string());
@@ -87,12 +100,10 @@ namespace opflexagent {
     os2.close();
     
    
-   SnatManager& snatMgr = agent.getSnatManager();
    auto snat1 = snatMgr.getSnat(uuid1);
-   WAIT_FOR(snatMgr.getSnat(uuid1)!= nullptr, 500);
+  // WAIT_FOR(snatMgr.getSnat(uuid1), 500);
    BOOST_CHECK(snat1->getInterfaceName() == "veth1");
-
-    watcher.stop();
+   watcher.stop();
 
 
 }
