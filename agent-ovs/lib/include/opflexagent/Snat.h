@@ -130,13 +130,6 @@ public:
     }
 
     /**
-     * Unset the interface MAC address for snat
-     */
-    void unsetInterfaceMAC() {
-        interfaceMac = boost::none;
-    }
-
-    /**
      * VLAN trunk tag for use on the local interface
      *
      * @return the vlan tag or boost::none if no vlan tag is set
@@ -152,13 +145,6 @@ public:
      */
     void setIfaceVlan(uint16_t ifaceVlan) {
         this->ifaceVlan = ifaceVlan;
-    }
-
-    /**
-     * Unset the interface vlan trunk tag.
-     */
-    void unsetIfaceVlan() {
-        ifaceVlan = boost::none;
     }
 
     /**
@@ -192,13 +178,6 @@ public:
      */
     void setZone(uint16_t zone) {
         this->zone = zone;
-    }
-
-    /**
-     * Unset SNAT zone
-     */
-    void unsetZone() {
-        zone = 0;
     }
 
     /**
@@ -264,13 +243,6 @@ public:
      */
     PortRangeMap getPortRangeMap() const {
         return portRangeMap;
-    }
-
-    /**
-     * Clear the list of port ranges
-     */
-    void clearPortRanges() {
-        portRangeMap.clear();
     }
 
 private:
