@@ -64,7 +64,7 @@ public:
      * @param[in] session name of mirror
      * @param[in] srcPorts source ports
      * @param[in] dstPorts dest ports
-     * @param[in] ipAddr remote destination
+     * @param[in] remoteIp remote destination
      * @param[in] version erspan version
      */
     void createMirrorAndOutputPort(const string& session, const set<string>& srcPorts,
