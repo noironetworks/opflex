@@ -72,9 +72,9 @@ void OvsdbConnection::stop() {
     threadManager.stopTask("OvsdbConnection");
 }
 
- void OvsdbConnection::on_state_change(yajr::Peer * p, void * data,
-                     yajr::StateChange::To stateChange,
-                     int error) {
+void OvsdbConnection::on_state_change(yajr::Peer * p, void * data,
+                                      yajr::StateChange::To stateChange,
+                                      int error) {
     auto* conn = (OvsdbConnection*)data;
     switch (stateChange) {
         case yajr::StateChange::CONNECT: {
@@ -228,9 +228,6 @@ bool processRowUpdate(const Value& value, OvsdbRowDetails& rowDetails) {
 }
 
 void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    payload.Accept(writer);
     if (payload.IsObject()) {
         OvsdbTableDetails tableState;
         if (payload.HasMember(OvsdbMessage::toString(OvsdbTable::BRIDGE))) {
@@ -349,9 +346,6 @@ void OvsdbConnection::handleMonitorError(uint64_t reqId, const Document& payload
 }
 
 void OvsdbConnection::handleUpdate(const Document& payload) {
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    payload.Accept(writer);
     if (payload.IsArray()) {
         if (payload[0].IsString()) {
             if (payload[1].IsObject()) {
@@ -476,14 +470,8 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                         }
                     }
                 }
-            } else {
-                LOG(WARNING) << "second elem is not an array";
             }
-        } else {
-            LOG(WARNING) << "first element in array is not a string";
         }
-    } else {
-        LOG(WARNING) << "Payload is not an array";
     }
 }
 

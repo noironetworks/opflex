@@ -60,56 +60,46 @@ BOOST_FIXTURE_TEST_CASE( verify_connect, OvsdbConnectionFixture ) {
     payload.GetAllocator().Clear();
     payload.Parse(bridgeMonitorResponse.c_str());
     conn->handleMonitor(1, payload);
-
     payload.GetAllocator().Clear();
     payload.Parse(bridgeMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
     payload.GetAllocator().Clear();
     payload.Parse(portMonitorResponse.c_str());
-    conn->handleMonitor(1, payload);
-    conn->handleUpdate(payload);
-
+    conn->handleMonitor(2, payload);
     payload.GetAllocator().Clear();
     payload.Parse(portMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
     payload.GetAllocator().Clear();
     payload.Parse(interfaceMonitorResponse.c_str());
-    conn->handleMonitor(1, payload);
-    conn->handleUpdate(payload);
-
+    conn->handleMonitor(3, payload);
     payload.GetAllocator().Clear();
     payload.Parse(interfaceMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
     payload.GetAllocator().Clear();
     payload.Parse(mirrorMonitorResponse.c_str());
-    conn->handleMonitor(1, payload);
-    conn->handleUpdate(payload);
-
+    conn->handleMonitor(4, payload);
     payload.GetAllocator().Clear();
     payload.Parse(mirrorMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
     payload.GetAllocator().Clear();
     payload.Parse(netflowMonitorResponse.c_str());
-    conn->handleMonitor(1, payload);
-    conn->handleUpdate(payload);
-
+    conn->handleMonitor(5, payload);
     payload.GetAllocator().Clear();
     payload.Parse(netflowMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
     payload.GetAllocator().Clear();
     payload.Parse(ipfixMonitorResponse.c_str());
-    conn->handleMonitor(1, payload);
-    conn->handleUpdate(payload);
-
+    conn->handleMonitor(6, payload);
     payload.GetAllocator().Clear();
     payload.Parse(ipfixMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
+    conn->stop();
 }
 BOOST_AUTO_TEST_SUITE_END()
 
