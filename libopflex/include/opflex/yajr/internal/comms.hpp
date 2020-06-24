@@ -27,6 +27,7 @@
 
 #include <sstream>  /* for basic_stringstream<> */
 #include <iostream>
+#include <atomic>
 
 #define uv_close(h, cb)                        \
     do {                                       \
@@ -259,7 +260,7 @@ class Peer : public SafeListBaseHook {
         uv_async_t kickLibuv_;
         uv_timer_t prepareAgain_;
         uint64_t lastRun_;
-        bool destroying_;
+        std::atomic<bool> destroying_;
         uint64_t refCount_;
 
         friend class Peer;
