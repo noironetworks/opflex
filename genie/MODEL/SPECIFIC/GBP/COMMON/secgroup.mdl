@@ -54,5 +54,7 @@ module[gbp]
                 cardinality=many;
                 ]
         }
+        member[order; type=scalar/UInt32]
+        member[direction; type=gbp/Direction]
     }
 }
