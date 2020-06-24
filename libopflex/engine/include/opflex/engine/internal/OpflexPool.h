@@ -335,10 +335,12 @@ public:
     }
 
     void setTunnelMac(const opflex::modb::MAC &mac) {
+        const std::lock_guard<std::mutex> lock(tunnel_mac_mutex);
         tunnelMac = mac;
     }
 
     opflex::modb::MAC getTunnelMac() {
+        const std::lock_guard<std::mutex> lock(tunnel_mac_mutex);
         return tunnelMac;
     }
 
@@ -396,6 +398,7 @@ private:
     boost::asio::ip::address_v4 ipv4_proxy;
     boost::asio::ip::address_v4 ipv6_proxy;
     boost::asio::ip::address_v4 mac_proxy;
+    std::mutex tunnel_mac_mutex;
     opflex::modb::MAC tunnelMac;
 
     uv_loop_t* client_loop;
