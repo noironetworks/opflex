@@ -128,6 +128,7 @@ void internal::Peer::LoopData::destroy(bool now) {
     destroying_ = true;
     down();
 
+    opflex::util::LockGuard guard(&peerMutex);
     for (size_t i=0; i < Peer::LoopData::TOTAL_STATES; ++i) {
         peers[Peer::LoopData::PeerState(i)]
             .clear_and_dispose(PeerDisposer(now));
