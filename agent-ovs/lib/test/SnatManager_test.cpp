@@ -58,10 +58,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
     fs::ofstream os(path1);
     os  << "{"
 	<< "\"uuid\":\"" << uuid1 << "\","
-	<< "\"interface-name\":\"bond0\","
-		//<< "\"mac\":\"10:ff:00:a3:02:01\","
-	<< "\"snat-ip\":\"1.101.1.100\","
-	<< "\"interface-mac\":\"88:1d:fc:a9:c2:ef\","
+	<< "\"interface-name\":\"veth0\","
+	<< "\"snat-ip\":\"10.0.0.1\","
+	<< "\"interface-mac\":\"10:ff:00:a4:02:01\","
 	<< "\"local\": true,"
 	<< "\"dest\":[\"0.0.0.0/0\"],"
 	<< "\"port-range\":["
@@ -69,13 +68,20 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
 	<< "\"end\":10999}"
 	<< "],"
 	<< "\"interface-vlan\": 102,"
-	<< "\"zone\":8191"
+	<< "\"zone\":8191,"
+	<< "\"remote\":["
+        << "{\"mac\":\"10:ff:00:a3:01:00\","
+        << "\"port-range\":["
+        << "{\"start\":8000,"
+        << "\"end\":10999}"
+        << "]"
+        << "}"
+        << "]"
 	<< "}" << std::endl;
     os.close();
 
     SnatManager& snatMgr = agent.getSnatManager();
    // WAIT_FOR(snatMgr.getSnat(uuid1), 500);
-	//std::cout << "snatMgr is :" << snatMgr << endl;
     FSWatcher watcher;
     FSSnatSource source(&agent.getSnatManager(), watcher,
                                     temp.string());
@@ -88,30 +94,37 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
     fs::ofstream os2(path2);
     os2 << "{"
 	<< "\"uuid\":\"00000000-0000-0000-0000-ffff01650164\","
-	<< "\"interface-name\":\"bond1\","
-		//<< "\"mac\":\"10:ff:00:a3:02:01\","
-	<< "\"snat-ip\":\"1.101.1.100\","
-	<< "\"interface-mac\":\"88:1d:fc:a9:c2:ef\","
-	<< "\"local\": true,"
-	<< "\"dest\":[\"0.0.0.0/0\"],"
-	<< "\"port-range\":["
-	<< "{\"start\":8000,"
-	<< "\"end\":10999}"
-	<< "],"
-	<< "\"interface-vlan\": 102,"
-	<< "\"zone\":8191"
-	<< "}" << std::endl;
+        << "\"interface-name\":\"veth1\","
+        << "\"snat-ip\":\"10.0.0.1\","
+        << "\"interface-mac\":\"10:ff:00:a4:02:01\","
+        << "\"local\": true,"
+        << "\"dest\":[\"0.0.0.0/0\"],"
+        << "\"port-range\":["
+        << "{\"start\":8000,"
+        << "\"end\":10999}"
+        << "],"
+        << "\"interface-vlan\": 102,"
+        << "\"zone\":8191,"
+        << "\"remote\":["
+        << "{\"mac\":\"10:ff:00:a3:01:00\","
+        << "\"port-range\":["
+        << "{\"start\":8000,"
+        << "\"end\":10999}"
+        << "]"
+        << "}"
+        << "]"
+        << "}" << std::endl;
     os2.close();
 	
-	usleep(0.1*1000*1000);
-	WAIT_FOR(agent.getSnatManager().getSnat(
+    usleep(0.1*1000*1000);
+    WAIT_FOR(agent.getSnatManager().getSnat(
             "00000000-0000-0000-0000-ffff01650164"), 500);
     
    
    auto snat1 = agent.getSnatManager().getSnat(
             "00000000-0000-0000-0000-ffff01650164");
    //WAIT_FOR(snatMgr.getSnat("00000000-0000-0000-0000-ffff01650164"), 50000);
-   BOOST_CHECK(snat1->getInterfaceName() == "bond1");
+   BOOST_CHECK(snat1->getInterfaceName() == "veth1");
    watcher.stop();
 
 
@@ -124,18 +137,25 @@ BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSSnatFixture ) {
     fs::ofstream os(path1);
     os<< "{"
 	<< "\"uuid\":\"00000000-0000-0000-0000-ffff01650165\","
-	<< "\"interface-name\":\"bond0\","
-	//<< "\"mac\":\"10:ff:00:a3:02:01\","
-	<< "\"snat-ip\":\"1.101.1.100\","
-	<< "\"interface-mac\":\"88:1d:fc:a9:c2:ef\","
-	<< "\"local\": true,"
-	<< "\"dest\":[\"0.0.0.0/0\"],"
-	<< "\"port-range\":["
-	<< "{\"start\":8000,"
-	<< "\"end\":10999}"
-	<< "],"
-	<< "\"interface-vlan\": 102,"
-	<< "\"zone\":8191"
+        << "\"interface-name\":\"veth0\","
+        << "\"snat-ip\":\"10.0.0.1\","
+        << "\"interface-mac\":\"10:ff:00:a4:02:01\","
+        << "\"local\": true,"
+        << "\"dest\":[\"0.0.0.0/0\"],"
+        << "\"port-range\":["
+        << "{\"start\":8000,"
+        << "\"end\":10999}"
+        << "],"
+        << "\"interface-vlan\": 102,"
+        << "\"zone\":8191,"
+        << "\"remote\":["
+        << "{\"mac\":\"10:ff:00:a3:01:00\","
+        << "\"port-range\":["
+        << "{\"start\":8000,"
+        << "\"end\":10999}"
+        << "]"
+        << "}"
+        << "]"
 	<< "}" << std::endl;
     os.close();
     FSWatcher watcher;
@@ -147,10 +167,10 @@ BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSSnatFixture ) {
             "00000000-0000-0000-0000-ffff01650165") != nullptr), 500);
     auto extSnat = agent.getSnatManager().getSnat(
             "00000000-0000-0000-0000-ffff01650165");
-    //BOOST_CHECK(extSnat->isExternal());
-    BOOST_CHECK(extSnat->getSnatIP() == "1.101.1.100");
+  
+    BOOST_CHECK(extSnat->getSnatIP() == "10.0.0.1");
 
-    // check for removing an endpoint
+    // check for removing a Snat
     fs::remove(path1);
 
    // usleep(1000*1000);
