@@ -21,6 +21,7 @@
 #include <opflexagent/Agent.h>
 #include <opflexagent/FSWatcher.h>
 #include <string.h>
+#include <iostream>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -28,76 +29,135 @@
 
 namespace opflexagent {
 
-using std::string;
-using boost::optional;
-namespace fs = boost::filesystem;
+    using std::string;
+    using boost::optional;
+    namespace fs = boost::filesystem;
 
-class FSSnatFixture : public BaseFixture {
-public:
-    FSSnatFixture()
-        : BaseFixture(),
-          temp(fs::temp_directory_path() / fs::unique_path()) {
-        fs::create_directory(temp);
-    }
+    class FSSnatFixture : public BaseFixture {
+    public:
+	FSSnatFixture()
+            : BaseFixture(),
+              temp(fs::temp_directory_path() / fs::unique_path()) {
+            fs::create_directory(temp);
+        }
 
-    ~FSSnatFixture() {
-        fs::remove_all(temp);
-    }
+        ~FSSnatFixture() {
+            fs::remove_all(temp);
+        }
 
-    fs::path temp;
-};
+        fs::path temp;
+    };
+
+
 
 BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
 
     // check already existing snat file
-    const std::string &uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754";
-    fs::path path1(temp / "83f18f0b-80f7-46e2-b06c-4d9487b0c754.st");
+    const std::string& uuid1 = "00000000-0000-0000-0000-ffff01650164";
+    fs::path path1(temp / "00000000-0000-0000-0000-ffff01650164.snat");
     fs::ofstream os(path1);
-    os << "{"
-       << "\"uuid\":\"" << uuid1 << "\","
-       << "\"mac\":\"10:ff:00:a3:02:01\","
-       << "\"snat-ip\":\"10.0.0.10\","
-       //<< "\"local\":[\"10.0.0.1\",\"10.0.0.2\",\"10.0.0.3\"],"
-       << "\"interface-name\":\"veth0\","
-       //<< "\"interface-mac\":\"veth0-acc\","
-       //<< "\"interface-vlan\":\"/PolicyUniverse/PolicySpace/test/GbpEpGroup/epg/\","
-       //<< "\"dest\":["
-       //<< "{\"zone\":\"sg1-space1\",\"name\":\"sg1\"},"
-       //<< "{\"port-range\":\"sg2-space2\",\"name\":\"sg2\"}"
-       //<< "],"
-       //<< "\"start\":{"
-       //<< "\"end\":\"value1\",\"attr2\":\"value2\""
-       //<< "\"remote\":\"value1\",\"attr2\":\"value2\""
-       //<< "}"
-       << "}" << std::endl;
+    os  << "{"
+	<< "\"uuid\":\"" << uuid1 << "\","
+	<< "\"interface-name\":\"bond0\","
+		//<< "\"mac\":\"10:ff:00:a3:02:01\","
+	<< "\"snat-ip\":\"1.101.1.100\","
+	<< "\"interface-mac\":\"88:1d:fc:a9:c2:ef\","
+	<< "\"local\": true,"
+	<< "\"dest\":[\"0.0.0.0/0\"],"
+	<< "\"port-range\":["
+	<< "{\"start\":8000,"
+	<< "\"end\":10999}"
+	<< "],"
+	<< "\"interface-vlan\": 102,"
+	<< "\"zone\":8191"
+	<< "}" << std::endl;
     os.close();
 
     SnatManager& snatMgr = agent.getSnatManager();
-
+   // WAIT_FOR(snatMgr.getSnat(uuid1), 500);
+	//std::cout << "snatMgr is :" << snatMgr << endl;
     FSWatcher watcher;
     FSSnatSource source(&agent.getSnatManager(), watcher,
                                     temp.string());
 
     watcher.start();
+    usleep(0.1*1000*1000);
+    WAIT_FOR(snatMgr.getSnat("00000000-0000-0000-0000-ffff01650164"), 500);
 
-    WAIT_FOR(snatMgr.getSnat(uuid1), 500);
-
-    fs::path path2(temp / "83f18f0b-80f7-46e2-b06c-4d9487b0c754.st");
+    fs::path path2(temp / "00000000-0000-0000-0000-ffff01650164.snat");
     fs::ofstream os2(path2);
     os2 << "{"
-        << "\"uuid\":\"83f18f0b-80f7-46e2-b06c-4d9487b0c754\","
-        << "\"mac\":\"10:ff:00:a3:02:01\","
-        << "\"snat-ip\":[\"10.0.0.10\"],"
-        << "\"interface-name\":\"veth1\","
-        //<< "\"policy-space-name\":\"test\","
-        //<< "\"path-attachment\":\"ext_int2\","
-        //<< "\"node-attachment\":\"ext_node2\""
-        << "}" << std::endl;
+	<< "\"uuid\":\"00000000-0000-0000-0000-ffff01650164\","
+	<< "\"interface-name\":\"bond1\","
+		//<< "\"mac\":\"10:ff:00:a3:02:01\","
+	<< "\"snat-ip\":\"1.101.1.100\","
+	<< "\"interface-mac\":\"88:1d:fc:a9:c2:ef\","
+	<< "\"local\": true,"
+	<< "\"dest\":[\"0.0.0.0/0\"],"
+	<< "\"port-range\":["
+	<< "{\"start\":8000,"
+	<< "\"end\":10999}"
+	<< "],"
+	<< "\"interface-vlan\": 102,"
+	<< "\"zone\":8191"
+	<< "}" << std::endl;
     os2.close();
+	
+	usleep(0.1*1000*1000);
+	WAIT_FOR(agent.getSnatManager().getSnat(
+            "00000000-0000-0000-0000-ffff01650164"), 500);
     
-    auto snat1 = snatMgr.getSnat(uuid1);
-    // WAIT_FOR(snatMgr.getSnat(uuid1), 500);
-    BOOST_CHECK(snat1->getInterfaceName() == "veth1");
+   
+   auto snat1 = agent.getSnatManager().getSnat(
+            "00000000-0000-0000-0000-ffff01650164");
+   //WAIT_FOR(snatMgr.getSnat("00000000-0000-0000-0000-ffff01650164"), 50000);
+   BOOST_CHECK(snat1->getInterfaceName() == "bond1");
+   watcher.stop();
+
+
+}
+
+BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSSnatFixture ) {
+
+    // check for a new Snat added to watch directory
+    fs::path path1(temp / "00000000-0000-0000-0000-ffff01650165.snat");
+    fs::ofstream os(path1);
+    os<< "{"
+	<< "\"uuid\":\"00000000-0000-0000-0000-ffff01650165\","
+	<< "\"interface-name\":\"bond0\","
+	//<< "\"mac\":\"10:ff:00:a3:02:01\","
+	<< "\"snat-ip\":\"1.101.1.100\","
+	<< "\"interface-mac\":\"88:1d:fc:a9:c2:ef\","
+	<< "\"local\": true,"
+	<< "\"dest\":[\"0.0.0.0/0\"],"
+	<< "\"port-range\":["
+	<< "{\"start\":8000,"
+	<< "\"end\":10999}"
+	<< "],"
+	<< "\"interface-vlan\": 102,"
+	<< "\"zone\":8191"
+	<< "}" << std::endl;
+    os.close();
+    FSWatcher watcher;
+    FSSnatSource source(&agent.getSnatManager(), watcher,
+                             temp.string());
+    watcher.start();
+   // usleep(1000*1000);
+    WAIT_FOR((agent.getSnatManager().getSnat(
+            "00000000-0000-0000-0000-ffff01650165") != nullptr), 500);
+    auto extSnat = agent.getSnatManager().getSnat(
+            "00000000-0000-0000-0000-ffff01650165");
+    //BOOST_CHECK(extSnat->isExternal());
+    BOOST_CHECK(extSnat->getSnatIP() == "1.101.1.100");
+
+    // check for removing an endpoint
+    fs::remove(path1);
+
+   // usleep(1000*1000);
+
+    WAIT_FOR((agent.getSnatManager().getSnat(
+            "00000000-0000-0000-0000-ffff01650165") == nullptr), 500);
+
     watcher.stop();
 }
 }
