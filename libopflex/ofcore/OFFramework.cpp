@@ -277,7 +277,7 @@ void OFFramework::clearTLMutator() {
     uv_key_set(&pimpl->mutator_key, NULL);
 }
 
-void OFFramework::getOpflexPeerStats(std::unordered_map<string, OF_SHARED_PTR<OFStats>>& stats) {
+void OFFramework::getOpflexPeerStats(std::unordered_map<string, std::shared_ptr<OFStats>>& stats) {
     engine::internal::OpflexPool& pool = pimpl->processor.getPool();
     pool.getOpflexPeerStats(stats);
 }

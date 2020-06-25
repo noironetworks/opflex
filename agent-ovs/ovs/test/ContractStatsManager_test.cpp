@@ -93,7 +93,7 @@ public:
                             uint32_t bytes,
                             bool isTx=false) override;
     void verifyRdDropPromMetrics(uint32_t pkts, uint32_t bytes);
-    void updateOFPeerStats(OF_SHARED_PTR<OFStats> opflexStats);
+    void updateOFPeerStats(std::shared_ptr<OFStats> opflexStats);
     void verifyOFPeerMetrics(const std::string& peer, uint32_t count);
 #endif
     IntFlowManager  intFlowManager;
@@ -105,7 +105,7 @@ private:
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
 void ContractStatsManagerFixture::
-updateOFPeerStats (OF_SHARED_PTR<OFStats> opflexStats)
+updateOFPeerStats (std::shared_ptr<OFStats> opflexStats)
 {
     opflexStats->incrIdentReqs();
     opflexStats->incrIdentResps();
@@ -625,7 +625,7 @@ BOOST_FIXTURE_TEST_CASE(testrDSEpgDelete, ContractStatsManagerFixture) {
 BOOST_FIXTURE_TEST_CASE(testOFPeer, ContractStatsManagerFixture) {
 
     LOG(DEBUG) << "### OfPeer start";
-    OF_SHARED_PTR<OFStats> opflexStats = OF_MAKE_SHARED<OFStats>();
+    std::shared_ptr<OFStats> opflexStats = std::make_shared<OFStats>();
     const std::string peer = "127.0.0.1:8009";
 
     updateOFPeerStats(opflexStats);

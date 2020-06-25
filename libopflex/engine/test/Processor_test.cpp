@@ -84,7 +84,7 @@ public:
 
 
 private:
-    OF_UNORDERED_MAP<int, PeerStatus> statusMap;
+    std::unordered_map<int, PeerStatus> statusMap;
     Health latestHealth;
     boost::mutex status_mutex;
 };
@@ -188,13 +188,13 @@ BOOST_FIXTURE_TEST_CASE( dereference, Fixture ) {
     URI c4u("/class4/test/");
     URI c5u("/class5/test/");
     URI c6u("/class4/test/class6/test2/");
-    OF_SHARED_PTR<ObjectInstance> oi5 = OF_MAKE_SHARED<ObjectInstance>(5);
+    std::shared_ptr<ObjectInstance> oi5 = std::make_shared<ObjectInstance>(5);
     oi5->setString(10, "test");
     oi5->addReference(11, 4, c4u);
 
-    OF_SHARED_PTR<ObjectInstance> oi4 = OF_MAKE_SHARED<ObjectInstance>(4);
+    std::shared_ptr<ObjectInstance> oi4 = std::make_shared<ObjectInstance>(4);
     oi4->setString(9, "test");
-    OF_SHARED_PTR<ObjectInstance> oi6 = OF_MAKE_SHARED<ObjectInstance>(6);
+    std::shared_ptr<ObjectInstance> oi6 = std::make_shared<ObjectInstance>(6);
     oi6->setString(13, "test2");
 
     client2->put(5, c5u, oi5);
@@ -393,17 +393,17 @@ BOOST_FIXTURE_TEST_CASE( endpoint_declare, ServerFixture ) {
     StoreClient::notif_t notifs;
 
     URI u1("/");
-    OF_SHARED_PTR<ObjectInstance> oi1 = OF_MAKE_SHARED<ObjectInstance>(1);
+    std::shared_ptr<ObjectInstance> oi1 = std::make_shared<ObjectInstance>(1);
     client1->put(1, u1, oi1);
 
     // check add
     URI u2_1("/class2/42/");
-    OF_SHARED_PTR<ObjectInstance> oi2_1 = OF_MAKE_SHARED<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi2_1 = std::make_shared<ObjectInstance>(2);
     oi2_1->setInt64(4, 42);
     client1->put(2, u2_1, oi2_1);
 
     URI u2_2("/class2/43/");
-    OF_SHARED_PTR<ObjectInstance> oi2_2 = OF_MAKE_SHARED<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi2_2 = std::make_shared<ObjectInstance>(2);
     oi2_2->setInt64(4, 43);
     client1->put(2, u2_2, oi2_2);
 
@@ -416,7 +416,7 @@ BOOST_FIXTURE_TEST_CASE( endpoint_declare, ServerFixture ) {
     StoreClient* rclient = opflexServer.getSystemClient();
     WAIT_FOR(itemPresent(rclient, 2, u2_1), 1000);
     WAIT_FOR(itemPresent(rclient, 2, u2_2), 1000);
-    OF_SHARED_PTR<const ObjectInstance> roi2_2 = rclient->get(2, u2_2);
+    std::shared_ptr<const ObjectInstance> roi2_2 = rclient->get(2, u2_2);
     BOOST_CHECK_EQUAL(43, roi2_2->getInt64(4));
 
     // check update
@@ -452,17 +452,17 @@ BOOST_FIXTURE_TEST_CASE( endpoint_declare_flaky, ServerFixture ) {
     StoreClient::notif_t notifs;
 
     URI u1("/");
-    OF_SHARED_PTR<ObjectInstance> oi1 = OF_MAKE_SHARED<ObjectInstance>(1);
+    std::shared_ptr<ObjectInstance> oi1 = std::make_shared<ObjectInstance>(1);
     client1->put(1, u1, oi1);
 
     // check add
     URI u2_1("/class2/42/");
-    OF_SHARED_PTR<ObjectInstance> oi2_1 = OF_MAKE_SHARED<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi2_1 = std::make_shared<ObjectInstance>(2);
     oi2_1->setInt64(4, 42);
     client1->put(2, u2_1, oi2_1);
 
     URI u2_2("/class2/43/");
-    OF_SHARED_PTR<ObjectInstance> oi2_2 = OF_MAKE_SHARED<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi2_2 = std::make_shared<ObjectInstance>(2);
     oi2_2->setInt64(4, 43);
     client1->put(2, u2_2, oi2_2);
 
@@ -475,7 +475,7 @@ BOOST_FIXTURE_TEST_CASE( endpoint_declare_flaky, ServerFixture ) {
     StoreClient* rclient = opflexServer.getSystemClient();
     WAIT_FOR(itemPresent(rclient, 2, u2_1), 1000);
     WAIT_FOR(itemPresent(rclient, 2, u2_2), 1000);
-    OF_SHARED_PTR<const ObjectInstance> roi2_2 = rclient->get(2, u2_2);
+    std::shared_ptr<const ObjectInstance> roi2_2 = rclient->get(2, u2_2);
     BOOST_CHECK_EQUAL(43, roi2_2->getInt64(4));
 }
 
@@ -496,17 +496,17 @@ BOOST_FIXTURE_TEST_CASE( main_loop_adaptor, SyncFixture ) {
     StoreClient::notif_t notifs;
 
     URI u1("/");
-    OF_SHARED_PTR<ObjectInstance> oi1 = OF_MAKE_SHARED<ObjectInstance>(1);
+    std::shared_ptr<ObjectInstance> oi1 = std::make_shared<ObjectInstance>(1);
     client1->put(1, u1, oi1);
 
     // check add
     URI u2_1("/class2/42/");
-    OF_SHARED_PTR<ObjectInstance> oi2_1 = OF_MAKE_SHARED<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi2_1 = std::make_shared<ObjectInstance>(2);
     oi2_1->setInt64(4, 42);
     client1->put(2, u2_1, oi2_1);
 
     URI u2_2("/class2/43/");
-    OF_SHARED_PTR<ObjectInstance> oi2_2 = OF_MAKE_SHARED<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi2_2 = std::make_shared<ObjectInstance>(2);
     oi2_2->setInt64(4, 43);
     client1->put(2, u2_2, oi2_2);
 
@@ -519,7 +519,7 @@ BOOST_FIXTURE_TEST_CASE( main_loop_adaptor, SyncFixture ) {
     StoreClient* rclient = opflexServer.getSystemClient();
     WAIT_FOR_DO(itemPresent(rclient, 2, u2_1), 1000, adaptor->runOnce());
     WAIT_FOR_DO(itemPresent(rclient, 2, u2_2), 1000, adaptor->runOnce());
-    OF_SHARED_PTR<const ObjectInstance> roi2_2 = rclient->get(2, u2_2);
+    std::shared_ptr<const ObjectInstance> roi2_2 = rclient->get(2, u2_2);
     BOOST_CHECK_EQUAL(43, roi2_2->getInt64(4));
 
     // check update
@@ -565,10 +565,10 @@ public:
 
     void setup() {
         rclient = opflexServer.getSystemClient();
-        root = OF_MAKE_SHARED<ObjectInstance>(1);
-        oi4 = OF_MAKE_SHARED<ObjectInstance>(4);
-        oi5 = OF_MAKE_SHARED<ObjectInstance>(5);
-        oi6 = OF_MAKE_SHARED<ObjectInstance>(6);
+        root = std::make_shared<ObjectInstance>(1);
+        oi4 = std::make_shared<ObjectInstance>(4);
+        oi5 = std::make_shared<ObjectInstance>(5);
+        oi6 = std::make_shared<ObjectInstance>(6);
 
         // set up the server-side store
         oi4->setString(9, "test");
@@ -595,10 +595,10 @@ public:
     URI c5u;
     URI c6u;
     StoreClient* rclient;
-    OF_SHARED_PTR<ObjectInstance> root;
-    OF_SHARED_PTR<ObjectInstance> oi4;
-    OF_SHARED_PTR<ObjectInstance> oi5;
-    OF_SHARED_PTR<ObjectInstance> oi6;
+    std::shared_ptr<ObjectInstance> root;
+    std::shared_ptr<ObjectInstance> oi4;
+    std::shared_ptr<ObjectInstance> oi5;
+    std::shared_ptr<ObjectInstance> oi6;
 };
 
 // test policy_resolve, policy_unresolve, policy_update
@@ -723,9 +723,9 @@ public:
 
     void setup() {
         rclient = opflexServer.getSystemClient();
-        oi1 = OF_MAKE_SHARED<ObjectInstance>(1);
-        oi2 = OF_MAKE_SHARED<ObjectInstance>(2);
-        oi3 = OF_MAKE_SHARED<ObjectInstance>(3);
+        oi1 = std::make_shared<ObjectInstance>(1);
+        oi2 = std::make_shared<ObjectInstance>(2);
+        oi3 = std::make_shared<ObjectInstance>(3);
 
         client1->put(1, u1, oi1);
 
@@ -750,9 +750,9 @@ public:
     URI u2;
     URI u3;
     StoreClient* rclient;
-    OF_SHARED_PTR<ObjectInstance> oi1;
-    OF_SHARED_PTR<ObjectInstance> oi2;
-    OF_SHARED_PTR<ObjectInstance> oi3;
+    std::shared_ptr<ObjectInstance> oi1;
+    std::shared_ptr<ObjectInstance> oi2;
+    std::shared_ptr<ObjectInstance> oi3;
 };
 
 // test state_report
@@ -802,9 +802,9 @@ public:
     void setup() {
         // set up the server-side store
         rclient = opflexServer.getSystemClient();
-        root = OF_MAKE_SHARED<ObjectInstance>(1);
-        oi8 = OF_MAKE_SHARED<ObjectInstance>(8);
-        oi10 = OF_MAKE_SHARED<ObjectInstance>(10);
+        root = std::make_shared<ObjectInstance>(1);
+        oi8 = std::make_shared<ObjectInstance>(8);
+        oi10 = std::make_shared<ObjectInstance>(10);
         oi8->setString(17, "test");
         oi10->setString(21, "test2");
 
@@ -815,7 +815,7 @@ public:
         rclient->addChild(8, c8u, 20, 10, c10u);
 
         // create a local reference to the remote policy object
-        oi9 = OF_MAKE_SHARED<ObjectInstance>(9);
+        oi9 = std::make_shared<ObjectInstance>(9);
         oi9->setString(18, "test");
         oi9->setReference(19, 8, c8u);
         client2->put(9, c9u, oi9);
@@ -831,10 +831,10 @@ public:
     URI c9u;
     URI c10u;
     StoreClient* rclient;
-    OF_SHARED_PTR<ObjectInstance> root;
-    OF_SHARED_PTR<ObjectInstance> oi8;
-    OF_SHARED_PTR<ObjectInstance> oi9;
-    OF_SHARED_PTR<ObjectInstance> oi10;
+    std::shared_ptr<ObjectInstance> root;
+    std::shared_ptr<ObjectInstance> oi8;
+    std::shared_ptr<ObjectInstance> oi9;
+    std::shared_ptr<ObjectInstance> oi10;
 };
 
 // test endpoint_resolve, endpoint_unresolve, endpoint_update

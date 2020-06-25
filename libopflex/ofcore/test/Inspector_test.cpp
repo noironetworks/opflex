@@ -76,16 +76,16 @@ BOOST_FIXTURE_TEST_CASE( query, InspectorFixture ) {
     URI c5u("/class5/test/");
     URI c5u_2("/class5/test2/");
     URI c6u("/class4/test/class6/test2/");
-    OF_SHARED_PTR<ObjectInstance> oi5(new ObjectInstance(5));
+    std::shared_ptr<ObjectInstance> oi5(new ObjectInstance(5));
     oi5->setString(10, "test");
     oi5->addReference(11, 4, c4u);
-    OF_SHARED_PTR<ObjectInstance> oi5_2(new ObjectInstance(5));
+    std::shared_ptr<ObjectInstance> oi5_2(new ObjectInstance(5));
     oi5_2->setString(10, "test2");
     oi5_2->addReference(11, 4, c4u);
 
-    OF_SHARED_PTR<ObjectInstance> oi4(new ObjectInstance(4));
+    std::shared_ptr<ObjectInstance> oi4(new ObjectInstance(4));
     oi4->setString(9, "test");
-    OF_SHARED_PTR<ObjectInstance> oi6(new ObjectInstance(6));
+    std::shared_ptr<ObjectInstance> oi6(new ObjectInstance(6));
     oi6->setString(13, "test2");
 
     client2->put(5, c5u, oi5);

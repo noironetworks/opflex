@@ -16,13 +16,13 @@
 #define OPFLEX_UTIL_THREADMANAGER_H
 
 #include <string>
+#include <unordered_map>
 
 #include <boost/noncopyable.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <uv.h>
 
 #include "opflex/ofcore/MainLoopAdaptor.h"
-#include "opflex/ofcore/OFTypes.h"
 
 namespace opflex {
 namespace util {
@@ -82,7 +82,7 @@ private:
 
     boost::scoped_ptr<AdaptorImpl> adaptor;
 
-    typedef OF_UNORDERED_MAP<std::string, Task> task_map_t;
+    typedef std::unordered_map<std::string, Task> task_map_t;
     task_map_t task_map;
 
     static void cleanup_func(uv_async_t* handle);

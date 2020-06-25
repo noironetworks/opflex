@@ -349,7 +349,7 @@ private:
         /**
          * Outgoing URI references
          */
-        OF_UNORDERED_SET<modb::reference_t> urirefs;
+        std::unordered_set<modb::reference_t> urirefs;
 
         /**
          * Whether the item was written locally

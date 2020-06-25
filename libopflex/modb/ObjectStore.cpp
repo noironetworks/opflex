@@ -104,7 +104,7 @@ Region* ObjectStore::getRegion(class_id_t class_id) {
     return class_map.at(class_id).region;
 }
 
-void ObjectStore::getOwners(/* out */ OF_UNORDERED_SET<std::string>& output) {
+void ObjectStore::getOwners(/* out */ std::unordered_set<std::string>& output) {
     BOOST_FOREACH(const region_owner_map_t::value_type v, region_owner_map) {
         output.insert(v.first);
     }

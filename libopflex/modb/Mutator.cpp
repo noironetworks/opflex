@@ -17,6 +17,7 @@
 
 #include <utility>
 #include <stdexcept>
+#include <unordered_set>
 
 #include <boost/foreach.hpp>
 
@@ -24,7 +25,6 @@
 #include "opflex/modb/Mutator.h"
 #include "opflex/modb/mo-internal/StoreClient.h"
 #include "opflex/modb/internal/ObjectStore.h"
-#include "opflex/ofcore/OFTypes.h"
 #include "opflex/modb/internal/Region.h"
 
 namespace opflex {
@@ -36,10 +36,10 @@ using std::make_pair;
 using mointernal::StoreClient;
 using mointernal::ObjectInstance;
 
-typedef OF_UNORDERED_SET<reference_t > uri_set_t;
-typedef OF_UNORDERED_MAP<prop_id_t, uri_set_t> prop_uri_map_t;
-typedef OF_UNORDERED_MAP<reference_t, prop_uri_map_t> uri_prop_uri_map_t;
-typedef OF_UNORDERED_MAP<URI, OF_SHARED_PTR<ObjectInstance> > obj_map_t;
+typedef std::unordered_set<reference_t > uri_set_t;
+typedef std::unordered_map<prop_id_t, uri_set_t> prop_uri_map_t;
+typedef std::unordered_map<reference_t, prop_uri_map_t> uri_prop_uri_map_t;
+typedef std::unordered_map<URI, std::shared_ptr<ObjectInstance> > obj_map_t;
 
 class Mutator::MutatorImpl {
 public:
@@ -55,7 +55,7 @@ public:
     obj_map_t obj_map;
 
     // removed objects
-    OF_UNORDERED_SET<pair<class_id_t, URI> > removed_objects;
+    std::unordered_set<pair<class_id_t, URI> > removed_objects;
 
     // added children
     uri_prop_uri_map_t added_children;
@@ -72,7 +72,7 @@ Mutator::~Mutator() {
     delete pimpl;
 }
 
-OF_SHARED_PTR<ObjectInstance>& Mutator::addChild(class_id_t parent_class,
+std::shared_ptr<ObjectInstance>& Mutator::addChild(class_id_t parent_class,
                                                   const URI& parent_uri,
                                                   prop_id_t parent_prop,
                                                   class_id_t child_class,
@@ -83,18 +83,18 @@ OF_SHARED_PTR<ObjectInstance>& Mutator::addChild(class_id_t parent_class,
     return modify(child_class, child_uri);
 }
 
-OF_SHARED_PTR<ObjectInstance>& Mutator::modify(class_id_t class_id,
+std::shared_ptr<ObjectInstance>& Mutator::modify(class_id_t class_id,
                                                const URI& uri) {
     // check for copy in mutator
     obj_map_t::iterator it = pimpl->obj_map.find(uri);
     if (it != pimpl->obj_map.end()) return it->second;
-    OF_SHARED_PTR<ObjectInstance> copy;
-    OF_SHARED_PTR<const ObjectInstance> oi;
+    std::shared_ptr<ObjectInstance> copy;
+    std::shared_ptr<const ObjectInstance> oi;
     if (pimpl->client.get(class_id, uri, oi)) {
-        copy = OF_MAKE_SHARED<ObjectInstance>(*oi.get());
+        copy = std::make_shared<ObjectInstance>(*oi.get());
     } else {
         // create new object
-        copy = OF_MAKE_SHARED<ObjectInstance>(class_id);
+        copy = std::make_shared<ObjectInstance>(class_id);
     }
 
     pair<obj_map_t::iterator, bool> r =

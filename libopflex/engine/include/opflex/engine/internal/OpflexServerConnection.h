@@ -132,7 +132,7 @@ private:
     /**
      * uri_map is a map of URIs agent is interested in
      */
-    OF_UNORDERED_MAP<opflex::modb::URI, int64_t> uri_map;
+    std::unordered_map<opflex::modb::URI, int64_t> uri_map;
     std::mutex uri_map_mutex;
 
     /**

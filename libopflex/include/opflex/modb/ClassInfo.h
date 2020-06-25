@@ -98,7 +98,7 @@ public:
     /**
      * A map from a prop_id_t to a PropertyInfo object
      */
-    typedef OF_UNORDERED_MAP<prop_id_t, PropertyInfo> property_map_t;
+    typedef std::unordered_map<prop_id_t, PropertyInfo> property_map_t;
 
     /**
      * Default constructor
@@ -191,7 +191,7 @@ private:
      */
     std::string owner;
 
-    typedef OF_UNORDERED_MAP<std::string, prop_id_t> prop_name_map_t;
+    typedef std::unordered_map<std::string, prop_id_t> prop_name_map_t;
 
     /**
      * The properties for this class

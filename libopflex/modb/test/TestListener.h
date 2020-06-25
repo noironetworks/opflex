@@ -14,6 +14,7 @@
 
 #include <mutex>
 #include <uv.h>
+#include <unordered_set>
 
 #include "opflex/modb/ObjectListener.h"
 
@@ -34,7 +35,7 @@ public:
     }
 
     std::mutex uri_mutex;
-    OF_UNORDERED_SET<URI> notifs;
+    std::unordered_set<URI> notifs;
 };
 
 // wait for a condition to become true because of an event in another

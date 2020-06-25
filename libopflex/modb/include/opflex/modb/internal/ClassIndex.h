@@ -14,6 +14,7 @@
 #ifndef MODB_CLASSINDEX_H
 #define MODB_CLASSINDEX_H
 
+#include <unordered_set>
 #include <utility>
 
 #include "opflex/modb/URI.h"
@@ -126,13 +127,13 @@ public:
      *
      * @param output an unordered_set to receive the output
      */
-    void getAll(OF_UNORDERED_SET<URI>& output) const;
+    void getAll(std::unordered_set<URI>& output) const;
 
 private:
-    typedef OF_UNORDERED_SET<URI> uri_set_t;
-    typedef OF_UNORDERED_MAP<prop_id_t, uri_set_t> prop_uri_map_t;
-    typedef OF_UNORDERED_MAP<URI, prop_uri_map_t> uri_prop_uri_map_t;
-    typedef OF_UNORDERED_MAP<URI, std::pair<URI, prop_id_t> > uri_prop_map_t;
+    typedef std::unordered_set<URI> uri_set_t;
+    typedef std::unordered_map<prop_id_t, uri_set_t> prop_uri_map_t;
+    typedef std::unordered_map<URI, prop_uri_map_t> uri_prop_uri_map_t;
+    typedef std::unordered_map<URI, std::pair<URI, prop_id_t> > uri_prop_map_t;
 
     /**
      * The child map allows us to look up all the children of this
@@ -149,7 +150,7 @@ private:
      * The instance map gives us a list of all managed objects of this
      * class index's type.
      */
-    OF_UNORDERED_SET<URI> instance_map;
+    std::unordered_set<URI> instance_map;
 
 };
 

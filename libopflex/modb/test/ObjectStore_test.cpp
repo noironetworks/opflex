@@ -63,8 +63,8 @@ BOOST_FIXTURE_TEST_CASE( metadata_init, BaseFixture ) {
 }
 
 BOOST_FIXTURE_TEST_CASE( region, BaseFixture ) {
-    OF_SHARED_PTR<ObjectInstance> oi =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(1));
+    std::shared_ptr<ObjectInstance> oi =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(1));
     oi->setUInt64(1, 42);
     oi->addString(2, "val1");
     oi->addString(2, "val2");
@@ -73,11 +73,11 @@ BOOST_FIXTURE_TEST_CASE( region, BaseFixture ) {
     client1->put(1, uri, oi);
     BOOST_CHECK_THROW(client2->put(1, uri, oi), invalid_argument);
 
-    OF_SHARED_PTR<const ObjectInstance> oi2 = client1->get(1, uri);
+    std::shared_ptr<const ObjectInstance> oi2 = client1->get(1, uri);
     BOOST_CHECK_EQUAL(42, oi2->getUInt64(1));
 
-    OF_SHARED_PTR<ObjectInstance> oi3 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(*oi2));
+    std::shared_ptr<ObjectInstance> oi3 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(*oi2));
     oi3->addString(2, "val3");
     client1->put(1, uri, oi3);
 
@@ -91,20 +91,20 @@ BOOST_FIXTURE_TEST_CASE( region, BaseFixture ) {
 }
 
 BOOST_FIXTURE_TEST_CASE( tree, BaseFixture ) {
-    OF_UNORDERED_MAP<URI, class_id_t> notifs;
+    std::unordered_map<URI, class_id_t> notifs;
 
     TestListener listener;
     db.registerListener(1, &listener);
     db.registerListener(2, &listener);
 
-    OF_SHARED_PTR<ObjectInstance> oi1 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(1));
-    OF_SHARED_PTR<ObjectInstance> oi2 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(2));
-    OF_SHARED_PTR<ObjectInstance> oi3 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(3));
-    OF_SHARED_PTR<ObjectInstance> oi4 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(2));
+    std::shared_ptr<ObjectInstance> oi1 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(1));
+    std::shared_ptr<ObjectInstance> oi2 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(2));
+    std::shared_ptr<ObjectInstance> oi3 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(3));
+    std::shared_ptr<ObjectInstance> oi4 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(2));
 
     URI uri1("/");
     URI uri2("/prop3/42");

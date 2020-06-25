@@ -454,7 +454,8 @@ void OpflexPool::addConfiguredPeers() {
     }
 }
 
-void OpflexPool::getOpflexPeerStats(std::unordered_map<string, OF_SHARED_PTR<OFStats>>& stats) {
+
+void OpflexPool::getOpflexPeerStats(std::unordered_map<string, std::shared_ptr<OFStats>>& stats) {
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(conn_map_t::value_type& v, connections) {
         const string peername = v.first.first + ":" + std::to_string(v.first.second);

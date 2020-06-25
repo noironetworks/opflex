@@ -20,8 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "opflex/ofcore/OFTypes.h"
-
 namespace opflex {
 namespace modb {
 
@@ -45,7 +43,7 @@ public:
     /**
      * Construct a URI using the given string representation
      */
-    explicit URI(const OF_SHARED_PTR<const std::string>& uri);
+    explicit URI(const std::shared_ptr<const std::string>& uri);
 
     /**
      * Construct a URI using the given string representation
@@ -84,7 +82,7 @@ public:
     static const URI ROOT;
 
 private:
-    OF_SHARED_PTR<const std::string> uri;
+    std::shared_ptr<const std::string> uri;
     size_t hashv;
 
     friend bool operator==(const URI& lhs, const URI& rhs);

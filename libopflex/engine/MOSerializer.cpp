@@ -123,8 +123,8 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
     try {
         URI uri(uriv.GetString());
         const ClassInfo& ci = store->getClassInfo(classv.GetString());
-        OF_SHARED_PTR<ObjectInstance> oi =
-            OF_MAKE_SHARED<ObjectInstance>(ci.getId(), false);
+        std::shared_ptr<ObjectInstance> oi =
+            std::make_shared<ObjectInstance>(ci.getId(), false);
         if (mo.HasMember("properties")) {
             const Value& properties = mo["properties"];
             if (properties.IsArray()) {
@@ -288,7 +288,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
         }
 
         if (replaceChildren) {
-            OF_UNORDERED_SET<string> children;
+            std::unordered_set<string> children;
             if (mo.HasMember("children")) {
                 const Value& cvs = mo["children"];
                 if (cvs.IsArray()) {
@@ -355,7 +355,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
 }
 
 static void getRoots(ObjectStore* store, Region::obj_set_t& roots) {
-    OF_UNORDERED_SET<string> owners;
+    std::unordered_set<string> owners;
     store->getOwners(owners);
     BOOST_FOREACH(const string& owner, owners) {
         try {
@@ -539,7 +539,7 @@ void MOSerializer::displayObject(std::ostream& ostream,
                                  bool utf8, size_t truncate) {
     StoreClient& client = store->getReadOnlyStoreClient();
     const modb::ClassInfo& ci = store->getClassInfo(class_id);
-    const OF_SHARED_PTR<const modb::mointernal::ObjectInstance>
+    const std::shared_ptr<const modb::mointernal::ObjectInstance>
         oi(client.get(class_id, uri));
     std::map<modb::class_id_t, std::vector<modb::URI> > children;
     typedef std::map<std::string, std::pair<bool, std::string> > dmap;
@@ -766,7 +766,7 @@ void MOSerializer::displayUnresolvedObject(std::ostream& ostream,
                                            bool utf8) {
     StoreClient& client = store->getReadOnlyStoreClient();
     const modb::ClassInfo& ci = store->getClassInfo(class_id);
-    const OF_SHARED_PTR<const modb::mointernal::ObjectInstance> oi(
+    const std::shared_ptr<const modb::mointernal::ObjectInstance> oi(
         client.get(class_id, uri));
     std::map<modb::class_id_t, std::vector<modb::URI> > children;
     size_t maxPropName = 0;

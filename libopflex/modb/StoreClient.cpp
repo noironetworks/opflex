@@ -65,14 +65,14 @@ void StoreClient::deliverNotifications(const notif_t& notifs) {
 
 void StoreClient::put(class_id_t class_id,
                       const URI& uri,
-                      const OF_SHARED_PTR<const ObjectInstance>& oi) {
+                      const std::shared_ptr<const ObjectInstance>& oi) {
     Region* r = checkOwner(store, readOnly, region, class_id);
     r->put(class_id, uri, oi);
 }
 
 bool StoreClient::putIfModified(class_id_t class_id,
                                 const URI& uri,
-                                const OF_SHARED_PTR<const ObjectInstance>& oi) {
+                                const std::shared_ptr<const ObjectInstance>& oi) {
     Region* r = checkOwner(store, readOnly, region, class_id);
     return r->putIfModified(class_id, uri, oi);
 }
@@ -82,14 +82,14 @@ bool StoreClient::isPresent(class_id_t class_id, const URI& uri) const {
     return r->isPresent(uri);
 }
 
-OF_SHARED_PTR<const ObjectInstance> StoreClient::get(class_id_t class_id,
+std::shared_ptr<const ObjectInstance> StoreClient::get(class_id_t class_id,
                                                      const URI& uri) const {
     Region* r = store->getRegion(class_id);
     return r->get(uri);
 }
 
 bool StoreClient::get(class_id_t class_id, const URI& uri,
-                      /*out*/ OF_SHARED_PTR<const ObjectInstance>& oi) const {
+                      /*out*/ std::shared_ptr<const ObjectInstance>& oi) const {
     Region *r;
     try {
         r = store->getRegion(class_id);
@@ -209,7 +209,7 @@ bool StoreClient::getParent(class_id_t child_class, const URI& child,
 }
 
 void StoreClient::getObjectsForClass(class_id_t class_id,
-                                     /* out */ OF_UNORDERED_SET<URI>& output) {
+                                     /* out */ std::unordered_set<URI>& output) {
     Region* r = store->getRegion(class_id);
     return r->getObjectsForClass(class_id, output);
 }
