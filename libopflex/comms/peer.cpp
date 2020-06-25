@@ -75,7 +75,7 @@ bool Peer::down() {
     return true;
 }
 
-uv_mutex_t Peer::LoopData::peerMutex{};
+std::recursive_mutex Peer::LoopData::peerMutex{};
 
 void Peer::insert(Peer::LoopData::PeerState peerState) {
     LOG(DEBUG3) << this << " is being inserted in " << peerState;

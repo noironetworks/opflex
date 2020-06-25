@@ -57,6 +57,7 @@ void internal::Peer::LoopData::onPrepareLoop() {
 
     uint64_t now = uv_now(prepare_.loop);
 
+    const std::lock_guard<std::recursive_mutex> lock(peerMutex);
     peers[TO_LISTEN]
         .clear_and_dispose(RetryPeer());
 
@@ -128,7 +129,7 @@ void internal::Peer::LoopData::destroy(bool now) {
     destroying_ = true;
     down();
 
-    opflex::util::LockGuard guard(&peerMutex);
+    const std::lock_guard<std::recursive_mutex> lock(peerMutex);
     for (size_t i=0; i < Peer::LoopData::TOTAL_STATES; ++i) {
         peers[Peer::LoopData::PeerState(i)]
             .clear_and_dispose(PeerDisposer(now));
@@ -246,6 +247,7 @@ Peer::LoopData::~LoopData() {
 
     LOG(DEBUG1) << this << " is being deleted" ;
 
+    const std::lock_guard<std::recursive_mutex> lock(peerMutex);
     for (size_t i=0; i < Peer::LoopData::TOTAL_STATES; ++i) {
         assert(peers[Peer::LoopData::PeerState(i)].empty());
         /* delete all peers for final builds */
