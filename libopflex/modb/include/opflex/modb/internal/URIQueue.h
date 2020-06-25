@@ -14,6 +14,7 @@
 #ifndef MODB_URIQUEUE_H
 #define MODB_URIQUEUE_H
 
+#include <mutex>
 #include <boost/atomic.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
@@ -131,7 +132,7 @@ private:
      */
     item_queue_t item_queue;
     uv_loop_t* item_loop;
-    uv_mutex_t item_mutex;
+    std::mutex item_mutex;
     uv_async_t item_async;
     uv_async_t cleanup_async;
 

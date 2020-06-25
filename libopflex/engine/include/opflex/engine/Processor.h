@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <utility>
+#include <mutex>
 
 #include <boost/atomic.hpp>
 #include <boost/multi_index_container.hpp>
@@ -490,7 +491,7 @@ private:
      * Store and index the state of managed objects
      */
     object_state_t obj_state;
-    uv_mutex_t item_mutex;
+    std::mutex item_mutex;
 
     /**
      * Processing delay to allow batching updates

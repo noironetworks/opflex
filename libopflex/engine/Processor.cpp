@@ -26,7 +26,6 @@
 #include "opflex/engine/internal/OpflexPEHandler.h"
 #include "opflex/engine/internal/ProcessorMessage.h"
 #include "opflex/engine/Processor.h"
-#include "opflex/util/LockGuard.h"
 #include "opflex/logging/internal/logging.hpp"
 
 namespace opflex {
@@ -67,12 +66,10 @@ Processor::Processor(ObjectStore* store_, ThreadManager& threadManager_)
       processingDelay(DEFAULT_PROC_DELAY),
       retryDelay(DEFAULT_RETRY_DELAY),
       proc_active(false) {
-    uv_mutex_init(&item_mutex);
 }
 
 Processor::~Processor() {
     stop();
-    uv_mutex_destroy(&item_mutex);
 }
 
 // get the current time in milliseconds since something
@@ -156,7 +153,7 @@ void Processor::removeRef(obj_state_by_exp::iterator& it,
 }
 
 size_t Processor::getRefCount(const URI& uri) {
-    util::LockGuard guard(&item_mutex);
+    const std::lock_guard<std::mutex> lock(item_mutex);
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
     obj_state_by_uri::iterator uit = uri_index.find(uri);
     if (uit != uri_index.end()) {
@@ -166,7 +163,7 @@ size_t Processor::getRefCount(const URI& uri) {
 }
 
 bool Processor::isObjNew(const URI& uri) {
-    util::LockGuard guard(&item_mutex);
+    const std::lock_guard<std::mutex> lock(item_mutex);
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
     obj_state_by_uri::iterator uit = uri_index.find(uri);
     if (uit != uri_index.end()) {
@@ -354,7 +351,7 @@ bool Processor::declareObj(ClassInfo::class_type_t type, const item& i,
 void Processor::processItem(obj_state_by_exp::iterator& it) {
     StoreClient::notif_t notifs;
 
-    util::LockGuard guard(&item_mutex);
+    std::unique_lock<std::mutex> guard(item_mutex);
     ItemState curState = it->details->state;
     size_t curRefCount = it->details->refcount;
     bool local = it->details->local;
@@ -527,7 +524,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
         exp_index.modify(it, Processor::change_expiration(newexp));
     }
 
-    guard.release();
+    guard.unlock();
 
     if (!notifs.empty())
         client->deliverNotifications(notifs);
@@ -538,7 +535,7 @@ void Processor::doProcess() {
     uint32_t proc_count = 0;
     while (proc_active) {
         {
-            util::LockGuard guard(&item_mutex);
+            const std::lock_guard<std::mutex> lock(item_mutex);
             if (!hasWork(it))
                 break;
         }
@@ -615,7 +612,7 @@ void Processor::stop() {
 
     LOG(DEBUG) << "Stopping OpFlex Processor";
     {
-        util::LockGuard guard(&item_mutex);
+        const std::lock_guard<std::mutex> lock(item_mutex);
         proc_active = false;
     }
 
@@ -629,7 +626,7 @@ void Processor::stop() {
 
 void Processor::objectUpdated(modb::class_id_t class_id,
                               const modb::URI& uri) {
-    util::LockGuard guard(&item_mutex);
+    const std::lock_guard<std::mutex> lock(item_mutex);
     if (!proc_active) return;
 
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
@@ -714,7 +711,7 @@ OpflexHandler* Processor::newHandler(OpflexConnection* conn) {
 }
 
 void Processor::handleNewConnections() {
-    util::LockGuard guard(&item_mutex);
+    const std::lock_guard<std::mutex> lock(item_mutex);
     BOOST_FOREACH(const item& i, obj_state) {
         uint64_t newexp = 0;
         const ClassInfo& ci = store->getClassInfo(i.details->class_id);
@@ -732,7 +729,7 @@ void Processor::connectionReady(OpflexConnection* conn) {
 }
 
 void Processor::responseReceived(uint64_t reqId) {
-    util::LockGuard guard(&item_mutex);
+    const std::lock_guard<std::mutex> lock(item_mutex);
     obj_state_by_xid& xid_index = obj_state.get<xid_tag>();
     obj_state_by_xid::iterator xi0,xi1;
     boost::tuples::tie(xi0,xi1)=xid_index.equal_range(reqId);

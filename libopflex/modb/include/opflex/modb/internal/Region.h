@@ -14,6 +14,7 @@
 #ifndef MODB_REGION_H
 #define MODB_REGION_H
 
+#include <mutex>
 #include <string>
 #include <uv.h>
 
@@ -250,7 +251,7 @@ private:
     /**
      * Mutex for serializing access to the region
      */
-    uv_mutex_t region_mutex;
+    std::mutex region_mutex;
 
     typedef std::unordered_map<class_id_t, ClassIndex> class_map_t;
     typedef std::unordered_map <URI,

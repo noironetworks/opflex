@@ -23,8 +23,6 @@
 #include "opflex/engine/internal/OpflexListener.h"
 #include "opflex/engine/internal/OpflexPool.h"
 #include "opflex/logging/internal/logging.hpp"
-#include "opflex/util/RecursiveLockGuard.h"
-
 #include <opflex/yajr/internal/comms.hpp>
 
 namespace opflex {
@@ -32,7 +30,6 @@ namespace engine {
 namespace internal {
 
 using std::string;
-using util::LockGuard;
 using yajr::transport::ZeroCopyOpenSSL;
 
 OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
@@ -41,8 +38,6 @@ OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
                                const std::string& domain_)
     : handlerFactory(handlerFactory_), port(port_),
       name(name_), domain(domain_), active(true) {
-    uv_mutex_init(&conn_mutex);
-    uv_key_create(&conn_mutex_key);
 }
 
 OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
@@ -51,13 +46,9 @@ OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
                                const std::string& domain_)
     : handlerFactory(handlerFactory_), socketName(socketName_),
       port(0), name(name_), domain(domain_), active(true) {
-    uv_mutex_init(&conn_mutex);
-    uv_key_create(&conn_mutex_key);
 }
 
 OpflexListener::~OpflexListener() {
-    uv_key_delete(&conn_mutex_key);
-    uv_mutex_destroy(&conn_mutex);
 }
 
 void OpflexListener::enableSSL(const std::string& caStorePath,
@@ -79,8 +70,7 @@ void OpflexListener::on_cleanup_async(uv_async_t* handle) {
     OpflexListener* listener = (OpflexListener*)handle->data;
 
     {
-        util::RecursiveLockGuard guard(&listener->conn_mutex,
-                                       &listener->conn_mutex_key);
+        const std::lock_guard<std::recursive_mutex> lock(listener->conn_mutex);
         conn_set_t conns(listener->conns);
         BOOST_FOREACH(OpflexServerConnection* conn, conns) {
             conn->close();
@@ -95,8 +85,7 @@ void OpflexListener::on_cleanup_async(uv_async_t* handle) {
 
 void OpflexListener::on_writeq_async(uv_async_t* handle) {
     OpflexListener* listener = (OpflexListener*)handle->data;
-    util::RecursiveLockGuard guard(&listener->conn_mutex,
-                                   &listener->conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(listener->conn_mutex);
     BOOST_FOREACH(OpflexServerConnection* conn, listener->conns) {
         conn->processWriteQueue();
     }
@@ -160,8 +149,7 @@ void* OpflexListener::on_new_connection(yajr::Listener* ylistener,
     }
 
     OpflexListener* listener = (OpflexListener*)data;
-    util::RecursiveLockGuard guard(&listener->conn_mutex,
-                                   &listener->conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(listener->conn_mutex);
     boost::unique_lock<boost::mutex> serverConnGuard(serverConnectionMutex);
     OpflexServerConnection* conn = new OpflexServerConnection(listener);
     listener->conns.insert(conn);
@@ -169,17 +157,17 @@ void* OpflexListener::on_new_connection(yajr::Listener* ylistener,
 }
 
 void OpflexListener::connectionClosed(OpflexServerConnection* conn) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    std::unique_lock<std::recursive_mutex> guard(conn_mutex);
     conns.erase(conn);
     delete conn;
-    guard.release();
+    guard.unlock();
     if (!active)
         uv_async_send(&cleanup_async);
 }
 
 void OpflexListener::sendToAll(OpflexMessage* message) {
     boost::scoped_ptr<OpflexMessage> messagep(message);
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (!active) return;
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
         // this is inefficient but we only use this for testing
@@ -189,7 +177,7 @@ void OpflexListener::sendToAll(OpflexMessage* message) {
 
 void OpflexListener::sendToOne(OpflexServerConnection* conn, OpflexMessage* message) {
     boost::scoped_ptr<OpflexMessage> messagep(message);
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (!active) return;
     conn->sendMessage(message->clone());
 }
@@ -221,7 +209,7 @@ void OpflexListener::sendTimeouts() {
 }
 
 bool OpflexListener::applyConnPred(conn_pred_t pred, void* user) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
         if (!pred(conn, user)) return false;
     }

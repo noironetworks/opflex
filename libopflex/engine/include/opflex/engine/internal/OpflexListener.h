@@ -11,6 +11,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <mutex>
 #include <set>
 #include <netinet/in.h>
 #include <boost/atomic.hpp>
@@ -197,8 +198,7 @@ private:
 
     yajr::Listener* listener;
 
-    uv_mutex_t conn_mutex;
-    uv_key_t conn_mutex_key;
+    std::recursive_mutex conn_mutex;
     typedef std::set<OpflexServerConnection*> conn_set_t;
     conn_set_t conns;
 
