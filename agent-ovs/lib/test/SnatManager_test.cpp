@@ -15,9 +15,7 @@
 #include <opflexagent/test/BaseFixture.h>
 #include <opflexagent/Snat.h>
 #include <opflexagent/SnatManager.h>
-#include <opflexagent/Agent.h>
 #include <opflexagent/FSWatcher.h>
-#include <string.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
