@@ -362,11 +362,7 @@ private:
     /** location string for this policy element */
     boost::optional<std::string> location;
 
-#ifdef HAVE_CXX11
     std::unique_ptr<yajr::transport::ZeroCopyOpenSSL::Ctx> clientCtx;
-#else
-    std::auto_ptr<yajr::transport::ZeroCopyOpenSSL::Ctx> clientCtx;
-#endif
 
     uv_mutex_t conn_mutex;
     uv_key_t conn_mutex_key;

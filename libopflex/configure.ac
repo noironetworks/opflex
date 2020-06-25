@@ -129,7 +129,7 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
 AC_LANG([C++])
-AX_CXX_COMPILE_STDCXX([11], [noext], [optional])
+AX_CXX_COMPILE_STDCXX([11], [ext], [mandatory])
 
 dnl check for compiler flags
 AX_CHECK_COMPILE_FLAG([-Wno-multichar],

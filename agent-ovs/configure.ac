@@ -79,7 +79,7 @@ AC_PROG_INSTALL
 AM_PROG_AS
 AC_LANG([C])
 AC_LANG([C++])
-AX_CXX_COMPILE_STDCXX([11], [ext], [mandatory])
+AX_CXX_COMPILE_STDCXX([14], [ext], [mandatory])
 
 # check for doxygen
 AC_CHECK_PROGS(DOXYGEN,doxygen,none)

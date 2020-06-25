@@ -369,22 +369,6 @@ void act_macvlan_learn(struct ofpbuf* ofpacts,
     ofpact_finish_LEARN(ofpacts, &learn);
 }
 
-uint32_t get_output_reg_value(const struct ofpact* ofpacts,
-                              size_t ofpacts_len) {
-    const struct ofpact* a;
-    OFPACT_FOR_EACH (a, ofpacts, ofpacts_len) {
-        if (a->type == OFPACT_SET_FIELD) {
-            struct ofpact_set_field* sf = ofpact_get_SET_FIELD(a);
-            const struct mf_field *mf = sf->field;
-            if (mf->id == MFF_REG7) {
-                return ntohl(*((ovs_be32*)&sf->value));
-                break;
-            }
-        }
-    }
-    return OFPP_NONE;
-}
-
 struct dp_packet* alloc_dpp() {
     return (struct dp_packet*)malloc(sizeof(struct dp_packet));
 }

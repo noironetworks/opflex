@@ -16,6 +16,7 @@ noinst_LTLIBRARIES += liblogging.la
 AM_CPPFLAGS = \
 	-Wall \
 	-Werror \
+	-std=c++11 \
 	-I$(srcdir)/include \
 	-I$(top_srcdir)/include
 

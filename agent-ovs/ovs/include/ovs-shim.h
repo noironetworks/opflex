@@ -245,12 +245,6 @@ extern "C" {
             int regId, const void* regValue, const void* mask);
 
     /**
-     * Get the value of the output reg action
-     */
-    uint32_t get_output_reg_value(const struct ofpact* ofpacts,
-                                  size_t ofpacts_len);
-
-    /**
      * malloc a dp_packet
      */
     struct dp_packet* alloc_dpp();
