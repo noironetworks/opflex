@@ -393,7 +393,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
         break;
     }
 
-    OF_SHARED_PTR<const ObjectInstance> oi;
+    std::shared_ptr<const ObjectInstance> oi;
     if (!client->get(it->details->class_id, it->uri, oi)) {
         // item removed
         switch (curState) {
@@ -440,7 +440,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     // check for references to other objects and update the reference
     // count.  Create a new state object or clear the object as
     // needed.
-    OF_UNORDERED_SET<reference_t> visited;
+    std::unordered_set<reference_t> visited;
     if (oi && ci.getType() != ClassInfo::REVERSE_RELATIONSHIP) {
         BOOST_FOREACH(const ClassInfo::property_map_t::value_type& p,
                       ci.getProperties()) {
@@ -464,7 +464,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
             }
         }
     }
-    OF_UNORDERED_SET<reference_t> existing(it->details->urirefs);
+    std::unordered_set<reference_t> existing(it->details->urirefs);
     BOOST_FOREACH(const reference_t& up, existing) {
         if (visited.find(up) == visited.end()) {
             removeRef(it, up);
@@ -639,7 +639,7 @@ void Processor::objectUpdated(modb::class_id_t class_id,
 
     bool present;
     bool local = false;
-    OF_SHARED_PTR<const ObjectInstance> oi;
+    std::shared_ptr<const ObjectInstance> oi;
     if ((present = client->get(class_id, uri, oi))) {
         local = oi->isLocal();
     }
@@ -737,7 +737,7 @@ void Processor::responseReceived(uint64_t reqId) {
     obj_state_by_xid::iterator xi0,xi1;
     boost::tuples::tie(xi0,xi1)=xid_index.equal_range(reqId);
 
-    OF_UNORDERED_SET<URI> items;
+    std::unordered_set<URI> items;
     while (xi0 != xi1) {
         items.insert(xi0->uri);
         xi0++;

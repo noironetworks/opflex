@@ -18,7 +18,6 @@
 
 #include "opflex/modb/URI.h"
 #include "opflex/modb/mo-internal/ObjectInstance.h"
-#include "opflex/ofcore/OFTypes.h"
 
 namespace opflex {
 
@@ -92,7 +91,7 @@ public:
      * @param class_id the class ID for the object
      * @param uri The URI for the object
      */
-    OF_SHARED_PTR<mointernal::ObjectInstance>& modify(class_id_t class_id,
+    std::shared_ptr<mointernal::ObjectInstance>& modify(class_id_t class_id,
                                                       const URI& uri);
 
     /**
@@ -117,7 +116,7 @@ public:
      * @param child_class the class ID of the child
      * @param child_uri the URI of the child
      */
-    OF_SHARED_PTR<mointernal
+    std::shared_ptr<mointernal
                   ::ObjectInstance>& addChild(class_id_t parent_class,
                                               const URI& parent_uri,
                                               prop_id_t parent_prop,

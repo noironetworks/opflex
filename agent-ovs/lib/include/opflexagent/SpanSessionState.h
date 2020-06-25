@@ -13,6 +13,8 @@
 #ifndef OPFLEX_SPANSESSIONSTATE_H
 #define OPFLEX_SPANSESSIONSTATE_H
 
+#include <unordered_set>
+
 #include <opflex/modb/URI.h>
 #include <modelgbp/gbp/DirectionEnumT.hpp>
 #include <modelgbp/platform/AdminStateEnumT.hpp>

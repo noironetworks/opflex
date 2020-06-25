@@ -263,7 +263,7 @@ namespace opflexagent {
     void SpanManager::processEpGroup(const URI& uri, unsigned char dir) {
         LOG(DEBUG) << "Epg uri " << uri;
         // get the local end points that are part of this EP group
-        std::vector<OF_SHARED_PTR<modelgbp::epr::L2Ep>> out;
+        std::vector<std::shared_ptr<modelgbp::epr::L2Ep>> out;
         optional<shared_ptr<L2Universe>> l2u = L2Universe::resolve(framework);
         l2u.get()->resolveEprL2Ep(out);
         vector<shared_ptr<L2Ep>> l2EpVec;
@@ -288,7 +288,7 @@ namespace opflexagent {
         // get the span sessions associated with this EP group and
         // add L2Ep to the source end point list for each session.
         shared_ptr<modelgbp::gbp::EpGroup> lEpGrp = oEpGrp.get();
-        std::vector<OF_SHARED_PTR<modelgbp::gbp::EpGroupToSpanSessionRSrc>> vGrpToSess;
+        std::vector<std::shared_ptr<modelgbp::gbp::EpGroupToSpanSessionRSrc>> vGrpToSess;
         lEpGrp->resolveGbpEpGroupToSpanSessionRSrc(vGrpToSess);
         for (auto& sesRsrc : vGrpToSess) {
             unordered_map<opflex::modb::URI, shared_ptr<SessionState>>::iterator it;
@@ -421,7 +421,7 @@ namespace opflexagent {
             URI egUri(l2Ep->getGroup().get());
             boost::optional<shared_ptr<EpGroup>> epgOpt = getEpgIfPartOfSession(egUri);
             if (epgOpt) {
-                std::vector<OF_SHARED_PTR<modelgbp::gbp::EpGroupToSpanSessionRSrc>> vGrpToSess;
+                std::vector<std::shared_ptr<modelgbp::gbp::EpGroupToSpanSessionRSrc>> vGrpToSess;
                 epgOpt->get()->resolveGbpEpGroupToSpanSessionRSrc(vGrpToSess);
                 for (auto& sesRsrc : vGrpToSess) {
                     auto it = sess_map.find(sesRsrc->getTargetURI().get());

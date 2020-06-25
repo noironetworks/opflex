@@ -75,7 +75,7 @@ void InterfaceStatsManagerFixture::verifyCounters(uint64_t *dummy_stats,
     epMgr.getEndpointsByIface(intPortName, endpoints);
     optional<shared_ptr<EpStatUniverse> > su =
                                 EpStatUniverse::resolve(framework);
-    std::vector<OF_SHARED_PTR<modelgbp::gbpe::EpCounter> > epCounters;
+    std::vector<std::shared_ptr<modelgbp::gbpe::EpCounter> > epCounters;
 
     for (const std::string& uuid : endpoints) { // assuming only one entry
 

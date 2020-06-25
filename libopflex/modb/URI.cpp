@@ -40,14 +40,14 @@ using boost::copy_range;
 
 const URI URI::ROOT("/");
 
-URI::URI(const OF_SHARED_PTR<const std::string>& uri_)
+URI::URI(const std::shared_ptr<const std::string>& uri_)
     : uri(uri_) {
     hashv = 0;
     boost::hash_combine(hashv, *uri);
 }
 
 URI::URI(const std::string& uri_) {
-    uri = OF_MAKE_SHARED<const std::string>(uri_);
+    uri = std::make_shared<const std::string>(uri_);
 
     hashv = 0;
     boost::hash_combine(hashv, uri_);

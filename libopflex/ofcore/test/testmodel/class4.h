@@ -111,7 +111,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    static boost::optional<OF_SHARED_PTR<class4> >
+    static boost::optional<std::shared_ptr<class4> >
     resolve(opflex::ofcore::OFFramework& framework,
             const opflex::modb::URI& uri) {
         return opflex::modb::mointernal
@@ -133,7 +133,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    static boost::optional<OF_SHARED_PTR<class4> >
+    static boost::optional<std::shared_ptr<class4> >
     resolve(opflex::ofcore::OFFramework& framework,
             const std::string& prop9Value) {
         return resolve(framework,
@@ -225,7 +225,7 @@ public:
      */
     class4(opflex::ofcore::OFFramework& framework,
            const opflex::modb::URI& uri,
-           const OF_SHARED_PTR<const opflex::modb
+           const std::shared_ptr<const opflex::modb
               ::mointernal::ObjectInstance>& oi)
         : MO(framework, CLASS_ID, uri, oi) { }
 };

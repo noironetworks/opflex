@@ -113,7 +113,7 @@ public:
         if (genId % 10 != 0) return; // reduce the frequency of faults
 
         auto l2u = modelgbp::epr::L2Universe::resolve(a.getFramework());
-        std::vector<OF_SHARED_PTR<modelgbp::epr::L2Ep> > l2Eps;
+        std::vector<std::shared_ptr<modelgbp::epr::L2Ep> > l2Eps;
         l2u.get()->resolveEprL2Ep(l2Eps);
         if (l2Eps.empty())
         {

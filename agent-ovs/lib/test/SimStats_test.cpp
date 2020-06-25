@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(interface_counters, SimStatsFixture ) {
     simStats.updateInterfaceCounters();
 }
 
-static bool hasConsContracts(const shared_ptr<EpGroup>& epg, std::vector<OF_SHARED_PTR<EpGroupToConsContractRSrc> > consRefs) {
+static bool hasConsContracts(const shared_ptr<EpGroup>& epg, std::vector<std::shared_ptr<EpGroupToConsContractRSrc> > consRefs) {
     epg->resolveGbpEpGroupToConsContractRSrc(consRefs);
     return !consRefs.empty();
 }
@@ -101,7 +101,7 @@ BOOST_FIXTURE_TEST_CASE(contract_counters, SimStatsFixture ) {
     simStats.contractUpdated(simContract->getURI());
     WAIT_FOR(simSpace->resolveGbpEpGroup("b"), 500);
     auto epgB = simSpace->resolveGbpEpGroup("b");
-    std::vector<OF_SHARED_PTR<EpGroupToConsContractRSrc> > consRefs;
+    std::vector<std::shared_ptr<EpGroupToConsContractRSrc> > consRefs;
     WAIT_FOR(hasConsContracts(epgB.get(), consRefs), 500);
     list<shared_ptr<PolicyRule> > rules;
     WAIT_FOR(hasRules(agent.getPolicyManager(), simContract, rules), 500);
