@@ -2925,7 +2925,7 @@ void PrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
 
 /* Function called from PolicyStatsManager to update OFPeerStats */
 void PrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
-                                               const OF_SHARED_PTR<OFStats> stats)
+                                               const std::shared_ptr<OFStats> stats)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(ofpeer_stats_mutex);

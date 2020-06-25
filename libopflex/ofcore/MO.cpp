@@ -30,7 +30,7 @@ public:
     MOImpl(OFFramework& framework_,
            class_id_t class_id_,
            const URI& uri_,
-           const OF_SHARED_PTR<const ObjectInstance>& oi_)
+           const std::shared_ptr<const ObjectInstance>& oi_)
         : framework(framework_),
           class_id(class_id_), uri(uri_), oi(oi_){ }
 
@@ -56,7 +56,7 @@ public:
     /**
      * Object instance for this managed object
      */
-    OF_SHARED_PTR<const modb::mointernal::ObjectInstance> oi;
+    std::shared_ptr<const modb::mointernal::ObjectInstance> oi;
 
     friend bool operator==(const MO& lhs, const MO& rhs);
 };
@@ -64,7 +64,7 @@ public:
 MO::MO(OFFramework& framework,
        class_id_t class_id,
        const URI& uri,
-       const OF_SHARED_PTR<const ObjectInstance>& oi)
+       const std::shared_ptr<const ObjectInstance>& oi)
     : pimpl(new MOImpl(framework, class_id, uri, oi)) {
 
 }
@@ -93,7 +93,7 @@ StoreClient& MO::getStoreClient(OFFramework& framework) {
     return framework.getStore().getReadOnlyStoreClient();
 }
 
-OF_SHARED_PTR<const ObjectInstance> MO::resolveOI(OFFramework& framework,
+std::shared_ptr<const ObjectInstance> MO::resolveOI(OFFramework& framework,
                                                   class_id_t class_id,
                                                   const URI& uri) {
     return MO::getStoreClient(framework).get(class_id, uri);

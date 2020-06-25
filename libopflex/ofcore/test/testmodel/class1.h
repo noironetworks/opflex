@@ -191,7 +191,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    static boost::optional<OF_SHARED_PTR<class1> >
+    static boost::optional<std::shared_ptr<class1> >
     resolve(opflex::ofcore::OFFramework& framework,
             const opflex::modb::URI& uri) {
         return opflex::modb::mointernal
@@ -210,7 +210,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    static boost::optional<OF_SHARED_PTR<class1> >
+    static boost::optional<std::shared_ptr<class1> >
     resolve(opflex::ofcore::OFFramework& framework) {
         return resolve(framework,
                        opflex::modb::URI::ROOT);
@@ -225,7 +225,7 @@ public:
      * @throws std::logic_error if no mutator is active
      * @see opflex::modb::Mutator
      */
-    static OF_SHARED_PTR<class1>
+    static std::shared_ptr<class1>
     createRootElement(opflex::ofcore::OFFramework& framework) {
         return opflex::modb::mointernal
             ::MO::createRootElement<class1>(framework, CLASS_ID);
@@ -242,7 +242,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    boost::optional<OF_SHARED_PTR<class2> >
+    boost::optional<std::shared_ptr<class2> >
     resolveClass2(int64_t prop4Value) {
         return class2::resolve(getFramework(),
                                opflex::modb::URIBuilder(getURI())
@@ -263,7 +263,7 @@ public:
      * @param out a reference to a vector that will receive the child
      * objects.
      */
-    void resolveClass2(/* out */ std::vector<OF_SHARED_PTR<class2> >& out) {
+    void resolveClass2(/* out */ std::vector<std::shared_ptr<class2> >& out) {
         return opflex::modb::mointernal
             ::MO::resolveChildren<class2>(getFramework(),
                                           CLASS_ID, getURI(),
@@ -284,8 +284,8 @@ public:
      * @throws std::logic_error if no mutator is active
      * @return a shared pointer to the (possibly new) object
      */
-    OF_SHARED_PTR<class2> addClass2(int64_t prop4Value) {
-        OF_SHARED_PTR<class2> result =
+    std::shared_ptr<class2> addClass2(int64_t prop4Value) {
+        std::shared_ptr<class2> result =
             addChild<class2>(CLASS_ID, getURI(),
                              (opflex::modb::prop_id_t)3,
                              (opflex::modb::class_id_t)2,
@@ -307,7 +307,7 @@ public:
      * class3
 
      */
-    boost::optional<OF_SHARED_PTR<class4> >
+    boost::optional<std::shared_ptr<class4> >
     resolveClass4(const std::string& prop9Value) {
         return class4::resolve(getFramework(),
                                opflex::modb::URIBuilder(getURI())
@@ -328,7 +328,7 @@ public:
      * @param out a reference to a vector that will receive the child
      * objects.
      */
-    void resolveClass4(/* out */ std::vector<OF_SHARED_PTR<class4> >& out) {
+    void resolveClass4(/* out */ std::vector<std::shared_ptr<class4> >& out) {
         return opflex::modb::mointernal
             ::MO::resolveChildren<class4>(getFramework(),
                                           CLASS_ID, getURI(),
@@ -349,8 +349,8 @@ public:
      * @throws std::logic_error if no mutator is active
      * @return a shared pointer to the (possibly new) object
      */
-    OF_SHARED_PTR<class4> addClass4(const std::string& prop9Value) {
-        OF_SHARED_PTR<class4> result =
+    std::shared_ptr<class4> addClass4(const std::string& prop9Value) {
+        std::shared_ptr<class4> result =
             addChild<class4>(CLASS_ID, getURI(),
                              (opflex::modb::prop_id_t)8,
                              (opflex::modb::class_id_t)4,
@@ -372,7 +372,7 @@ public:
      * class3
 
      */
-    boost::optional<OF_SHARED_PTR<class5> >
+    boost::optional<std::shared_ptr<class5> >
     resolveClass5(const std::string& prop10Value) {
         return class5::resolve(getFramework(),
                                opflex::modb::URIBuilder(getURI())
@@ -393,7 +393,7 @@ public:
      * @param out a reference to a vector that will receive the child
      * objects.
      */
-    void resolveClass5(/* out */ std::vector<OF_SHARED_PTR<class5> >& out) {
+    void resolveClass5(/* out */ std::vector<std::shared_ptr<class5> >& out) {
         return opflex::modb::mointernal
             ::MO::resolveChildren<class5>(getFramework(),
                                           CLASS_ID, getURI(),
@@ -414,8 +414,8 @@ public:
      * @throws std::logic_error if no mutator is active
      * @return a shared pointer to the (possibly new) object
      */
-    OF_SHARED_PTR<class5> addClass5(const std::string& prop10Value) {
-        OF_SHARED_PTR<class5> result =
+    std::shared_ptr<class5> addClass5(const std::string& prop10Value) {
+        std::shared_ptr<class5> result =
             addChild<class5>(CLASS_ID, getURI(),
                              (opflex::modb::prop_id_t)8,
                              (opflex::modb::class_id_t)4,
@@ -462,7 +462,7 @@ public:
      */
     class1(opflex::ofcore::OFFramework& framework,
            const opflex::modb::URI& uri,
-           const OF_SHARED_PTR<const opflex::modb
+           const std::shared_ptr<const opflex::modb
               ::mointernal::ObjectInstance>& oi)
         : MO(framework, CLASS_ID, uri, oi) { }
 };

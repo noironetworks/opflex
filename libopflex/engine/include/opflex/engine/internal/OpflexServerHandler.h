@@ -99,8 +99,8 @@ public:
 protected:
     GbpOpflexServerImpl* server;
     boost::mutex resolutionMutex;
-    OF_UNORDERED_SET<modb::reference_t> resolutions;
-    OF_UNORDERED_SET<modb::reference_t> declarations;
+    std::unordered_set<modb::reference_t> resolutions;
+    std::unordered_set<modb::reference_t> declarations;
     boost::atomic<bool> flakyMode;
 };
 

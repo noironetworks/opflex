@@ -280,7 +280,7 @@ on_timer_base(const error_code& ec,
 
     // flush OpFlex client stats
     // TODO: Move these to a separate class to avoid polluting Policy/FlowStatsManager
-    std::unordered_map<string, OF_SHARED_PTR<OFStats>> stats;
+    std::unordered_map<string, std::shared_ptr<OFStats>> stats;
     agent->getFramework().getOpflexPeerStats(stats);
     Mutator mutator(agent->getFramework(), "policyelement");
     optional<shared_ptr<SysStatUniverse> > ssu =

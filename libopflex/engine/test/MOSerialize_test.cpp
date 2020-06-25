@@ -40,23 +40,23 @@ BOOST_FIXTURE_TEST_CASE( mo_serialize , BaseFixture ) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
 
-    OF_SHARED_PTR<ObjectInstance> oi =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(1));
+    std::shared_ptr<ObjectInstance> oi =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(1));
     oi->setUInt64(1, 42);
     oi->addString(2, "test1");
     oi->addString(2, "test2");
     URI uri("/");
     client1->put(1, uri, oi);
 
-    OF_SHARED_PTR<ObjectInstance> oi2 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(2));
+    std::shared_ptr<ObjectInstance> oi2 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(2));
     oi2->setInt64(4, -42);
     URI uri2("/class2/-42");
     client1->put(2, uri2, oi2);
     client1->addChild(1, uri, 3, 2, uri2);
 
-    OF_SHARED_PTR<ObjectInstance> oi3 =
-        OF_SHARED_PTR<ObjectInstance>(new ObjectInstance(2));
+    std::shared_ptr<ObjectInstance> oi3 =
+        std::shared_ptr<ObjectInstance>(new ObjectInstance(2));
     oi3->setInt64(4, -84);
     URI uri3("/class2/-84");
     client1->put(2, uri3, oi3);
@@ -158,8 +158,8 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
     URI uri("/");
     URI uri2("/class2/-42");
     URI uri3("/class2/-84");
-    OF_SHARED_PTR<const ObjectInstance> oi = sysClient.get(1, uri);
-    OF_SHARED_PTR<const ObjectInstance> oi2 = sysClient.get(2, uri2);
+    std::shared_ptr<const ObjectInstance> oi = sysClient.get(1, uri);
+    std::shared_ptr<const ObjectInstance> oi2 = sysClient.get(2, uri2);
 
     BOOST_CHECK_EQUAL(42, oi->getUInt64(1));
     BOOST_CHECK_EQUAL(2, oi->getStringSize(2));
@@ -285,12 +285,12 @@ BOOST_FIXTURE_TEST_CASE( types , BaseFixture ) {
     URI c6u("/class4/test/class6/test2/");
     URI c7u("/class4/test/class7/0");
 
-    OF_SHARED_PTR<ObjectInstance> oi1 = OF_MAKE_SHARED<ObjectInstance>(1);
-    OF_SHARED_PTR<ObjectInstance> oi2 = OF_MAKE_SHARED<ObjectInstance>(2);
-    OF_SHARED_PTR<ObjectInstance> oi4 = OF_MAKE_SHARED<ObjectInstance>(4);
-    OF_SHARED_PTR<ObjectInstance> oi5 = OF_MAKE_SHARED<ObjectInstance>(5);
-    OF_SHARED_PTR<ObjectInstance> oi6 = OF_MAKE_SHARED<ObjectInstance>(6);
-    OF_SHARED_PTR<ObjectInstance> oi7 = OF_MAKE_SHARED<ObjectInstance>(7);
+    std::shared_ptr<ObjectInstance> oi1 = std::make_shared<ObjectInstance>(1);
+    std::shared_ptr<ObjectInstance> oi2 = std::make_shared<ObjectInstance>(2);
+    std::shared_ptr<ObjectInstance> oi4 = std::make_shared<ObjectInstance>(4);
+    std::shared_ptr<ObjectInstance> oi5 = std::make_shared<ObjectInstance>(5);
+    std::shared_ptr<ObjectInstance> oi6 = std::make_shared<ObjectInstance>(6);
+    std::shared_ptr<ObjectInstance> oi7 = std::make_shared<ObjectInstance>(7);
 
     oi2->setInt64(4, 32);
     oi2->setMAC(15, MAC("aa:bb:cc:dd:ee:ff"));

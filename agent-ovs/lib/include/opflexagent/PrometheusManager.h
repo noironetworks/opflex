@@ -14,7 +14,6 @@
 #define __OPFLEXAGENT_PROMETHEUS_MANAGER_H__
 
 #include <opflex/ofcore/OFFramework.h>
-#include <opflex/ofcore/OFTypes.h>
 #include <opflex/ofcore/OFStats.h>
 #include <unordered_map>
 #include <memory>
@@ -211,7 +210,7 @@ public:
      * @param stats   opflex stats corresponding to the peer
      */
     void addNUpdateOFPeerStats(const std::string& peer,
-                               const OF_SHARED_PTR<OFStats> stats);
+                               const std::shared_ptr<OFStats> stats);
 
 
     /* SvcCounter related APIs */

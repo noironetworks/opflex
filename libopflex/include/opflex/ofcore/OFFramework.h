@@ -897,7 +897,7 @@ public:
      *
      * @param stats Map of named peers to associated OpFlex stats
      */
-    void getOpflexPeerStats(std::unordered_map<std::string, OF_SHARED_PTR<OFStats>>& stats);
+    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFStats>>& stats);
 
     /**
      * Enable/Disable reporting of observable changes to registered observers

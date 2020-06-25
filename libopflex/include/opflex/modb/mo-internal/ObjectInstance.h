@@ -23,7 +23,6 @@
 #include "opflex/modb/PropertyInfo.h"
 #include "opflex/modb/URI.h"
 #include "opflex/modb/MAC.h"
-#include "opflex/ofcore/OFTypes.h"
 
 namespace opflex {
 namespace modb {
@@ -484,7 +483,7 @@ private:
         void clear();
     };
 
-    typedef OF_UNORDERED_MAP<prop_key_t, Value> prop_map_t;
+    typedef std::unordered_map<prop_key_t, Value> prop_map_t;
     prop_map_t prop_map;
     bool local;
 

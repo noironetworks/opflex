@@ -15,10 +15,10 @@
 #define MODB_STORECLIENT_H
 
 #include <boost/noncopyable.hpp>
+#include <unordered_set>
 
 #include "opflex/modb/URI.h"
 #include "opflex/modb/mo-internal/ObjectInstance.h"
-#include "opflex/ofcore/OFTypes.h"
 
 namespace opflex {
 namespace modb {
@@ -49,7 +49,7 @@ public:
      */
     void put(class_id_t class_id,
              const URI& uri,
-             const OF_SHARED_PTR<const ObjectInstance>& oi);
+             const std::shared_ptr<const ObjectInstance>& oi);
 
     /**
      * Set the specified URI to the provided object instance if it has
@@ -65,7 +65,7 @@ public:
      */
     bool putIfModified(class_id_t class_id,
                        const URI& uri,
-                       const OF_SHARED_PTR<const ObjectInstance>& oi);
+                       const std::shared_ptr<const ObjectInstance>& oi);
 
     /**
      * Check whether an item exists in the store.  Note that it could
@@ -90,7 +90,7 @@ public:
      * @throws std::out_of_range if no such element is present or
      * there is no such class ID registered
      */
-    OF_SHARED_PTR<const ObjectInstance> get(class_id_t class_id,
+    std::shared_ptr<const ObjectInstance> get(class_id_t class_id,
                                             const URI& uri) const;
 
     /**
@@ -104,12 +104,12 @@ public:
      * @return true if object with specified class ID and URI is present
      */
     bool get(class_id_t class_id, const URI& uri,
-             /*out*/ OF_SHARED_PTR<const ObjectInstance>& oi) const;
+             /*out*/ std::shared_ptr<const ObjectInstance>& oi) const;
 
     /**
      * A map to store queued notifications
      */
-    typedef OF_UNORDERED_MAP<URI, class_id_t> notif_t;
+    typedef std::unordered_map<URI, class_id_t> notif_t;
 
     /**
      * Remove the specified URI, if present
@@ -238,7 +238,7 @@ public:
      * @throws std::out_of_range if the class is not found
      */
     void getObjectsForClass(class_id_t class_id,
-                            /* out */ OF_UNORDERED_SET<URI>& output);
+                            /* out */ std::unordered_set<URI>& output);
 
 private:
 

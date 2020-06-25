@@ -13,6 +13,7 @@
 #define MODB_TEST_TESTLISTENER_H
 
 #include <uv.h>
+#include <unordered_set>
 
 #include "opflex/modb/ObjectListener.h"
 #include "opflex/util/LockGuard.h"
@@ -36,7 +37,7 @@ public:
     }
 
     uv_mutex_t mutex;
-    OF_UNORDERED_SET<URI> notifs;
+    std::unordered_set<URI> notifs;
 };
 
 // wait for a condition to become true because of an event in another

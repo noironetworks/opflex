@@ -74,7 +74,7 @@ public:
                    T& writer,
                    bool recursive = true) {
         const modb::ClassInfo& ci = store->getClassInfo(class_id);
-        const OF_SHARED_PTR<const modb::mointernal::ObjectInstance>
+        const std::shared_ptr<const modb::mointernal::ObjectInstance>
             oi(client.get(class_id, uri));
         std::map<modb::class_id_t, std::vector<modb::URI> > children;
 
@@ -184,7 +184,7 @@ public:
                    T& writer,
                    bool recursive = true) {
         const modb::ClassInfo& ci = store->getClassInfo(class_id);
-        const OF_SHARED_PTR<const modb::mointernal::ObjectInstance>
+        const std::shared_ptr<const modb::mointernal::ObjectInstance>
             oi(client.get(class_id, uri));
         std::map<modb::class_id_t, std::vector<modb::URI> > children;
         writer.StartObject();

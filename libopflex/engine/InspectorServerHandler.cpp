@@ -133,7 +133,7 @@ void InspectorServerHandler::handlePolicyQueryReq(const Value& id,
                 modb::reference_t mo(ci.getId(), puri);
                 mos.push_back(mo);
             } else {
-                OF_UNORDERED_SET<modb::URI> uris;
+                std::unordered_set<modb::URI> uris;
                 inspector->db->getReadOnlyStoreClient()
                     .getObjectsForClass(ci.getId(), uris);
                 BOOST_FOREACH(const modb::URI& uri, uris) {

@@ -81,7 +81,7 @@ public:
      * modified.
      * @throws std::out_of_range if no such element is present.
      */
-    OF_SHARED_PTR<const mointernal::ObjectInstance> get(const URI& uri);
+    std::shared_ptr<const mointernal::ObjectInstance> get(const URI& uri);
 
     /**
      * Get the object instance associated with the specified URI
@@ -92,7 +92,7 @@ public:
      * @return true if object is found.
      */
     bool get(const URI& uri,
-             /*out*/ OF_SHARED_PTR<const mointernal::ObjectInstance>& oi);
+             /*out*/ std::shared_ptr<const mointernal::ObjectInstance>& oi);
 
     /**
      * Set the specified URI to the provided object instance,
@@ -103,7 +103,7 @@ public:
      * @param oi the object instance to set
      */
     void put(class_id_t class_id, const URI& uri,
-             const OF_SHARED_PTR<const mointernal::ObjectInstance>& oi);
+             const std::shared_ptr<const mointernal::ObjectInstance>& oi);
 
     /**
      * Set the specified URI to the provided object instance if it has
@@ -119,7 +119,7 @@ public:
      */
     bool putIfModified(class_id_t class_id,
                        const URI& uri,
-                       const OF_SHARED_PTR<const mointernal
+                       const std::shared_ptr<const mointernal
                        ::ObjectInstance>& oi);
 
     /**
@@ -216,7 +216,7 @@ public:
     /*
      * A set of URI/class_id pairs
      */
-    typedef OF_UNORDERED_SET<reference_t> obj_set_t;
+    typedef std::unordered_set<reference_t> obj_set_t;
 
     /**
      * Get the current set of "roots" in the region, which are objects
@@ -234,7 +234,7 @@ public:
      * @throws std::out_of_range if the class is not found
      */
     void getObjectsForClass(class_id_t class_id,
-                            /* out */ OF_UNORDERED_SET<URI>& output);
+                            /* out */ std::unordered_set<URI>& output);
 
 private:
     /**
@@ -252,9 +252,9 @@ private:
      */
     uv_mutex_t region_mutex;
 
-    typedef OF_UNORDERED_MAP<class_id_t, ClassIndex> class_map_t;
-    typedef OF_UNORDERED_MAP <URI,
-                              OF_SHARED_PTR<const mointernal::ObjectInstance> > uri_map_t;
+    typedef std::unordered_map<class_id_t, ClassIndex> class_map_t;
+    typedef std::unordered_map <URI,
+                              std::shared_ptr<const mointernal::ObjectInstance> > uri_map_t;
 
     class_map_t class_map;
     uri_map_t uri_map;

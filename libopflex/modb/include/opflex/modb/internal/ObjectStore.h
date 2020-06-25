@@ -170,7 +170,7 @@ public:
      *
      * @param output a set to receive the owners
      */
-    void getOwners(/* out */ OF_UNORDERED_SET<std::string>& output);
+    void getOwners(/* out */ std::unordered_set<std::string>& output);
 
 private:
     struct ClassContext {
@@ -179,10 +179,10 @@ private:
         Region* region;
     };
 
-    typedef OF_UNORDERED_MAP<std::string, Region*> region_owner_map_t;
-    typedef OF_UNORDERED_MAP<class_id_t, ClassContext> class_map_t;
-    typedef OF_UNORDERED_MAP<std::string, ClassInfo*> class_name_map_t;
-    typedef OF_UNORDERED_MAP<prop_id_t, ClassInfo*> prop_map_t;
+    typedef std::unordered_map<std::string, Region*> region_owner_map_t;
+    typedef std::unordered_map<class_id_t, ClassContext> class_map_t;
+    typedef std::unordered_map<std::string, ClassInfo*> class_name_map_t;
+    typedef std::unordered_map<prop_id_t, ClassInfo*> prop_map_t;
 
     /**
      * Lookup region by owner

@@ -113,7 +113,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    static boost::optional<OF_SHARED_PTR<class2> >
+    static boost::optional<std::shared_ptr<class2> >
     resolve(opflex::ofcore::OFFramework& framework,
             const opflex::modb::URI& uri) {
         return opflex::modb::mointernal
@@ -135,7 +135,7 @@ public:
      * @return a shared pointer to the object or boost::none if it
      * does not exist.
      */
-    static boost::optional<OF_SHARED_PTR<class2> >
+    static boost::optional<std::shared_ptr<class2> >
     resolve(opflex::ofcore::OFFramework& framework,
             int64_t prop4Value) {
         return resolve(framework,
@@ -154,7 +154,7 @@ public:
      * @param prop6Value The value of prop6, a naming property for class3
      * @param prop7Value The value of prop7, a naming property for class3
      */
-    boost::optional<OF_SHARED_PTR<class3> >
+    boost::optional<std::shared_ptr<class3> >
     resolveClass3(int64_t prop6Value,
                   const std::string& prop7Value) {
         return class3::resolve(getFramework(),
@@ -177,7 +177,7 @@ public:
      * @param out a reference to a vector that will receive the child
      * objects.
      */
-    void resolveClass3(/* out */ std::vector<OF_SHARED_PTR<class3> >& out) {
+    void resolveClass3(/* out */ std::vector<std::shared_ptr<class3> >& out) {
         return opflex::modb::mointernal
             ::MO::resolveChildren<class3>(getFramework(),
                                           CLASS_ID, getURI(),
@@ -197,9 +197,9 @@ public:
      * @throws std::logic_error if no mutator is active
      * @return a shared pointer to the (possibly new) object
      */
-    OF_SHARED_PTR<class3> addClass3(int64_t prop6Value,
+    std::shared_ptr<class3> addClass3(int64_t prop6Value,
                                         const std::string& prop7Value) {
-        OF_SHARED_PTR<class3> result =
+        std::shared_ptr<class3> result =
             addChild<class3>(CLASS_ID, getURI(), 5, 3,
                              opflex::modb::URIBuilder(getURI())
                                  .addElement("class3")
@@ -246,7 +246,7 @@ public:
      */
     class2(opflex::ofcore::OFFramework& framework,
            const opflex::modb::URI& uri,
-           const OF_SHARED_PTR<const opflex::modb
+           const std::shared_ptr<const opflex::modb
               ::mointernal::ObjectInstance>& oi)
         : MO(framework, CLASS_ID, uri, oi) { }
 };

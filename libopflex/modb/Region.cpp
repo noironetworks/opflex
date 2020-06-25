@@ -48,13 +48,13 @@ bool Region::isPresent(const URI& uri) {
     return uri_map.find(uri) != uri_map.end();
 }
 
-OF_SHARED_PTR<const ObjectInstance> Region::get(const URI& uri) {
+std::shared_ptr<const ObjectInstance> Region::get(const URI& uri) {
     LockGuard guard(&region_mutex);
     return uri_map.at(uri);
 }
 
 bool Region::get(const URI& uri,
-                 /*out*/ OF_SHARED_PTR<const ObjectInstance>& oi) {
+                 /*out*/ std::shared_ptr<const ObjectInstance>& oi) {
     LockGuard guard(&region_mutex);
     uri_map_t::const_iterator itr = uri_map.find(uri);
     if (itr != uri_map.end()) {
@@ -65,7 +65,7 @@ bool Region::get(const URI& uri,
 }
 
 void Region::put(class_id_t class_id, const URI& uri,
-                 const OF_SHARED_PTR<const ObjectInstance>& oi) {
+                 const std::shared_ptr<const ObjectInstance>& oi) {
     LockGuard guard(&region_mutex);
     try {
         ClassIndex& ci = class_map.at(class_id);
@@ -78,7 +78,7 @@ void Region::put(class_id_t class_id, const URI& uri,
 }
 
 bool Region::putIfModified(class_id_t class_id, const URI& uri,
-                           const OF_SHARED_PTR<const ObjectInstance>& oi) {
+                           const std::shared_ptr<const ObjectInstance>& oi) {
     LockGuard guard(&region_mutex);
     try {
         ClassIndex& ci = class_map.at(class_id);
@@ -167,7 +167,7 @@ void Region::getRoots(/* out */ obj_set_t& output) {
 }
 
 void Region::getObjectsForClass(class_id_t class_id,
-                                /* out */ OF_UNORDERED_SET<URI>& output) {
+                                /* out */ std::unordered_set<URI>& output) {
     LockGuard guard(&region_mutex);
     ClassIndex& ci = class_map.at(class_id);
     ci.getAll(output);
