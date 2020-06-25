@@ -99,9 +99,7 @@ gbp_include_HEADERS = \
 	include/opflex/gbp/Policy.h
 util_includedir = $(includedir)/opflex/util
 util_include_HEADERS = \
-	include/opflex/util/ThreadManager.h \
-    include/opflex/util/LockGuard.h \
-    include/opflex/util/RecursiveLockGuard.h
+	include/opflex/util/ThreadManager.h
 yajr_includedir = $(includedir)/opflex/yajr
 yajr_include_HEADERS = \
     include/opflex/yajr/yajr.hpp
