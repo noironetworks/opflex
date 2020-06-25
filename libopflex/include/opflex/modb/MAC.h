@@ -109,8 +109,6 @@ size_t hash_value(MAC const& mac);
 } /* namespace modb */
 } /* namespace opflex */
 
-#if __cplusplus > 199711L
-
 namespace std {
 /**
  * Template specialization for std::hash<opflex::modb::MAC>, making
@@ -125,7 +123,5 @@ template<> struct hash<opflex::modb::MAC> {
     }
 };
 } /* namespace std */
-
-#endif
 
 #endif /* MODB_MAC_H */

@@ -19,9 +19,6 @@
 #include <cstdlib>
 
 #include <boost/algorithm/string/split.hpp>
-#if __cplusplus <= 199711L
-#include <boost/make_shared.hpp>
-#endif
 
 #include "opflex/modb/URI.h"
 
@@ -145,13 +142,9 @@ size_t hash_value(URI const& uri) {
 } /* namespace modb */
 } /* namespace opflex */
 
-#if __cplusplus > 199711L
-
 namespace std {
 std::size_t
 hash<opflex::modb::URI>::operator()(const opflex::modb::URI& u) const {
     return opflex::modb::hash_value(u);
 }
 } /* namespace std */
-
-#endif

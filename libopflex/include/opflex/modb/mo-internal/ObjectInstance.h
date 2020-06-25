@@ -54,8 +54,6 @@ size_t hash_value(reference_t const& key);
 } /* namespace modb */
 } /* namespace opflex */
 
-#if __cplusplus > 199711L
-
 namespace std {
 /**
  * Template specialization for std::hash<opflex::modb::prop_key_t>, making
@@ -85,7 +83,6 @@ template<> struct hash<opflex::modb::reference_t> {
 
 } /* namespace std */
 
-#endif
 
 namespace opflex {
 namespace modb {

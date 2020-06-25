@@ -120,8 +120,6 @@ size_t hash_value(URI const& uri);
 } /* namespace modb */
 } /* namespace opflex */
 
-#if __cplusplus > 199711L
-
 namespace std {
 /**
  * Template specialization for std::hash<opflex::modb::URI>, making
@@ -134,7 +132,5 @@ template<> struct hash<opflex::modb::URI> {
     std::size_t operator()(const opflex::modb::URI& u) const;
 };
 } /* namespace std */
-
-#endif
 
 #endif /* MODB_URI_H */

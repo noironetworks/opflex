@@ -41,8 +41,6 @@
 #  include <config.h>
 #endif
 
-#if __cplusplus > 199711L
-
 namespace std {
 /**
  * Template specialization for std::hash<OpflexPool::peer_name_t>, making
@@ -58,8 +56,6 @@ template<> struct hash<std::pair<std::string, int>> {
 };
 
 } /* namespace std */
-
-#endif
 
 namespace opflex {
 namespace engine {
