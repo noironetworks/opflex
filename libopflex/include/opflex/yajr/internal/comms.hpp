@@ -28,6 +28,7 @@
 #include <sstream>  /* for basic_stringstream<> */
 #include <iostream>
 #include <atomic>
+#include <mutex>
 
 #define uv_close(h, cb)                        \
     do {                                       \
@@ -189,7 +190,7 @@ class Peer : public SafeListBaseHook {
                 uv_loop_t * uv_loop,
                 Peer::LoopData::PeerState peerState,
                 Peer* peer) {
-            opflex::util::LockGuard guard(&peerMutex);
+            const std::lock_guard<std::recursive_mutex> lock(peerMutex);
             (&getLoopData(uv_loop)->peers[peerState])->push_back(*peer);
         }
 
@@ -203,7 +204,7 @@ class Peer : public SafeListBaseHook {
         static std::size_t getPeerCount(
                 uv_loop_t * uv_loop,
                 Peer::LoopData::PeerState peerState) {
-            opflex::util::LockGuard guard(&peerMutex);
+            const std::lock_guard<std::recursive_mutex> lock(peerMutex);
             return (&getLoopData(uv_loop)->peers[peerState])->size();
         }
 
@@ -255,13 +256,13 @@ class Peer : public SafeListBaseHook {
         void onPrepareLoop();
         static void onPrepareLoop(uv_prepare_t *);
         static void fini(uv_handle_t *);
-        static uv_mutex_t peerMutex;
+        static std::recursive_mutex peerMutex;
         uv_prepare_t prepare_;
         uv_async_t kickLibuv_;
         uv_timer_t prepareAgain_;
         uint64_t lastRun_;
         std::atomic<bool> destroying_;
-        uint64_t refCount_;
+        std::atomic<uint64_t> refCount_;
 
         friend class Peer;
     };
