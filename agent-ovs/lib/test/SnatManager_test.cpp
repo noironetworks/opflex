@@ -2,26 +2,22 @@
 /*
  * Test suite for Snat manager
  *
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2020 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-#include <opflex/modb/ObjectListener.h>
 #include <boost/test/unit_test.hpp>
-#include <boost/test/tools/assertion_result.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <opflexagent/FSSnatSource.h>
-#include <opflexagent/logging.h>
 #include <opflexagent/test/BaseFixture.h>
 #include <opflexagent/Snat.h>
 #include <opflexagent/SnatManager.h>
 #include <opflexagent/Agent.h>
 #include <opflexagent/FSWatcher.h>
 #include <string.h>
-#include <iostream>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -29,34 +25,35 @@
 
 namespace opflexagent {
 
-    using std::string;
-    using boost::optional;
-    namespace fs = boost::filesystem;
+using std::string;
+using boost::optional;
+namespace fs = boost::filesystem;
 
-    class FSSnatFixture : public BaseFixture {
-    public:
-	FSSnatFixture()
-            : BaseFixture(),
-              temp(fs::temp_directory_path() / fs::unique_path()) {
-            fs::create_directory(temp);
-        }
+class FSSnatFixture : public BaseFixture {
+public:
+    FSSnatFixture()
+        : BaseFixture(),
+          temp(fs::temp_directory_path() / fs::unique_path()) {
+        fs::create_directory(temp);
+    }
+    ~FSSnatFixture() {
+        fs::remove_all(temp);
+    }
 
-        ~FSSnatFixture() {
-            fs::remove_all(temp);
-        }
+    fs::path temp;
+};
 
-        fs::path temp;
-    };
-
-
+bool hasSnat(SnatManager& snatMgr, const string& uuid) {
+    auto snat = snatMgr.getSnat(uuid);
+    return snat && snat->isLocal() && snat->getUUID() == uuid;
+}
 
 BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
-
-    // check already existing snat file
-    const std::string& uuid1 = "00000000-0000-0000-0000-ffff01650164";
-    fs::path path1(temp / "00000000-0000-0000-0000-ffff01650164.snat");
-    fs::ofstream os(path1);
-    os  << "{"
+   // check already existing snat file
+   const std::string uuid1 = "00000000-0000-0000-0000-ffff01650164";
+   fs::path path1(temp / (uuid1 + ".snat"));
+   fs::ofstream os(path1);
+   os  << "{"
 	<< "\"uuid\":\"" << uuid1 << "\","
 	<< "\"interface-name\":\"veth0\","
 	<< "\"snat-ip\":\"10.0.0.1\","
@@ -81,19 +78,15 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
     os.close();
 
     SnatManager& snatMgr = agent.getSnatManager();
-   // WAIT_FOR(snatMgr.getSnat(uuid1), 500);
     FSWatcher watcher;
-    FSSnatSource source(&agent.getSnatManager(), watcher,
-                                    temp.string());
-
+    FSSnatSource source(&snatMgr, watcher, temp.string());
     watcher.start();
-    usleep(0.1*1000*1000);
-    WAIT_FOR(snatMgr.getSnat("00000000-0000-0000-0000-ffff01650164"), 500);
-
-    fs::path path2(temp / "00000000-0000-0000-0000-ffff01650164.snat");
+    WAIT_FOR(hasSnat(snatMgr, uuid1), 500);
+  
+    fs::path path2(temp / (uuid1 + ".snat"));
     fs::ofstream os2(path2);
     os2 << "{"
-	<< "\"uuid\":\"00000000-0000-0000-0000-ffff01650164\","
+	<< "\"uuid\":\"" << uuid1 << "\","
         << "\"interface-name\":\"veth1\","
         << "\"snat-ip\":\"10.0.0.1\","
         << "\"interface-mac\":\"10:ff:00:a4:02:01\","
@@ -116,17 +109,11 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSSnatFixture ) {
         << "}" << std::endl;
     os2.close();
 	
-    usleep(0.1*1000*1000);
-    WAIT_FOR(agent.getSnatManager().getSnat(
-            "00000000-0000-0000-0000-ffff01650164"), 500);
-    
-   
-   auto snat1 = agent.getSnatManager().getSnat(
-            "00000000-0000-0000-0000-ffff01650164");
-   //WAIT_FOR(snatMgr.getSnat("00000000-0000-0000-0000-ffff01650164"), 50000);
-   BOOST_CHECK(snat1->getInterfaceName() == "veth1");
-   watcher.stop();
 
+    WAIT_FOR(hasSnat(snatMgr, uuid1) && snatMgr.getSnat(uuid1)->getInterfaceName() == "veth1", 500);
+    auto snat1 = snatMgr.getSnat(uuid1);
+    BOOST_CHECK(snat1->getInterfaceName() == "veth1");
+    watcher.stop();
 
 }
 
@@ -162,22 +149,15 @@ BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSSnatFixture ) {
     FSSnatSource source(&agent.getSnatManager(), watcher,
                              temp.string());
     watcher.start();
-   // usleep(1000*1000);
-    WAIT_FOR((agent.getSnatManager().getSnat(
-            "00000000-0000-0000-0000-ffff01650165") != nullptr), 500);
-    auto extSnat = agent.getSnatManager().getSnat(
-            "00000000-0000-0000-0000-ffff01650165");
+    WAIT_FOR((agent.getSnatManager().getSnat("00000000-0000-0000-0000-ffff01650165") != nullptr), 500);
+    auto extSnat = agent.getSnatManager().getSnat("00000000-0000-0000-0000-ffff01650165");
   
     BOOST_CHECK(extSnat->getSnatIP() == "10.0.0.1");
 
     // check for removing a Snat
     fs::remove(path1);
-
-   // usleep(1000*1000);
-
-    WAIT_FOR((agent.getSnatManager().getSnat(
-            "00000000-0000-0000-0000-ffff01650165") == nullptr), 500);
+    WAIT_FOR((agent.getSnatManager().getSnat("00000000-0000-0000-0000-ffff01650165") == nullptr), 500);
 
     watcher.stop();
 }
-}
+} /* namespace opflexagent */
