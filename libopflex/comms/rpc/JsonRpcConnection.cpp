@@ -23,15 +23,13 @@ namespace opflex {
 namespace jsonrpc {
 
 RpcConnection::RpcConnection() : requestId(1), connGeneration(0) {
-    uv_mutex_init(&queue_mutex);
 }
 
 RpcConnection::~RpcConnection() {
-    uv_mutex_destroy(&queue_mutex);
 }
 
 void RpcConnection::cleanup() {
-    util::LockGuard guard(&queue_mutex);
+    const std::lock_guard<std::mutex> lock(queue_mutex);
     connGeneration += 1;
     while (!write_queue.empty()) {
         delete write_queue.front().first;
@@ -44,7 +42,7 @@ void RpcConnection::sendMessage(JsonRpcMessage* message, bool sync) {
         boost::scoped_ptr<JsonRpcMessage> messagep(message);
         doWrite(message);
     } else {
-        util::LockGuard guard(&queue_mutex);
+        const std::lock_guard<std::mutex> lock(queue_mutex);
         write_queue.push_back(std::make_pair(message, connGeneration));
     }
     messagesReady();
@@ -52,7 +50,7 @@ void RpcConnection::sendMessage(JsonRpcMessage* message, bool sync) {
 
 
 void RpcConnection::processWriteQueue() {
-    util::LockGuard guard(&queue_mutex);
+    const std::lock_guard<std::mutex> lock(queue_mutex);
     while (!write_queue.empty()) {
         const write_queue_item_t& qi = write_queue.front();
         // Avoid writing messages from a previous reconnect attempt

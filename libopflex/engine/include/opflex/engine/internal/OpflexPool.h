@@ -364,8 +364,7 @@ private:
 
     std::unique_ptr<yajr::transport::ZeroCopyOpenSSL::Ctx> clientCtx;
 
-    uv_mutex_t conn_mutex;
-    uv_key_t conn_mutex_key;
+    std::recursive_mutex conn_mutex;
     std::mutex modify_uri_mutex;
 
     class ConnData {

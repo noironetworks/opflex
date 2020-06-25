@@ -18,7 +18,6 @@
 
 #include "opflex/modb/internal/Region.h"
 #include "opflex/modb/internal/ObjectStore.h"
-#include "opflex/util/LockGuard.h"
 
 namespace opflex {
 namespace modb {
@@ -27,16 +26,13 @@ using std::string;
 using std::vector;
 using std::pair;
 using std::make_pair;
-using opflex::util::LockGuard;
 using mointernal::ObjectInstance;
 
 Region::Region(ObjectStore* parent, const string& owner_)
     : client(parent, this), owner(owner_) {
-    uv_mutex_init(&region_mutex);
 }
 
 Region::~Region() {
-    uv_mutex_destroy(&region_mutex);
 }
 
 void Region::addClass(const ClassInfo& class_info) {
@@ -44,18 +40,18 @@ void Region::addClass(const ClassInfo& class_info) {
 }
 
 bool Region::isPresent(const URI& uri) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     return uri_map.find(uri) != uri_map.end();
 }
 
 OF_SHARED_PTR<const ObjectInstance> Region::get(const URI& uri) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     return uri_map.at(uri);
 }
 
 bool Region::get(const URI& uri,
                  /*out*/ OF_SHARED_PTR<const ObjectInstance>& oi) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     uri_map_t::const_iterator itr = uri_map.find(uri);
     if (itr != uri_map.end()) {
         oi = itr->second;
@@ -66,7 +62,7 @@ bool Region::get(const URI& uri,
 
 void Region::put(class_id_t class_id, const URI& uri,
                  const OF_SHARED_PTR<const ObjectInstance>& oi) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     try {
         ClassIndex& ci = class_map.at(class_id);
         uri_map[uri] = oi;
@@ -79,7 +75,7 @@ void Region::put(class_id_t class_id, const URI& uri,
 
 bool Region::putIfModified(class_id_t class_id, const URI& uri,
                            const OF_SHARED_PTR<const ObjectInstance>& oi) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     try {
         ClassIndex& ci = class_map.at(class_id);
         uri_map_t::iterator it = uri_map.find(uri);
@@ -103,7 +99,7 @@ bool Region::putIfModified(class_id_t class_id, const URI& uri,
 }
 
 bool Region::remove(class_id_t class_id, const URI& uri) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     ClassIndex& ci = class_map.at(class_id);
     ci.delInstance(uri);
     roots.erase(make_pair(class_id, uri));
@@ -115,7 +111,7 @@ bool Region::addChild(class_id_t parent_class,
                       prop_id_t parent_prop,
                       class_id_t child_class,
                       const URI& child_uri) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     obj_set_t::iterator it = roots.find(make_pair(child_class, child_uri));
     if (it != roots.end())
         roots.erase(it);
@@ -128,7 +124,7 @@ bool Region::delChild(class_id_t parent_class,
                       prop_id_t parent_prop,
                       class_id_t child_class,
                       const URI& child_uri) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     ClassIndex& ci = class_map.at(child_class);
     bool r = ci.delChild(parent_uri, parent_prop, child_uri);
     if (uri_map.find(child_uri) != uri_map.end() && !ci.hasParent(child_uri))
@@ -141,34 +137,34 @@ void Region::getChildren(class_id_t parent_class,
                          prop_id_t parent_prop,
                          class_id_t child_class,
                          /* out */ vector<URI>& output) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     ClassIndex& ci = class_map.at(child_class);
     ci.getChildren(parent_uri, parent_prop, output);
 }
 
 std::pair<URI, prop_id_t> Region::getParent(class_id_t child_class,
                                             const URI& child) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     ClassIndex& ci = class_map.at(child_class);
     return ci.getParent(child);
 }
 
 bool Region::getParent(class_id_t child_class, const URI& child,
                        /* out */ std::pair<URI, prop_id_t>& parent) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     class_map_t::const_iterator citr = class_map.find(child_class);
     return citr != class_map.end() ? citr->second.getParent(child, parent)
                                    : false;
 }
 
 void Region::getRoots(/* out */ obj_set_t& output) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     output.insert(roots.begin(), roots.end());
 }
 
 void Region::getObjectsForClass(class_id_t class_id,
                                 /* out */ OF_UNORDERED_SET<URI>& output) {
-    LockGuard guard(&region_mutex);
+    const std::lock_guard<std::mutex> lock(region_mutex);
     ClassIndex& ci = class_map.at(class_id);
     ci.getAll(output);
 }

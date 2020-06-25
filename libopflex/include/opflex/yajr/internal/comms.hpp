@@ -17,7 +17,6 @@
 #include <opflex/yajr/transport/PlainText.hpp>
 
 #include <opflex/logging/OFLogHandler.h>
-#include "opflex/util/LockGuard.h"
 
 #include <rapidjson/document.h>
 #include <uv.h>

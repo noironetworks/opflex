@@ -39,6 +39,4 @@ libutil_la_CXXFLAGS = $(UV_CFLAGS)
 
 libutil_la_LIBADD = $(UV_LIBS)
 libutil_la_SOURCES = \
-	LockGuard.cpp \
-	RecursiveLockGuard.cpp \
 	ThreadManager.cpp

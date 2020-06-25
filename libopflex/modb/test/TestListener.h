@@ -12,30 +12,28 @@
 #ifndef MODB_TEST_TESTLISTENER_H
 #define MODB_TEST_TESTLISTENER_H
 
+#include <mutex>
 #include <uv.h>
 
 #include "opflex/modb/ObjectListener.h"
-#include "opflex/util/LockGuard.h"
 
 namespace opflex {
 namespace modb {
 
 class TestListener : public ObjectListener {
 public:
-    TestListener() {
-        uv_mutex_init(&mutex);
-    }
+    TestListener() {}
 
     virtual void objectUpdated(class_id_t class_id, const URI& uri) {
-        opflex::util::LockGuard guard(&mutex);
+        const std::lock_guard<std::mutex> lock(uri_mutex);
         notifs.insert(uri);
     }
     bool contains(const URI& uri) {
-        opflex::util::LockGuard guard(&mutex);
+        const std::lock_guard<std::mutex> lock(uri_mutex);
         return notifs.find(uri) != notifs.end();
     }
 
-    uv_mutex_t mutex;
+    std::mutex uri_mutex;
     OF_UNORDERED_SET<URI> notifs;
 };
 

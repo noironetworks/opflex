@@ -14,6 +14,7 @@
 #ifndef MODB_OBJECTSTORE_H
 #define MODB_OBJECTSTORE_H
 
+#include <mutex>
 #include <boost/noncopyable.hpp>
 #include <list>
 #include <uv.h>
@@ -237,7 +238,7 @@ private:
     /**
      * Mutex for accessing listeners
      */
-    uv_mutex_t listener_mutex;
+    std::mutex listener_mutex;
 
     /**
      * Queue a notification to be delivered to the listeners

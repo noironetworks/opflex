@@ -19,7 +19,6 @@
 #include <boost/foreach.hpp>
 
 #include "opflex/modb/internal/ObjectStore.h"
-#include "opflex/util/LockGuard.h"
 
 namespace opflex {
 namespace modb {
@@ -29,7 +28,6 @@ using mointernal::StoreClient;
 ObjectStore::ObjectStore(util::ThreadManager& threadManager_)
     : systemClient(this, NULL), readOnlyClient(this, NULL, true),
       notif_proc(this), notif_queue(&notif_proc, threadManager_) {
-    uv_mutex_init(&listener_mutex);
 }
 
 ObjectStore::~ObjectStore() {
@@ -40,8 +38,6 @@ ObjectStore::~ObjectStore() {
          it != region_owner_map.end(); it++) {
         delete it->second;
     }
-
-    uv_mutex_destroy(&listener_mutex);
 }
 
 void ObjectStore::init(const ModelMetadata& model) {
@@ -74,7 +70,7 @@ ObjectStore::NotifQueueProc::NotifQueueProc(ObjectStore* store_)
 
 void ObjectStore::NotifQueueProc::processItem(const URI& uri,
                                               const boost::any& data) {
-    util::LockGuard guard(&store->listener_mutex);
+    const std::lock_guard<std::mutex> lock(store->listener_mutex);
     std::list<ObjectListener*>::const_iterator it;
     class_id_t class_id = boost::any_cast<class_id_t>(data);
     std::list<ObjectListener*>& listeners =
@@ -146,13 +142,13 @@ void ObjectStore::forEachClass(void (*apply)(void*, const ClassInfo&), void* dat
 
 void ObjectStore::registerListener(class_id_t class_id,
                                    ObjectListener* listener) {
-    util::LockGuard guard(&listener_mutex);
+    const std::lock_guard<std::mutex> lock(listener_mutex);
     class_map.at(class_id).listeners.push_back(listener);
 }
 
 void ObjectStore::unregisterListener(class_id_t class_id,
                                      ObjectListener* listener) {
-    util::LockGuard guard(&listener_mutex);
+    const std::lock_guard<std::mutex> lock(listener_mutex);
     class_map_t::iterator it = class_map.find(class_id);
     if (it == class_map.end()) return;
     it->second.listeners.remove(listener);

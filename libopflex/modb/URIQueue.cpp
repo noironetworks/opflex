@@ -16,8 +16,6 @@
 
 #include <boost/foreach.hpp>
 #include "opflex/modb/internal/URIQueue.h"
-
-#include "opflex/util/LockGuard.h"
 #include "opflex/logging/internal/logging.hpp"
 
 namespace opflex {
@@ -26,12 +24,10 @@ namespace modb {
 URIQueue::URIQueue(QProcessor* processor_, util::ThreadManager& threadManager_)
     : processor(processor_), threadManager(threadManager_),
       proc_shouldRun(false) {
-    uv_mutex_init(&item_mutex);
 }
 
 URIQueue::~URIQueue() {
     stop();
-    uv_mutex_destroy(&item_mutex);
 }
 
 // listen on the item queue and dispatch events where required
@@ -41,7 +37,7 @@ void URIQueue::proc_async_func(uv_async_t* handle) {
     if (queue->proc_shouldRun) {
         item_queue_t toProcess;
         {
-            util::LockGuard guard(&queue->item_mutex);
+            const std::lock_guard<std::mutex> lock(queue->item_mutex);
             toProcess.swap(queue->item_queue);
         }
 
@@ -86,7 +82,7 @@ void URIQueue::stop() {
 
 void URIQueue::queueItem(const URI& uri, const boost::any& data) {
     {
-        util::LockGuard guard(&item_mutex);
+        const std::lock_guard<std::mutex> lock(item_mutex);
         item_queue.push_back(item(uri, data));
         uv_async_send(&item_async);
     }

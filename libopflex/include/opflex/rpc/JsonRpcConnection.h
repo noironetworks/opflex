@@ -16,6 +16,7 @@
 #ifndef RPC_JSONRPCCONNECTION_H
 #define RPC_JSONRPCCONNECTION_H
 
+#include <mutex>
 #include <boost/noncopyable.hpp>
 
 #include <rapidjson/document.h>
@@ -159,7 +160,7 @@ private:
     typedef std::pair<JsonRpcMessage*, uint64_t> write_queue_item_t;
     typedef std::list<write_queue_item_t> write_queue_t;
     write_queue_t write_queue;
-    uv_mutex_t queue_mutex;
+    std::mutex queue_mutex;
 
     virtual void notifyReady() {};
     virtual void notifyFailed() {}

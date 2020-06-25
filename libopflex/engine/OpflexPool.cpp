@@ -20,7 +20,6 @@
 #include "opflex/engine/internal/OpflexPool.h"
 #include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/logging/internal/logging.hpp"
-#include "opflex/util/RecursiveLockGuard.h"
 
 namespace opflex {
 namespace engine {
@@ -41,13 +40,9 @@ OpflexPool::OpflexPool(HandlerFactory& factory_,
       ipv4_proxy(0), ipv6_proxy(0),
       mac_proxy(0), curHealth(PeerStatusListener::DOWN)
 {
-    uv_mutex_init(&conn_mutex);
-    uv_key_create(&conn_mutex_key);
 }
 
 OpflexPool::~OpflexPool() {
-    uv_key_delete(&conn_mutex_key);
-    uv_mutex_destroy(&conn_mutex);
 }
 
 void OpflexPool::addPendingItem(OpflexClientConnection* conn, const std::string& uri) {
@@ -69,12 +64,12 @@ void OpflexPool::removePendingItem(OpflexClientConnection* conn, const std::stri
 }
 
 boost::optional<string> OpflexPool::getLocation() {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     return location;
 }
 
 void OpflexPool::setLocation(const string& location) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     this->location = location;
 }
 
@@ -111,8 +106,7 @@ void OpflexPool::enableSSL(const string& caStorePath,
 void OpflexPool::on_conn_async(uv_async_t* handle) {
     OpflexPool* pool = (OpflexPool*)handle->data;
     if (pool->active) {
-        util::RecursiveLockGuard guard(&pool->conn_mutex,
-                                       &pool->conn_mutex_key);
+        const std::lock_guard<std::recursive_mutex> lock(pool->conn_mutex);
         BOOST_FOREACH(conn_map_t::value_type& v, pool->connections) {
             v.second.conn->connect();
         }
@@ -122,8 +116,7 @@ void OpflexPool::on_conn_async(uv_async_t* handle) {
 void OpflexPool::on_cleanup_async(uv_async_t* handle) {
     OpflexPool* pool = (OpflexPool*)handle->data;
     {
-        util::RecursiveLockGuard guard(&pool->conn_mutex,
-                                       &pool->conn_mutex_key);
+        const std::lock_guard<std::recursive_mutex> lock(pool->conn_mutex);
         conn_map_t conns(pool->connections);
         BOOST_FOREACH(conn_map_t::value_type& v, conns) {
             v.second.conn->close();
@@ -140,8 +133,7 @@ void OpflexPool::on_cleanup_async(uv_async_t* handle) {
 
 void OpflexPool::on_writeq_async(uv_async_t* handle) {
     OpflexPool* pool = (OpflexPool*)handle->data;
-    util::RecursiveLockGuard guard(&pool->conn_mutex,
-                                   &pool->conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(pool->conn_mutex);
     BOOST_FOREACH(conn_map_t::value_type& v, pool->connections) {
         v.second.conn->processWriteQueue();
     }
@@ -198,7 +190,7 @@ void OpflexPool::updatePeerStatus(const string& hostname, int port,
     bool hasReadyConnection = false;
     bool hasDegradedConnection = false;
     {
-        util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+        const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
         BOOST_FOREACH(conn_map_t::value_type& v, connections) {
             if (v.second.conn->isReady())
                 hasReadyConnection = true;
@@ -237,7 +229,7 @@ void OpflexPool::updatePeerStatus(const string& hostname, int port,
 
 OpflexClientConnection* OpflexPool::getPeer(const string& hostname,
                                             int port) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     auto it = connections.find(make_pair(hostname, port));
     if (it != connections.end()) {
         return it->second.conn;
@@ -247,7 +239,7 @@ OpflexClientConnection* OpflexPool::getPeer(const string& hostname,
 
 void OpflexPool::addPeer(const string& hostname, int port,
                          bool configured) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (configured)
         configured_peers.insert(make_pair(hostname, port));
     doAddPeer(hostname, port);
@@ -272,7 +264,7 @@ void OpflexPool::doAddPeer(const string& hostname, int port) {
 }
 
 void OpflexPool::addPeer(OpflexClientConnection* conn) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     ConnData& cd = connections[make_pair(conn->getHostname(), conn->getPort())];
     if (cd.conn != NULL) {
         LOG(ERROR) << "Connection for "
@@ -293,7 +285,7 @@ void OpflexPool::doRemovePeer(const string& hostname, int port) {
 }
 
 void OpflexPool::resetAllPeers() {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     conn_map_t conns(connections);
     BOOST_FOREACH(conn_map_t::value_type& v, conns) {
         v.second.conn->close();
@@ -324,7 +316,7 @@ void OpflexPool::updateRole(ConnData& cd,
 }
 
 size_t OpflexPool::getRoleCount(ofcore::OFConstants::OpflexRole role) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
 
     auto it = roles.find(role);
     if (it == roles.end()) return 0;
@@ -334,7 +326,7 @@ size_t OpflexPool::getRoleCount(ofcore::OFConstants::OpflexRole role) {
 
 void OpflexPool::setRoles(OpflexClientConnection* conn,
                           uint8_t newroles) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     ConnData& cd = connections.at(make_pair(conn->getHostname(),
                                             conn->getPort()));
     doSetRoles(cd, newroles);
@@ -350,11 +342,9 @@ void OpflexPool::doSetRoles(ConnData& cd, uint8_t newroles) {
 }
 
 void OpflexPool::connectionClosed(OpflexClientConnection* conn) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
-
+    std::unique_lock<std::recursive_mutex> guard(conn_mutex);
     doConnectionClosed(conn);
-
-    guard.release();
+    guard.unlock();
     if (!active)
         uv_async_send(&cleanup_async);
 }
@@ -398,7 +388,7 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
     if (!active) return 0;
     std::vector<OpflexClientConnection*> conns;
 
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     auto it = roles.find(role);
     if (it == roles.end())
         return 0;
@@ -432,7 +422,7 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
 
 void OpflexPool::validatePeerSet(OpflexClientConnection * conn, const peer_name_set_t& peers) {
     peer_name_set_t to_remove;
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
 
     conn_map_t conns(connections);
     BOOST_FOREACH(const conn_map_t::value_type& cv, conns) {
@@ -452,20 +442,20 @@ void OpflexPool::validatePeerSet(OpflexClientConnection * conn, const peer_name_
 }
 
 bool OpflexPool::isConfiguredPeer(const string& hostname, int port) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     return configured_peers.find(make_pair(hostname, port)) !=
         configured_peers.end();
 }
 
 void OpflexPool::addConfiguredPeers() {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(const peer_name_t& peer_name, configured_peers) {
         addPeer(peer_name.first, peer_name.second, false);
     }
 }
 
 void OpflexPool::getOpflexPeerStats(std::unordered_map<string, OF_SHARED_PTR<OFStats>>& stats) {
-    util::RecursiveLockGuard guard(&conn_mutex, &conn_mutex_key);
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(conn_map_t::value_type& v, connections) {
         const string peername = v.first.first + ":" + std::to_string(v.first.second);
         stats.emplace(std::make_pair(peername, v.second.conn->getOpflexStats()));
