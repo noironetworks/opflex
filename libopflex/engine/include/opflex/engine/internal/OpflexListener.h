@@ -185,11 +185,7 @@ private:
     std::string socketName;
     uint16_t port;
 
-#ifdef HAVE_CXX11
     std::unique_ptr<yajr::transport::ZeroCopyOpenSSL::Ctx> serverCtx;
-#else
-    std::auto_ptr<yajr::transport::ZeroCopyOpenSSL::Ctx> serverCtx;
-#endif
 
     std::string name;
     std::string domain;

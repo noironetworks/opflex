@@ -15,6 +15,7 @@ SUBDIRS = . test
 AM_CPPFLAGS = $(BOOST_CPPFLAGS) \
         -Wall \
         -Werror \
+        -std=c++11 \
         -I$(srcdir)/include -I$(top_srcdir)/include \
 	-I$(top_srcdir)/modb/include \
 	-I$(top_srcdir)/logging/include \

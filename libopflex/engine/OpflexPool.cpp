@@ -394,12 +394,7 @@ void incrementMsgCounter(OpflexClientConnection* conn, OpflexMessage* msg)
 size_t OpflexPool::sendToRole(OpflexMessage* message,
                            OFConstants::OpflexRole role,
                            bool sync, const std::string& uri) {
-#ifdef HAVE_CXX11
     std::unique_ptr<OpflexMessage> messagep(message);
-#else
-    std::auto_ptr<OpflexMessage> messagep(message);
-#endif
-
     if (!active) return 0;
     std::vector<OpflexClientConnection*> conns;
 

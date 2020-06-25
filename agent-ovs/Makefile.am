@@ -293,7 +293,8 @@ if RENDERER_OVS
 	$(libmodelgbp_CFLAGS) \
 	$(OVS_ADDL_CFLAGS) \
 	$(libopenvswitch_CFLAGS) \
-	$(libofproto_CFLAGS)
+	$(libofproto_CFLAGS) \
+	-std=gnu++14
 if ENABLE_TSAN
   librenderer_openvswitch_la_CXXFLAGS += -fsanitize=thread
 endif
