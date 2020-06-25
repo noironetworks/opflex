@@ -464,6 +464,7 @@ agent_test_SOURCES = \
 	lib/test/ServiceManager_test.cpp \
 	lib/test/SimStats_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
+	lib/test/SnatManager_test.cpp \
 	cmd/test/agent_test.cpp
 
 agent_test_LDADD = \
