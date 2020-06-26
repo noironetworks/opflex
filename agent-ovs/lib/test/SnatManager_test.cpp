@@ -120,8 +120,9 @@ BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSSnatFixture ) {
     // check for a new Snat added to watch directory
     fs::path path1(temp / "00000000-0000-0000-0000-ffff01650165.snat");
     fs::ofstream os(path1);
+    const std::string uuid = "00000000-0000-0000-0000-ffff01650165";
     os<< "{"
-	<< "\"uuid\":\"00000000-0000-0000-0000-ffff01650165\","
+	<< "\"uuid\":\"" << uuid << "\","
         << "\"interface-name\":\"veth0\","
         << "\"snat-ip\":\"10.0.0.1\","
         << "\"interface-mac\":\"10:ff:00:a4:02:01\","
@@ -144,17 +145,28 @@ BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSSnatFixture ) {
 	<< "}" << std::endl;
     os.close();
     FSWatcher watcher;
-    FSSnatSource source(&agent.getSnatManager(), watcher,
-                             temp.string());
+    SnatManager& snatMgr = agent.getSnatManager();
+    FSSnatSource source(&snatMgr, watcher,temp.string());
     watcher.start();
-    WAIT_FOR((agent.getSnatManager().getSnat("00000000-0000-0000-0000-ffff01650165") != nullptr), 500);
-    auto extSnat = agent.getSnatManager().getSnat("00000000-0000-0000-0000-ffff01650165");
+    WAIT_FOR((snatMgr.getSnat(uuid) != nullptr), 500);
+    auto extSnat = snatMgr.getSnat(uuid);
   
     BOOST_CHECK(extSnat->getSnatIP() == "10.0.0.1");
 
+    const std::string epUuid = " 9b7295f4-07a8-41ac-a681-e0ee82560262";
+    snatMgr.addEndpoint(uuid, epUuid);
+
+    std::unordered_set<std::string> eps;
+    snatMgr.getEndpoints(uuid, eps);
+    BOOST_CHECK(eps.size() == 1);
+    snatMgr.delEndpoint(epUuid);
+    eps.clear();
+    snatMgr.getEndpoints(uuid, eps);
+    BOOST_CHECK(eps.empty());
+
     // check for removing a Snat
     fs::remove(path1);
-    WAIT_FOR((agent.getSnatManager().getSnat("00000000-0000-0000-0000-ffff01650165") == nullptr), 500);
+    WAIT_FOR((agent.getSnatManager().getSnat(uuid) == nullptr), 500);
 
     watcher.stop();
 }
