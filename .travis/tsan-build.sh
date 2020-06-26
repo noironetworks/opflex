@@ -3,15 +3,24 @@
 set -o errtrace
 set -x
 
+trap 'catch $? $LINENO' ERR
+
+catch() {
+  echo "Error $1 occurred on $2"
+}
+
 pushd libopflex
+set -e
 ./autogen.sh
 ./configure --enable-tsan &> /dev/null
 make -j2
-make check
 sudo make install
+set +e
+make check
 find . -name test-suite.log|xargs cat
 popd
 
+set -e
 pushd genie
 mvn compile exec:java &> /dev/null
 pushd target/libmodelgbp
@@ -28,6 +37,10 @@ pushd agent-ovs
 ./configure --enable-tsan &> /dev/null
 make -j2
 sudo make install
+set +e
 make check
+result=$?
 find . -name test-suite.log|xargs cat
 popd
+
+exit $result
