@@ -13,6 +13,7 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <opflexagent/FSRDConfigSource.h>
+#include <opflexagent/FSPacketDropLogConfigSource.h>
 #include <opflexagent/logging.h>
 
 #include <opflexagent/test/BaseFixture.h>
@@ -21,14 +22,14 @@ namespace opflexagent {
 
 namespace fs = boost::filesystem;
 
-class FSRDConfigFixture : public BaseFixture {
+class FSConfigFixture : public BaseFixture {
 public:
-    FSRDConfigFixture() : BaseFixture(),
+    FSConfigFixture() : BaseFixture(),
         temp(fs::temp_directory_path() / fs::unique_path()) {
         fs::create_directory(temp);
     }
 
-    ~FSRDConfigFixture() {
+    ~FSConfigFixture() {
         fs::remove_all(temp);
     }
 
@@ -37,7 +38,7 @@ public:
 
 BOOST_AUTO_TEST_SUITE(ExtraConfigManager_test)
 
-BOOST_FIXTURE_TEST_CASE( rdconfigsource, FSRDConfigFixture ) {
+BOOST_FIXTURE_TEST_CASE( rdconfigsource, FSConfigFixture ) {
 
     // check for a new RDConfig added to watch directory
     fs::path path1(temp / "abc.rdconfig");
@@ -64,5 +65,24 @@ BOOST_FIXTURE_TEST_CASE( rdconfigsource, FSRDConfigFixture ) {
     watcher.stop();
 }
 
+BOOST_FIXTURE_TEST_CASE( droplogconfigsource, FSConfigFixture ) {
+    fs::path path(temp / "a.droplogcfg");
+    fs::ofstream os(path);
+    os << "{"
+       << "\"drop-log-enable\": true"
+       << "}" << std::endl;
+    os.close();
+    FSWatcher watcher;
+    opflex::modb::URI uri =
+        opflex::modb::URIBuilder().addElement("PolicyUniverse")
+            .addElement("ObserverDropLogConfig").build();
+    FSPacketDropLogConfigSource source(&agent.getExtraConfigManager(), watcher,
+                                       temp.string(), uri);
+    watcher.start();
+
+    WAIT_FOR(modelgbp::observer::DropLogConfig::resolve(agent.getFramework(), uri), 500);
+
+    watcher.stop();
+}
 BOOST_AUTO_TEST_SUITE_END()
 }
