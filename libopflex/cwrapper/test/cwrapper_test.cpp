@@ -25,6 +25,8 @@
 #include "opflex/c/offramework_c.h"
 #include "opflex/c/ofpeerstatuslistener_c.h"
 #include "opflex/c/ofloghandler_c.h"
+#include "opflex/c/ofmutator_c.h"
+#include "opflex/c/ofuri_c.h"
 
 #include "MDFixture.h"
 #include "TestListener.h"
@@ -135,6 +137,36 @@ BOOST_FIXTURE_TEST_CASE( init, ServerFixture ) {
     BOOST_CHECK(OF_IS_SUCCESS(offramework_stop(framework)));
     BOOST_CHECK(OF_IS_SUCCESS(offramework_destroy(&framework)));
     BOOST_CHECK(OF_IS_SUCCESS(ofpeerstatuslistener_destroy(&peer_listener)));
+}
+
+BOOST_FIXTURE_TEST_CASE( uritest, ServerFixture ) {
+    std::string originalUriString("/PolicyUniverse/PolicySpace/abc");
+    opflex::modb::URI uri(originalUriString);
+    ofuri_p uri_c = &uri;
+    const char* str[originalUriString.length()];
+    BOOST_CHECK(OF_IS_SUCCESS(ofuri_get_str(uri_c, str)));
+
+    std::string c_uriString(*str);
+    BOOST_CHECK(originalUriString == c_uriString);
+
+    size_t hashValue = 0;
+    BOOST_CHECK(OF_IS_SUCCESS(ofuri_hash(uri_c, &hashValue)));
+    LOG(DEBUG) << hashValue;
+}
+
+
+BOOST_FIXTURE_TEST_CASE( mutator, ServerFixture ) {
+    offramework_p framework = NULL;
+    BOOST_CHECK(OF_IS_SUCCESS(offramework_create(&framework)));
+
+    const char* owner = "_SYSTEM_";
+    ofmutator_p mutator = NULL;
+    BOOST_CHECK(OF_IS_SUCCESS(ofmutator_create(framework, owner, &mutator)));
+    BOOST_CHECK(OF_IS_SUCCESS(ofmutator_commit(mutator)));
+    BOOST_CHECK(OF_IS_SUCCESS(ofmutator_destroy(&mutator)));
+
+    BOOST_CHECK(OF_IS_SUCCESS(offramework_stop(framework)));
+    BOOST_CHECK(OF_IS_SUCCESS(offramework_destroy(&framework)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
