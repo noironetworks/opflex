@@ -66,6 +66,8 @@ BOOST_FIXTURE_TEST_CASE( rdconfigsource, FSConfigFixture ) {
 }
 
 BOOST_FIXTURE_TEST_CASE( droplogconfigsource, FSConfigFixture ) {
+    using modelgbp::observer::DropLogConfig;
+    using modelgbp::observer::DropLogModeEnumT;
     fs::path path(temp / "a.droplogcfg");
     fs::ofstream os(path);
     os << "{"
@@ -80,8 +82,18 @@ BOOST_FIXTURE_TEST_CASE( droplogconfigsource, FSConfigFixture ) {
                                        temp.string(), uri);
     watcher.start();
 
-    WAIT_FOR(modelgbp::observer::DropLogConfig::resolve(agent.getFramework(), uri), 500);
-
+    WAIT_FOR(DropLogConfig::resolve(agent.getFramework(), uri), 500);
+    boost::optional<shared_ptr<DropLogConfig>> dropLogCfg = DropLogConfig::resolve(agent.getFramework(), uri);
+    BOOST_CHECK(dropLogCfg.get()->getDropLogMode().get()== DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
+    BOOST_CHECK(dropLogCfg.get()->getDropLogEnable().get());
+    fs::ofstream os2(path);
+    os2 << "{"
+       << "\"drop-log-enable\": false"
+       << "}" << std::endl;
+    os2.close();
+    WAIT_FOR((DropLogConfig::resolve(agent.getFramework(), uri).get()->getDropLogEnable().get()==0), 500);
+    fs::remove(path);
+    WAIT_FOR(!(DropLogConfig::resolve(agent.getFramework(), uri)), 500);
     watcher.stop();
 }
 BOOST_AUTO_TEST_SUITE_END()
