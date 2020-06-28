@@ -60,10 +60,6 @@ public:
     virtual void setProperties(const boost::property_tree::ptree& properties);
     virtual void start();
     virtual void stop();
-    /**
-     *  Get the packetLoggerInstance
-     */
-    PacketLogHandler &getPacketLogger() {return pktLogger;}
 
 private:
     IdGenerator idGen;
@@ -136,6 +132,8 @@ private:
     boost::asio::io_service pktLoggerIO;
     boost::asio::io_service exporterIO;
     PacketLogHandler pktLogger;
+    std::unique_ptr<std::thread> exporterThread;
+    std::unique_ptr<std::thread> packetLoggerThread;
 
     /**
      * Timer callback to clean up IDs that have been erased
@@ -147,6 +145,10 @@ private:
      * Start packet logger
      */
     void startPacketLogger();
+    /**
+     * Stop packet logger
+     */
+    void stopPacketLogger();
 };
 
 /**

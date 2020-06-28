@@ -283,19 +283,7 @@ void OVSRenderer::stop() {
         encapType == IntFlowManager::ENCAP_IVXLAN) {
         tunnelEpManager.stop();
     }
-    {
-        std::string fileName(std::string(PACKET_LOGGER_PIDDIR) +"/logger.pid");
-        fstream s(fileName, s.in);
-        pid_t child_pid;
-        if(s >> child_pid) {
-            if(kill(child_pid, SIGUSR1)) {
-                LOG(ERROR) << "Failed to stop logger" << errno;
-            } else {
-                LOG(INFO) << "terminating logger process " << child_pid;
-            }
-        }
-    }
-
+    stopPacketLogger();
 }
 
 #define DEF_FLOWID_CACHEDIR \
@@ -557,41 +545,6 @@ void OVSRenderer::startPacketLogger() {
         LOG(DEBUG) << "DropLog interfaces not configured";
         return;
     }
-    boost::asio::io_service &agent_io = getAgent().getAgentIOService();
-    // Inform the io_service that we are about to become a daemon. The
-    // io_service cleans up any internal resources, such as threads, that may
-    // interfere with forking.
-    agent_io.notify_fork(boost::asio::io_service::fork_prepare);
-    if(pid_t pid = fork()) {
-        if (pid > 0) {
-            agent_io.notify_fork(boost::asio::io_service::fork_parent);
-        } else {
-            LOG(ERROR) << "PacketLogger: Failed to fork:" << errno;
-        }
-        return;
-    }
-    // Inform the io_service that we have finished becoming a daemon. The
-    // io_service uses this opportunity to create any internal file descriptors
-    // that need to be private to the new process.
-    agent_io.notify_fork(boost::asio::io_service::fork_child);
-    int chdir_ret = chdir("/");
-    if(chdir_ret) {
-        LOG(ERROR) << "PacketLogger: Failed to chdir to /";
-    }
-    // Close the standard streams. This decouples the daemon from the terminal
-    // that started it.
-    int fd;
-    fd = open("/dev/null",O_RDWR, 0);
-    if (fd != -1) {
-        dup2 (fd, STDIN_FILENO);
-        if (fd > 0)
-            close (fd);
-    }
-    auto logParams = getAgent().getLogParams();
-    std::string log_level,log_file;
-    bool toSysLog;
-    std::tie(log_level, toSysLog, log_file) = logParams;
-    initLogging(log_level, toSysLog, log_file);
     boost::system::error_code ec;
     boost::asio::ip::address addr = boost::asio::ip::address::from_string(LOOPBACK, ec);
     if(ec) {
@@ -604,44 +557,28 @@ void OVSRenderer::startPacketLogger() {
     pktLogger.setIntBridgeTableDescription(tblDescMap);
     accessSwitchManager.getForwardingTableList(tblDescMap);
     pktLogger.setAccBridgeTableDescription(tblDescMap);
-    if(!pktLogger.startListener()) {
-        exit(1);
+    pktLogger.startListener();
+    if(!getAgent().getPacketEventNotifSock().empty()) {
+        exporterThread.reset(new std::thread([this]() {
+           this->pktLogger.startExporter();
+        }));
     }
+    packetLoggerThread.reset(new std::thread([this]() {
+       this->pktLoggerIO.run();
+    }));
+}
 
-    pid_t child_pid = getpid();
-    std::string fileName(std::string(PACKET_LOGGER_PIDDIR) + "/logger.pid");
-    fstream s(fileName, s.out);
-    if(!s.is_open()) {
-        LOG(ERROR) << "Failed to open " << fileName;
-    } else {
-        s << child_pid;
+void OVSRenderer::stopPacketLogger() {
+    pktLogger.stopListener();
+    pktLogger.stopExporter();
+    if(exporterThread) {
+        exporterThread->join();
+        exporterThread.reset();
     }
-    s.close();
-    // Register signal handlers.
-    sigset_t waitset;
-    sigemptyset(&waitset);
-    sigaddset(&waitset, SIGINT);
-    sigaddset(&waitset, SIGTERM);
-    sigaddset(&waitset, SIGUSR1);
-    sigprocmask(SIG_BLOCK, &waitset, NULL);
-    std::thread signal_thread([this, &waitset]() {
-        int sig;
-        int result = sigwait(&waitset, &sig);
-        if (result == 0) {
-            LOG(INFO) << "Got " << strsignal(sig) << " signal";
-        } else {
-            LOG(ERROR) << "Failed to wait for signals: " << errno;
-        }
-        this->getPacketLogger().stopListener();
-        this->getPacketLogger().stopExporter();
-    });
-    std::thread client_thread([this]() {
-       this->getPacketLogger().startExporter();
-    });
-    this->pktLoggerIO.run();
-    client_thread.join();
-    signal_thread.join();
-    exit(0);
+    if(packetLoggerThread) {
+        packetLoggerThread->join();
+        packetLoggerThread.reset();
+    }
 }
 
 } /* namespace opflexagent */

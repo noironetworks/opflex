@@ -99,7 +99,7 @@ private:
     boost::asio::ip::udp::endpoint localEndpoint;
     boost::asio::ip::udp::endpoint remoteEndpoint;
     boost::array<unsigned char, 4096> recv_buffer;
-    bool stopped;
+    std::atomic<bool> stopped;
 };
 
 /**
@@ -138,7 +138,7 @@ private:
     boost::asio::local::stream_protocol::socket clientSocket;
     boost::asio::local::stream_protocol::endpoint remoteEndpoint;
     boost::array<unsigned char, 4096> send_buffer;
-    bool stopped;
+    std::atomic<bool> stopped;
     bool connected;
     unsigned pendingDataLen;
     static const unsigned maxEventsPerBuffer=10;
