@@ -106,10 +106,6 @@ namespace opflexagent {
         // get mirror artifacts from OVSDB if provisioned
         opflexagent::mirror mir;
         bool isMirProv = conn->getOvsdbState().getMirrorState(seSt.get()->getName(), mir);
-        if (isMirProv) {
-            LOG(DEBUG) << "mirror state for " << seSt.get()->getName() << " uuid " << mir.uuid;
-            LOG(DEBUG) << "src ports = " << mir.src_ports.size() << ", dst ports = " << mir.dst_ports.size();
-        }
 
         // There should be at least one source and the destination should be set
         // Admin state should be ON.
@@ -147,8 +143,7 @@ namespace opflexagent {
         // check if the number of source and dest ports are the
         // same as provisioned.
         if (srcPort.size() != mir.src_ports.size() ||
-                dstPort.size() != mir.dst_ports.size()) {
-            LOG(DEBUG) << "updating mirror config";
+            dstPort.size() != mir.dst_ports.size()) {
             updateMirrorConfig(seSt.get());
             return;
         }

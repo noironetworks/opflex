@@ -317,6 +317,10 @@ namespace opflexagent {
     }
 
     void SpanManager::addEndpoint(const shared_ptr<LocalEp>& lEp, const shared_ptr<L2Ep>& l2Ep, const unsigned char dir) {
+        if (!l2Ep || !l2Ep->isInterfaceNameSet()) {
+            LOG(WARNING) << "Unable to add EP to span as interface name is not set";
+            return;
+        }
         optional<URI> parent = SpanManager::getSession(lEp);
         if (parent) {
             notifyUpdate.insert(parent.get());

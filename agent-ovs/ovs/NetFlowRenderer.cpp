@@ -173,7 +173,7 @@ namespace opflexagent {
     void NetFlowRenderer::createIpfix(const string& targets, int sampling) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
-        LOG(DEBUG) << "bridge uuid " << brUuid << "sampling rate is " << sampling;
+        LOG(DEBUG) << "bridge uuid " << brUuid << " sampling rate is " << sampling;
         vector<OvsdbValue> values;
         values.emplace_back(targets);
         OvsdbValues tdSet(values);

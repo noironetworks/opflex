@@ -71,6 +71,7 @@ bool verifyCreateDestroy(Agent& agent, const shared_ptr<NetFlowRenderer>& nfr) {
     exporterConfig->setSrcAddr("3.3.3.3");
     exporterConfig->setVersion(2);
     exporterConfig->setDstAddr("5.5.5.7");
+    exporterConfig->setDstPort(1234);
     agent.getNetFlowManager().updateExporterConfigState(exporterConfig);
     nfr->exporterUpdated(exporterURI);
 
