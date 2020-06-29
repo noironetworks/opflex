@@ -45,6 +45,7 @@ OpflexClientConnection::OpflexClientConnection(HandlerFactory& handlerFactory,
 }
 
 OpflexClientConnection::~OpflexClientConnection() {
+    pool->clearPendingItems(this);
 }
 
 const string& OpflexClientConnection::getName() {
