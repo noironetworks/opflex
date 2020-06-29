@@ -22,6 +22,7 @@
 #include <rapidjson/document.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/asio/ip/address_v4.hpp>
+#include <boost/foreach.hpp>
 
 #include "opflex/engine/Processor.h"
 #include "opflex/engine/internal/OpflexPool.h"
@@ -357,6 +358,21 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
     StoreClient* client = getProcessor()->getSystemClient();
     MOSerializer& serializer = getProcessor()->getSerializer();
     StoreClient::notif_t notifs;
+
+    size_t numPeer = 0;
+    uint64_t leastUC = -1;
+    {
+        OpflexPool& pool = getProcessor()->getPool();
+        const std::lock_guard<std::recursive_mutex> lock(pool.conn_mutex);
+        numPeer = pool.connections.size();
+        BOOST_FOREACH(OpflexPool::conn_map_t::value_type& v, pool.connections) {
+            const auto& connUC = v.second.conn->getOpflexStats()->getPolUnresolvedCount();
+            LOG(DEBUG) << "before deserialize: Conn: " << v.second.conn->getHostname() << "  UC: " << connUC;
+            if (connUC < leastUC)
+                leastUC = connUC;
+        }
+    }
+
     if (payload.HasMember("policy")) {
         const Value& policy = payload["policy"];
         if (!policy.IsArray()) {
@@ -368,15 +384,31 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
         Value::ConstValueIterator it;
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
-            serializer.deserialize(mo, *client, true, &notifs);
             if (!mo.HasMember("uri")) {
                 LOG(ERROR) << "uri member doesn't exist in the JSON value" ;
-            }
-            else {
+            } else {
                 const Value& uriv = mo["uri"];
                 OpflexPool& pool = getProcessor()->getPool();
                 pool.removePendingItem(conn, uriv.GetString());
             } 
+
+            const auto& currUC = conn->getOpflexStats()->getPolUnresolvedCount();
+            //if (((numPeer > 1) && (std::labs(leastUC - currUC) < 10))
+            if (((numPeer > 1)
+                    && ((std::labs(leastUC - currUC) < 10) // if the peers are almost in sync, allow processing the payload
+                            || (currUC < leastUC))) // if UC is lesser than least UC, then continue processing
+                || (numPeer == 1)) { // if this is the only peer, dont worry about UC
+                LOG(DEBUG) << "doing deserialize from [" << conn->getRemotePeer() << "]"
+                           << " lUC:" << leastUC
+                           << " cUC:" << currUC
+                           << " numPeer:" << numPeer;
+                serializer.deserialize(mo, *client, true, &notifs);
+            } else {
+                LOG(DEBUG) << "Skipping deserialize from [" << conn->getRemotePeer() << "]"
+                           << " lUC:" << leastUC
+                           << " cUC:" << currUC
+                           << " numPeer:" << numPeer;
+            }
         }
     }
     client->deliverNotifications(notifs);

@@ -423,6 +423,7 @@ private:
                           ofcore::PeerStatusListener::PeerStatus status);
 
     friend class OpflexClientConnection;
+    friend class OpflexPEHandler;
 };
 
 
