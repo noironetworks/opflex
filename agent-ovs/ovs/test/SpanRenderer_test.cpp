@@ -102,7 +102,7 @@ public:
         OvsdbRowDetails mirrorDetail2;
         uuid = "922108c7-ce2d-4d46-a419-1654a5bf47ef";
         mirrorDetail2["uuid"] = OvsdbValue(uuid);
-        const string mirrorName2("abc");
+        const string mirrorName2("ugh-vspan");
         mirrorDetail2["name"] = OvsdbValue(mirrorName2);
         mirrorDetail2["out_port"] = OvsdbValue(erspanPortUuid2);
         mirrorDetail2["select_src_port"] = OvsdbValue(Dtype::SET, "set", srcPorts);
@@ -181,8 +181,10 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
     Mutator mutator2(framework, "policyelement");
     MAC l2Mac("aa:bb:cc:dd:01:01");
     auto l2Ep = epr->addEprL2Ep(bd->getURI().toString(), l2Mac);
+    l2Ep->setInterfaceName("p1-tap");
     MAC l2Mac2("aa:bb:cc:dd:01:02");
     auto l2Ep2 = epr->addEprL2Ep(bd->getURI().toString(), l2Mac2);
+    l2Ep2->setInterfaceName("p2-tap");
     mutator2.commit();
 
     ErspanParams params;
@@ -199,6 +201,12 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
     mutator3.commit();
     WAIT_FOR(modelgbp::span::LocalEpToEpRSrc::resolve(framework, ep2Rel->getURI()), 500);
 
+    {
+        // TOOD - populate SrcGrps in modb instead
+        lock_guard <recursive_mutex> guard(SpanManager::updates);
+        agent.getSpanManager().addEndpoint(localEp, l2Ep, DirectionEnumT::CONST_IN);
+        agent.getSpanManager().addEndpoint(localEp2, l2Ep2, DirectionEnumT::CONST_BIDIRECTIONAL);
+    }
     spr->spanUpdated(session->getURI());
 }
 
