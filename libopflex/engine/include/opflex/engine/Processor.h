@@ -308,7 +308,7 @@ private:
         NEW,
         /** a local item that's been updated */
         UPDATED,
-        /** a local item that's been send to the server */
+        /** a local item that's been sent to the server */
         IN_SYNC,
         /** A remote item that does not get resolved */
         REMOTE,

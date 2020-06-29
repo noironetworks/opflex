@@ -46,20 +46,39 @@ OpflexPool::~OpflexPool() {
 }
 
 void OpflexPool::addPendingItem(OpflexClientConnection* conn, const std::string& uri) {
-    std::string hostName = conn->getHostname();
+    const std::string& hostName = conn->getHostname();
     std::unique_lock<std::mutex> lock(modify_uri_mutex);
-    if(pendingResolution[hostName].insert(uri).second == true) {
-       conn->getOpflexStats()->incrPolUnresolvedCount();
+    if (pendingResolution[hostName].insert(uri).second == true) {
+        conn->getOpflexStats()->incrPolUnresolvedCount();
+        LOG(TRACE) << "add pending UC: conn: " << hostName
+                   << " size: " << pendingResolution[hostName].size()
+                   << " UC: " << conn->getOpflexStats()->getPolUnresolvedCount()
+                   << " URI: " << uri;
+    }
+}
+
+void OpflexPool::clearPendingItems (OpflexClientConnection* conn)
+{
+    const std::string& hostName = conn->getHostname();
+    std::unique_lock<std::mutex> lock(modify_uri_mutex);
+    if (pendingResolution.find(hostName) != pendingResolution.end()) {
+        pendingResolution[hostName].clear();
+        pendingResolution.erase(hostName);
+        LOG(TRACE) << "clearing pending UCs: conn: " << hostName;
     }
 }
 
 void OpflexPool::removePendingItem(OpflexClientConnection* conn, const std::string& uri) {
-    std::string hostName = conn->getHostname();
+    const std::string& hostName = conn->getHostname();
     std::unique_lock<std::mutex> lock(modify_uri_mutex);
     std::set<std::string>::iterator rem = pendingResolution[hostName].find(uri);
     if (rem != pendingResolution[hostName].end()) {
         pendingResolution[hostName].erase(rem);
         conn->getOpflexStats()->decrPolUnresolvedCount();
+        LOG(TRACE) << "del pending UC: conn: " << hostName
+                   << " size: " << pendingResolution[hostName].size()
+                   << " UC: " << conn->getOpflexStats()->getPolUnresolvedCount()
+                   << " URI: " << uri;
     }
 }
 

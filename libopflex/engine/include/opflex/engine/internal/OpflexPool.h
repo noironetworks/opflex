@@ -216,6 +216,11 @@ public:
     void removePendingItem(OpflexClientConnection* conn, const std::string& uri);
 
     /**
+     * Clear the pending policies per connection
+     */
+    void clearPendingItems(OpflexClientConnection* conn);
+
+    /**
      * Register the given peer status listener to get updates on the
      * health of the connection pool and on individual connections.
      *
