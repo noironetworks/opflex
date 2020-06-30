@@ -857,7 +857,7 @@ public:
         fs::create_directory(temp);
     }
     ~FSServiceFixture() {
-       // fs::remove_all(temp);
+        fs::remove_all(temp);
     }
 
     fs::path temp;
@@ -875,34 +875,34 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
     fs::ofstream os(path1);
     os  << "{"
         << "\"uuid\":\"" << uuid1 << "\","
-		<< "\"domain-policy-space\": \"common\","
-		<< "\"domain-name\": \"l3out_1_vrf\","
-		<< "\"service-mode\": \"loadbalancer\","
-		<< "\"service-mac\": \"88:1d:fc:f2:fb:59\","
-                << "\"interface-name\": \"veth0\","
-                << "\"interface-ip\": \"10.5.8.3\","
-                << "\"interface-vlan\": 102,"
-		<< "\"service-type\": \"clusterIp\","
-		<< "\"service-mapping\":["
-		<< "{\"service-ip\": \"10.96.0.1\","
-		<< "\"service-proto\": \"tcp\","
-		<< "\"service-port\": 443,"
-		<< "\"next-hop-ips\":["
-		<< "\"1.100.101.11\""
-		<< "],"
-		<< "\"next-hop-port\": 6443,"
-		<< "\"conntrack-enabled\": true"
-		<< "}"
-		<< "],"
-		<< "\"attributes\": {"
-		<< "\"component\":\"apiserver\","
-		<< "\"name\":\"kubernetes\","
-		<< "\"namespace\":\"default\","
-		<< "\"provider\":\"kubernetes\","
-		<< "\"service-name\":\"default_kubernetes\""
-		<< "}"
-		<< "}" << std::endl;
-	os.close();
+        << "\"domain-policy-space\": \"common\","
+	<< "\"domain-name\": \"l3out_1_vrf\","
+	<< "\"service-mode\": \"loadbalancer\","
+	<< "\"service-mac\": \"88:1d:fc:f2:fb:59\","
+        << "\"interface-name\": \"veth0\","
+        << "\"interface-ip\": \"10.5.8.3\","
+        << "\"interface-vlan\": 102,"
+	<< "\"service-type\": \"clusterIp\","
+	<< "\"service-mapping\":["
+	<< "{\"service-ip\": \"10.96.0.1\","
+	<< "\"service-proto\": \"tcp\","
+	<< "\"service-port\": 443,"
+	<< "\"next-hop-ips\":["
+	<< "\"1.100.101.11\""
+	<< "],"
+	<< "\"next-hop-port\": 6443,"
+	<< "\"conntrack-enabled\": true"
+	<< "}"
+	<< "],"
+	<< "\"attributes\": {"
+	<< "\"component\":\"apiserver\","
+	<< "\"name\":\"kubernetes\","
+	<< "\"namespace\":\"default\","
+	<< "\"provider\":\"kubernetes\","
+	<< "\"service-name\":\"default_kubernetes\""
+	<< "}"
+	<< "}" << std::endl;
+    os.close();
 
     ServiceManager& serviceMgr = agent.getServiceManager();
     FSWatcher watcher;
@@ -913,34 +913,34 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
     fs::path path2(temp / (uuid1 + ".service"));
     fs::ofstream os2(path2);
     os2 << "{"
-	    << "\"uuid\":\"" << uuid1 << "\","
-		<< "\"domain-policy-space\": \"common\","
-		<< "\"domain-name\": \"l3out_1_vrf\","
-		<< "\"service-mode\": \"loadbalancer\","
-		 << "\"interface-name\": \"veth1\","
-                << "\"interface-ip\": \"10.5.8.3\","
-                << "\"interface-vlan\": 102,"
-         	<< "\"service-type\": \"clusterIp\","
-		<< "\"service-mapping\":["
-		<< "{\"service-ip\": \"10.96.0.2\","
-		<< "\"service-proto\": \"tcp\","
-		<< "\"service-port\": 443,"
-		<< "\"next-hop-ips\":["
-		<< "\"1.100.101.11\""
-		<< "],"
-		<< "\"next-hop-port\": 6443,"
-		<< "\"conntrack-enabled\": true"
-		<< "}"
-		<< "],"
-		<< "\"attributes\": {"
-		<< "\"component\":\"apiserver\","
-		<< "\"name\":\"kubernetes\","
-		<< "\"namespace\":\"default\","
-		<< "\"provider\":\"kubernetes\","
-		<< "\"service-name\":\"default_kubernetes\""
-		<< "}"
-		<< "}" << std::endl;
-	os.close();
+        << "\"uuid\":\"" << uuid1 << "\","
+	<< "\"domain-policy-space\": \"common\","
+	<< "\"domain-name\": \"l3out_1_vrf\","
+	<< "\"service-mode\": \"local-anycast\","
+        << "\"interface-name\": \"veth1\","
+        << "\"interface-ip\": \"10.5.8.3\","
+        << "\"interface-vlan\": 102,"
+        << "\"service-type\": \"clusterIp\","
+	<< "\"service-mapping\":["
+	<< "{\"service-ip\": \"10.96.0.2\","
+	<< "\"service-proto\": \"tcp\","
+	<< "\"service-port\": 443,"
+	<< "\"next-hop-ips\":["
+	<< "\"1.100.101.11\""
+	<< "],"
+	<< "\"next-hop-port\": 6443,"
+	<< "\"conntrack-enabled\": true"
+	<< "}"
+	<< "],"
+	<< "\"attributes\": {"
+	<< "\"component\":\"apiserver\","
+	<< "\"name\":\"kubernetes\","
+	<< "\"namespace\":\"default\","
+	<< "\"provider\":\"kubernetes\","
+	<< "\"service-name\":\"default_kubernetes\""
+	<< "}"
+	<< "}" << std::endl;
+    os2.close();
     
     WAIT_FOR(hasService(serviceMgr, uuid1) && serviceMgr.getService(uuid1)->getServiceMode() == Service::ServiceMode::LOADBALANCER, 500);
     auto service1 = serviceMgr.getService(uuid1);
@@ -956,34 +956,34 @@ BOOST_FIXTURE_TEST_CASE( fsdelservice, FSServiceFixture ) {
     fs::ofstream os(path1);
     const std::string uuid = "11310ce0-d8d3-41c9-9f1f-7e9aa5cf0a52";
     os  << "{"
-	    << "\"uuid\":\"" << uuid << "\","
-	    << "\"domain-policy-space\": \"common\","
-		<< "\"domain-name\": \"l3out_1_vrf\","
-		<< "\"service-mode\": \"loadbalancer\","
-		 << "\"interface-name\": \"veth0\","
-                << "\"interface-ip\": \"10.5.8.3\","
-                << "\"interface-vlan\": 102,"
-        	<< "\"service-type\": \"clusterIp\","
-		<< "\"service-mapping\":["
-		<< "{\"service-ip\": \"10.96.0.1\","
-		<< "\"service-proto\": \"tcp\","
-		<< "\"service-port\": 443,"
-		<< "\"next-hop-ips\":["
-		<< "\"1.100.101.11\""
-		<< "],"
-		<< "\"next-hop-port\": 6443,"
-		<< "\"conntrack-enabled\": true"
-		<< "}"
-		<< "],"
-		<< "\"attributes\": {"
-		<< "\"component\":\"apiserver\","
-		<< "\"name\":\"kubernetes\","
-		<< "\"namespace\":\"default\","
-		<< "\"provider\":\"kubernetes\","
-		<< "\"service-name\":\"default_kubernetes\""
-		<< "}"
-		<< "}" << std::endl;
-	os.close();
+	<< "\"uuid\":\"" << uuid << "\","
+	<< "\"domain-policy-space\": \"common\","
+	<< "\"domain-name\": \"l3out_1_vrf\","
+	<< "\"service-mode\": \"loadbalancer\","
+	<< "\"interface-name\": \"veth0\","
+        << "\"interface-ip\": \"10.5.8.3\","
+        << "\"interface-vlan\": 102,"
+        << "\"service-type\": \"clusterIp\","
+	<< "\"service-mapping\":["
+	<< "{\"service-ip\": \"10.96.0.1\","
+	<< "\"service-proto\": \"tcp\","
+	<< "\"service-port\": 443,"
+	<< "\"next-hop-ips\":["
+	<< "\"1.100.101.11\""
+	<< "],"
+	<< "\"next-hop-port\": 6443,"
+	<< "\"conntrack-enabled\": true"
+	<< "}"
+	<< "],"
+	<< "\"attributes\": {"
+	<< "\"component\":\"apiserver\","
+	<< "\"name\":\"kubernetes\","
+	<< "\"namespace\":\"default\","
+	<< "\"provider\":\"kubernetes\","
+	<< "\"service-name\":\"default_kubernetes\""
+	<< "}"
+        << "}" << std::endl;
+    os.close();
 
     FSWatcher watcher;
     ServiceManager& serviceMgr = agent.getServiceManager();
@@ -994,18 +994,6 @@ BOOST_FIXTURE_TEST_CASE( fsdelservice, FSServiceFixture ) {
 
     BOOST_CHECK(extService->getServiceMode() == Service::ServiceMode::LOADBALANCER);
 
-    //const std::string epUuid = " 9b7295f4-07a8-41ac-a681-e0ee82560262";
-    //snatMgr.addEndpoint(uuid, epUuid);
-
-    //std::unordered_set<std::string> eps;
-    //snatMgr.getEndpoints(uuid, eps);
-    //BOOST_CHECK(eps.size() == 1);
-    //snatMgr.delEndpoint(epUuid);
-    //eps.clear();
-    //snatMgr.getEndpoints(uuid, eps);
-    //BOOST_CHECK(eps.empty());
-
-    // check for removing a Snat
     fs::remove(path1);
     WAIT_FOR((agent.getServiceManager().getService(uuid) == nullptr), 500);
 
