@@ -1306,6 +1306,53 @@ BOOST_FIXTURE_TEST_CASE( fsextsvisource, FSEndpointFixture ) {
     watcher.stop();
 }
 
+BOOST_FIXTURE_TEST_CASE( testotherparams, FSEndpointFixture ) {
+
+    // check for a new EP added to watch directory
+    const std::string uuid("aaa18f0b-80f7-46e2-b06c-4d9487b0cbbb");
+    fs::path path1(temp / (uuid + ".ep"));
+    fs::ofstream os(path1);
+    os << "{"
+       << "\"uuid\":\"" << uuid << "\","
+       << "\"mac\":\"10:ff:00:a3:01:03\","
+       << "\"ip\":[\"10.1.0.3\"],"
+       << "\"interface-name\":\"veth0\","
+       << "\"access-interface-vlan\":\"1234\","
+       << "\"access-uplink-interface\":\"eth2\","
+       << "\"promiscuous-mode\":\"true\","
+       << "\"discovery-proxy-mode\":\"true\","
+       << "\"nat-mode\":\"true\","
+       << "\"anycast-return-ip\":[\"1.2.3.4\"],"
+       << "\"virtual-ip\":[{\"mac\":\"24:ff:00:a3:01:03\",\"ip\":\"9.9.9.1\"},{\"ip\":\"11.1.1.1\"}],"
+       << "\"dhcp4\":{\"ip\":\"123.123.123.123\",\"server-ip\":\"23.53.31.23\",\"server-mac\":\"10:ff:00:a3:01:03\","
+         << "\"prefix-len\":\"24\",\"routers\":[\"44.1.3.4\"],\"dns-servers\":[\"8.8.8.8\",\"8.8.8.7\"],"
+         << "\"domain\":\"test.com\",\"static-routes\":[{\"dest\":\"198.1.1.1\",\"dest-prefix\":\"24\",\"next-hop\":\"196.12.3.1\"}],"
+         << "\"interface-mtu\":\"1500\",\"lease-time\":\"3600\"},"
+       << "\"dhcp6\":{\"search-list\":[\"test.com\",\"abc.com\"],\"dns-servers\":[\"8.8.8.8\",\"8.8.8.7\"],"
+         << "\"t1\":\"1000\",\"t2\":\"2000\",\"preferred-lifetime\":\"3600\",\"valid-lifetime\":\"3600\"},"
+       << "\"ip-address-mapping\":[{\"uuid\":\"" << uuid << "\",\"floating-ip\":\"55.5.4.5\",\"mapped-ip\":\"10.1.0.3\","
+         << "\"policy-space-name\":\"abc\",\"endpoint-group-name\":\"def\",\"next-hop-if\":\"eth2\",\"next-hop-mac\":\"10:ff:00:a3:01:04\"}],"
+       << "\"snats\":[\"83f18f0b-80f7-46e2-b06c-4d9487b0c793\"],"
+       << "\"active-active-aap\":\"true\","
+       << "\"disable-adv\":\"false\","
+       << "\"access-allow-untagged\":\"true\","
+       << "\"endpoint-group\":\"/PolicyUniverse/PolicySpace/abc/GbpEpGroup/def/\""
+       << "}" << std::endl;
+    os.close();
+    FSWatcher watcher;
+    FSEndpointSource source(&agent.getEndpointManager(), watcher,
+                             temp.string());
+    watcher.start();
+    WAIT_FOR((agent.getEndpointManager().getEndpoint(uuid) != nullptr), 500);
+    auto ep = agent.getEndpointManager().getEndpoint(uuid);
+
+    BOOST_CHECK_EQUAL(1, ep->getAnycastReturnIPs().size());
+    BOOST_CHECK_EQUAL(2, ep->getVirtualIPs().size());
+
+
+    watcher.stop();
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } /* namespace opflexagent */
