@@ -17,6 +17,11 @@
 #include <modelgbp/svc/ServiceUniverse.hpp>
 #include <modelgbp/svc/ServiceModeEnumT.hpp>
 #include <modelgbp/observer/SvcStatUniverse.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <opflexagent/FSServiceSource.h>
+#include <opflexagent/Service.h>
+#include <opflexagent/ServiceManager.h>
+#include <opflexagent/FSWatcher.h>
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -35,6 +40,7 @@ using namespace modelgbp::gbpe;
 using namespace modelgbp::svc;
 using namespace opflex::modb;
 using modelgbp::observer::SvcStatUniverse;
+namespace fs = boost::filesystem;
 
 class ServiceManagerFixture : public ModbFixture {
     typedef opflex::ofcore::OFConstants::OpflexElementMode opflex_elem_t;
@@ -841,6 +847,169 @@ BOOST_FIXTURE_TEST_CASE(testDeleteExtLB, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
 #endif
     LOG(DEBUG) << "############# SERVICE EXT DELETE END ############";
+}
+
+class FSServiceFixture : public BaseFixture {
+public:
+    FSServiceFixture()
+        : BaseFixture(),
+          temp(fs::temp_directory_path() / fs::unique_path()) {
+        fs::create_directory(temp);
+    }
+    ~FSServiceFixture() {
+       // fs::remove_all(temp);
+    }
+
+    fs::path temp;
+};
+
+bool hasService(ServiceManager& serviceMgr, const string& uuid) {
+    auto service = serviceMgr.getService(uuid);
+    return service && service->getUUID() == uuid;
+}
+
+BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
+   // check already existing service file
+    const std::string uuid1 = "11310ce0-d8d3-41c9-9f1f-7e9aa5cf0a51";
+    fs::path path1(temp / (uuid1 + ".service"));
+    fs::ofstream os(path1);
+    os  << "{"
+        << "\"uuid\":\"" << uuid1 << "\","
+		<< "\"domain-policy-space\": \"common\","
+		<< "\"domain-name\": \"l3out_1_vrf\","
+		<< "\"service-mode\": \"loadbalancer\","
+		<< "\"service-mac\": \"88:1d:fc:f2:fb:59\","
+                << "\"interface-name\": \"veth0\","
+                << "\"interface-ip\": \"10.5.8.3\","
+                << "\"interface-vlan\": 102,"
+		<< "\"service-type\": \"clusterIp\","
+		<< "\"service-mapping\":["
+		<< "{\"service-ip\": \"10.96.0.1\","
+		<< "\"service-proto\": \"tcp\","
+		<< "\"service-port\": 443,"
+		<< "\"next-hop-ips\":["
+		<< "\"1.100.101.11\""
+		<< "],"
+		<< "\"next-hop-port\": 6443,"
+		<< "\"conntrack-enabled\": true"
+		<< "}"
+		<< "],"
+		<< "\"attributes\": {"
+		<< "\"component\":\"apiserver\","
+		<< "\"name\":\"kubernetes\","
+		<< "\"namespace\":\"default\","
+		<< "\"provider\":\"kubernetes\","
+		<< "\"service-name\":\"default_kubernetes\""
+		<< "}"
+		<< "}" << std::endl;
+	os.close();
+
+    ServiceManager& serviceMgr = agent.getServiceManager();
+    FSWatcher watcher;
+    FSServiceSource source(&serviceMgr, watcher, temp.string());
+    watcher.start();
+    WAIT_FOR(hasService(serviceMgr, uuid1), 500);
+
+    fs::path path2(temp / (uuid1 + ".service"));
+    fs::ofstream os2(path2);
+    os2 << "{"
+	    << "\"uuid\":\"" << uuid1 << "\","
+		<< "\"domain-policy-space\": \"common\","
+		<< "\"domain-name\": \"l3out_1_vrf\","
+		<< "\"service-mode\": \"loadbalancer\","
+		 << "\"interface-name\": \"veth1\","
+                << "\"interface-ip\": \"10.5.8.3\","
+                << "\"interface-vlan\": 102,"
+         	<< "\"service-type\": \"clusterIp\","
+		<< "\"service-mapping\":["
+		<< "{\"service-ip\": \"10.96.0.2\","
+		<< "\"service-proto\": \"tcp\","
+		<< "\"service-port\": 443,"
+		<< "\"next-hop-ips\":["
+		<< "\"1.100.101.11\""
+		<< "],"
+		<< "\"next-hop-port\": 6443,"
+		<< "\"conntrack-enabled\": true"
+		<< "}"
+		<< "],"
+		<< "\"attributes\": {"
+		<< "\"component\":\"apiserver\","
+		<< "\"name\":\"kubernetes\","
+		<< "\"namespace\":\"default\","
+		<< "\"provider\":\"kubernetes\","
+		<< "\"service-name\":\"default_kubernetes\""
+		<< "}"
+		<< "}" << std::endl;
+	os.close();
+    
+    WAIT_FOR(hasService(serviceMgr, uuid1) && serviceMgr.getService(uuid1)->getServiceMode() == Service::ServiceMode::LOADBALANCER, 500);
+    auto service1 = serviceMgr.getService(uuid1);
+    BOOST_CHECK(service1->getServiceMode() == Service::ServiceMode::LOADBALANCER);
+    watcher.stop();
+
+}
+
+BOOST_FIXTURE_TEST_CASE( fsdelservice, FSServiceFixture ) {
+
+    // check for a new Service added to watch directory
+    fs::path path1(temp / "11310ce0-d8d3-41c9-9f1f-7e9aa5cf0a52.service");
+    fs::ofstream os(path1);
+    const std::string uuid = "11310ce0-d8d3-41c9-9f1f-7e9aa5cf0a52";
+    os  << "{"
+	    << "\"uuid\":\"" << uuid << "\","
+	    << "\"domain-policy-space\": \"common\","
+		<< "\"domain-name\": \"l3out_1_vrf\","
+		<< "\"service-mode\": \"loadbalancer\","
+		 << "\"interface-name\": \"veth0\","
+                << "\"interface-ip\": \"10.5.8.3\","
+                << "\"interface-vlan\": 102,"
+        	<< "\"service-type\": \"clusterIp\","
+		<< "\"service-mapping\":["
+		<< "{\"service-ip\": \"10.96.0.1\","
+		<< "\"service-proto\": \"tcp\","
+		<< "\"service-port\": 443,"
+		<< "\"next-hop-ips\":["
+		<< "\"1.100.101.11\""
+		<< "],"
+		<< "\"next-hop-port\": 6443,"
+		<< "\"conntrack-enabled\": true"
+		<< "}"
+		<< "],"
+		<< "\"attributes\": {"
+		<< "\"component\":\"apiserver\","
+		<< "\"name\":\"kubernetes\","
+		<< "\"namespace\":\"default\","
+		<< "\"provider\":\"kubernetes\","
+		<< "\"service-name\":\"default_kubernetes\""
+		<< "}"
+		<< "}" << std::endl;
+	os.close();
+
+    FSWatcher watcher;
+    ServiceManager& serviceMgr = agent.getServiceManager();
+    FSServiceSource source(&serviceMgr, watcher,temp.string());
+    watcher.start();
+    WAIT_FOR((serviceMgr.getService(uuid) != nullptr), 500);
+    auto extService = serviceMgr.getService(uuid);
+
+    BOOST_CHECK(extService->getServiceMode() == Service::ServiceMode::LOADBALANCER);
+
+    //const std::string epUuid = " 9b7295f4-07a8-41ac-a681-e0ee82560262";
+    //snatMgr.addEndpoint(uuid, epUuid);
+
+    //std::unordered_set<std::string> eps;
+    //snatMgr.getEndpoints(uuid, eps);
+    //BOOST_CHECK(eps.size() == 1);
+    //snatMgr.delEndpoint(epUuid);
+    //eps.clear();
+    //snatMgr.getEndpoints(uuid, eps);
+    //BOOST_CHECK(eps.empty());
+
+    // check for removing a Snat
+    fs::remove(path1);
+    WAIT_FOR((agent.getServiceManager().getService(uuid) == nullptr), 500);
+
+    watcher.stop();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
