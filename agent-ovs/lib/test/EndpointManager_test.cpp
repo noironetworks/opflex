@@ -1349,7 +1349,8 @@ BOOST_FIXTURE_TEST_CASE( testotherparams, FSEndpointFixture ) {
     BOOST_CHECK_EQUAL(1, ep->getAnycastReturnIPs().size());
     BOOST_CHECK_EQUAL(2, ep->getVirtualIPs().size());
 
-
+    fs::remove(path1);
+    WAIT_FOR((agent.getEndpointManager().getEndpoint(uuid) == nullptr), 500);
     watcher.stop();
 }
 
