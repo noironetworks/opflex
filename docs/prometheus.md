@@ -161,6 +161,7 @@ Opflex-agent declares and resolves policies with peer agent. These metrics are a
  | opflex_peer_state_report_req_count | number of state reports sent to opflex peer |
  | opflex_peer_state_report_resp_count | number of state reports responses received from opflex peer |
  | opflex_peer_state_report_err_count | number of state reports error repsonses from opflex peer |
+ | opflex_peer_unresolved_policy_count | number of policies requested by agent which aren't yet resolved by opflex peer |
 
 # Grafana
 Following are a few graphs created in grafana using the exported opflex metrics.
@@ -215,4 +216,4 @@ Opflex-agent exports a number of metrics based on the current implementation cho
    [grafana-sg]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/SecurityGroup.png?raw=true>
    [grafana-ofpeer-1]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-1.png?raw=true>
    [grafana-ofpeer-2]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-2.png?raw=true>
-   [grafana-ofpeer-3]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-PolicyUpdateReceived.png?raw=true>
+   [grafana-ofpeer-3]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-3.png?raw=true>
