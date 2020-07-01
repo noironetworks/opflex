@@ -1,7 +1,7 @@
 module[qos]
  {
      #Burst and Rate are always in Kbps.
- 
+     
      class[BandwidthLimit;
            super=policy/NamedDefinition;
            concrete]
@@ -23,6 +23,24 @@ module[qos]
              }
          }
      }
+
+    class[DscpMarking;
+          concrete]
+    {
+         member[mark; type=scalar/UByte]
+         contained
+        {
+            parent[class=policy/Requirement]
+        }
+
+        named
+        {
+            parent[class=*;]
+            {
+                component[prefix=dscp-marking;]
+            }
+        }
+    }
 
      class[Requirement;
            super=policy/NamedDefinition;
