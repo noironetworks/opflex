@@ -407,15 +407,6 @@ public:
         }
 
         /**
-         * Set the next hop IP addresses for the service mapping
-         *
-         * @param nextHopIps the IP addresses
-         */
-        void setNextHopIPs(const std::set<std::string>& nextHopIps) {
-            this->nextHopIps = nextHopIps;
-        }
-
-        /**
          * Add a next hop IP address for the service mapping
          *
          * @param nextHopIp the IP address
