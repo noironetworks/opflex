@@ -319,7 +319,9 @@ BOOST_FIXTURE_TEST_CASE( types , BaseFixture ) {
     writer.EndArray();
     string str(buffer.GetString());
 
-    //std::cerr << str << std::endl;
+    StringBuffer buffer2;
+    Writer<StringBuffer> writer2(buffer2);
+    serializer.serializeUnresolved(1, URI::ROOT, sysClient, writer2, true);
 
     sysClient.remove(1, URI::ROOT, true);
     BOOST_CHECK_THROW(sysClient.get(1, URI::ROOT), out_of_range);
