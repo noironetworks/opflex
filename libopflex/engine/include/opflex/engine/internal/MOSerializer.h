@@ -115,6 +115,9 @@ public:
                             writer.String(pit->second.getName().c_str());
                             writer.String("data");
                             serialize_ref(client, writer, r);
+                            writer.EndObject();
+                            writer.EndArray();
+                            writer.EndObject();
                         }
                     } else {
                         writer.StartArray();
@@ -139,13 +142,13 @@ public:
                                 writer.String(pit->second.getName().c_str());
                                 writer.String("data");
                                 serialize_ref(client, writer, r);
+                                writer.EndObject();
+                                writer.EndArray();
+                                writer.EndObject();
                             }
                         }
                         writer.EndArray();
                     }
-                    writer.EndObject();
-                    writer.EndArray();
-                    writer.EndObject();
                     break;
                 case modb::PropertyInfo::COMPOSITE:
                     client.getChildren(class_id, uri, pit->first,
