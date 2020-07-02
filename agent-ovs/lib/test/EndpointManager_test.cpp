@@ -1352,6 +1352,7 @@ BOOST_FIXTURE_TEST_CASE( testotherparams, FSEndpointFixture ) {
     fs::remove(path1);
     WAIT_FOR((agent.getEndpointManager().getEndpoint(uuid) == nullptr), 500);
     watcher.stop();
+    agent.stop();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
