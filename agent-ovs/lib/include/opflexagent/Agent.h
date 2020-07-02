@@ -132,7 +132,7 @@ public:
     /**
      * Get the prometheus manager object for this agent
      */
-    PrometheusManager& getPrometheusManager() { return prometheusManager; }
+    AgentPrometheusManager& getPrometheusManager() { return prometheusManager; }
 #endif
 
     /**
@@ -330,7 +330,7 @@ private:
 
     opflex::ofcore::OFFramework& framework;
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    PrometheusManager prometheusManager;
+    AgentPrometheusManager prometheusManager;
 #endif
     PolicyManager policyManager;
     EndpointManager endpointManager;

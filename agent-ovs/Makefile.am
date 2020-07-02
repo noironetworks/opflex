@@ -222,7 +222,7 @@ libopflex_agent_la_SOURCES = \
 	lib/SnatSource.cpp \
 	lib/FSPacketDropLogConfigSource.cpp
 if ENABLE_PROMETHEUS
-libopflex_agent_la_SOURCES += lib/PrometheusManager.cpp
+libopflex_agent_la_SOURCES += lib/AgentPrometheusManager.cpp
 endif
 
 libopflex_agent_la_LDFLAGS = -shared -version-info ${VERSION_INFO}
@@ -543,6 +543,9 @@ opflex_server_SOURCES = \
 	cmd/test/include/Policies.h \
 	cmd/test/Policies.cpp \
 	cmd/test/opflex_server.cpp
+if ENABLE_PROMETHEUS
+opflex_server_SOURCES += cmd/test/ServerPrometheusManager.cpp
+endif
 if ENABLE_GRPC
 %.grpc.pb.cc %.grpc.pb.h %.pb.cc %.pb.h: %.proto
 	protoc --cpp_out=. $^
@@ -565,6 +568,10 @@ opflex_server_LDADD = \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB) \
 	libopflex_agent.la
+if ENABLE_PROMETHEUS
+opflex_server_LDADD += $(PROMETHEUS_CORE_LIBS)
+opflex_server_LDADD += $(PROMETHEUS_PULL_LIBS)
+endif
 if ENABLE_GRPC
 opflex_server_LDADD += $(GRPC_LIBS) $(PROTOBUF_LIBS) -lgrpc++_reflection
 endif

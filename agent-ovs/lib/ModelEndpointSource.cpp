@@ -170,7 +170,7 @@ void ModelEndpointSource::objectUpdated (opflex::modb::class_id_t class_id,
             auto acc_intf = newep.getAccessInterface();
             if (acc_intf) {
                 newep.setAttributeHash(
-                    PrometheusManager::calcHashEpAttributes(
+                    AgentPrometheusManager::calcHashEpAttributes(
                                             acc_intf.get(),
                                             newep.getAttributes(),
                                             manager->getAgent().getPrometheusEpAttributes()));

@@ -587,7 +587,7 @@ void Agent::start() {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     if (prometheusEnabled) {
         prometheusManager.start(prometheusExposeLocalHostOnly,
-                                prometheusExposeEpSvcNan);
+                          prometheusExposeEpSvcNan);
     } else {
         LOG(DEBUG) << "prometheus not enabled";
     }

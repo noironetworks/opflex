@@ -839,7 +839,7 @@ private:
     CtZoneManager& ctZoneManager;
     TunnelEpManager& tunnelEpManager;
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    PrometheusManager& prometheusManager;
+    AgentPrometheusManager& prometheusManager;
 #endif
     TaskQueue taskQueue;
 

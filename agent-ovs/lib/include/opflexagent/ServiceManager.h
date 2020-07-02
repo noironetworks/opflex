@@ -48,7 +48,7 @@ public:
 #ifdef HAVE_PROMETHEUS_SUPPORT
     ServiceManager(Agent& agent_,
                    opflex::ofcore::OFFramework& framework_,
-                   PrometheusManager& prometheusManager_);
+                   AgentPrometheusManager& prometheusManager_);
 #else
     ServiceManager(Agent& agent,
                    opflex::ofcore::OFFramework& framework);
@@ -167,7 +167,7 @@ private:
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
     // reference to prometheus manager
-    PrometheusManager& prometheusManager;
+    AgentPrometheusManager& prometheusManager;
 #endif
 
     class ServiceState {
