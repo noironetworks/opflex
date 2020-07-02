@@ -4626,6 +4626,7 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
                             maskedFlow.action().go(SNAT_REV_TABLE_ID);
                         } else {
                             maskedFlow.action().ethDst(dmac)
+                                               .ethSrc(ifcMac)
                                                .output(OFPP_IN_PORT);
                         }
                         maskedFlow.build(toSnatFlows);
