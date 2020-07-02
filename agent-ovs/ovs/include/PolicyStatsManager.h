@@ -352,7 +352,7 @@ protected:
     /**
      * The prometheus manager that exports stats to prometheus server
      */
-    PrometheusManager& prometheusManager;
+    AgentPrometheusManager& prometheusManager;
 #endif
 
     /**

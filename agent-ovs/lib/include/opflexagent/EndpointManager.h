@@ -126,7 +126,7 @@ public:
     EndpointManager(Agent& agent,
                     opflex::ofcore::OFFramework& framework,
                     PolicyManager& policyManager,
-                    PrometheusManager& prometheusManager);
+                    AgentPrometheusManager& prometheusManager);
 #else
     EndpointManager(Agent& agent,
                     opflex::ofcore::OFFramework& framework,
@@ -396,7 +396,7 @@ private:
     opflex::ofcore::OFFramework& framework;
     PolicyManager& policyManager;
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    PrometheusManager& prometheusManager;
+    AgentPrometheusManager& prometheusManager;
 #endif
 
     class EndpointState {

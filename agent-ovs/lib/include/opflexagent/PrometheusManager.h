@@ -10,15 +10,17 @@
  */
 
 #pragma once
-#ifndef __OPFLEXAGENT_PROMETHEUS_MANAGER_H__
-#define __OPFLEXAGENT_PROMETHEUS_MANAGER_H__
+#ifndef __OPFLEX_PROMETHEUS_MANAGER_H__
+#define __OPFLEX_PROMETHEUS_MANAGER_H__
 
 #include <opflex/ofcore/OFFramework.h>
-#include <opflex/ofcore/OFStats.h>
+#include <opflexagent/logging.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <string>
 #include <mutex>
+#include <regex>
 
 #include <prometheus/gauge.h>
 #include <prometheus/counter.h>
@@ -26,6 +28,8 @@
 #include <prometheus/registry.h>
 
 namespace opflexagent {
+
+#define RETURN_IF_DISABLED  if (disabled) {return;}
 
 using std::string;
 using std::map;
@@ -37,6 +41,10 @@ using std::mutex;
 using std::pair;
 using boost::optional;
 using namespace prometheus;
+using std::regex;
+using std::regex_match;
+using std::regex_replace;
+using std::lock_guard;
 
 class Agent;
 struct EpCounters;
@@ -48,7 +56,7 @@ typedef optional<pair<map<string, string>, Gauge *> >  mgauge_pair_t;
 
 /**
  * Prometheus manager is responsible for maintaining state of all
- * the metrics exposed from opflex agent to prometheus. It is also
+ * the metrics exposed from opflex agent/server to prometheus. It is also
  * responsible for opening a http server to accept get requests for
  * exporting available metrics to prometheus.
  */
@@ -57,11 +65,187 @@ public:
     /**
      * Instantiate a new prometheus manager
      */
-    PrometheusManager(Agent &agent_, opflex::ofcore::OFFramework &fwk_);
+    PrometheusManager() : disabled{true} {};
     /**
      * Destroy the prometheus manager and clean up all state
      */
-    ~PrometheusManager() {};
+    virtual ~PrometheusManager() {};
+
+    // If the annotations are same, then we could land up in a situation where
+    // the gauge pointers are same across metrics. This could lead to memory
+    // corruption. Maintain a set of Gauge pointers to track any duplicates and
+    // use it to avoid creating duplicate metrics.
+    // 'T' can be one of the 4 supported metric types
+    template <typename T>
+    class MetricDupChecker {
+    public:
+        MetricDupChecker() {};
+
+        ~MetricDupChecker() {};
+
+        // check if a metric already exists
+        bool is_dup (T *metric)
+        {
+            const lock_guard<mutex> lock(dup_mutex);
+            if (metrics.count(metric)) {
+                LOG(ERROR) << "Duplicate metric detected: " << metric;
+                return true;
+            }
+            return false;
+        }
+
+        // add metric ptr to checker
+        void add (T *metric)
+        {
+            const lock_guard<mutex> lock(dup_mutex);
+            metrics.insert(metric);
+        }
+
+        // remove the metric from checker
+        void remove (T *metric)
+        {
+            const lock_guard<mutex> lock(dup_mutex);
+            metrics.erase(metric);
+        }
+
+        // Erase all state
+        void clear (void)
+        {
+            const lock_guard<mutex> lock(dup_mutex);
+            metrics.clear();
+        }
+    private:
+        // Lock to safe guard duplicate metric check state
+        mutex dup_mutex;
+        unordered_set<T *>  metrics;
+    };
+
+    // Init state
+    virtual void init(void) {};
+    // Create any gauge metrics during start
+    virtual void createStaticGauges(void) {};
+    // remove any gauge metrics during stop
+    virtual void removeStaticGauges(void) {};
+    // create any gauge metric families during start
+    virtual void createStaticGaugeFamilies(void) {};
+    // remove any gauge metric families during stop
+    virtual void removeStaticGaugeFamilies(void) {};
+    // create any counters at start
+    virtual void createStaticCounters(void) {};
+    // remove any counters at stop
+    virtual void removeStaticCounters(void) {};
+    // create any counter families at start
+    virtual void createStaticCounterFamilies(void) {};
+    // remove any counter families at stop
+    virtual void removeStaticCounterFamilies(void) {};
+    // Remove apis for dynamic families and metrics
+    virtual void removeDynamicCounterFamilies(void) {};
+    virtual void removeDynamicGaugeFamilies(void) {};
+    virtual void removeDynamicCounters(void) {};
+    virtual void removeDynamicGauges(void) {};
+
+    //Utility apis
+    /**
+     * Prometheus expects label/metric family names to be given
+     * in a particular format.
+     * More info: https://prometheus.io/docs/concepts/data_model/
+     * In short: the names can be like "[a-zA-Z_:][a-zA-Z0-9_:]*"
+     * and cannot start with "__" (used internally).
+     *
+     * @param: the name that we have to sanitize
+     *
+     * @return: the sanitized name that can be given to prometheus
+     */
+    static string sanitizeMetricName (const string& metric_name)
+    {
+        // Prometheus doesnt like anything other than:
+        // [a-zA-Z_:][a-zA-Z0-9_:]* for metric family name - these are static as on date
+        // [a-zA-Z_][a-zA-Z0-9_]* for label name
+        // https://prometheus.io/docs/concepts/data_model/
+
+        // Note: the below negation regex doesnt work correctly if there are numbers
+        // first char. This is mainly because multiple []'s and '*' doesnt work with
+        // regex_replace
+        //static const regex metric_name_regex("[^a-zA-Z_][^a-zA-Z0-9_]*");
+        static const regex regex1("[^a-zA-Z_]");
+        static const regex regex2("[^0-9a-zA-Z_]");
+        auto label1 = regex_replace(metric_name.substr(0,1), regex1, "_");
+        string label2;
+        if (metric_name.size() > 1)
+            label2 = regex_replace(metric_name.substr(1), regex2, "_");
+        auto label = label1+label2;
+
+        // Label names beginning with __ are reserved for internal use in
+        // prometheus.
+        auto reserved_for_internal_purposes = label.compare(0, 2, "__") == 0;
+        if (reserved_for_internal_purposes)
+            label[0] = 'a';
+
+        return label;
+    }
+
+    // Api to check if the input metric_name is prometheus compatible.
+    static bool checkMetricName (const string& metric_name)
+    {
+        // Prometheus doesnt like anything other than:
+        // [a-zA-Z_:][a-zA-Z0-9_:]* for metric family name - these are static as on date
+        // [a-zA-Z_][a-zA-Z0-9_]* for label name
+        // https://prometheus.io/docs/concepts/data_model/
+        static const regex metric_name_regex("[a-zA-Z_][a-zA-Z0-9_]*");
+        return regex_match(metric_name, metric_name_regex);
+    }
+
+    // The http server handle
+    unique_ptr<Exposer>     exposer_ptr;
+
+    /**
+     * Registry which keeps track of all the metric
+     * families to scrape.
+     */
+    shared_ptr<Registry>    registry_ptr;
+
+    MetricDupChecker<Gauge> gauge_check;
+    MetricDupChecker<Counter> counter_check;
+
+    /**
+     * True if shutting down or not start()'ed
+     */
+    std::atomic<bool> disabled;
+};
+
+class ServerPrometheusManager : private PrometheusManager {
+public:
+    /**
+     * Instantiate a new prometheus manager for opflex-server
+     */
+    ServerPrometheusManager();
+    /**
+     * Destroy the prometheus manager and clean up all state
+     */
+    virtual ~ServerPrometheusManager() {};
+    /**
+     * Start the prometheus manager
+     *
+     * @param exposeLocalHostOnly     flag to indicate if the the exposer
+     *                                should be bound with local host only.
+     */
+    void start(bool exposeLocalHostOnly);
+    /**
+     * Stop the prometheus manager
+     */
+    void stop();
+};
+
+class AgentPrometheusManager : private PrometheusManager {
+public:
+    /**
+     * Instantiate a new prometheus manager for opflex-agent
+     */
+    AgentPrometheusManager(Agent &agent_, opflex::ofcore::OFFramework &fwk_);
+    /**
+     * Destroy the prometheus manager and clean up all state
+     */
+    virtual ~AgentPrometheusManager() {};
     /**
      * Start the prometheus manager
      *
@@ -338,88 +522,34 @@ public:
                                          const string& classifier);
 
 
-    // TODO: Other Counter related APIs
-
 private:
     // opflex agent handle
     Agent&     agent;
     // opflex framwork handle
     opflex::ofcore::OFFramework& framework;
-    // The http server handle
-    unique_ptr<Exposer>     exposer_ptr;
-    /**
-     * Registry which keeps track of all the metric
-     * families to scrape.
-     */
-    shared_ptr<Registry>    registry_ptr;
-
     // Init state
-    void init(void);
-
-    // If the annotations are same, then we could land up in a situation where
-    // the gauge pointers are same across metrics. This could lead to memory
-    // corruption. Maintain a set of Gauge pointers to track any duplicates and
-    // use it to avoid creating duplicate metrics.
-    // 'T' can be one of the 4 supported metric types
-    template <typename T>
-    class MetricDupChecker {
-    public:
-        MetricDupChecker() {};
-        ~MetricDupChecker() {};
-        // check if a metric already exists
-        bool is_dup(T *);
-        // add metric ptr to checker
-        void add(T *);
-        // remove the metric from checker
-        void remove(T *);
-        // Erase all state
-        void clear(void);
-    private:
-        // Lock to safe guard duplicate metric check state
-        mutex dup_mutex;
-        unordered_set<T *>  metrics;
-    };
-
-    MetricDupChecker<Gauge> gauge_check;
-    MetricDupChecker<Counter> counter_check;
-
+    virtual void init(void) override;
     // Create any gauge metrics during start
-    void createStaticGauges(void);
+    virtual void createStaticGauges(void);
     // remove any gauge metrics during stop
-    void removeStaticGauges(void);
+    virtual void removeStaticGauges(void);
     // create any gauge metric families during start
-    void createStaticGaugeFamilies(void);
+    virtual void createStaticGaugeFamilies(void);
     // remove any gauge metric families during stop
-    void removeStaticGaugeFamilies(void);
+    virtual void removeStaticGaugeFamilies(void);
     // create any counters at start
-    void createStaticCounters(void);
+    virtual void createStaticCounters(void);
     // remove any counters at stop
-    void removeStaticCounters(void);
+    virtual void removeStaticCounters(void);
     // create any counter families at start
-    void createStaticCounterFamilies(void);
+    virtual void createStaticCounterFamilies(void);
     // remove any counter families at stop
-    void removeStaticCounterFamilies(void);
+    virtual void removeStaticCounterFamilies(void);
     // Remove apis for dynamic families and metrics
-    void removeDynamicCounterFamilies(void);
-    void removeDynamicGaugeFamilies(void);
-    void removeDynamicCounters(void);
-    void removeDynamicGauges(void);
-
-    //Utility apis
-    /**
-     * Prometheus expects label/metric family names to be given
-     * in a particular format.
-     * More info: https://prometheus.io/docs/concepts/data_model/
-     * In short: the names can be like "[a-zA-Z_:][a-zA-Z0-9_:]*"
-     * and cannot start with "__" (used internally).
-     *
-     * @param: the name that we have to sanitize
-     *
-     * @return: the sanitized name that can be given to prometheus
-     */
-    static string sanitizeMetricName(const string& metric_name);
-    // Api to check if the input metric_name is prometheus compatible.
-    static bool checkMetricName(const string& metric_name);
+    virtual void removeDynamicCounterFamilies(void);
+    virtual void removeDynamicGaugeFamilies(void);
+    virtual void removeDynamicCounters(void);
+    virtual void removeDynamicGauges(void);
 
     /* Start of EpCounter related apis and state */
     // Lock to safe guard EpCounter related state
@@ -1021,10 +1151,6 @@ private:
 
     // PrometheusManager specific state
     /**
-     * True if shutting down or not start()'ed
-     */
-    std::atomic<bool> disabled;
-    /**
      * True if Nan ep<-->svc metrics can be exposed
      */
     std::atomic<bool> exposeEpSvcNan;
@@ -1033,4 +1159,4 @@ private:
 
 } /* namespace opflexagent */
 
-#endif // __OPFLEXAGENT_PROMETHEUS_MANAGER_H__
+#endif // __OPFLEX_PROMETHEUS_MANAGER_H__

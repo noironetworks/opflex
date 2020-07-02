@@ -102,7 +102,7 @@ void BaseTableDropStatsManager::start(bool register_listener) {
        }
        mutator.commit();
 #ifdef HAVE_PROMETHEUS_SUPPORT
-       PrometheusManager &prometheusManager = agent->getPrometheusManager();
+       AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
        prometheusManager.addTableDropGauge(connection->getSwitchName(),
                                             tbl_it.second.first);
 #endif
@@ -123,7 +123,7 @@ void BaseTableDropStatsManager::stop(bool unregister_listener) {
                << connection->getSwitchName()
                << " Table Drop stats manager";
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    PrometheusManager &prometheusManager = agent->getPrometheusManager();
+    AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
     for (const auto& tbl_it: tableDescMap) {
         prometheusManager.removeTableDropGauge(
                 connection->getSwitchName(),
@@ -306,7 +306,7 @@ void BaseTableDropStatsManager::on_timer(const boost::system::error_code& ec) {
         }
         mutator.commit();
 #ifdef HAVE_PROMETHEUS_SUPPORT
-        PrometheusManager &prometheusManager = agent->getPrometheusManager();
+        AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
         prometheusManager.updateTableDropGauge(connection->getSwitchName(),
                                                 tbl_it.second.first,
                                                 byte_count,

@@ -1,6 +1,6 @@
 /* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
 /*
- * Implementation for PrometheusManager class.
+ * Implementation for AgentPrometheusManager class.
  *
  * Copyright (c) 2019-2020 Cisco Systems, Inc. and others.  All rights reserved.
  *
@@ -9,15 +9,13 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-#include <opflexagent/logging.h>
 #include <opflexagent/Agent.h>
+#include <opflex/ofcore/OFStats.h>
 #include <opflexagent/PrometheusManager.h>
-#include <opflexagent/EndpointManager.h>
 #include <modelgbp/gbpe/L24Classifier.hpp>
 #include <map>
 #include <boost/optional.hpp>
 #include <boost/algorithm/string.hpp>
-#include <regex>
 #include <prometheus/detail/utils.h>
 
 namespace opflexagent {
@@ -25,12 +23,6 @@ namespace opflexagent {
 using std::vector;
 using std::size_t;
 using std::to_string;
-using std::lock_guard;
-using std::regex;
-using std::regex_match;
-using std::regex_replace;
-using std::make_shared;
-using std::make_pair;
 using namespace prometheus::detail;
 using boost::split;
 
@@ -159,7 +151,7 @@ static string ofpeer_family_help[] =
   "number of state reports sent to opflex peer",
   "number of state reports responses received from opflex peer",
   "number of state reports error repsonses from opflex peer",
-  "number of policies requested by the agent which is not yet resolved by opflex peer"
+  "number of policies requested by the agent which aren't yet resolved by opflex peer"
 };
 
 static string remote_ep_family_names[] =
@@ -226,22 +218,22 @@ static string table_drop_family_help[] =
 
 #define RETURN_IF_DISABLED  if (disabled) {return;}
 
-// construct PrometheusManager
-PrometheusManager::PrometheusManager(Agent &agent_,
-                                     opflex::ofcore::OFFramework &fwk_) :
-                                     agent(agent_),
-                                     framework(fwk_),
-                                     gauge_ep_total{0},
-                                     gauge_svc_total{0},
-                                     disabled{true},
-                                     exposeEpSvcNan{false}
+// construct AgentPrometheusManager for opflex agent
+AgentPrometheusManager::AgentPrometheusManager(Agent &agent_,
+                                             opflex::ofcore::OFFramework &fwk_) :
+                                             PrometheusManager(),
+                                             agent(agent_),
+                                             framework(fwk_),
+                                             gauge_ep_total{0},
+                                             gauge_svc_total{0},
+                                             exposeEpSvcNan{false}
 {
     //Init state to avoid coverty warnings
     init();
 }
 
 // create all ep counter families during start
-void PrometheusManager::createStaticCounterFamiliesEp (void)
+void AgentPrometheusManager::createStaticCounterFamiliesEp (void)
 {
     // add a new counter family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -266,7 +258,7 @@ void PrometheusManager::createStaticCounterFamiliesEp (void)
 }
 
 // create all svc counter families during start
-void PrometheusManager::createStaticCounterFamiliesSvc (void)
+void AgentPrometheusManager::createStaticCounterFamiliesSvc (void)
 {
     // add a new counter family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -291,7 +283,7 @@ void PrometheusManager::createStaticCounterFamiliesSvc (void)
 }
 
 // create all counter families during start
-void PrometheusManager::createStaticCounterFamilies (void)
+void AgentPrometheusManager::createStaticCounterFamilies (void)
 {
     // EpCounter families
     {
@@ -307,7 +299,7 @@ void PrometheusManager::createStaticCounterFamilies (void)
 }
 
 // create all static ep counters during start
-void PrometheusManager::createStaticCountersEp ()
+void AgentPrometheusManager::createStaticCountersEp ()
 {
     auto& counter_ep_create = counter_ep_create_family_ptr->Add({});
     counter_ep_create_ptr = &counter_ep_create;
@@ -317,7 +309,7 @@ void PrometheusManager::createStaticCountersEp ()
 }
 
 // create all static svc counters during start
-void PrometheusManager::createStaticCountersSvc ()
+void AgentPrometheusManager::createStaticCountersSvc ()
 {
     auto& counter_svc_create = counter_svc_create_family_ptr->Add({});
     counter_svc_create_ptr = &counter_svc_create;
@@ -327,7 +319,7 @@ void PrometheusManager::createStaticCountersSvc ()
 }
 
 // create all static counters during start
-void PrometheusManager::createStaticCounters ()
+void AgentPrometheusManager::createStaticCounters ()
 {
     // EpCounter related metrics
     {
@@ -343,13 +335,13 @@ void PrometheusManager::createStaticCounters ()
 }
 
 // remove all dynamic counters during stop
-void PrometheusManager::removeDynamicCounters ()
+void AgentPrometheusManager::removeDynamicCounters ()
 {
     // No dynamic counters as of now
 }
 
 // remove all dynamic counters during stop
-void PrometheusManager::removeDynamicGauges ()
+void AgentPrometheusManager::removeDynamicGauges ()
 {
     // Remove EpCounter related gauges
     {
@@ -407,7 +399,7 @@ void PrometheusManager::removeDynamicGauges ()
 }
 
 // remove all static ep counters during stop
-void PrometheusManager::removeStaticCountersEp ()
+void AgentPrometheusManager::removeStaticCountersEp ()
 {
     counter_ep_create_family_ptr->Remove(counter_ep_create_ptr);
     counter_ep_create_ptr = nullptr;
@@ -417,7 +409,7 @@ void PrometheusManager::removeStaticCountersEp ()
 }
 
 // remove all static svc counters during stop
-void PrometheusManager::removeStaticCountersSvc ()
+void AgentPrometheusManager::removeStaticCountersSvc ()
 {
     counter_svc_create_family_ptr->Remove(counter_svc_create_ptr);
     counter_svc_create_ptr = nullptr;
@@ -427,7 +419,7 @@ void PrometheusManager::removeStaticCountersSvc ()
 }
 
 // remove all static counters during stop
-void PrometheusManager::removeStaticCounters ()
+void AgentPrometheusManager::removeStaticCounters ()
 {
 
     // Remove EpCounter related counter metrics
@@ -444,7 +436,7 @@ void PrometheusManager::removeStaticCounters ()
 }
 
 // create all OFPeer specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesOFPeer (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesOFPeer (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -464,7 +456,7 @@ void PrometheusManager::createStaticGaugeFamiliesOFPeer (void)
 }
 
 // create all ContractClassifier specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesContractClassifier (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesContractClassifier (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -484,7 +476,7 @@ void PrometheusManager::createStaticGaugeFamiliesContractClassifier (void)
 }
 
 // create all SGClassifier specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesSGClassifier (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesSGClassifier (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -504,7 +496,7 @@ void PrometheusManager::createStaticGaugeFamiliesSGClassifier (void)
 }
 
 // create all RemoteEp specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesRemoteEp (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesRemoteEp (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -527,7 +519,7 @@ void PrometheusManager::createStaticGaugeFamiliesRemoteEp (void)
 }
 
 // create all RDDrop specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesRDDrop (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesRDDrop (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -547,7 +539,7 @@ void PrometheusManager::createStaticGaugeFamiliesRDDrop (void)
 }
 
 // create all EP specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesEp (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesEp (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -574,7 +566,7 @@ void PrometheusManager::createStaticGaugeFamiliesEp (void)
 }
 
 // create all SvcTarget specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesSvcTarget (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesSvcTarget (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -594,7 +586,7 @@ void PrometheusManager::createStaticGaugeFamiliesSvcTarget (void)
 }
 
 // create all SVC specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesSvc (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesSvc (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -621,7 +613,7 @@ void PrometheusManager::createStaticGaugeFamiliesSvc (void)
 }
 
 // create all PODSVC specific gauge families during start
-void PrometheusManager::createStaticGaugeFamiliesPodSvc (void)
+void AgentPrometheusManager::createStaticGaugeFamiliesPodSvc (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
@@ -640,7 +632,7 @@ void PrometheusManager::createStaticGaugeFamiliesPodSvc (void)
     }
 }
 
-void PrometheusManager::createStaticGaugeFamiliesTableDrop(void) {
+void AgentPrometheusManager::createStaticGaugeFamiliesTableDrop(void) {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
     // Note: There is a unique ptr allocated and referencing the below reference
@@ -660,7 +652,7 @@ void PrometheusManager::createStaticGaugeFamiliesTableDrop(void) {
 }
 
 // remove all static counters during stop
-void PrometheusManager::removeStaticGaugesTableDrop ()
+void AgentPrometheusManager::removeStaticGaugesTableDrop ()
 {
     // Remove Table Drop related counter metrics
     const lock_guard<mutex> lock(table_drop_counter_mutex);
@@ -680,7 +672,7 @@ void PrometheusManager::removeStaticGaugesTableDrop ()
 }
 
 // create all gauge families during start
-void PrometheusManager::createStaticGaugeFamilies (void)
+void AgentPrometheusManager::createStaticGaugeFamilies (void)
 {
     {
         const lock_guard<mutex> lock(ep_counter_mutex);
@@ -731,21 +723,21 @@ void PrometheusManager::createStaticGaugeFamilies (void)
 }
 
 // create EpCounter gauges during start
-void PrometheusManager::createStaticGaugesEp ()
+void AgentPrometheusManager::createStaticGaugesEp ()
 {
     auto& gauge_ep_total = gauge_ep_total_family_ptr->Add({});
     gauge_ep_total_ptr = &gauge_ep_total;
 }
 
 // create SvcCounter gauges during start
-void PrometheusManager::createStaticGaugesSvc ()
+void AgentPrometheusManager::createStaticGaugesSvc ()
 {
     auto& gauge_svc_total = gauge_svc_total_family_ptr->Add({});
     gauge_svc_total_ptr = &gauge_svc_total;
 }
 
 // create gauges during start
-void PrometheusManager::createStaticGauges ()
+void AgentPrometheusManager::createStaticGauges ()
 {
     // EpCounter related gauges
     {
@@ -761,7 +753,7 @@ void PrometheusManager::createStaticGauges ()
 }
 
 // remove ep gauges during stop
-void PrometheusManager::removeStaticGaugesEp ()
+void AgentPrometheusManager::removeStaticGaugesEp ()
 {
     gauge_ep_total_family_ptr->Remove(gauge_ep_total_ptr);
     gauge_ep_total_ptr = nullptr;
@@ -769,7 +761,7 @@ void PrometheusManager::removeStaticGaugesEp ()
 }
 
 // remove svc gauges during stop
-void PrometheusManager::removeStaticGaugesSvc ()
+void AgentPrometheusManager::removeStaticGaugesSvc ()
 {
     gauge_svc_total_family_ptr->Remove(gauge_svc_total_ptr);
     gauge_svc_total_ptr = nullptr;
@@ -777,7 +769,7 @@ void PrometheusManager::removeStaticGaugesSvc ()
 }
 
 // remove gauges during stop
-void PrometheusManager::removeStaticGauges ()
+void AgentPrometheusManager::removeStaticGauges ()
 {
 
     // Remove EpCounter related gauge metrics
@@ -795,40 +787,8 @@ void PrometheusManager::removeStaticGauges ()
 
 }
 
-template <class T>
-bool PrometheusManager::MetricDupChecker<T>::is_dup (T *metric)
-{
-    const lock_guard<mutex> lock(dup_mutex);
-    if (metrics.count(metric)) {
-        LOG(ERROR) << "Duplicate metric detected: " << metric;
-        return true;
-    }
-    return false;
-}
-
-template <class T>
-void PrometheusManager::MetricDupChecker<T>::add (T *metric)
-{
-    const lock_guard<mutex> lock(dup_mutex);
-    metrics.insert(metric);
-}
-
-template <class T>
-void PrometheusManager::MetricDupChecker<T>::remove (T *metric)
-{
-    const lock_guard<mutex> lock(dup_mutex);
-    metrics.erase(metric);
-}
-
-template <class T>
-void PrometheusManager::MetricDupChecker<T>::clear (void)
-{
-    const lock_guard<mutex> lock(dup_mutex);
-    metrics.clear();
-}
-
-// Start of PrometheusManager instance
-void PrometheusManager::start (bool exposeLocalHostOnly, bool exposeEpSvcNan_)
+// Start of AgentPrometheusManager instance
+void AgentPrometheusManager::start (bool exposeLocalHostOnly, bool exposeEpSvcNan_)
 {
     disabled = false;
     exposeEpSvcNan = exposeEpSvcNan_;
@@ -868,8 +828,8 @@ void PrometheusManager::start (bool exposeLocalHostOnly, bool exposeEpSvcNan_)
     LOG(DEBUG) << "Agent config's allowed ep attributes: " << allowed;
 }
 
-// initialize state of PrometheusManager instance
-void PrometheusManager::init ()
+// initialize state of AgentPrometheusManager instance
+void AgentPrometheusManager::init ()
 {
     {
         const lock_guard<mutex> lock(ep_counter_mutex);
@@ -975,8 +935,8 @@ void PrometheusManager::init ()
     }
 }
 
-// Stop of PrometheusManager instance
-void PrometheusManager::stop ()
+// Stop of AgentPrometheusManager instance
+void AgentPrometheusManager::stop ()
 {
     RETURN_IF_DISABLED
     disabled = true;
@@ -1007,19 +967,19 @@ void PrometheusManager::stop ()
 }
 
 // Increment Ep count
-void PrometheusManager::incStaticCounterEpCreate ()
+void AgentPrometheusManager::incStaticCounterEpCreate ()
 {
     counter_ep_create_ptr->Increment();
 }
 
 // decrement ep count
-void PrometheusManager::incStaticCounterEpRemove ()
+void AgentPrometheusManager::incStaticCounterEpRemove ()
 {
     counter_ep_remove_ptr->Increment();
 }
 
 // track total ep count
-void PrometheusManager::updateStaticGaugeEpTotal (bool add)
+void AgentPrometheusManager::updateStaticGaugeEpTotal (bool add)
 {
     if (add)
         gauge_ep_total_ptr->Set(++gauge_ep_total);
@@ -1028,19 +988,19 @@ void PrometheusManager::updateStaticGaugeEpTotal (bool add)
 }
 
 // Increment Svc count
-void PrometheusManager::incStaticCounterSvcCreate ()
+void AgentPrometheusManager::incStaticCounterSvcCreate ()
 {
     counter_svc_create_ptr->Increment();
 }
 
 // decrement svc count
-void PrometheusManager::incStaticCounterSvcRemove ()
+void AgentPrometheusManager::incStaticCounterSvcRemove ()
 {
     counter_svc_remove_ptr->Increment();
 }
 
 // track total svc count
-void PrometheusManager::updateStaticGaugeSvcTotal (bool add)
+void AgentPrometheusManager::updateStaticGaugeSvcTotal (bool add)
 {
     if (add)
         gauge_svc_total_ptr->Set(++gauge_svc_total);
@@ -1048,49 +1008,9 @@ void PrometheusManager::updateStaticGaugeSvcTotal (bool add)
         gauge_svc_total_ptr->Set(--gauge_svc_total);
 }
 
-// Check if a given metric name is Prometheus compatible
-bool PrometheusManager::checkMetricName (const string& metric_name)
-{
-    // Prometheus doesnt like anything other than:
-    // [a-zA-Z_:][a-zA-Z0-9_:]* for metric family name - these are static as on date
-    // [a-zA-Z_][a-zA-Z0-9_]* for label name
-    // https://prometheus.io/docs/concepts/data_model/
-    static const regex metric_name_regex("[a-zA-Z_][a-zA-Z0-9_]*");
-    return regex_match(metric_name, metric_name_regex);
-}
-
-// sanitize metric family name for prometheus to accept
-string PrometheusManager::sanitizeMetricName (const string& metric_name)
-{
-    // Prometheus doesnt like anything other than:
-    // [a-zA-Z_:][a-zA-Z0-9_:]* for metric family name - these are static as on date
-    // [a-zA-Z_][a-zA-Z0-9_]* for label name
-    // https://prometheus.io/docs/concepts/data_model/
-
-    // Note: the below negation regex doesnt work correctly if there are numbers
-    // first char. This is mainly because multiple []'s and '*' doesnt work with
-    // regex_replace
-    //static const regex metric_name_regex("[^a-zA-Z_][^a-zA-Z0-9_]*");
-    static const regex regex1("[^a-zA-Z_]");
-    static const regex regex2("[^0-9a-zA-Z_]");
-    auto label1 = regex_replace(metric_name.substr(0,1), regex1, "_");
-    string label2;
-    if (metric_name.size() > 1)
-        label2 = regex_replace(metric_name.substr(1), regex2, "_");
-    auto label = label1+label2;
-
-    // Label names beginning with __ are reserved for internal use in
-    // prometheus.
-    auto reserved_for_internal_purposes = label.compare(0, 2, "__") == 0;
-    if (reserved_for_internal_purposes)
-        label[0] = 'a';
-
-    return label;
-}
-
 // Create OFPeerStats gauge given metric type, peer (IP,port) tuple
-void PrometheusManager::createDynamicGaugeOFPeer (OFPEER_METRICS metric,
-                                                  const string& peer)
+void AgentPrometheusManager::createDynamicGaugeOFPeer (OFPEER_METRICS metric,
+                                                       const string& peer)
 {
     // Retrieve the Gauge if its already created
     if (getDynamicGaugeOFPeer(metric, peer))
@@ -1112,10 +1032,10 @@ void PrometheusManager::createDynamicGaugeOFPeer (OFPEER_METRICS metric,
 
 // Create ContractClassifierCounter gauge given metric type,
 // name of srcEpg, dstEpg & classifier
-bool PrometheusManager::createDynamicGaugeContractClassifier (CONTRACT_METRICS metric,
-                                                              const string& srcEpg,
-                                                              const string& dstEpg,
-                                                              const string& classifier)
+bool AgentPrometheusManager::createDynamicGaugeContractClassifier (CONTRACT_METRICS metric,
+                                                                  const string& srcEpg,
+                                                                  const string& dstEpg,
+                                                                  const string& classifier)
 {
     // Retrieve the Gauge if its already created
     if (getDynamicGaugeContractClassifier(metric,
@@ -1152,8 +1072,8 @@ bool PrometheusManager::createDynamicGaugeContractClassifier (CONTRACT_METRICS m
 }
 
 // Create SGClassifierCounter gauge given metric type, classifier
-bool PrometheusManager::createDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric,
-                                                        const string& classifier)
+bool AgentPrometheusManager::createDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric,
+                                                             const string& classifier)
 {
     // Retrieve the Gauge if its already created
     if (getDynamicGaugeSGClassifier(metric, classifier))
@@ -1179,7 +1099,7 @@ bool PrometheusManager::createDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS met
 }
 
 // Construct label, given EPG URI
-string PrometheusManager::constructEpgLabel (const string& epg)
+string AgentPrometheusManager::constructEpgLabel (const string& epg)
 {
     /* Example EPG URI:
      * /PolicyUniverse/PolicySpace/kube/GbpEpGroup/kubernetes%7ckube-system/
@@ -1198,8 +1118,8 @@ string PrometheusManager::constructEpgLabel (const string& epg)
 }
 
 // Construct label, given classifier URI
-string PrometheusManager::constructClassifierLabel (const string& classifier,
-                                                    bool isSecGrp)
+string AgentPrometheusManager::constructClassifierLabel (const string& classifier,
+                                                         bool isSecGrp)
 {
     /* Example classifier URI:
      * /PolicyUniverse/PolicySpace/kube/GbpeL24Classifier/SGkube_np_static-discovery%7cdiscovery%7carp-ingress/
@@ -1245,8 +1165,8 @@ string PrometheusManager::constructClassifierLabel (const string& classifier,
 }
 
 // Get a compressed human readable form of classifier
-string PrometheusManager::stringizeClassifier (const string& tenant,
-                                               const string& classifier)
+string AgentPrometheusManager::stringizeClassifier (const string& tenant,
+                                                    const string& classifier)
 {
     using namespace modelgbp::gbpe;
     string compressed;
@@ -1310,7 +1230,7 @@ string PrometheusManager::stringizeClassifier (const string& tenant,
 }
 
 // Create RemoteEp gauge given metric type
-void PrometheusManager::createDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
+void AgentPrometheusManager::createDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
 {
     // Retrieve the Gauge if its already created
     if (getDynamicGaugeRemoteEp(metric))
@@ -1324,8 +1244,8 @@ void PrometheusManager::createDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
 }
 
 // Create RDDropCounter gauge given metric type, rdURI
-void PrometheusManager::createDynamicGaugeRDDrop (RDDROP_METRICS metric,
-                                                  const string& rdURI)
+void AgentPrometheusManager::createDynamicGaugeRDDrop (RDDROP_METRICS metric,
+                                                       const string& rdURI)
 {
     // Retrieve the Gauge if its already created
     if (getDynamicGaugeRDDrop(metric, rdURI))
@@ -1356,14 +1276,14 @@ void PrometheusManager::createDynamicGaugeRDDrop (RDDROP_METRICS metric,
 }
 
 // Create SvcTargetCounter gauge given metric type, svc-tgt uuid & ep attr_map
-void PrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
-                                                     const string& uuid,
-                                                     const string& nhip,
-                    const unordered_map<string, string>&    svc_attr_map,
-                    const unordered_map<string, string>&    ep_attr_map,
-                                                     bool createIfNotPresent,
-                                                     bool updateLabels,
-                                                     bool isNodePort)
+void AgentPrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
+                                                         const string& uuid,
+                                                         const string& nhip,
+                        const unordered_map<string, string>&    svc_attr_map,
+                        const unordered_map<string, string>&    ep_attr_map,
+                                                         bool createIfNotPresent,
+                                                         bool updateLabels,
+                                                         bool isNodePort)
 {
     // Retrieve the Gauge if its already created
     auto const &mgauge = getDynamicGaugeSvcTarget(metric, uuid);
@@ -1424,10 +1344,10 @@ void PrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
 }
 
 // Create SvcCounter gauge given metric type, svc uuid & attr_map
-void PrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
-                                               const string& uuid,
-                    const unordered_map<string, string>&    svc_attr_map,
-                                               bool isNodePort)
+void AgentPrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
+                                                   const string& uuid,
+                        const unordered_map<string, string>&    svc_attr_map,
+                                                   bool isNodePort)
 {
     // During counter update from stats manager, dont create new gauge metric
     if (svc_attr_map.size() == 0)
@@ -1479,10 +1399,10 @@ void PrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
 }
 
 // Create PodSvcCounter gauge given metric type, ep+svc uuid & attr_maps
-void PrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
-                                                  const string& uuid,
-                    const unordered_map<string, string>&    ep_attr_map,
-                    const unordered_map<string, string>&    svc_attr_map)
+void AgentPrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
+                                                      const string& uuid,
+                        const unordered_map<string, string>&    ep_attr_map,
+                        const unordered_map<string, string>&    svc_attr_map)
 {
     // During counter update from stats manager, dont create new gauge metric
     if ((ep_attr_map.size() == 0) && (svc_attr_map.size() == 0))
@@ -1535,11 +1455,11 @@ void PrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
 }
 
 // Create EpCounter gauge given metric type and an uuid
-bool PrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
-                                              const string& uuid,
-                                              const string& ep_name,
-                                              const size_t& attr_hash,
-                    const unordered_map<string, string>&    attr_map)
+bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
+                                                  const string& uuid,
+                                                  const string& ep_name,
+                                                  const size_t& attr_hash,
+                        const unordered_map<string, string>&    attr_map)
 {
     /**
      * We create a hash of all the key, value pairs in label attr_map
@@ -1556,7 +1476,7 @@ bool PrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
          * - we dont do a delete and create of metric for every attribute change.
          * Rather the dttribute's delete and create will get processed in EP Mgr.
          * Then during periodic update of epCounter, we will detect attr change in
-         * PrometheusManager and do a delete/create of metric for latest label
+         * AgentPrometheusManager and do a delete/create of metric for latest label
          * annotations.
          * - by not doing del/add of metric for every attribute change, we reduce
          * # of metric+label creation in prometheus.
@@ -1609,11 +1529,11 @@ bool PrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
 }
 
 // Create a label map that can be used for annotation, given the ep attr map
-const map<string,string> PrometheusManager::createLabelMapFromSvcTargetAttr (
-                                                           const string& nhip,
-                            const unordered_map<string, string>&  svc_attr_map,
-                            const unordered_map<string, string>&  ep_attr_map,
-                            bool isNodePort)
+const map<string,string> AgentPrometheusManager::createLabelMapFromSvcTargetAttr (
+                                                               const string& nhip,
+                                const unordered_map<string, string>&  svc_attr_map,
+                                const unordered_map<string, string>&  ep_attr_map,
+                                bool isNodePort)
 {
     map<string,string>   label_map;
 
@@ -1655,9 +1575,9 @@ const map<string,string> PrometheusManager::createLabelMapFromSvcTargetAttr (
 }
 
 // Create a label map that can be used for annotation, given the svc attr_map
-const map<string,string> PrometheusManager::createLabelMapFromSvcAttr (
-                          const unordered_map<string, string>&  svc_attr_map,
-                          bool isNodePort)
+const map<string,string> AgentPrometheusManager::createLabelMapFromSvcAttr (
+                              const unordered_map<string, string>&  svc_attr_map,
+                              bool isNodePort)
 {
     map<string,string>   label_map;
 
@@ -1688,9 +1608,9 @@ const map<string,string> PrometheusManager::createLabelMapFromSvcAttr (
 
 // Create a label map that can be used for annotation, given the ep attr map
 // and svc attr_map
-const map<string,string> PrometheusManager::createLabelMapFromPodSvcAttr (
-                          const unordered_map<string, string>&  ep_attr_map,
-                          const unordered_map<string, string>&  svc_attr_map)
+const map<string,string> AgentPrometheusManager::createLabelMapFromPodSvcAttr (
+                              const unordered_map<string, string>&  ep_attr_map,
+                              const unordered_map<string, string>&  svc_attr_map)
 {
     map<string,string>   label_map;
 
@@ -1725,7 +1645,7 @@ const map<string,string> PrometheusManager::createLabelMapFromPodSvcAttr (
 }
 
 // Create a label map that can be used for annotation, given the ep attr map
-map<string,string> PrometheusManager::createLabelMapFromEpAttr (
+map<string,string> AgentPrometheusManager::createLabelMapFromEpAttr (
                                                            const string& ep_name,
                                  const unordered_map<string, string>&   attr_map,
                                  const unordered_set<string>&        allowed_set)
@@ -1777,8 +1697,8 @@ map<string,string> PrometheusManager::createLabelMapFromEpAttr (
 }
 
 // Get OFPeer stats gauge given the metric, peer (IP,port) tuple
-Gauge * PrometheusManager::getDynamicGaugeOFPeer (OFPEER_METRICS metric,
-                                                  const string& peer)
+Gauge * AgentPrometheusManager::getDynamicGaugeOFPeer (OFPEER_METRICS metric,
+                                                       const string& peer)
 {
     Gauge *pgauge = nullptr;
     auto itr = ofpeer_gauge_map[metric].find(peer);
@@ -1795,10 +1715,10 @@ Gauge * PrometheusManager::getDynamicGaugeOFPeer (OFPEER_METRICS metric,
 
 // Get ContractClassifierCounter gauge given the metric,
 // name of srcEpg, dstEpg & classifier
-Gauge * PrometheusManager::getDynamicGaugeContractClassifier (CONTRACT_METRICS metric,
-                                                              const string& srcEpg,
-                                                              const string& dstEpg,
-                                                              const string& classifier)
+Gauge * AgentPrometheusManager::getDynamicGaugeContractClassifier (CONTRACT_METRICS metric,
+                                                                  const string& srcEpg,
+                                                                  const string& dstEpg,
+                                                                  const string& classifier)
 {
     Gauge *pgauge = nullptr;
     const string& key = srcEpg+dstEpg+classifier;
@@ -1817,8 +1737,8 @@ Gauge * PrometheusManager::getDynamicGaugeContractClassifier (CONTRACT_METRICS m
 }
 
 // Get SGClassifierCounter gauge given the metric, classifier
-Gauge * PrometheusManager::getDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric,
-                                                        const string& classifier)
+Gauge * AgentPrometheusManager::getDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric,
+                                                             const string& classifier)
 {
     Gauge *pgauge = nullptr;
     auto itr = sgclassifier_gauge_map[metric].find(classifier);
@@ -1834,14 +1754,14 @@ Gauge * PrometheusManager::getDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS met
 }
 
 // Get RemoteEp gauge given the metric
-Gauge * PrometheusManager::getDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
+Gauge * AgentPrometheusManager::getDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
 {
     return remote_ep_gauge_map[metric];
 }
 
 // Get RDDropCounter gauge given the metric, rdURI
-Gauge * PrometheusManager::getDynamicGaugeRDDrop (RDDROP_METRICS metric,
-                                                  const string& rdURI)
+Gauge * AgentPrometheusManager::getDynamicGaugeRDDrop (RDDROP_METRICS metric,
+                                                       const string& rdURI)
 {
     Gauge *pgauge = nullptr;
     auto itr = rddrop_gauge_map[metric].find(rdURI);
@@ -1857,8 +1777,8 @@ Gauge * PrometheusManager::getDynamicGaugeRDDrop (RDDROP_METRICS metric,
 }
 
 // Get SvcTargetCounter gauge given the metric, uuid of SvcTarget
-mgauge_pair_t PrometheusManager::getDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
-                                                           const string& uuid)
+mgauge_pair_t AgentPrometheusManager::getDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
+                                                                const string& uuid)
 {
     mgauge_pair_t mgauge = boost::none;
     auto itr = svc_target_gauge_map[metric].find(uuid);
@@ -1874,8 +1794,8 @@ mgauge_pair_t PrometheusManager::getDynamicGaugeSvcTarget (SVC_TARGET_METRICS me
 }
 
 // Get SvcCounter gauge given the metric, uuid of Svc
-mgauge_pair_t PrometheusManager::getDynamicGaugeSvc (SVC_METRICS metric,
-                                                     const string& uuid)
+mgauge_pair_t AgentPrometheusManager::getDynamicGaugeSvc (SVC_METRICS metric,
+                                                          const string& uuid)
 {
     mgauge_pair_t mgauge = boost::none;
     auto itr = svc_gauge_map[metric].find(uuid);
@@ -1891,8 +1811,8 @@ mgauge_pair_t PrometheusManager::getDynamicGaugeSvc (SVC_METRICS metric,
 }
 
 // Get PodSvcCounter gauge given the metric, uuid of Pod+Svc
-mgauge_pair_t PrometheusManager::getDynamicGaugePodSvc (PODSVC_METRICS metric,
-                                                  const string& uuid)
+mgauge_pair_t AgentPrometheusManager::getDynamicGaugePodSvc (PODSVC_METRICS metric,
+                                                            const string& uuid)
 {
     mgauge_pair_t mgauge = boost::none;
     auto itr = podsvc_gauge_map[metric].find(uuid);
@@ -1908,8 +1828,8 @@ mgauge_pair_t PrometheusManager::getDynamicGaugePodSvc (PODSVC_METRICS metric,
 }
 
 // Get EpCounter gauge given the metric, uuid of EP
-hgauge_pair_t PrometheusManager::getDynamicGaugeEp (EP_METRICS metric,
-                                                   const string& uuid)
+hgauge_pair_t AgentPrometheusManager::getDynamicGaugeEp (EP_METRICS metric,
+                                                        const string& uuid)
 {
     hgauge_pair_t hgauge = boost::none;
     auto itr = ep_gauge_map[metric].find(uuid);
@@ -1924,10 +1844,10 @@ hgauge_pair_t PrometheusManager::getDynamicGaugeEp (EP_METRICS metric,
 
 // Remove dynamic ContractClassifierCounter gauge given a metic type and
 // name of srcEpg, dstEpg & classifier
-bool PrometheusManager::removeDynamicGaugeContractClassifier (CONTRACT_METRICS metric,
-                                                              const string& srcEpg,
-                                                              const string& dstEpg,
-                                                              const string& classifier)
+bool AgentPrometheusManager::removeDynamicGaugeContractClassifier (CONTRACT_METRICS metric,
+                                                                  const string& srcEpg,
+                                                                  const string& dstEpg,
+                                                                  const string& classifier)
 {
     Gauge *pgauge = getDynamicGaugeContractClassifier(metric,
                                                       srcEpg,
@@ -1954,7 +1874,7 @@ bool PrometheusManager::removeDynamicGaugeContractClassifier (CONTRACT_METRICS m
 }
 
 // Remove dynamic ContractClassifierCounter gauge given a metric type
-void PrometheusManager::removeDynamicGaugeContractClassifier (CONTRACT_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeContractClassifier (CONTRACT_METRICS metric)
 {
     auto itr = contract_gauge_map[metric].begin();
     while (itr != contract_gauge_map[metric].end()) {
@@ -1970,7 +1890,7 @@ void PrometheusManager::removeDynamicGaugeContractClassifier (CONTRACT_METRICS m
 }
 
 // Remove dynamic ContractClassifierCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugeContractClassifier ()
+void AgentPrometheusManager::removeDynamicGaugeContractClassifier ()
 {
     for (CONTRACT_METRICS metric=CONTRACT_METRICS_MIN;
             metric <= CONTRACT_METRICS_MAX;
@@ -1980,8 +1900,8 @@ void PrometheusManager::removeDynamicGaugeContractClassifier ()
 }
 
 // Remove dynamic SGClassifierCounter gauge given a metic type and classifier
-bool PrometheusManager::removeDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric,
-                                                        const string& classifier)
+bool AgentPrometheusManager::removeDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric,
+                                                             const string& classifier)
 {
     Gauge *pgauge = getDynamicGaugeSGClassifier(metric, classifier);
     if (pgauge) {
@@ -1997,7 +1917,7 @@ bool PrometheusManager::removeDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS met
 }
 
 // Remove dynamic SGClassifierCounter gauge given a metric type
-void PrometheusManager::removeDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS metric)
 {
     auto itr = sgclassifier_gauge_map[metric].begin();
     while (itr != sgclassifier_gauge_map[metric].end()) {
@@ -2013,7 +1933,7 @@ void PrometheusManager::removeDynamicGaugeSGClassifier (SGCLASSIFIER_METRICS met
 }
 
 // Remove dynamic SGClassifierCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugeSGClassifier ()
+void AgentPrometheusManager::removeDynamicGaugeSGClassifier ()
 {
     for (SGCLASSIFIER_METRICS metric=SGCLASSIFIER_METRICS_MIN;
             metric <= SGCLASSIFIER_METRICS_MAX;
@@ -2023,7 +1943,7 @@ void PrometheusManager::removeDynamicGaugeSGClassifier ()
 }
 
 // Remove dynamic RemoteEp gauge given a metic type
-bool PrometheusManager::removeDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
+bool AgentPrometheusManager::removeDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
 {
     Gauge *pgauge = getDynamicGaugeRemoteEp(metric);
     if (pgauge) {
@@ -2036,7 +1956,7 @@ bool PrometheusManager::removeDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
 }
 
 // Remove dynamic RemoteEp gauges for all metrics
-void PrometheusManager::removeDynamicGaugeRemoteEp ()
+void AgentPrometheusManager::removeDynamicGaugeRemoteEp ()
 {
     for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
             metric <= REMOTE_EP_METRICS_MAX;
@@ -2046,8 +1966,8 @@ void PrometheusManager::removeDynamicGaugeRemoteEp ()
 }
 
 // Remove dynamic RDDropCounter gauge given a metic type and rdURI
-bool PrometheusManager::removeDynamicGaugeRDDrop (RDDROP_METRICS metric,
-                                                  const string& rdURI)
+bool AgentPrometheusManager::removeDynamicGaugeRDDrop (RDDROP_METRICS metric,
+                                                       const string& rdURI)
 {
     Gauge *pgauge = getDynamicGaugeRDDrop(metric, rdURI);
     if (pgauge) {
@@ -2062,7 +1982,7 @@ bool PrometheusManager::removeDynamicGaugeRDDrop (RDDROP_METRICS metric,
 }
 
 // Remove dynamic RDDropCounter gauge given a metric type
-void PrometheusManager::removeDynamicGaugeRDDrop (RDDROP_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeRDDrop (RDDROP_METRICS metric)
 {
     auto itr = rddrop_gauge_map[metric].begin();
     while (itr != rddrop_gauge_map[metric].end()) {
@@ -2077,7 +1997,7 @@ void PrometheusManager::removeDynamicGaugeRDDrop (RDDROP_METRICS metric)
 }
 
 // Remove dynamic RDDropCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugeRDDrop ()
+void AgentPrometheusManager::removeDynamicGaugeRDDrop ()
 {
     for (RDDROP_METRICS metric=RDDROP_METRICS_MIN;
             metric <= RDDROP_METRICS_MAX;
@@ -2091,8 +2011,8 @@ void PrometheusManager::removeDynamicGaugeRDDrop ()
 // a requirement to delete a gauge metric per peer, in case a leaf goes down
 // or replaced. This can be used after changes to remove the corresponging
 // observer mo.
-bool PrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric,
-                                                  const string& peer)
+bool AgentPrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric,
+                                                       const string& peer)
 {
     Gauge *pgauge = getDynamicGaugeOFPeer(metric, peer);
     if (pgauge) {
@@ -2107,7 +2027,7 @@ bool PrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric,
 }
 
 // Remove dynamic OFPeerStats gauge given a metric type
-void PrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric)
 {
     auto itr = ofpeer_gauge_map[metric].begin();
     while (itr != ofpeer_gauge_map[metric].end()) {
@@ -2122,7 +2042,7 @@ void PrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric)
 }
 
 // Remove dynamic OFPeerStats gauges for all metrics
-void PrometheusManager::removeDynamicGaugeOFPeer ()
+void AgentPrometheusManager::removeDynamicGaugeOFPeer ()
 {
     for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
             metric <= OFPEER_METRICS_MAX;
@@ -2132,8 +2052,8 @@ void PrometheusManager::removeDynamicGaugeOFPeer ()
 }
 
 // Remove dynamic SvcTargetCounter gauge given a metic type and svc-target uuid
-bool PrometheusManager::removeDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
-                                                     const string& uuid)
+bool AgentPrometheusManager::removeDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
+                                                          const string& uuid)
 {
     auto mgauge = getDynamicGaugeSvcTarget(metric, uuid);
     if (mgauge) {
@@ -2150,7 +2070,7 @@ bool PrometheusManager::removeDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
 }
 
 // Remove dynamic SvcTargetCounter gauge given a metric type
-void PrometheusManager::removeDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric)
 {
     auto itr = svc_target_gauge_map[metric].begin();
     while (itr != svc_target_gauge_map[metric].end()) {
@@ -2166,7 +2086,7 @@ void PrometheusManager::removeDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric)
 }
 
 // Remove dynamic SvcTargetCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugeSvcTarget ()
+void AgentPrometheusManager::removeDynamicGaugeSvcTarget ()
 {
     for (SVC_TARGET_METRICS metric=SVC_TARGET_METRICS_MIN;
             metric <= SVC_TARGET_METRICS_MAX;
@@ -2176,8 +2096,8 @@ void PrometheusManager::removeDynamicGaugeSvcTarget ()
 }
 
 // Remove dynamic SvcCounter gauge given a metic type and svc uuid
-bool PrometheusManager::removeDynamicGaugeSvc (SVC_METRICS metric,
-                                               const string& uuid)
+bool AgentPrometheusManager::removeDynamicGaugeSvc (SVC_METRICS metric,
+                                                    const string& uuid)
 {
     auto mgauge = getDynamicGaugeSvc(metric, uuid);
     if (mgauge) {
@@ -2194,7 +2114,7 @@ bool PrometheusManager::removeDynamicGaugeSvc (SVC_METRICS metric,
 }
 
 // Remove dynamic SvcCounter gauge given a metric type
-void PrometheusManager::removeDynamicGaugeSvc (SVC_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeSvc (SVC_METRICS metric)
 {
     auto itr = svc_gauge_map[metric].begin();
     while (itr != svc_gauge_map[metric].end()) {
@@ -2210,7 +2130,7 @@ void PrometheusManager::removeDynamicGaugeSvc (SVC_METRICS metric)
 }
 
 // Remove dynamic SvcCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugeSvc ()
+void AgentPrometheusManager::removeDynamicGaugeSvc ()
 {
     for (SVC_METRICS metric=SVC_METRICS_MIN;
             metric <= SVC_METRICS_MAX;
@@ -2220,8 +2140,8 @@ void PrometheusManager::removeDynamicGaugeSvc ()
 }
 
 // Remove dynamic PodSvcCounter gauge given a metic type and podsvc uuid
-bool PrometheusManager::removeDynamicGaugePodSvc (PODSVC_METRICS metric,
-                                                  const string& uuid)
+bool AgentPrometheusManager::removeDynamicGaugePodSvc (PODSVC_METRICS metric,
+                                                       const string& uuid)
 {
     auto mgauge = getDynamicGaugePodSvc(metric, uuid);
     if (mgauge) {
@@ -2238,7 +2158,7 @@ bool PrometheusManager::removeDynamicGaugePodSvc (PODSVC_METRICS metric,
 }
 
 // Remove dynamic PodSvcCounter gauge given a metric type
-void PrometheusManager::removeDynamicGaugePodSvc (PODSVC_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugePodSvc (PODSVC_METRICS metric)
 {
     auto itr = podsvc_gauge_map[metric].begin();
     while (itr != podsvc_gauge_map[metric].end()) {
@@ -2254,7 +2174,7 @@ void PrometheusManager::removeDynamicGaugePodSvc (PODSVC_METRICS metric)
 }
 
 // Remove dynamic PodSvcCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugePodSvc ()
+void AgentPrometheusManager::removeDynamicGaugePodSvc ()
 {
     for (PODSVC_METRICS metric=PODSVC_METRICS_MIN;
             metric <= PODSVC_METRICS_MAX;
@@ -2264,8 +2184,8 @@ void PrometheusManager::removeDynamicGaugePodSvc ()
 }
 
 // Remove dynamic EpCounter gauge given a metic type and ep uuid
-bool PrometheusManager::removeDynamicGaugeEp (EP_METRICS metric,
-                                              const string& uuid)
+bool AgentPrometheusManager::removeDynamicGaugeEp (EP_METRICS metric,
+                                                   const string& uuid)
 {
     auto hgauge = getDynamicGaugeEp(metric, uuid);
     if (hgauge) {
@@ -2280,7 +2200,7 @@ bool PrometheusManager::removeDynamicGaugeEp (EP_METRICS metric,
 }
 
 // Remove dynamic EpCounter gauge given a metic type
-void PrometheusManager::removeDynamicGaugeEp (EP_METRICS metric)
+void AgentPrometheusManager::removeDynamicGaugeEp (EP_METRICS metric)
 {
     auto itr = ep_gauge_map[metric].begin();
     while (itr != ep_gauge_map[metric].end()) {
@@ -2301,7 +2221,7 @@ void PrometheusManager::removeDynamicGaugeEp (EP_METRICS metric)
 }
 
 // Remove dynamic EpCounter gauges for all metrics
-void PrometheusManager::removeDynamicGaugeEp ()
+void AgentPrometheusManager::removeDynamicGaugeEp ()
 {
     for (EP_METRICS metric=EP_RX_BYTES;
             metric < EP_METRICS_MAX;
@@ -2311,19 +2231,19 @@ void PrometheusManager::removeDynamicGaugeEp ()
 }
 
 // Remove all dynamically allocated counter families
-void PrometheusManager::removeDynamicCounterFamilies ()
+void AgentPrometheusManager::removeDynamicCounterFamilies ()
 {
     // No dynamic counter families as of now
 }
 
 // Remove all dynamically allocated gauge families
-void PrometheusManager::removeDynamicGaugeFamilies ()
+void AgentPrometheusManager::removeDynamicGaugeFamilies ()
 {
     // No dynamic gauge families as of now
 }
 
 // Remove all statically  allocated ep counter families
-void PrometheusManager::removeStaticCounterFamiliesEp ()
+void AgentPrometheusManager::removeStaticCounterFamiliesEp ()
 {
     counter_ep_create_family_ptr = nullptr;
     counter_ep_remove_family_ptr = nullptr;
@@ -2331,7 +2251,7 @@ void PrometheusManager::removeStaticCounterFamiliesEp ()
 }
 
 // Remove all statically  allocated svc counter families
-void PrometheusManager::removeStaticCounterFamiliesSvc ()
+void AgentPrometheusManager::removeStaticCounterFamiliesSvc ()
 {
     counter_svc_create_family_ptr = nullptr;
     counter_svc_remove_family_ptr = nullptr;
@@ -2339,7 +2259,7 @@ void PrometheusManager::removeStaticCounterFamiliesSvc ()
 }
 
 // Remove all statically  allocated counter families
-void PrometheusManager::removeStaticCounterFamilies ()
+void AgentPrometheusManager::removeStaticCounterFamilies ()
 {
     // EpCounter specific
     {
@@ -2355,7 +2275,7 @@ void PrometheusManager::removeStaticCounterFamilies ()
 }
 
 // Remove all statically allocated OFPeer gauge families
-void PrometheusManager::removeStaticGaugeFamiliesOFPeer ()
+void AgentPrometheusManager::removeStaticGaugeFamiliesOFPeer ()
 {
     for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
             metric <= OFPEER_METRICS_MAX;
@@ -2365,7 +2285,7 @@ void PrometheusManager::removeStaticGaugeFamiliesOFPeer ()
 }
 
 // Remove all statically allocated ContractClassifier gauge families
-void PrometheusManager::removeStaticGaugeFamiliesContractClassifier ()
+void AgentPrometheusManager::removeStaticGaugeFamiliesContractClassifier ()
 {
     for (CONTRACT_METRICS metric=CONTRACT_METRICS_MIN;
             metric <= CONTRACT_METRICS_MAX;
@@ -2375,7 +2295,7 @@ void PrometheusManager::removeStaticGaugeFamiliesContractClassifier ()
 }
 
 // Remove all statically allocated SGClassifier gauge families
-void PrometheusManager::removeStaticGaugeFamiliesSGClassifier ()
+void AgentPrometheusManager::removeStaticGaugeFamiliesSGClassifier ()
 {
     for (SGCLASSIFIER_METRICS metric=SGCLASSIFIER_METRICS_MIN;
             metric <= SGCLASSIFIER_METRICS_MAX;
@@ -2385,7 +2305,7 @@ void PrometheusManager::removeStaticGaugeFamiliesSGClassifier ()
 }
 
 // Remove all statically allocated RemoteEp gauge families
-void PrometheusManager::removeStaticGaugeFamiliesRemoteEp ()
+void AgentPrometheusManager::removeStaticGaugeFamiliesRemoteEp ()
 {
     for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
             metric <= REMOTE_EP_METRICS_MAX;
@@ -2395,7 +2315,7 @@ void PrometheusManager::removeStaticGaugeFamiliesRemoteEp ()
 }
 
 // Remove all statically allocated RDDrop gauge families
-void PrometheusManager::removeStaticGaugeFamiliesRDDrop ()
+void AgentPrometheusManager::removeStaticGaugeFamiliesRDDrop ()
 {
     for (RDDROP_METRICS metric=RDDROP_METRICS_MIN;
             metric <= RDDROP_METRICS_MAX;
@@ -2405,7 +2325,7 @@ void PrometheusManager::removeStaticGaugeFamiliesRDDrop ()
 }
 
 // Remove all statically allocated podsvc gauge families
-void PrometheusManager::removeStaticGaugeFamiliesPodSvc()
+void AgentPrometheusManager::removeStaticGaugeFamiliesPodSvc()
 {
     for (PODSVC_METRICS metric=PODSVC_METRICS_MIN;
             metric <= PODSVC_METRICS_MAX;
@@ -2415,7 +2335,7 @@ void PrometheusManager::removeStaticGaugeFamiliesPodSvc()
 }
 
 // Remove all statically allocated ep gauge families
-void PrometheusManager::removeStaticGaugeFamiliesEp()
+void AgentPrometheusManager::removeStaticGaugeFamiliesEp()
 {
     gauge_ep_total_family_ptr = nullptr;
     for (EP_METRICS metric=EP_RX_BYTES;
@@ -2426,7 +2346,7 @@ void PrometheusManager::removeStaticGaugeFamiliesEp()
 }
 
 // Remove all statically allocated svc target gauge families
-void PrometheusManager::removeStaticGaugeFamiliesSvcTarget()
+void AgentPrometheusManager::removeStaticGaugeFamiliesSvcTarget()
 {
     for (SVC_TARGET_METRICS metric=SVC_TARGET_METRICS_MIN;
             metric <= SVC_TARGET_METRICS_MAX;
@@ -2436,7 +2356,7 @@ void PrometheusManager::removeStaticGaugeFamiliesSvcTarget()
 }
 
 // Remove all statically allocated svc gauge families
-void PrometheusManager::removeStaticGaugeFamiliesSvc()
+void AgentPrometheusManager::removeStaticGaugeFamiliesSvc()
 {
     gauge_svc_total_family_ptr = nullptr;
     for (SVC_METRICS metric=SVC_METRICS_MIN;
@@ -2446,7 +2366,7 @@ void PrometheusManager::removeStaticGaugeFamiliesSvc()
     }
 }
 
-void PrometheusManager::removeStaticGaugeFamiliesTableDrop()
+void AgentPrometheusManager::removeStaticGaugeFamiliesTableDrop()
 {
     const lock_guard<mutex> lock(table_drop_counter_mutex);
     for (TABLE_DROP_METRICS metric = TABLE_DROP_BYTES;
@@ -2457,7 +2377,7 @@ void PrometheusManager::removeStaticGaugeFamiliesTableDrop()
 }
 
 // Remove all statically allocated gauge families
-void PrometheusManager::removeStaticGaugeFamilies()
+void AgentPrometheusManager::removeStaticGaugeFamilies()
 {
     // EpCounter specific
     {
@@ -2518,9 +2438,9 @@ void PrometheusManager::removeStaticGaugeFamilies()
 }
 
 // Return a rolling hash of attribute map for the ep
-size_t PrometheusManager::calcHashEpAttributes (const string& ep_name,
-                      const unordered_map<string, string>&   attr_map,
-                      const unordered_set<string>&        allowed_set)
+size_t AgentPrometheusManager::calcHashEpAttributes (const string& ep_name,
+                          const unordered_map<string, string>&   attr_map,
+                          const unordered_set<string>&        allowed_set)
 {
     auto label_map = createLabelMapFromEpAttr(ep_name,
                                               attr_map,
@@ -2531,12 +2451,12 @@ size_t PrometheusManager::calcHashEpAttributes (const string& ep_name,
 }
 
 /* Function called from IntFlowManager to update PodSvcCounter */
-void PrometheusManager::addNUpdatePodSvcCounter (bool isEpToSvc,
-                                                 const string& uuid,
-                                                 uint64_t bytes,
-                                                 uint64_t pkts,
-                  const unordered_map<string, string>& ep_attr_map,
-                  const unordered_map<string, string>& svc_attr_map)
+void AgentPrometheusManager::addNUpdatePodSvcCounter (bool isEpToSvc,
+                                                      const string& uuid,
+                                                      uint64_t bytes,
+                                                      uint64_t pkts,
+                      const unordered_map<string, string>& ep_attr_map,
+                      const unordered_map<string, string>& svc_attr_map)
 {
     RETURN_IF_DISABLED
 
@@ -2626,17 +2546,17 @@ void PrometheusManager::addNUpdatePodSvcCounter (bool isEpToSvc,
  * To avoid confusion and keep things simple, we will annotate with the nhip
  * as well to avoid duplicate metrics. We can avoid showing the IP in grafana
  * if its not of much value. */
-void PrometheusManager::addNUpdateSvcTargetCounter (const string& uuid,
-                                                    const string& nhip,
-                                                    uint64_t rx_bytes,
-                                                    uint64_t rx_pkts,
-                                                    uint64_t tx_bytes,
-                                                    uint64_t tx_pkts,
-                         const unordered_map<string, string>& svc_attr_map,
-                         const unordered_map<string, string>& ep_attr_map,
-                                                    bool createIfNotPresent,
-                                                    bool updateLabels,
-                                                    bool isNodePort)
+void AgentPrometheusManager::addNUpdateSvcTargetCounter (const string& uuid,
+                                                         const string& nhip,
+                                                         uint64_t rx_bytes,
+                                                         uint64_t rx_pkts,
+                                                         uint64_t tx_bytes,
+                                                         uint64_t tx_pkts,
+                             const unordered_map<string, string>& svc_attr_map,
+                             const unordered_map<string, string>& ep_attr_map,
+                                                         bool createIfNotPresent,
+                                                         bool updateLabels,
+                                                         bool isNodePort)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_target_counter_mutex);
@@ -2688,13 +2608,13 @@ void PrometheusManager::addNUpdateSvcTargetCounter (const string& uuid,
 }
 
 /* Function called from IntFlowManager and ServiceManager to update SvcCounter */
-void PrometheusManager::addNUpdateSvcCounter (const string& uuid,
-                                              uint64_t rx_bytes,
-                                              uint64_t rx_pkts,
-                                              uint64_t tx_bytes,
-                                              uint64_t tx_pkts,
-                  const unordered_map<string, string>& svc_attr_map,
-                                              bool isNodePort)
+void AgentPrometheusManager::addNUpdateSvcCounter (const string& uuid,
+                                                   uint64_t rx_bytes,
+                                                   uint64_t rx_pkts,
+                                                   uint64_t tx_bytes,
+                                                   uint64_t tx_pkts,
+                      const unordered_map<string, string>& svc_attr_map,
+                                                   bool isNodePort)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_counter_mutex);
@@ -2741,11 +2661,11 @@ void PrometheusManager::addNUpdateSvcCounter (const string& uuid,
 }
 
 /* Function called from ContractStatsManager to add/update ContractClassifierCounter */
-void PrometheusManager::addNUpdateContractClassifierCounter (const string& srcEpg,
-                                                             const string& dstEpg,
-                                                             const string& classifier,
-                                                             uint64_t bytes,
-                                                             uint64_t pkts)
+void AgentPrometheusManager::addNUpdateContractClassifierCounter (const string& srcEpg,
+                                                                  const string& dstEpg,
+                                                                  const string& classifier,
+                                                                  uint64_t bytes,
+                                                                  uint64_t pkts)
 {
     RETURN_IF_DISABLED
 
@@ -2793,11 +2713,11 @@ void PrometheusManager::addNUpdateContractClassifierCounter (const string& srcEp
 }
 
 /* Function called from SecGrpStatsManager to add/update SGClassifierCounter */
-void PrometheusManager::addNUpdateSGClassifierCounter (const string& classifier,
-                                                       uint64_t rx_bytes,
-                                                       uint64_t rx_pkts,
-                                                       uint64_t tx_bytes,
-                                                       uint64_t tx_pkts)
+void AgentPrometheusManager::addNUpdateSGClassifierCounter (const string& classifier,
+                                                            uint64_t rx_bytes,
+                                                            uint64_t rx_pkts,
+                                                            uint64_t tx_bytes,
+                                                            uint64_t tx_pkts)
 {
     RETURN_IF_DISABLED
 
@@ -2843,7 +2763,7 @@ void PrometheusManager::addNUpdateSGClassifierCounter (const string& classifier,
 }
 
 /* Function called from ServiceManager to increment service count */
-void PrometheusManager::incSvcCounter (void)
+void AgentPrometheusManager::incSvcCounter (void)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_counter_mutex);
@@ -2852,7 +2772,7 @@ void PrometheusManager::incSvcCounter (void)
 }
 
 /* Function called from ServiceManager to decrement service count */
-void PrometheusManager::decSvcCounter (void)
+void AgentPrometheusManager::decSvcCounter (void)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_counter_mutex);
@@ -2861,7 +2781,7 @@ void PrometheusManager::decSvcCounter (void)
 }
 
 /* Function called from EndpointManager to create/update RemoteEp count */
-void PrometheusManager::addNUpdateRemoteEpCount (size_t count)
+void AgentPrometheusManager::addNUpdateRemoteEpCount (size_t count)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(remote_ep_mutex);
@@ -2879,10 +2799,10 @@ void PrometheusManager::addNUpdateRemoteEpCount (size_t count)
 
 /* Function called from ContractStatsManager to update RDDropCounter
  * This will be called from IntFlowManager to create metrics. */
-void PrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
-                                                 bool isAdd,
-                                                 uint64_t bytes,
-                                                 uint64_t pkts)
+void AgentPrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
+                                                      bool isAdd,
+                                                      uint64_t bytes,
+                                                      uint64_t pkts)
 {
     RETURN_IF_DISABLED
 
@@ -2924,8 +2844,8 @@ void PrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
 }
 
 /* Function called from PolicyStatsManager to update OFPeerStats */
-void PrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
-                                               const std::shared_ptr<OFStats> stats)
+void AgentPrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
+                                                    const std::shared_ptr<OFStats> stats)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(ofpeer_stats_mutex);
@@ -3019,11 +2939,11 @@ void PrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
 }
 
 /* Function called from EP Manager to update EpCounter */
-void PrometheusManager::addNUpdateEpCounter (const string& uuid,
-                                             const string& ep_name,
-                                             const size_t& attr_hash,
-                  const unordered_map<string, string>&    attr_map,
-                                             const EpCounters& counters)
+void AgentPrometheusManager::addNUpdateEpCounter (const string& uuid,
+                                                  const string& ep_name,
+                                                  const size_t& attr_hash,
+                      const unordered_map<string, string>&    attr_map,
+                                                  const EpCounters& counters)
 {
     RETURN_IF_DISABLED
 
@@ -3103,8 +3023,8 @@ void PrometheusManager::addNUpdateEpCounter (const string& uuid,
 }
 
 // Function called from ServiceManager to remove SvcTargetCounter
-void PrometheusManager::removeSvcTargetCounter (const string& uuid,
-                                                const string& nhip)
+void AgentPrometheusManager::removeSvcTargetCounter (const string& uuid,
+                                                     const string& nhip)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_target_counter_mutex);
@@ -3121,7 +3041,7 @@ void PrometheusManager::removeSvcTargetCounter (const string& uuid,
 }
 
 // Function called from ServiceManager to remove SvcCounter
-void PrometheusManager::removeSvcCounter (const string& uuid)
+void AgentPrometheusManager::removeSvcCounter (const string& uuid)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_counter_mutex);
@@ -3137,8 +3057,8 @@ void PrometheusManager::removeSvcCounter (const string& uuid)
 }
 
 // Function called from IntFlowManager to remove PodSvcCounter
-void PrometheusManager::removePodSvcCounter (bool isEpToSvc,
-                                             const string& uuid)
+void AgentPrometheusManager::removePodSvcCounter (bool isEpToSvc,
+                                                  const string& uuid)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(podsvc_counter_mutex);
@@ -3172,8 +3092,8 @@ void PrometheusManager::removePodSvcCounter (bool isEpToSvc,
 }
 
 // Function called from EP Manager to remove EpCounter
-void PrometheusManager::removeEpCounter (const string& uuid,
-                                         const string& ep_name)
+void AgentPrometheusManager::removeEpCounter (const string& uuid,
+                                              const string& ep_name)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(ep_counter_mutex);
@@ -3193,9 +3113,9 @@ void PrometheusManager::removeEpCounter (const string& uuid,
 }
 
 // Function called from ContractStatsManager to remove ContractClassifierCounter
-void PrometheusManager::removeContractClassifierCounter (const string& srcEpg,
-                                                         const string& dstEpg,
-                                                         const string& classifier)
+void AgentPrometheusManager::removeContractClassifierCounter (const string& srcEpg,
+                                                              const string& dstEpg,
+                                                              const string& classifier)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(contract_stats_mutex);
@@ -3211,7 +3131,7 @@ void PrometheusManager::removeContractClassifierCounter (const string& srcEpg,
 }
 
 // Function called from SecGrpStatsManager to remove SGClassifierCounter
-void PrometheusManager::removeSGClassifierCounter (const string& classifier)
+void AgentPrometheusManager::removeSGClassifierCounter (const string& classifier)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(sgclassifier_stats_mutex);
@@ -3227,7 +3147,7 @@ void PrometheusManager::removeSGClassifierCounter (const string& classifier)
 }
 
 // Function called from IntFlowManager to remove RDDropCounter
-void PrometheusManager::removeRDDropCounter (const string& rdURI)
+void AgentPrometheusManager::removeRDDropCounter (const string& rdURI)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(rddrop_stats_mutex);
@@ -3241,9 +3161,9 @@ void PrometheusManager::removeRDDropCounter (const string& rdURI)
     }
 }
 
-const map<string,string> PrometheusManager::createLabelMapFromTableDropKey(
-        const string& bridge_name,
-        const string& table_name)
+const map<string,string> AgentPrometheusManager::createLabelMapFromTableDropKey (
+                                                    const string& bridge_name,
+                                                    const string& table_name)
 {
    map<string,string>   label_map;
    string table_str = bridge_name + string("_") + table_name;
@@ -3251,9 +3171,9 @@ const map<string,string> PrometheusManager::createLabelMapFromTableDropKey(
    return label_map;
 }
 
-mgauge_pair_t PrometheusManager::getStaticGaugeTableDrop(TABLE_DROP_METRICS metric,
-                                          const string& bridge_name,
-                                          const string& table_name)
+mgauge_pair_t AgentPrometheusManager::getStaticGaugeTableDrop (TABLE_DROP_METRICS metric,
+                                                  const string& bridge_name,
+                                                  const string& table_name)
 {
     const string table_drop_key = bridge_name + table_name;
     const auto &gauge_itr = table_drop_gauge_map[metric].find(table_drop_key);
@@ -3263,8 +3183,8 @@ mgauge_pair_t PrometheusManager::getStaticGaugeTableDrop(TABLE_DROP_METRICS metr
     return gauge_itr->second;
 }
 
-void PrometheusManager::createStaticGaugeTableDrop (const string& bridge_name,
-                                                    const string& table_name)
+void AgentPrometheusManager::createStaticGaugeTableDrop (const string& bridge_name,
+                                                         const string& table_name)
 {
     RETURN_IF_DISABLED
     if ((bridge_name.empty() || table_name.empty()))
@@ -3301,8 +3221,8 @@ void PrometheusManager::createStaticGaugeTableDrop (const string& bridge_name,
     }
 }
 
-void PrometheusManager::removeTableDropGauge (const string& bridge_name,
-                                              const string& table_name)
+void AgentPrometheusManager::removeTableDropGauge (const string& bridge_name,
+                                                   const string& table_name)
 {
     RETURN_IF_DISABLED
     string table_drop_key = bridge_name + table_name;
@@ -3324,10 +3244,10 @@ void PrometheusManager::removeTableDropGauge (const string& bridge_name,
     }
 }
 
-void PrometheusManager::updateTableDropGauge (const string& bridge_name,
-                                              const string& table_name,
-                                              const uint64_t &bytes,
-                                              const uint64_t &packets)
+void AgentPrometheusManager::updateTableDropGauge (const string& bridge_name,
+                                                   const string& table_name,
+                                                   const uint64_t &bytes,
+                                                   const uint64_t &packets)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(table_drop_counter_mutex);

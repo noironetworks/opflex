@@ -33,7 +33,7 @@ using boost::optional;
 #ifdef HAVE_PROMETHEUS_SUPPORT
 ServiceManager::ServiceManager (Agent& agent_,
                                 opflex::ofcore::OFFramework& framework_,
-                                PrometheusManager& prometheusManager_)
+                                AgentPrometheusManager& prometheusManager_)
     : agent(agent_), framework(framework_),
       prometheusManager(prometheusManager_) {
 }

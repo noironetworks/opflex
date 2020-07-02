@@ -36,6 +36,9 @@
 #ifdef HAVE_GRPC_SUPPORT
 #include "GbpClient.h"
 #endif
+#ifdef HAVE_PROMETHEUS_SUPPORT
+#include <opflexagent/PrometheusManager.h>
+#endif
 
 using std::string;
 using std::make_pair;
@@ -70,6 +73,10 @@ int main(int argc, char** argv) {
             ("sample", po::value<string>()->default_value(""),
              "Output a sample policy to the given file then exit")
             ("daemon", "Run the opflex server as a daemon")
+#ifdef HAVE_PROMETHEUS_SUPPORT
+            ("disable-prometheus", "Disable exporting metrics to prometheus")
+            ("enable-prometheus-localhost", "Export prometheus port only on localhost")
+#endif
             ("policy,p", po::value<string>()->default_value(""),
              "Read the specified policy file to seed the MODB")
             ("ssl_castore", po::value<string>()->default_value("/etc/ssl/certs/"),
@@ -97,6 +104,10 @@ int main(int argc, char** argv) {
     }
 
     bool daemon = false;
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    bool enable_prometheus = true;
+    bool enable_localhost_only = false;
+#endif
     std::string log_file;
     std::string level_str;
     std::string policy_file;
@@ -130,6 +141,12 @@ int main(int argc, char** argv) {
         if (vm.count("daemon")) {
             daemon = true;
         }
+#ifdef HAVE_PROMETHEUS_SUPPORT
+        if (vm.count("disable-prometheus"))
+            enable_prometheus = false;
+        if (vm.count("enable-prometheus-localhost"))
+            enable_localhost_only = true;
+#endif
         log_file = vm["log"].as<string>();
         level_str = vm["level"].as<string>();
         policy_file = vm["policy"].as<string>();
@@ -210,9 +227,15 @@ int main(int argc, char** argv) {
                                modelgbp::getMetadata(),
                                prr_interval_secs);
 #ifdef HAVE_GRPC_SUPPORT
-	LOG(INFO) << "Connecting to gbp-server at address: "
+	      LOG(INFO) << "Connecting to gbp-server at address: "
                   << grpc_address;
         GbpClient client(grpc_address, server);
+#endif
+
+#ifdef HAVE_PROMETHEUS_SUPPORT
+        ServerPrometheusManager prometheusManager;
+        if (enable_prometheus)
+            prometheusManager.start(enable_localhost_only);
 #endif
 
         if (policy_file != "") {
@@ -276,6 +299,12 @@ int main(int argc, char** argv) {
             }
         }
 cleanup:
+#ifdef HAVE_PROMETHEUS_SUPPORT
+        prometheusManager.stop();
+#endif
+#ifdef HAVE_GRPC_SUPPORT
+        client.Stop();
+#endif
         server.stop();
     } catch (const std::exception& e) {
         LOG(ERROR) << "Fatal error: " << e.what();

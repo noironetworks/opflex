@@ -62,7 +62,7 @@ static const string NULL_MAC_ADDR("00:00:00:00:00:00");
 EndpointManager::EndpointManager(Agent& agent_,
                                  opflex::ofcore::OFFramework& framework_,
                                  PolicyManager& policyManager_,
-                                 PrometheusManager& prometheusManager_)
+                                 AgentPrometheusManager& prometheusManager_)
     : agent(agent_), framework(framework_), policyManager(policyManager_),
       prometheusManager(prometheusManager_), epgMappingListener(*this) {
 
