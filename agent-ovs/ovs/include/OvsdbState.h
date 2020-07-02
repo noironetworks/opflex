@@ -209,7 +209,7 @@ public:
                         auto options = row.second["options"].getCollectionValue();
                         if (options.find("erspan_ver") != options.end()) {
                             LOG(DEBUG) << "setting version to " << options["erspan_ver"];
-                            params.setVersion(stoi(options["erspan_ver"]));
+                            params.setVersion(stoul(options["erspan_ver"]));
                         }
                         if (options.find("remote_ip") != options.end()) {
                             LOG(DEBUG) << "Setting remote IP to " << options["remote_ip"];

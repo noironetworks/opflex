@@ -450,17 +450,17 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         setSimStatProperties(OPFLEX_STATS_INTERFACE_SETTING, OPFLEX_STATS_INTERFACE_INTERVAL,
                              properties, statProps);
         if (statProps.enabled)
-            interfaceInterval = statProps.interval*1000;
+            setInterfaceInterval(statProps.interval*1000);
         statProps.interval = 10;
         setSimStatProperties(OPFLEX_STATS_CONTRACT_SETTING, OPFLEX_STATS_CONTRACT_INTERVAL,
                              properties, statProps);
         if (statProps.enabled)
-            contractInterval = statProps.interval*1000;
+            setContractInterval(statProps.interval*1000);
         statProps.interval = 10;
         setSimStatProperties(OPFLEX_STATS_SECGRP_SETTING, OPFLEX_STATS_SECGRP_INTERVAL,
                              properties, statProps);
         if (statProps.enabled)
-            securityGroupInterval = statProps.interval*1000;
+            setSecurityGroupInterval(statProps.interval*1000);
 
         LOG(INFO) << "contract interval set to " << contractInterval << " millisecs";
         LOG(INFO) << "security group interval set to " << securityGroupInterval << " millisecs";

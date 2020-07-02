@@ -311,6 +311,8 @@ namespace opflexagent {
 
             values.clear();
             values.emplace_back("erspan_ver", std::to_string(version));
+            static const string erspanDir("1");
+            values.emplace_back("erspan_dir", erspanDir);
             values.emplace_back("remote_ip", remoteIp);
             OvsdbValues tdSet5("map", values);
             msg2.rowData.emplace("options", tdSet5);

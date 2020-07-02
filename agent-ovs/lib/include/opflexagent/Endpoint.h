@@ -147,16 +147,6 @@ public:
     }
 
     /**
-     * Set the security group labels for this endpoint.  This will
-     * overwrite any existing labels
-     *
-     * @param securityGroups the set of security labels
-     */
-    void setSecurityGroups(const std::set<opflex::modb::URI>& securityGroups) {
-        this->securityGroups = securityGroups;
-    }
-
-    /**
      * Add a security group label for this endpoint
      *
      * @param securityGroup the URI for the security group to add
@@ -172,16 +162,6 @@ public:
      */
     const std::unordered_set<std::string>& getIPs() const {
         return ips;
-    }
-
-    /**
-     * Set the IP addresses for this endpoint.  This will overwrite
-     * any existing IP addresses
-     *
-     * @param ips the IP addresses
-     */
-    void setIPs(const std::unordered_set<std::string>& ips) {
-        this->ips = ips;
     }
 
     /**
@@ -201,17 +181,6 @@ public:
      */
     const std::unordered_set<std::string>& getAnycastReturnIPs() const {
         return anycastReturnIps;
-    }
-
-    /**
-     * Set the list of IP addresses that are valid sources for anycast
-     * service addresses.  This will overwrite any existing IP
-     * addresses
-     *
-     * @param ips the IP addresses
-     */
-    void setAnycastReturnIPs(const std::unordered_set<std::string>& ips) {
-        this->anycastReturnIps = ips;
     }
 
     /**
@@ -252,16 +221,6 @@ public:
      */
     const virt_ip_set& getVirtualIPs() const {
         return virtualIps;
-    }
-
-    /**
-     * Set the virtual IP addresses for this endpoint.  This will overwrite
-     * any existing virtual IP addresses
-     *
-     * @param virtualIps the virtual IP addresses
-     */
-    void setVirtualIPs(const virt_ip_set& virtualIps) {
-        this->virtualIps = virtualIps;
     }
 
     /**
