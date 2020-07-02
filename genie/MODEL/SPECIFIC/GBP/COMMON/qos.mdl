@@ -30,7 +30,7 @@ module[qos]
          member[mark; type=scalar/UByte]
          contained
         {
-            parent[class=policy/Requirement]
+            parent[class=qos/Requirement]
         }
 
         named
