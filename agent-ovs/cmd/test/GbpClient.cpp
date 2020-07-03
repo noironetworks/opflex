@@ -203,16 +203,24 @@ void GbpClient::Start(const std::string& address) {
             grpc::CreateChannel(address,
                                 grpc::InsecureChannelCredentials()),
                                 server_);
-        client_ = &client;
-        client.Wait();
+        {
+            const std::lock_guard<std::mutex> lock(client_mutex);
+            client_ = &client;
+            client.Wait();
+        }
         std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 }
 
 void GbpClient::Stop() {
     stopping = true;
-    if (client_)
-        client_->Stop();
+
+    {
+        const std::lock_guard<std::mutex> lock(client_mutex);
+        if (client_)
+            client_->Stop();
+    }
+
     thread_.join();
 }
 

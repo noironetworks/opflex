@@ -19,6 +19,7 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <mutex>
 
 #ifdef RAPIDJSON_HAS_STDSTRING
 #undef RAPIDJSON_HAS_STDSTRING
@@ -47,8 +48,9 @@ private:
     void JsonDocAdd(rapidjson::Document& d, const gbpserver::GBPObject& gbp);
     std::thread thread_;
     opflex::test::GbpOpflexServer& server_;
-    bool stopping;
+    std::atomic<bool> stopping;
     GbpClientImpl* client_;
+    std::mutex client_mutex;
 };
 
 } /* namespace opflexagent */
