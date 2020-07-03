@@ -45,7 +45,7 @@ void ServerPrometheusManager::start (bool exposeLocalHostOnly)
     exposer_ptr->RegisterCollectable(registry_ptr);
 }
 
-// Stop of AgentPrometheusManager instance
+// Stop of ServerPrometheusManager instance
 void ServerPrometheusManager::stop ()
 {
     RETURN_IF_DISABLED

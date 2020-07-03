@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
                                modelgbp::getMetadata(),
                                prr_interval_secs);
 #ifdef HAVE_GRPC_SUPPORT
-	      LOG(INFO) << "Connecting to gbp-server at address: "
+        LOG(INFO) << "Connecting to gbp-server at address: "
                   << grpc_address;
         GbpClient client(grpc_address, server);
 #endif
@@ -283,6 +283,9 @@ int main(int argc, char** argv) {
 
                 if ((event->mask & IN_CLOSE_WRITE) && event->len > 0) {
                     LOG(INFO) << "Policy/Config dir modified : " << pf_dir;
+#ifdef HAVE_PROMETHEUS_SUPPORT
+                    prometheusManager.stop();
+#endif
 #ifdef HAVE_GRPC_SUPPORT
                     client.Stop();
 #endif
