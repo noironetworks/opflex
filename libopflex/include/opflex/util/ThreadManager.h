@@ -15,11 +15,11 @@
 #ifndef OPFLEX_UTIL_THREADMANAGER_H
 #define OPFLEX_UTIL_THREADMANAGER_H
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
 #include <boost/noncopyable.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <uv.h>
 
 #include "opflex/ofcore/MainLoopAdaptor.h"
@@ -80,7 +80,7 @@ private:
         uv_loop_t main_loop;
     };
 
-    boost::scoped_ptr<AdaptorImpl> adaptor;
+    std::unique_ptr<AdaptorImpl> adaptor;
 
     typedef std::unordered_map<std::string, Task> task_map_t;
     task_map_t task_map;

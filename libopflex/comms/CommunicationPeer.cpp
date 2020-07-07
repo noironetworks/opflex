@@ -11,8 +11,6 @@
 #  include <config.h>
 #endif
 
-#include <boost/scoped_ptr.hpp>
-
 #include <yajr/rpc/gen/echo.hpp>
 #include <yajr/rpc/internal/json_stream_wrappers.hpp>
 #include <yajr/rpc/methods.hpp>
@@ -104,7 +102,7 @@ void CommunicationPeer::bumpLastHeard() const {
 }
 
 void CommunicationPeer::onConnect() {
-    connected_ = 1;
+    connected_ = true;
     status_ = internal::Peer::kPS_ONLINE;
 
     keepAliveTimer_.data = this;
@@ -121,7 +119,7 @@ void CommunicationPeer::onConnect() {
 }
 
 void CommunicationPeer::onDisconnect() {
-    LOG(DEBUG1) << this << " connected_ = " << static_cast< bool >(connected_);
+    LOG(DEBUG1) << this << " connected_ = " << connected_;
     if (!uv_is_closing(getHandle())) {
         uv_close(getHandle(), on_close);
     }
@@ -130,7 +128,7 @@ void CommunicationPeer::onDisconnect() {
         /* wipe deque out and reset pendingBytes_ */
         s_.deque_.clear();
         pendingBytes_ = 0;
-        connected_ = 0;
+        connected_ = false;
 
         resetSsIn();
 
@@ -225,7 +223,7 @@ void CommunicationPeer::readBufNoNull(char* buffer, size_t nread) {
                     onError(UV_EPROTO);
                     onDisconnect();
                 }
-                boost::scoped_ptr<yajr::rpc::InboundMessage> msg(inb);
+                std::unique_ptr<yajr::rpc::InboundMessage> msg(inb);
                 if (!msg) {
                     LOG(ERROR) << "skipping inbound message";
                     continue;
@@ -272,7 +270,7 @@ void CommunicationPeer::readBufferZ(char const * buffer, size_t nread) {
         }
 
         buffer += chunk_size;
-        boost::scoped_ptr<yajr::rpc::InboundMessage> msg(parseFrame());
+        std::unique_ptr<yajr::rpc::InboundMessage> msg(parseFrame());
 
         if (!msg) {
             LOG(ERROR) << "skipping inbound message";

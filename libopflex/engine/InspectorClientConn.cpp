@@ -26,7 +26,10 @@ using yajr::Peer;
 
 InspectorClientConn::InspectorClientConn(HandlerFactory& handlerFactory,
                                          const std::string& name_)
-    : OpflexConnection(handlerFactory), name(name_), peer(NULL) {}
+    : OpflexConnection(handlerFactory), name(name_), peer(NULL) {
+    client_loop = {};
+    timer = {};
+}
 
 InspectorClientConn::~InspectorClientConn() {
 

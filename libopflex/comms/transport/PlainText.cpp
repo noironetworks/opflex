@@ -17,8 +17,6 @@
 
 #include <opflex/logging/internal/logging.hpp>
 
-#include <sys/uio.h>
-
 namespace yajr {
 namespace transport {
 

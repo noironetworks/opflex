@@ -20,15 +20,11 @@
 #include <yajr/transport/ZeroCopyOpenSSL.hpp>
 #include <opflex/yajr/internal/comms.hpp>
 
-#include <opflex/logging/OFLogHandler.h>
 #include <opflex/logging/StdOutLogHandler.h>
-
 #include <opflex/logging/internal/logging.hpp>
 
 #include <boost/test/unit_test_log.hpp>
 #include <boost/test/unit_test.hpp>
-
-#include <boost/scoped_ptr.hpp>
 
 #include <utility>
 
@@ -109,7 +105,8 @@ class CommsFixture {
         CommsFixture::current_loop = &loop_;
 
         uv_loop_init(CommsFixture::current_loop);
-
+        prepare_ = {};
+        timer_ = {};
         prepare_.data = timer_.data = this;
 
         int rc = ::yajr::initLoop(CommsFixture::current_loop);
@@ -1293,7 +1290,6 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_destroy_client_for_non_existent_service, Co
     BOOST_CHECK_EQUAL(!p, 0);
 
     loop_until_final(range_t(0,0), pc_no_peers);
-
 }
 
 BOOST_FIXTURE_TEST_CASE( STABLE_test_disconnect_client_for_non_existent_host, CommsFixture ) {
@@ -1319,7 +1315,6 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_disconnect_client_for_non_existent_service,
     BOOST_CHECK_EQUAL(!p, 0);
 
     loop_until_final(range_t(1,1), pc_retrying_client);
-
 }
 
 #ifdef YAJR_HAS_OPENSSL
@@ -1382,7 +1377,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_no_message_on_SSL, CommsFixture ) {
 
     LOG(DEBUG);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             NULL,
             SRCDIR"/test/server.pem",
@@ -1416,7 +1411,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_no_message_on_SSL, CommsFixture ) {
 
     BOOST_CHECK_EQUAL(!p, 0);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             SRCDIR"/test/ca.pem",
             NULL
@@ -1487,7 +1482,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_single_message_on_SSL, CommsFixture ) {
 
     LOG(DEBUG);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             NULL,
             SRCDIR"/test/server.pem",
@@ -1521,7 +1516,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_single_message_on_SSL, CommsFixture ) {
 
     BOOST_CHECK_EQUAL(!p, 0);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             SRCDIR"/test/ca.pem",
             NULL
@@ -1550,7 +1545,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_single_message_with_client_cert_on_SSL, Com
 
     LOG(DEBUG);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             SRCDIR"/test/ca.pem",
             SRCDIR"/test/server.pem",
@@ -1586,7 +1581,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_single_message_with_client_cert_on_SSL, Com
 
     BOOST_CHECK_EQUAL(!p, 0);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             SRCDIR"/test/ca.pem",
             SRCDIR"/test/server.pem",
@@ -1616,7 +1611,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_keepalive_on_SSL, CommsFixture ) {
 
     LOG(DEBUG);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             NULL,
             SRCDIR"/test/server.pem",
@@ -1651,7 +1646,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_keepalive_on_SSL, CommsFixture ) {
 
     BOOST_CHECK_EQUAL(!p, 0);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             SRCDIR"/test/ca.pem",
             NULL
@@ -1707,7 +1702,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_several_SSL_peers, CommsFixture ) {
 
     LOG(DEBUG);
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > serverCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             NULL,
             SRCDIR"/test/server.pem",
@@ -1721,7 +1716,7 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_several_SSL_peers, CommsFixture ) {
         return;
     }
 
-    boost::scoped_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
+    std::unique_ptr< ::yajr::transport::ZeroCopyOpenSSL::Ctx > clientCtx(
         ::yajr::transport::ZeroCopyOpenSSL::Ctx::createCtx(
             SRCDIR"/test/ca.pem",
             NULL

@@ -18,7 +18,6 @@
 #include <stdexcept>
 
 #include <boost/foreach.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include "opflex/engine/internal/OpflexListener.h"
 #include "opflex/engine/internal/OpflexPool.h"
@@ -37,7 +36,11 @@ OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
                                const std::string& name_,
                                const std::string& domain_)
     : handlerFactory(handlerFactory_), port(port_),
-      name(name_), domain(domain_), active(true) {
+      name(name_), domain(domain_), active(true),
+      server_thread(0), listener(nullptr) {
+    server_loop = {};
+    cleanup_async = {};
+    writeq_async = {};
 }
 
 OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
@@ -45,7 +48,11 @@ OpflexListener::OpflexListener(HandlerFactory& handlerFactory_,
                                const std::string& name_,
                                const std::string& domain_)
     : handlerFactory(handlerFactory_), socketName(socketName_),
-      port(0), name(name_), domain(domain_), active(true) {
+      port(0), name(name_), domain(domain_), active(true),
+      server_thread(0), listener(nullptr) {
+    server_loop = {};
+    cleanup_async = {};
+    writeq_async = {};
 }
 
 OpflexListener::~OpflexListener() {
@@ -166,7 +173,7 @@ void OpflexListener::connectionClosed(OpflexServerConnection* conn) {
 }
 
 void OpflexListener::sendToAll(OpflexMessage* message) {
-    boost::scoped_ptr<OpflexMessage> messagep(message);
+    std::unique_ptr<OpflexMessage> messagep(message);
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (!active) return;
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
@@ -176,7 +183,7 @@ void OpflexListener::sendToAll(OpflexMessage* message) {
 }
 
 void OpflexListener::sendToOne(OpflexServerConnection* conn, OpflexMessage* message) {
-    boost::scoped_ptr<OpflexMessage> messagep(message);
+    std::unique_ptr<OpflexMessage> messagep(message);
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (!active) return;
     conn->sendMessage(message->clone());

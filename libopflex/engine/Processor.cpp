@@ -66,6 +66,10 @@ Processor::Processor(ObjectStore* store_, ThreadManager& threadManager_)
       processingDelay(DEFAULT_PROC_DELAY),
       retryDelay(DEFAULT_RETRY_DELAY),
       proc_active(false) {
+    cleanup_async = {};
+    proc_async = {};
+    connect_async = {};
+    proc_timer = {};
 }
 
 Processor::~Processor() {

@@ -16,7 +16,6 @@
 
 #include <cstdio>
 #include <boost/test/unit_test.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <sys/stat.h>
 
 #include "BaseFixture.h"
@@ -29,7 +28,6 @@ namespace opflex {
 namespace ofcore {
 
 using std::string;
-using boost::scoped_ptr;
 using modb::BaseFixture;
 using modb::URI;
 using modb::mointernal::ObjectInstance;
