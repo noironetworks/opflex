@@ -339,8 +339,8 @@ class Peer : public SafeListBaseHook {
             :
               uvLoopSelector_(uvLoopSelector ? : &uvDefaultLoop),
               uvRefCnt_(1),
-              connected_(0),
-              destroying_(0),
+              connected_(false),
+              destroying_(false),
               passive_(passive),
               choked_(1),
               createFail_(1),
@@ -427,9 +427,9 @@ class Peer : public SafeListBaseHook {
     /** reference count */
     boost::atomic<unsigned int>  uvRefCnt_;
     /** Is this peer connected */
-    unsigned char connected_  :1;
+    std::atomic<bool> connected_;
     /** Is the peer begin destroyed */
-    unsigned char destroying_ :1;
+    std::atomic<bool> destroying_;
     /** Is this peer passive */
     unsigned char passive_    :1;
     /** Is the peer currently choked */
@@ -806,7 +806,7 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
     mutable size_t pendingBytes_;
     mutable uint64_t nextId_;
 
-    uint64_t keepAliveInterval_;
+    std::atomic<uint64_t> keepAliveInterval_;
     mutable uint64_t lastHeard_;
 
     ::yajr::transport::Transport transport_;

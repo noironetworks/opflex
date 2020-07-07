@@ -12,7 +12,6 @@
 #endif
 
 #include <opflex/yajr/internal/comms.hpp>
-#include <opflex/yajr/transport/engine.hpp>
 #include <opflex/logging/internal/logging.hpp>
 
 namespace yajr {

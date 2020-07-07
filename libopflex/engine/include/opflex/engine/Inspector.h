@@ -17,7 +17,6 @@
 #include <string>
 
 #include <boost/noncopyable.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <uv.h>
 
 #include "opflex/engine/internal/OpflexConnection.h"
@@ -90,7 +89,7 @@ public:
 private:
     modb::ObjectStore* db;
     internal::MOSerializer serializer;
-    boost::scoped_ptr<internal::OpflexListener> listener;
+    std::unique_ptr<internal::OpflexListener> listener;
 
     std::string name;
 

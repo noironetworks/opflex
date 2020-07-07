@@ -167,7 +167,11 @@ public:
     }
 
     ~ServerFixture() {
-        opflexServer.stop();
+        try {
+            opflexServer.stop();
+        } catch (...) {
+            LOG(WARNING) << "Exception thrown while stopping opflex server instance";
+        }
     }
 
     void startClient() {

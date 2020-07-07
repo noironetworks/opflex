@@ -18,7 +18,6 @@
 
 #include <boost/assign.hpp>
 #include <boost/foreach.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include "opflex/ofcore/OFFramework.h"
 #include "opflex/engine/Processor.h"
@@ -35,7 +34,7 @@ namespace ofcore {
 using namespace boost::assign;
 using namespace opflex::modb;
 using engine::internal::MOSerializer;
-using boost::scoped_ptr;
+using std::unique_ptr;
 using std::string;
 
 class OFFramework::OFFrameworkImpl {
@@ -49,7 +48,7 @@ public:
     util::ThreadManager threadManager;
     modb::ObjectStore db;
     engine::Processor processor;
-    scoped_ptr<engine::Inspector> inspector;
+    unique_ptr<engine::Inspector> inspector;
     uv_key_t mutator_key;
     bool started;
     opflex::ofcore::OFConstants::OpflexElementMode mode;

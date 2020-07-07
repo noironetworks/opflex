@@ -16,7 +16,6 @@
 
 #include <boost/foreach.hpp>
 #include <boost/optional.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include "opflex/modb/internal/ObjectStore.h"
 #include "opflex/engine/internal/InspectorClientHandler.h"
@@ -39,8 +38,8 @@ InspectorClient::newInstance(const std::string& name,
 namespace engine {
 
 using std::string;
+using std::unique_ptr;
 using boost::optional;
-using boost::scoped_ptr;
 using opflex::modb::ObjectStore;
 using opflex::modb::PropertyInfo;
 using opflex::modb::ClassInfo;
@@ -86,7 +85,7 @@ void InspectorClientImpl::execute() {
 
 void InspectorClientImpl::executeCommands() {
     while (!commands.empty()) {
-        scoped_ptr<Cmd> command(commands.front());
+        unique_ptr<Cmd> command(commands.front());
         commands.pop_front();
         pendingRequests += command->execute(*this);
     }
