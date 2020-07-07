@@ -24,22 +24,18 @@ void ListeningPeer::destroy(bool now) {
 
     assert(!destroying_);
     if (destroying_) {
-        LOG(WARNING)
-            << this
-            << " Double destroy() detected"
-        ;
-
+        LOG(WARNING) << this << " Double destroy() detected" ;
         return;
     }
 
-    destroying_ = 1;
+    destroying_ = true;
 
     if (down()) {
         return;
     }
 
     if (connected_) {
-        connected_ = 0;
+        connected_ = false;
         if (!uv_is_closing(getHandle())) {
             uv_close(getHandle(), on_close);
         }

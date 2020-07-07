@@ -14,8 +14,6 @@
 #  include <config.h>
 #endif
 
-#include <boost/scoped_ptr.hpp>
-
 #include "opflex/logging/internal/logging.hpp"
 #include "opflex/rpc/JsonRpcConnection.h"
 
@@ -39,7 +37,7 @@ void RpcConnection::cleanup() {
 
 void RpcConnection::sendMessage(JsonRpcMessage* message, bool sync) {
     if (sync) {
-        boost::scoped_ptr<JsonRpcMessage> messagep(message);
+        std::unique_ptr<JsonRpcMessage> messagep(message);
         doWrite(message);
     } else {
         const std::lock_guard<std::mutex> lock(queue_mutex);
@@ -59,7 +57,7 @@ void RpcConnection::processWriteQueue() {
                        << " of type " << qi.first->getType();
             continue;
         }
-        boost::scoped_ptr<JsonRpcMessage> message(qi.first);
+        std::unique_ptr<JsonRpcMessage> message(qi.first);
         write_queue.pop_front();
         doWrite(message.get());
     }

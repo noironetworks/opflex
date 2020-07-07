@@ -59,7 +59,7 @@ public:
      * only be called if it's called from the uv loop thread.
      */
     virtual void sendMessage(JsonRpcMessage* message, bool sync = false) {
-        boost::scoped_ptr<JsonRpcMessage> messagep(message);
+        std::unique_ptr<JsonRpcMessage> messagep(message);
         opflex::jsonrpc::PayloadWrapper wrapper(message);
         yajr::internal::GenericStringQueue<rapidjson::UTF8<> > sq;
         ::yajr::rpc::SendHandler writer;

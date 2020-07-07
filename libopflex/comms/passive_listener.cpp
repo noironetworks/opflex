@@ -77,7 +77,6 @@
     }
 
     int rc;
-
     if ((rc = peer->setAddrFromIpAndPort(ip_address, port))) {
         LOG(WARNING)
             << "addr_from_ip_and_port: ["
@@ -85,7 +84,6 @@
             << "] "
             << uv_strerror(rc)
         ;
-        assert(0);
         peer->destroy();
         return NULL;
     }
@@ -184,7 +182,7 @@ void ::yajr::comms::internal::ListeningTcpPeer::retry() {
 
     status_ = Peer::kPS_LISTENING;
     insert(internal::Peer::LoopData::LISTENING);
-    connected_ = 1;
+    connected_ = true;
 
     return;
 
@@ -252,7 +250,7 @@ void ::yajr::comms::internal::ListeningUnixPeer::retry() {
 
     status_ = Peer::kPS_LISTENING;
     insert(internal::Peer::LoopData::LISTENING);
-    connected_ = 1;
+    connected_ = true;
 
     return;
 
@@ -283,19 +281,13 @@ void on_passive_connection(uv_stream_t * server_handle, int status)
     ListeningPeer * listener = Peer::get<ListeningPeer>(server_handle);
 
     if (status) {
-        LOG(ERROR)
-            << listener
-            << "on_passive_connection: ["
-            << uv_err_name(status)
-            << "] "
-            << uv_strerror(status)
-        ;
+        LOG(ERROR) << listener << "on_passive_connection: ["
+            << uv_err_name(status) << "] " << uv_strerror(status);
 
         /* there could also be legitimate reasons for this, but we still have to
          * encounter them
          */
         assert(0);
-
         return;
     }
 

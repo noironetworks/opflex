@@ -16,7 +16,6 @@
 #include <yajr/rpc/methods.hpp>
 #include <opflex/yajr/rpc/rpc.hpp>
 
-#include <rapidjson/document.h>
 
 namespace yajr {
     namespace rpc {
@@ -119,13 +118,10 @@ bool OutboundMessage::send() {
             "to a proper communication peer "
             "before outbound messages are sent");
 
-    unsigned char connected = cP->connected_;
-
-    if (!connected) {
+    if (!cP->connected_) {
         cP->onError(UV_ENOTCONN);
         return false;
     }
-
 
 #if __cpp_exceptions || __EXCEPTIONS
     try {
