@@ -15,7 +15,6 @@
 
 #include <opflexagent/test/BaseFixture.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/join.hpp>
 
 #include <sstream>
@@ -212,7 +211,7 @@ BOOST_FIXTURE_TEST_CASE( vlans, LBFixture ) {
     for (size_t i = 0; i < test_cases.size(); i++) {
         LOG(INFO) << "Checking add " << i;
         LearningBridgeIface iface;
-        iface.setUUID(boost::lexical_cast<std::string>(i));
+        iface.setUUID(std::to_string(i));
         for (const auto& r : test_cases[i].input) {
             iface.addTrunkVlans(r);
         }
@@ -225,7 +224,7 @@ BOOST_FIXTURE_TEST_CASE( vlans, LBFixture ) {
 
     for (size_t i = 0; i < test_cases.size(); i++) {
         LOG(INFO) << "Checking remove " << i;
-        lbSource.removeLBIface(boost::lexical_cast<std::string>(i));
+        lbSource.removeLBIface(std::to_string(i));
         BOOST_CHECK(test_cases[i].remove_expected == f());
         listener.logUpdates();
         BOOST_CHECK(test_cases[i].remove_notify == listener.getVlanUpdates());

@@ -11,7 +11,6 @@
 #include <sstream>
 #include <boost/test/unit_test.hpp>
 #include <boost/assign/list_of.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <opflexagent/logging.h>
 #include <opflexagent/test/ModbFixture.h>
@@ -128,7 +127,7 @@ verifyOFPeerMetrics (const std::string& peer, uint32_t count)
 {
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    const auto& val1 = boost::lexical_cast<std::string>(count) + ".000000";
+    const auto& val1 = std::to_string(count) + ".000000";
     const auto& val2 = "0.000000";
 
     const std::string& ident_req = "opflex_peer_identity_req_count{peer=\""
@@ -230,12 +229,12 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
                                 "policy:classifier3,[etype:2048,proto:6,dport:80-85,]\""\
                                 ",dst_epg=\"tenant:tenant0,policy:epg2\",src_epg=\""\
                                 "tenant:tenant0,policy:epg1\"} "\
-                                + boost::lexical_cast<std::string>(pkts) + ".000000";
+                                + std::to_string(pkts) + ".000000";
     const std::string& s_bytes = "opflex_contract_bytes{classifier=\"tenant:tenant0,"\
                                  "policy:classifier3,[etype:2048,proto:6,dport:80-85,]\""\
                                  ",dst_epg=\"tenant:tenant0,policy:epg2\",src_epg=\""\
                                  "tenant:tenant0,policy:epg1\"} "\
-                                 + boost::lexical_cast<std::string>(bytes) + ".000000";
+                                 + std::to_string(bytes) + ".000000";
 
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -250,9 +249,9 @@ verifyRdDropPromMetrics (uint32_t pkts,
                          uint32_t bytes)
 {
     const std::string& s_pkts = "opflex_policy_drop_packets{routing_domain=\"tenant0:rd0\"} "\
-                                + boost::lexical_cast<std::string>(pkts) + ".000000";
+                                + std::to_string(pkts) + ".000000";
     const std::string& s_bytes = "opflex_policy_drop_bytes{routing_domain=\"tenant0:rd0\"} "\
-                                 + boost::lexical_cast<std::string>(bytes) + ".000000";
+                                 + std::to_string(bytes) + ".000000";
 
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -271,8 +270,7 @@ verifyRoutingDomainDropStats(shared_ptr<RoutingDomain> rd,
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
 
-    auto uuid =
-        boost::lexical_cast<string>(contractStatsManager.getAgentUUID());
+    auto uuid = contractStatsManager.getAgentUUID();
     WAIT_FOR_DO_ONFAIL(su.get()->resolveGbpeRoutingDomainDropCounter(uuid,
                                     contractStatsManager.getCurrDropGenId(),
                                     rd->getURI().toString()),
@@ -533,8 +531,7 @@ BOOST_FIXTURE_TEST_CASE(testContractDelete, ContractStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid =
-        boost::lexical_cast<std::string>(contractStatsManager.getAgentUUID());
+    auto uuid = contractStatsManager.getAgentUUID();
     optional<shared_ptr<L24ClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeL24ClassifierCounter(uuid,
                         contractStatsManager.getCurrClsfrGenId(),
@@ -568,8 +565,7 @@ BOOST_FIXTURE_TEST_CASE(testSEpgDelete, ContractStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid =
-        boost::lexical_cast<std::string>(contractStatsManager.getAgentUUID());
+    auto uuid = contractStatsManager.getAgentUUID();
     optional<shared_ptr<L24ClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeL24ClassifierCounter(uuid,
                         contractStatsManager.getCurrClsfrGenId(),
@@ -603,8 +599,7 @@ BOOST_FIXTURE_TEST_CASE(testrDSEpgDelete, ContractStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid =
-        boost::lexical_cast<std::string>(contractStatsManager.getAgentUUID());
+    auto uuid = contractStatsManager.getAgentUUID();
     optional<shared_ptr<L24ClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeL24ClassifierCounter(uuid,
                         contractStatsManager.getCurrClsfrGenId(),

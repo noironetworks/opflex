@@ -10,7 +10,6 @@
 
 #include <sstream>
 #include <boost/test/unit_test.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <opflexagent/Agent.h>
 #include <modelgbp/gbpe/SvcToEpCounter.hpp>
@@ -877,16 +876,16 @@ void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
     const string& scope = isNodePort?"nodePort":"cluster";
     const string& s_rx_bytes = "opflex_svc_rx_bytes{name=\"coredns\"" \
                                ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
-                            + boost::lexical_cast<std::string>(bytes) + ".000000";
+                            + std::to_string(bytes) + ".000000";
     const string& s_rx_pkts = "opflex_svc_rx_packets{name=\"coredns\"" \
                               ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
-                            + boost::lexical_cast<std::string>(pkts) + ".000000";
+                            + std::to_string(pkts) + ".000000";
     const string& s_tx_bytes = "opflex_svc_tx_bytes{name=\"coredns\"" \
                                ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
-                            + boost::lexical_cast<std::string>(bytes) + ".000000";
+                            + std::to_string(bytes) + ".000000";
     const string& s_tx_pkts = "opflex_svc_tx_packets{name=\"coredns\"" \
                               ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
-                            + boost::lexical_cast<std::string>(pkts) + ".000000";
+                            + std::to_string(pkts) + ".000000";
     pos = output.find(s_rx_bytes);
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find(s_rx_pkts);
@@ -912,13 +911,13 @@ void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
         tx_pkts = "opflex_svc_target_tx_packets{ip=\"";
     }
     const string& st_rx_bytes = rx_bytes + ip + s_ann
-                            + boost::lexical_cast<std::string>(bytes) + ".000000";
+                            + std::to_string(bytes) + ".000000";
     const string& st_rx_pkts = rx_pkts + ip + s_ann
-                            + boost::lexical_cast<std::string>(pkts) + ".000000";
+                            + std::to_string(pkts) + ".000000";
     const string& st_tx_bytes = tx_bytes + ip + s_ann
-                            + boost::lexical_cast<std::string>(bytes) + ".000000";
+                            + std::to_string(bytes) + ".000000";
     const string& st_tx_pkts = tx_pkts + ip + s_ann
-                            + boost::lexical_cast<std::string>(pkts) + ".000000";
+                            + std::to_string(pkts) + ".000000";
     pos = output.find(st_rx_bytes);
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find(st_rx_pkts);
@@ -937,19 +936,19 @@ void ServiceStatsManagerFixture::checkPodSvcPromMetrics (uint64_t pkts,
     const string& rx_bytes = "opflex_endpoint_to_svc_bytes{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + boost::lexical_cast<std::string>(bytes) + ".000000";
+                            + std::to_string(bytes) + ".000000";
     const string& rx_pkts = "opflex_endpoint_to_svc_packets{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + boost::lexical_cast<std::string>(pkts) + ".000000";
+                            + std::to_string(pkts) + ".000000";
     const string& tx_bytes = "opflex_svc_to_endpoint_bytes{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + boost::lexical_cast<std::string>(bytes) + ".000000";
+                            + std::to_string(bytes) + ".000000";
     const string& tx_pkts = "opflex_svc_to_endpoint_packets{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + boost::lexical_cast<std::string>(pkts) + ".000000";
+                            + std::to_string(pkts) + ".000000";
     size_t pos1 = output.find(rx_bytes);
     size_t pos2 = output.find(rx_pkts);
     size_t pos3 = output.find(tx_bytes);
@@ -1163,8 +1162,7 @@ ServiceStatsManagerFixture::checkPodSvcObjectStats (const std::string& epToSvcUu
     optional<shared_ptr<SvcStatUniverse> > su =
         SvcStatUniverse::resolve(agent.getFramework());
 
-    auto aUuid =
-        boost::lexical_cast<std::string>(agent.getUuid());
+    auto aUuid = agent.getUuid();
 
     LOG(DEBUG) << "checkObj expected pkt count: " << packet_count;
 
@@ -1262,15 +1260,7 @@ void ServiceStatsManagerFixture::checkPodSvcObsObj (bool add)
 
     optional<shared_ptr<SvcStatUniverse> > su =
         SvcStatUniverse::resolve(agent.getFramework());
-    std::string aUuid;
-    try {
-        aUuid =
-            boost::lexical_cast<std::string>(agent.getUuid());
-    } catch (const boost::bad_lexical_cast &e){
-        LOG(ERROR) << "Failed to get agent uuid " <<e.what();
-        BOOST_CHECK(false);
-        return;
-    };
+    std::string aUuid = agent.getUuid();
 
     LOG(DEBUG) << "Checking presence of"
                << " agentUuid: " << aUuid

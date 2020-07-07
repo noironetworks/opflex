@@ -19,7 +19,6 @@
 #include <boost/system/error_code.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/lexical_cast.hpp>
 #include <modelgbp/gbp/AutoconfigEnumT.hpp>
 
 #include <sstream>

@@ -25,7 +25,6 @@
 #include "AccessFlowManager.h"
 #include "FlowManagerFixture.h"
 
-#include <boost/lexical_cast.hpp>
 #include <boost/asio/io_service.hpp>
 
 #include <vector>
@@ -108,8 +107,7 @@ public:
         optional<shared_ptr<PolicyStatUniverse> > su =
             PolicyStatUniverse::resolve(agent.getFramework());
         if (srcEpg.get() && dstEpg.get()) {
-            auto uuid =
-                boost::lexical_cast<std::string>(statsManager->getAgentUUID());
+            auto uuid = statsManager->getAgentUUID();
             LOG(DEBUG) << "verifying stats for src_epg: " << srcEpg->getURI().toString()
                         << " dst_epg: " << dstEpg->getURI().toString()
                         << " classifier: " << classifier->getURI().toString()
@@ -139,8 +137,7 @@ public:
             verifyPromMetrics(classifier, t_packet_count, t_byte_count);
 #endif
         } else {
-            auto uuid =
-                boost::lexical_cast<std::string>(statsManager->getAgentUUID());
+            auto uuid = statsManager->getAgentUUID();
             optional<shared_ptr<SecGrpClassifierCounter> > myCounter =
                 boost::make_optional<shared_ptr<SecGrpClassifierCounter> >(false, nullptr);
             LOG(DEBUG) << "verifying stats for"
@@ -370,8 +367,7 @@ public:
         }
         optional<shared_ptr<PolicyStatUniverse> > su =
             PolicyStatUniverse::resolve(agent.getFramework());
-        auto uuid =
-            boost::lexical_cast<std::string>(statsManager->getAgentUUID());
+        auto uuid = statsManager->getAgentUUID();
         if (srcEpg.get() && dstEpg.get()) {
             optional<shared_ptr<L24ClassifierCounter> > myCounter =
                 su.get()->resolveGbpeL24ClassifierCounter(uuid,firstId,

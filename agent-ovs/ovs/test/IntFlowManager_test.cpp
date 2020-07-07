@@ -10,7 +10,6 @@
 
 #include <sstream>
 #include <boost/test/unit_test.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -2867,7 +2866,7 @@ void BaseIntFlowManagerFixture::initExpPodServiceStats (const string& svc_ip,
     optional<shared_ptr<SvcStatUniverse> > su =
                 SvcStatUniverse::resolve(agent.getFramework());
     BOOST_CHECK(su);
-    auto aUuid = boost::lexical_cast<std::string>(agent.getUuid());
+    auto aUuid = agent.getUuid();
     WAIT_FOR_DO_ONFAIL(su.get()->resolveGbpeEpToSvcCounter(aUuid, epToSvcUuid), 500,
                         ,LOG(ERROR) << "ep2svc obj not resolved uuid: " << epToSvcUuid;);
     WAIT_FOR_DO_ONFAIL(su.get()->resolveGbpeSvcToEpCounter(aUuid, svcToEpUuid), 500,
