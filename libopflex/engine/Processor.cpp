@@ -59,12 +59,14 @@ std::mt19937 gen(rd());
 
 Processor::Processor(ObjectStore* store_, ThreadManager& threadManager_)
     : AbstractObjectListener(store_),
+      client(nullptr),
       serializer(store_),
       threadManager(threadManager_),
       pool(*this, threadManager_), nextXid(FIRST_XID),
       reportObservables(true),
       processingDelay(DEFAULT_PROC_DELAY),
       retryDelay(DEFAULT_RETRY_DELAY),
+      proc_loop(nullptr),
       proc_active(false) {
     cleanup_async = {};
     proc_async = {};

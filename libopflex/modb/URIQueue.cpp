@@ -23,7 +23,9 @@ namespace modb {
 
 URIQueue::URIQueue(QProcessor* processor_, util::ThreadManager& threadManager_)
     : processor(processor_), threadManager(threadManager_),
-      proc_shouldRun(false) {
+      item_loop(nullptr), proc_shouldRun(false) {
+    item_async = {};
+    cleanup_async = {};
 }
 
 URIQueue::~URIQueue() {
