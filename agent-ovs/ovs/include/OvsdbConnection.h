@@ -43,7 +43,12 @@ class OvsdbConnection : public opflex::jsonrpc::RpcConnection {
     /**
      * Construct an OVSDB connection
      */
-    OvsdbConnection(bool useLocalTcpPort) : opflex::jsonrpc::RpcConnection(), peer(nullptr), connected(false), syncComplete(false), ovsdbUseLocalTcpPort(useLocalTcpPort) {}
+    OvsdbConnection(bool useLocalTcpPort) : opflex::jsonrpc::RpcConnection(),
+        peer(nullptr), client_loop(nullptr), connected(false),
+        syncComplete(false), ovsdbUseLocalTcpPort(useLocalTcpPort) {
+        connect_async = {};
+        writeq_async = {};
+    }
 
     /**
      * destructor

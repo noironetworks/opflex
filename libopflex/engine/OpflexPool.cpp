@@ -38,8 +38,10 @@ OpflexPool::OpflexPool(HandlerFactory& factory_,
       client_mode(OFConstants::OpflexElementMode::STITCHED_MODE),
       transport_state(OFConstants::OpflexTransportModeState::SEEKING_PROXIES),
       ipv4_proxy(0), ipv6_proxy(0),
-      mac_proxy(0), curHealth(PeerStatusListener::DOWN)
-{
+      mac_proxy(0), client_loop(nullptr), curHealth(PeerStatusListener::DOWN) {
+    conn_async = {};
+    cleanup_async = {};
+    writeq_async = {};
 }
 
 OpflexPool::~OpflexPool() {

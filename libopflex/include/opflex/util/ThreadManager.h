@@ -65,7 +65,9 @@ public:
 private:
     class Task : private boost::noncopyable {
     public:
-        Task() : loop(NULL) {}
+        Task() : loop(NULL), thread(0) {
+            cleanup = {};
+        }
 
         uv_loop_t* loop;
         uv_thread_t thread;
