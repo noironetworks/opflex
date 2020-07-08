@@ -11,7 +11,6 @@
 #include <sstream>
 #include <boost/test/unit_test.hpp>
 #include <boost/assign/list_of.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
 #include <opflexagent/test/ModbFixture.h>
@@ -189,9 +188,9 @@ void TableDropStatsManagerFixture::checkPrometheusCounters(uint64_t exp_packet_c
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     const string& promCtr= bridgeName+ "_" +tableName;
     string packets_key = "opflex_table_drop_packets{table=\"" + promCtr + "\"} "
-        + boost::lexical_cast<std::string>(exp_packet_count) + ".000000";
+        + std::to_string(exp_packet_count) + ".000000";
     string bytes_key = "opflex_table_drop_bytes{table=\"" + promCtr + "\"} "
-        + boost::lexical_cast<std::string>(exp_byte_count) + ".000000";
+        + std::to_string(exp_byte_count) + ".000000";
     string::size_type pos = output.find(packets_key);
     BOOST_CHECK_NE(pos, string::npos);
     pos = output.find(bytes_key);

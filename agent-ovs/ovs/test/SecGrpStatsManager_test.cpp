@@ -104,42 +104,42 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
     if (classifier == classifier1) {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                     + boost::lexical_cast<std::string>(bytes) + ".000000";
+                     + std::to_string(bytes) + ".000000";
         s_rx_bytes = "opflex_sg_rx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                     + boost::lexical_cast<std::string>(bytes) + ".000000";
+                     + std::to_string(bytes) + ".000000";
         s_tx_pkts = "opflex_sg_tx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                    + boost::lexical_cast<std::string>(pkts) + ".000000";
+                    + std::to_string(pkts) + ".000000";
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                    + boost::lexical_cast<std::string>(pkts) + ".000000";
+                    + std::to_string(pkts) + ".000000";
     } else if (classifier == classifier2) {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier2,[etype:2054,]\"} "\
-                     + boost::lexical_cast<std::string>(bytes) + ".000000";
+                     + std::to_string(bytes) + ".000000";
         s_rx_bytes = "opflex_sg_rx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier2,[etype:2054,]\"} "\
-                     + boost::lexical_cast<std::string>(bytes) + ".000000";
+                     + std::to_string(bytes) + ".000000";
         s_tx_pkts = "opflex_sg_tx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier2,[etype:2054,]\"} "\
-                    + boost::lexical_cast<std::string>(pkts) + ".000000";
+                    + std::to_string(pkts) + ".000000";
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier2,[etype:2054,]\"} "\
-                    + boost::lexical_cast<std::string>(pkts) + ".000000";
+                    + std::to_string(pkts) + ".000000";
     } else {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                     + boost::lexical_cast<std::string>(bytes) + ".000000";
+                     + std::to_string(bytes) + ".000000";
         s_rx_bytes = "opflex_sg_rx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                     + boost::lexical_cast<std::string>(bytes) + ".000000";
+                     + std::to_string(bytes) + ".000000";
         s_tx_pkts = "opflex_sg_tx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                    + boost::lexical_cast<std::string>(pkts) + ".000000";
+                    + std::to_string(pkts) + ".000000";
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                    + boost::lexical_cast<std::string>(pkts) + ".000000";
+                    + std::to_string(pkts) + ".000000";
     }
 
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
@@ -345,8 +345,7 @@ BOOST_FIXTURE_TEST_CASE(testSecGrpDelete, SecGrpStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid =
-        boost::lexical_cast<std::string>(secGrpStatsManager.getAgentUUID());
+    auto uuid = secGrpStatsManager.getAgentUUID();
     optional<shared_ptr<SecGrpClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeSecGrpClassifierCounter(uuid,
                         secGrpStatsManager.getCurrClsfrGenId(),

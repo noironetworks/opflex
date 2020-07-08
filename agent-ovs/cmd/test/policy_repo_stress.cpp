@@ -77,7 +77,7 @@ opflexagent::Endpoint createEndpoint(const uint32_t epId,
 
     std::string uri =
         boost::replace_all_copy(epgTemplate, "<group_id>",
-                                boost::lexical_cast<std::string>(groupId));
+                                std::to_string(groupId));
     ep.setEgURI(opflex::modb::URI(uri));
 
     return ep;
@@ -342,22 +342,18 @@ int main(int argc, char** argv) {
 
     std::vector<TestAgent> agents;
     for (uint32_t i = 0; i < num_agents; i++) {
+        std::string identity =
+            boost::replace_all_copy(identity_template, "<agent_id>",
+                                    std::to_string(i));
+        LOG(INFO) << "Creating agent " << identity;
         try {
-            std::string identity =
-                boost::replace_all_copy(identity_template, "<agent_id>",
-                                        boost::lexical_cast<std::string>(i));
-            LOG(INFO) << "Creating agent " << identity;
-            try {
-                agents.emplace_back(domain, identity);
-            } catch (const boost::asio::invalid_service_owner &e) {
-                LOG(WARNING) << "unable to add test agent: " << e.what();
-            }
-        } catch (const boost::bad_lexical_cast& e) {
-            LOG(WARNING) << "unable to create identity: " << e.what();
+            agents.emplace_back(domain, identity);
+        } catch (const boost::asio::invalid_service_owner &e) {
+            LOG(WARNING) << "unable to add test agent: " << e.what();
         }
     }
 
-    if (agents.size() == 0) {
+    if (agents.empty()) {
         LOG(opflexagent::ERROR) << "No agents created";
         return 4;
     }

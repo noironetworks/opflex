@@ -84,7 +84,7 @@ void OpflexClientConnection::connect() {
     remote_peer = rp.str();
 
     peer = yajr::Peer::create(hostname,
-                              boost::lexical_cast<string>(port),
+                              std::to_string(port),
                               on_state_change,
                               this, loop_selector);
 }
