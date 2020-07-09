@@ -123,8 +123,49 @@ BOOST_FIXTURE_TEST_CASE( mo_serialize , BaseFixture ) {
         const Value& mo2children = mo2["children"];
         BOOST_CHECK(mo2children.IsArray());
         BOOST_CHECK_EQUAL(0, mo2children.Size());
-
     }
+
+    // replace an existing mo using updateMOs
+    Document updateDoc;
+    StringBuffer updateBuffer;
+    Writer<StringBuffer> updateWriter(updateBuffer);
+    updateWriter.StartArray();
+    updateWriter.StartObject();
+    updateWriter.String("uri");
+    updateWriter.String(uri3.toString().c_str());
+    updateWriter.String("subject");
+    updateWriter.String("class2");
+    updateWriter.String("properties");
+    updateWriter.StartArray();
+    updateWriter.String("prop1");
+    updateWriter.String("value1");
+    updateWriter.EndArray();
+    updateWriter.EndObject();
+    updateWriter.EndArray();
+    updateDoc.Parse(updateBuffer.GetString());
+    serializer.updateMOs(updateDoc, *client1, opflex::gbp::PolicyUpdateOp::REPLACE);
+
+    // trigger deletions
+    StringBuffer deleteBuffer;
+    Writer<StringBuffer> deleteWriter(deleteBuffer);
+    deleteWriter.StartArray();
+    deleteWriter.StartObject();
+    deleteWriter.String("uri");
+    deleteWriter.String(uri3.toString().c_str());
+    deleteWriter.String("subject");
+    deleteWriter.String("class2");
+    deleteWriter.EndObject();
+    // add a delete with an invalid subject
+    deleteWriter.StartObject();
+    deleteWriter.String("uri");
+    deleteWriter.String("/fake");
+    deleteWriter.String("subject");
+    deleteWriter.String("fakesubject");
+    deleteWriter.EndObject();
+    deleteWriter.EndArray();
+    Document deleteDoc;
+    deleteDoc.Parse(deleteBuffer.GetString());
+    serializer.updateMOs(deleteDoc, *client1, opflex::gbp::PolicyUpdateOp::DELETE);
 }
 
 BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
