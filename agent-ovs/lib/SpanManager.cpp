@@ -228,6 +228,9 @@ namespace opflexagent {
                         if (dstSumm.get()->getVersion()) {
                             seSt->second->setVersion(dstSumm.get()->getVersion().get());
                         }
+                        if (dstSumm.get()->getFlowId()) {
+                            seSt->second->setSessionId(dstSumm.get()->getFlowId().get());
+                        }
                     }
                 }
             }

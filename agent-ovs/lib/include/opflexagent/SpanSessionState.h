@@ -193,11 +193,23 @@ class SessionState {
         */
        void setVersion(uint8_t ver) { version = ver;};
 
+       /**
+        * Get the session ID
+        * @return session ID
+        */
+       uint16_t getSessionId() const { return sessionId; }
+
+       /**
+        * Set the session ID
+        */
+       void setSessionId(uint16_t id) { sessionId = id; }
+
     private:
         URI uri;
         string name;
         uint8_t adminState;
         uint8_t version;
+        uint16_t sessionId;
 
         srcEpSet srcEndpoints;
         // mapping DstSummary to dst IP
@@ -212,7 +224,7 @@ public:
     /**
      * Default constructor
      */
-    ErspanParams() : ver(0) {}
+    ErspanParams() : ver(0), sessionId(1) {}
 
     /**
      * Copy constructor
@@ -274,11 +286,24 @@ public:
         portName = portName_;
     }
 
+    /**
+     * Get the session ID
+     * @return session ID
+     */
+    uint16_t getSessionId() const { return sessionId; }
+
+    /**
+     * Set the session ID
+     */
+    void setSessionId(uint16_t id) { sessionId = id; }
+
+
 private:
 
     unsigned int ver;
     string remoteIp;
     string portName;
+    uint16_t sessionId;
 };
 }
 

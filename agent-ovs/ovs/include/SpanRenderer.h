@@ -66,9 +66,10 @@ public:
      * @param[in] dstPorts dest ports
      * @param[in] remoteIp remote destination
      * @param[in] version erspan version
+     * @param[in] sessionId ERSPAN session ID
      */
     void createMirrorAndOutputPort(const string& session, const set<string>& srcPorts,
-        const set<string>& dstPorts, const string& remoteIp, const uint8_t version);
+        const set<string>& dstPorts, const string& remoteIp, const uint8_t version, const uint16_t sessionId);
 
     /**
      * deletes mirror session

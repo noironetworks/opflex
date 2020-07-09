@@ -215,6 +215,10 @@ public:
                             LOG(DEBUG) << "Setting remote IP to " << options["remote_ip"];
                             params.setRemoteIp(options["remote_ip"]);
                         }
+                        if (options.find("key") != options.end()) {
+                            LOG(DEBUG) << "Setting session ID to " << options["key"];
+                            params.setSessionId(stoul(options["key"]));
+                        }
                     }
                     return true;
                 }

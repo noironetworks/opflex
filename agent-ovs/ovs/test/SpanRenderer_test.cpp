@@ -121,6 +121,8 @@ public:
         options["erspan_ver"] = version;
         const string remoteIp = "99.99.99.99";
         options["remote_ip"] = remoteIp;
+        const string key = "1";
+        options["key"] = key;
         interfaceDetail["options"] = OvsdbValue(Dtype::MAP, "map", options);
         interfaceDetails[interfaceUuid] = interfaceDetail;
         conn->getOvsdbState().fullUpdate(OvsdbTable::INTERFACE, interfaceDetails);
@@ -152,7 +154,7 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
     set<string> src_ports = {"p1-tap", "p2-tap"};
     set<string> dst_ports = {"p1-tap", "p2-tap"};
     set<string> out_ports = {ERSPAN_PORT_PREFIX};
-    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1);
+    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1, 1);
     return true;
 }
 
