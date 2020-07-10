@@ -214,7 +214,7 @@ namespace opflexagent {
         deleteMirrorAndOutputPort(seSt->getName());
 
         LOG(DEBUG) << "creating mirror";
-        createMirrorAndOutputPort(seSt->getName(), srcPort, dstPort, seSt->getDestination().to_string(), seSt->getVersion());
+        createMirrorAndOutputPort(seSt->getName(), srcPort, dstPort, seSt->getDestination().to_string(), seSt->getVersion(), seSt->getSessionId());
     }
 
     void SpanRenderer::deleteMirrorAndOutputPort(const string& sessionName) {
@@ -261,7 +261,7 @@ namespace opflexagent {
     }
 
     void SpanRenderer::createMirrorAndOutputPort(const string& sess, const set<string>& srcPorts,
-        const set<string>& dstPorts, const string& remoteIp, const uint8_t version) {
+        const set<string>& dstPorts, const string& remoteIp, const uint8_t version, const uint16_t sessionId) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
@@ -314,6 +314,7 @@ namespace opflexagent {
             static const string erspanDir("1");
             values.emplace_back("erspan_dir", erspanDir);
             values.emplace_back("remote_ip", remoteIp);
+            values.emplace_back("key", std::to_string(sessionId));
             OvsdbValues tdSet5("map", values);
             msg2.rowData.emplace("options", tdSet5);
 
