@@ -827,8 +827,6 @@ private:
     void removeDynamicGaugePodSvc(PODSVC_METRICS metric);
     // func to remove all gauges of every PodSvcCounter
     void removeDynamicGaugePodSvc(void);
-    // func to dump PodSvcCounter metric state
-    void dumpPodSvcState(void);
 
     /**
      * cache the label map and Gauge ptr for every (endpoint + service) uuid

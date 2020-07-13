@@ -876,32 +876,32 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
     os  << "{"
         << "\"uuid\":\"" << uuid1 << "\","
         << "\"domain-policy-space\": \"common\","
-	<< "\"domain-name\": \"l3out_1_vrf\","
-	<< "\"service-mode\": \"loadbalancer\","
-	<< "\"service-mac\": \"88:1d:fc:f2:fb:59\","
+        << "\"domain-name\": \"l3out_1_vrf\","
+        << "\"service-mode\": \"loadbalancer\","
+        << "\"service-mac\": \"88:1d:fc:f2:fb:59\","
         << "\"interface-name\": \"veth0\","
         << "\"interface-ip\": \"10.5.8.3\","
         << "\"interface-vlan\": 102,"
-	<< "\"service-type\": \"clusterIp\","
-	<< "\"service-mapping\":["
-	<< "{\"service-ip\": \"10.96.0.1\","
-	<< "\"service-proto\": \"tcp\","
-	<< "\"service-port\": 443,"
-	<< "\"next-hop-ips\":["
-	<< "\"1.100.101.11\""
-	<< "],"
-	<< "\"next-hop-port\": 6443,"
-	<< "\"conntrack-enabled\": true"
-	<< "}"
-	<< "],"
-	<< "\"attributes\": {"
-	<< "\"component\":\"apiserver\","
-	<< "\"name\":\"kubernetes\","
-	<< "\"namespace\":\"default\","
-	<< "\"provider\":\"kubernetes\","
-	<< "\"service-name\":\"default_kubernetes\""
-	<< "}"
-	<< "}" << std::endl;
+        << "\"service-type\": \"clusterIp\","
+        << "\"service-mapping\":["
+        << "{\"service-ip\": \"10.96.0.1\","
+        << "\"service-proto\": \"tcp\","
+        << "\"service-port\": 443,"
+        << "\"next-hop-ips\":["
+        << "\"1.100.101.11\""
+        << "],"
+        << "\"next-hop-port\": 6443,"
+        << "\"conntrack-enabled\": true"
+        << "}"
+        << "],"
+        << "\"attributes\": {"
+        << "\"component\":\"apiserver\","
+        << "\"name\":\"kubernetes\","
+        << "\"namespace\":\"default\","
+        << "\"provider\":\"kubernetes\","
+        << "\"service-name\":\"default_kubernetes\""
+        << "}"
+        << "}" << std::endl;
     os.close();
 
     ServiceManager& serviceMgr = agent.getServiceManager();
@@ -914,37 +914,38 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
     fs::ofstream os2(path2);
     os2 << "{"
         << "\"uuid\":\"" << uuid1 << "\","
-	<< "\"domain-policy-space\": \"common\","
-	<< "\"domain-name\": \"l3out_1_vrf\","
-	<< "\"service-mode\": \"local-anycast\","
+        << "\"domain-policy-space\": \"common\","
+        << "\"domain-name\": \"l3out_1_vrf\","
+        << "\"service-mode\": \"local-anycast\","
         << "\"interface-name\": \"veth1\","
         << "\"interface-ip\": \"10.5.8.3\","
         << "\"interface-vlan\": 102,"
         << "\"service-type\": \"clusterIp\","
-	<< "\"service-mapping\":["
-	<< "{\"service-ip\": \"10.96.0.2\","
-	<< "\"service-proto\": \"tcp\","
-	<< "\"service-port\": 443,"
-	<< "\"next-hop-ips\":["
-	<< "\"1.100.101.11\""
-	<< "],"
-	<< "\"next-hop-port\": 6443,"
-	<< "\"conntrack-enabled\": true"
-	<< "}"
-	<< "],"
-	<< "\"attributes\": {"
-	<< "\"component\":\"apiserver\","
-	<< "\"name\":\"kubernetes\","
-	<< "\"namespace\":\"default\","
-	<< "\"provider\":\"kubernetes\","
-	<< "\"service-name\":\"default_kubernetes\""
-	<< "}"
-	<< "}" << std::endl;
+        << "\"service-mapping\":["
+        << "{\"service-ip\": \"10.96.0.2\","
+        << "\"service-proto\": \"tcp\","
+        << "\"service-port\": 443,"
+        << "\"next-hop-ips\":["
+        << "\"1.100.101.11\""
+        << "],"
+        << "\"next-hop-port\": 6443,"
+        << "\"conntrack-enabled\": true"
+        << "}"
+        << "],"
+        << "\"attributes\": {"
+        << "\"component\":\"apiserver\","
+        << "\"name\":\"kubernetes\","
+        << "\"namespace\":\"default\","
+        << "\"provider\":\"kubernetes\","
+        << "\"service-name\":\"default_kubernetes\""
+        << "}"
+        << "}" << std::endl;
     os2.close();
-    
-    WAIT_FOR(hasService(serviceMgr, uuid1) && serviceMgr.getService(uuid1)->getServiceMode() == Service::ServiceMode::LOADBALANCER, 500);
-    auto service1 = serviceMgr.getService(uuid1);
-    BOOST_CHECK(service1->getServiceMode() == Service::ServiceMode::LOADBALANCER);
+
+    WAIT_FOR(hasService(serviceMgr, uuid1)
+             && (serviceMgr.getService(uuid1)->getServiceMode() \
+                        == Service::ServiceMode::LOCAL_ANYCAST),
+             500);
     watcher.stop();
 
 }
@@ -956,32 +957,32 @@ BOOST_FIXTURE_TEST_CASE( fsdelservice, FSServiceFixture ) {
     fs::ofstream os(path1);
     const std::string uuid = "11310ce0-d8d3-41c9-9f1f-7e9aa5cf0a52";
     os  << "{"
-	<< "\"uuid\":\"" << uuid << "\","
-	<< "\"domain-policy-space\": \"common\","
-	<< "\"domain-name\": \"l3out_1_vrf\","
-	<< "\"service-mode\": \"loadbalancer\","
-	<< "\"interface-name\": \"veth0\","
+        << "\"uuid\":\"" << uuid << "\","
+        << "\"domain-policy-space\": \"common\","
+        << "\"domain-name\": \"l3out_1_vrf\","
+        << "\"service-mode\": \"loadbalancer\","
+        << "\"interface-name\": \"veth0\","
         << "\"interface-ip\": \"10.5.8.3\","
         << "\"interface-vlan\": 102,"
         << "\"service-type\": \"clusterIp\","
-	<< "\"service-mapping\":["
-	<< "{\"service-ip\": \"10.96.0.1\","
-	<< "\"service-proto\": \"tcp\","
-	<< "\"service-port\": 443,"
-	<< "\"next-hop-ips\":["
-	<< "\"1.100.101.11\""
-	<< "],"
-	<< "\"next-hop-port\": 6443,"
-	<< "\"conntrack-enabled\": true"
-	<< "}"
-	<< "],"
-	<< "\"attributes\": {"
-	<< "\"component\":\"apiserver\","
-	<< "\"name\":\"kubernetes\","
-	<< "\"namespace\":\"default\","
-	<< "\"provider\":\"kubernetes\","
-	<< "\"service-name\":\"default_kubernetes\""
-	<< "}"
+        << "\"service-mapping\":["
+        << "{\"service-ip\": \"10.96.0.1\","
+        << "\"service-proto\": \"tcp\","
+        << "\"service-port\": 443,"
+        << "\"next-hop-ips\":["
+        << "\"1.100.101.11\""
+        << "],"
+        << "\"next-hop-port\": 6443,"
+        << "\"conntrack-enabled\": true"
+        << "}"
+        << "],"
+        << "\"attributes\": {"
+        << "\"component\":\"apiserver\","
+        << "\"name\":\"kubernetes\","
+        << "\"namespace\":\"default\","
+        << "\"provider\":\"kubernetes\","
+        << "\"service-name\":\"default_kubernetes\""
+        << "}"
         << "}" << std::endl;
     os.close();
 
@@ -991,7 +992,6 @@ BOOST_FIXTURE_TEST_CASE( fsdelservice, FSServiceFixture ) {
     watcher.start();
     WAIT_FOR((serviceMgr.getService(uuid) != nullptr), 500);
     auto extService = serviceMgr.getService(uuid);
-
     BOOST_CHECK(extService->getServiceMode() == Service::ServiceMode::LOADBALANCER);
 
     fs::remove(path1);
