@@ -65,7 +65,7 @@ namespace opflexagent {
 
     void NetFlowRenderer::handleNetFlowUpdate(const opflex::modb::URI& netFlowURI) {
         if (!connect()) {
-            LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
+            LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
 
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
