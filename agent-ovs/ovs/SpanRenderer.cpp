@@ -39,7 +39,7 @@ namespace opflexagent {
 
     void SpanRenderer::spanDeleted(const shared_ptr<SessionState>& seSt) {
         if (!connect()) {
-            LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
+            LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
                                                       boost::posix_time::seconds(CONNECTION_RETRY)));
@@ -69,6 +69,7 @@ namespace opflexagent {
 
     void SpanRenderer::delConnectPtrCb(const boost::system::error_code& ec, const shared_ptr<SessionState>& pSt) {
         if (ec) {
+            LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
         }
@@ -82,24 +83,23 @@ namespace opflexagent {
     }
 
     void SpanRenderer::handleSpanUpdate(const opflex::modb::URI& spanURI) {
-        SpanManager& spMgr = agent.getSpanManager();
-        lock_guard<recursive_mutex> guard(opflexagent::SpanManager::updates);
-        optional<shared_ptr<SessionState>> seSt = spMgr.getSessionState(spanURI);
-        // Is the session state pointer set
-        if (!seSt) {
-            return;
-        }
-
         if (!connect()) {
-            LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
+            LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
-
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
                                                       milliseconds(CONNECTION_RETRY * 1000)));
             connection_timer->async_wait(boost::bind(&SpanRenderer::updateConnectCb, this,
                                                      boost::asio::placeholders::error, spanURI));
             timerStarted = true;
             LOG(DEBUG) << "conn timer " << connection_timer << ", timerStarted: " << timerStarted;
+            return;
+        }
+
+        SpanManager& spMgr = agent.getSpanManager();
+        lock_guard<recursive_mutex> guard(opflexagent::SpanManager::updates);
+        optional<shared_ptr<SessionState>> seSt = spMgr.getSessionState(spanURI);
+        // Is the session state pointer set
+        if (!seSt) {
             return;
         }
 
