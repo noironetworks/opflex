@@ -39,6 +39,7 @@
 #ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
 #endif
+#include <opflexagent/Agent.h>
 
 using std::string;
 using std::make_pair;
@@ -46,6 +47,7 @@ namespace po = boost::program_options;
 using opflex::test::GbpOpflexServer;
 using opflex::ofcore::OFConstants;
 using namespace opflexagent;
+using opflex::modb::Mutator;
 
 void sighandler(int sig) {
     LOG(INFO) << "Got " << strsignal(sig) << " signal";
@@ -58,6 +60,7 @@ void sighandler(int sig) {
 #define LOCALHOST "127.0.0.1"
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
+#define DEF_INSPECT_SOCKET LOCALSTATEDIR"/run/opflex-server-inspect.sock"
 
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
@@ -85,6 +88,8 @@ int main(int argc, char** argv) {
              "Enable SSL and use the private key specified")
             ("ssl_pass", po::value<string>()->default_value(""),
              "Use the specified password for the private key")
+            ("gbp_sock", po::value<string>()->default_value(DEF_INSPECT_SOCKET),
+             "Use the specified socket for gbp_inspect")
             ("peer", po::value<std::vector<string> >(),
              "A peer specified as hostname:port to return in identity response")
             ("transport_mode_proxies", po::value<std::vector<string> >(),
@@ -124,6 +129,7 @@ int main(int argc, char** argv) {
     std::string grpc_address;
     std::string grpc_conf_file;
 #endif
+    std::string gbp_socket;
     char buf[EVENT_BUF_LEN];
     int fd, wd;
 
@@ -154,6 +160,7 @@ int main(int argc, char** argv) {
         ssl_castore = vm["ssl_castore"].as<string>();
         ssl_key = vm["ssl_key"].as<string>();
         ssl_pass = vm["ssl_pass"].as<string>();
+        gbp_socket = vm["gbp_sock"].as<string>();
         if (vm.count("peer"))
             peers = vm["peer"].as<std::vector<string> >();
         if(vm.count("transport_mode_proxies")) {
@@ -221,6 +228,17 @@ int main(int argc, char** argv) {
         if (peer_vec.size() == 0)
             peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":"
                                          +std::to_string(server_port)));
+
+        opflex::ofcore::OFFramework framework;
+        framework.enableInspector(gbp_socket);
+        framework.setModel(modelgbp::getMetadata());
+        framework.start();
+
+        Mutator mutator(framework, "init");
+        std::shared_ptr<modelgbp::dmtree::Root> root =
+            modelgbp::dmtree::Root::createRootElement(framework);
+        Agent::createUniverse(root);
+        mutator.commit();
 
         GbpOpflexServer server(server_port, SERVER_ROLES, peer_vec,
                                transport_mode_proxies,
@@ -291,6 +309,7 @@ int main(int argc, char** argv) {
 #endif
                     /* should be stopped after client */
                     server.stop();
+                    framework.stop();
                     if (execv(argv[0], argv)) {
                         LOG(ERROR) << "opflex_server failed to restart self"
                                    << strerror(errno);
@@ -309,6 +328,7 @@ cleanup:
         client.Stop();
 #endif
         server.stop();
+        framework.stop();
     } catch (const std::exception& e) {
         LOG(ERROR) << "Fatal error: " << e.what();
         return 4;
