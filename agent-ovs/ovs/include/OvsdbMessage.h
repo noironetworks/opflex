@@ -30,7 +30,7 @@ enum class OvsdbOperation {SELECT, INSERT, UPDATE, MUTATE, DELETE};
 /**
  * OVSDB tables
  */
-enum class OvsdbTable {PORT, INTERFACE, BRIDGE, IPFIX, NETFLOW, MIRROR};
+enum class OvsdbTable {PORT, INTERFACE, BRIDGE, IPFIX, NETFLOW, MIRROR, QOS, QUEUE};
 
 /**
  * OVSDB functions
@@ -145,11 +145,24 @@ public:
 
     /**
      * constructor
+     * @param val value
+     */
+    OvsdbValue(uint64_t val) : type(Dtype::INTEGER), iVal(val), bVal(false) {}
+
+    /**
+     * constructor
      * @param type_ type of collection
      * @param key_ the key string
      * @param val value
      */
     OvsdbValue(Dtype type_, const std::string& key_, const std::map<std::string, std::string>& val) : key(key_), type(type_), iVal(-1), bVal(false), collection(val) {}
+
+    /**
+     * constructor
+     * @param key_ the key string
+     * @param val value
+     */
+    OvsdbValue(const std::string& key_, int val) : key(key_), type(Dtype::INTEGER), iVal(val),  bVal(false) {}
 
     /**
      * Copy constructor
@@ -206,6 +219,7 @@ public:
      int getIntValue() const {
          return iVal;
      }
+
 
      /**
       * Get the value when set to a collection type

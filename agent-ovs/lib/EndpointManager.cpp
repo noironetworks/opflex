@@ -249,6 +249,12 @@ void EndpointManager::updateEndpoint(const Endpoint& endpoint) {
             ip_local_ep_map.erase(ip);
     }
 
+
+    if (endpoint.getEpQosPol()){
+	    const boost::optional<opflex::modb::URI>& epQosPol = endpoint.getEpQosPol();
+	    LOG(DEBUG) << "QosPolUri" << epQosPol.get().toString();
+    }
+
     // update security group mapping
     const set<URI>& oldSecGroups = es.endpoint->getSecurityGroups();
     const set<URI>& secGroups = endpoint.getSecurityGroups();
@@ -919,7 +925,7 @@ bool EndpointManager::updateEndpointLocal(const std::string& uuid,
             }
 
             const optional<opflex::modb::URI>& qosPol =
-                    es.endpoint->getQosPol();
+                    es.endpoint->getEpQosPol();
             if (qosPol) {
                 l2e->addEpdrEndPointToQosRSrc()
                    ->setTargetRequirement(qosPol.get());

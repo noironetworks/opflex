@@ -72,6 +72,9 @@ void FSEndpointSource::updated(const fs::path& filePath) {
     static const std::string EP_SEC_GROUP("security-group");
     static const std::string SEC_GROUP_POLICY_SPACE("policy-space");
     static const std::string SEC_GROUP_NAME("name");
+    static const std::string QOS_POLICY("qos-policy");
+    static const std::string QOS_POLICY_SPACE("policy-space");
+    static const std::string QOS_POLICY_NAME("policy-name");
     static const std::string EP_IFACE_NAME("interface-name");
     static const std::string EP_ACCESS_IFACE("access-interface");
     static const std::string EP_ACCESS_IFACE_VLAN("access-interface-vlan");
@@ -209,23 +212,24 @@ void FSEndpointSource::updated(const fs::path& filePath) {
             }
         }
 
-        optional<ptree&> qosPol =
-                properties.get_child_optional(EP_QOS_POL);
-        if(qosPol){
-            for (const ptree::value_type &v : qosPol.get()){
-                optional<string> qosPolS =
-                    v.second.get_optional<string>(SEC_GROUP_POLICY_SPACE);
-                optional<string> qosPolName =
-                    v.second.get_optional<string>(SEC_GROUP_NAME);
-                if (qosPolS && qosPolName){
-                    newep.setQosPol(opflex::modb::URIBuilder()
-                                         .addElement("PolicyUniverse")
-                                         .addElement("PolicySpace")
-                                         .addElement(qosPolS.get())
-                                         .addElement("QosRequirement")
-                                         .addElement(qosPolName.get())
-                                         .build());
-                }
+	    optional<ptree&> qosPol =
+            properties.get_child_optional(QOS_POLICY);
+        if (qosPol){
+            optional<string> qosPolicySpace =
+			    qosPol.get().get<string>(QOS_POLICY_SPACE);
+
+		    optional<string> qosPolicyName =
+			    qosPol.get().get<string>(QOS_POLICY_NAME);
+            if (qosPolicyName && qosPolicySpace) {
+		        LOG(INFO) << "qos-policy-space:" << qosPolicySpace.get();
+                LOG(INFO) << "qos-policy-name:"  << qosPolicyName.get();
+                newep.setEpQosPol(opflex::modb::URIBuilder()
+                                       .addElement("PolicyUniverse")
+                                       .addElement("PolicySpace")
+                                       .addElement(qosPolicySpace.get())
+                                       .addElement("QosRequirement")
+                                       .addElement(qosPolicyName.get())
+                                       .build());
             }
         }
 

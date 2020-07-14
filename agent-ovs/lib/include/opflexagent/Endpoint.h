@@ -286,6 +286,39 @@ public:
         return interfaceName;
     }
 
+
+    /**
+     *  Uri of endpoint level qos policy applied on this endpoint.
+     *  @return uri of endpoint level qos policy
+     */
+    const boost::optional<opflex::modb::URI>& getEpQosPol() const{
+	    return epQosPol;
+    }
+
+    /**
+     * Set the endpoint level qos policy
+     * @param epQosPol of endpoint level qos policy
+     */
+    void setEpQosPol(const opflex::modb::URI& epQosPol){
+	    this->epQosPol = epQosPol;
+    }
+
+    /**
+     * Uri of endpoint group level qos policy applied on this endpoint.
+     * @return epgQosPol of endpoint group level qos policy
+     */
+    const boost::optional<opflex::modb::URI>& getEpgQosPol() const{
+	    return epgQosPol;
+    }
+
+    /**
+     * Set the endpoint group level qos policy
+     * @param epgQosPol of endpoint group level qos policy
+     */
+    void setEpgQosPol(const opflex::modb::URI& epgQosPol){
+	    this->epgQosPol = epgQosPol;
+    }
+
     /**
      * Set the integration bridge interface name to the string
      * specified.
@@ -1298,6 +1331,8 @@ private:
     boost::optional<opflex::modb::URI> extNodeURI;
     /*End external enpoint properties*/
     std::set<opflex::modb::URI> securityGroups;
+    boost::optional<opflex::modb::URI> epQosPol;
+    boost::optional<opflex::modb::URI> epgQosPol;
     boost::optional<std::string> interfaceName;
     boost::optional<std::string> accessInterface;
     boost::optional<uint16_t> accessIfaceVlan;

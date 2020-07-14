@@ -92,6 +92,9 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSEndpointSource.h \
 	lib/include/opflexagent/FSExternalEndpointSource.h \
 	lib/include/opflexagent/ModelEndpointSource.h \
+        lib/include/opflexagent/QosConfigState.h \
+	lib/include/opflexagent/QosListener.h \
+	lib/include/opflexagent/QosManager.h \
 	lib/include/opflexagent/Service.h \
 	lib/include/opflexagent/ServiceListener.h \
 	lib/include/opflexagent/ServiceSource.h \
@@ -171,6 +174,7 @@ noinst_HEADERS = \
 	ovs/include/eth.h \
 	ovs/include/JsonRpcRenderer.h \
 	ovs/include/NetFlowRenderer.h \
+	ovs/include/QosRenderer.h \
 	ovs/include/SpanRenderer.h \
 	ovs/include/PacketLogHandler.h \
 	ovs/include/PacketDecoder.h \
@@ -187,6 +191,7 @@ libopflex_agent_la_SOURCES = \
 	lib/FSWatcher.cpp \
 	lib/Endpoint.cpp \
 	lib/EndpointManager.cpp \
+	lib/QosManager.cpp \
 	lib/EndpointSource.cpp \
 	lib/FSEndpointSource.cpp \
 	lib/FSExternalEndpointSource.cpp \
@@ -277,6 +282,7 @@ if RENDERER_OVS
 	ovs/ovs-shim.c \
 	ovs/JsonRpcRenderer.cpp \
 	ovs/NetFlowRenderer.cpp \
+	ovs/QosRenderer.cpp \
 	ovs/SpanRenderer.cpp \
 	ovs/PacketLogHandler.cpp \
 	ovs/PacketDecoder.cpp \

@@ -33,6 +33,22 @@ void writeValue(yajr::rpc::SendHandler& writer, const OvsdbValue& value) {
         }
     } else if (value.getType() == Dtype::BOOL) {
         writer.Bool(value.getBoolValue());
+    } else if (value.getType() == Dtype::MAP){
+        std::map<std::string, std::string> valueMap = value.getCollectionValue();
+        writer.StartArray();
+        const string& qId = value.getKey();
+        std::istringstream ss(qId);
+        int intQId;
+        ss >> intQId;
+        writer.Int(intQId);
+
+        for(auto it : valueMap){
+            writer.StartArray();
+            writer.String(it.first.c_str());
+            writer.String(it.second.c_str());
+            writer.EndArray();
+        }
+        writer.EndArray();
     }
 }
 
