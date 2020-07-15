@@ -32,13 +32,20 @@ public:
      * constructor
      * @param agent_ reference to and agent instance
      */
-    JsonRpcRenderer(Agent &agent_);
+    explicit JsonRpcRenderer(Agent &agent_);
+
     /**
      * Start the renderer
      * @param swName Switch to connect to
      * @param conn OVSDB connection
      */
     virtual void start(const std::string& swName, OvsdbConnection* conn);
+
+    /**
+     * Stop the renderer
+     */
+    virtual void stop();
+
     /**
      * connect to OVSDB
      * @return boolean denoting success(true) of failure
@@ -60,10 +67,6 @@ protected:
      * reference to instance of Agent
      */
     Agent &agent;
-    /**
-     * mutex for thread synchronization
-     */
-    mutex handlerMutex;
     /**
      * timer for connection timeouts
      */
