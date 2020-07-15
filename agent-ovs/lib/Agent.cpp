@@ -35,6 +35,9 @@
 #include <opflexagent/Renderer.h>
 #include <opflexagent/SimStats.h>
 
+#include <opflexagent/FSFaultSource.h>
+#include <opflexagent/FaultSource.h>
+
 #include <cstdlib>
 #include <mutex>
 #include <condition_variable>
@@ -65,6 +68,7 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       serviceManager(*this, framework, prometheusManager),
       extraConfigManager(framework),
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
+      faultManager(*this, framework),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
       contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
@@ -82,6 +86,7 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       serviceManager(*this, framework),
       extraConfigManager(framework),
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
+      faultManager(*this, framework),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
       contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
@@ -333,7 +338,15 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         for (const ptree::value_type &v : dropLogCfgSrc.get())
         dropLogCfgSourcePath = v.second.data();
     }
+  
+    optional<const ptree&> hostAgentFaultSrc =
+        properties.get_child_optional(FAULT_SOURCE_FSPATH);
 
+    if (hostAgentFaultSrc) {
+        for (const ptree::value_type &v : hostAgentFaultSrc.get())
+        hostAgentFaultPath = v.second.data();
+    }
+    
     optional<const ptree&> packetEventNotifSock =
         properties.get_child_optional(PACKET_EVENT_NOTIF_SOCK);
 
@@ -650,6 +663,10 @@ void Agent::start() {
                 .build());
         dropLogCfgSource.reset(new FSPacketDropLogConfigSource(&extraConfigManager,
                         fsWatcher, dropLogCfgSourcePath, uri));
+    }
+    if(!hostAgentFaultPath.empty()) {
+        FaultSource* source = new FSFaultSource(&faultManager, fsWatcher, hostAgentFaultPath, *this);
+        faultSources.emplace_back(source);
     }
     fsWatcher.start();
 

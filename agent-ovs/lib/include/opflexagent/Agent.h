@@ -47,17 +47,22 @@
 #include <thread>
 #include <tuple>
 
+#include <opflexagent/FaultManager.h>
+#include <opflexagent/FaultSource.h>
+
 namespace opflexagent {
 
 class Renderer;
 class RendererPlugin;
 class EndpointSource;
+class FaultSource;
 class ServiceSource;
 class FSRDConfigSource;
 class LearningBridgeSource;
 class SnatSource;
 class SimStats;
 class FSPacketDropLogConfigSource;
+class FSFaultSource;
 typedef std::tuple<std::string, bool, std::string> LogParams;
 enum StatMode { REAL, SIM, OFF };
 /**
@@ -340,7 +345,8 @@ private:
     SnatManager snatManager;
     NotifServer notifServer;
     FSWatcher fsWatcher;
-    opflex_elem_t rendererFwdMode;
+    opflex_elem_t rendererFwdMode; 
+    FaultManager faultManager;
 
     boost::optional<std::string> opflexName;
     boost::optional<std::string> opflexDomain;
@@ -377,6 +383,7 @@ private:
 
     std::set<std::string> snatSourcePaths;
     std::vector<std::unique_ptr<SnatSource>> snatSources;
+    std::vector<std::unique_ptr<FaultSource>> faultSources;
 
     std::unordered_set<std::string> rendPluginLibs;
     std::unordered_set<void*> rendPluginHandles;

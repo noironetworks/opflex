@@ -161,6 +161,13 @@
         // Default: no drop log service
         "filesystem": ["DEFAULT_DROP_LOG_DIR"]
     },
+  
+    // Files system to manage Host Agent faults
+    "host-agent-fault-sources": {
+        // Filesystem path to monitor fault injections from the host agent
+        // Default: no host agent faults
+        "filesystem": ["DEFAULT_FS_FAULT_DIR"]
+    },
 
     // Dynamically loaded plugins can add new functionality to the
     // opflex agent at startup.
