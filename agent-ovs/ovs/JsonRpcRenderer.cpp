@@ -21,6 +21,13 @@ namespace opflexagent {
         conn = conn_;
     }
 
+    void JsonRpcRenderer::stop() {
+        if (timerStarted) {
+            timerStarted = false;
+            connection_timer->cancel();
+        }
+    }
+
     bool JsonRpcRenderer::connect() {
         if (conn->isConnected()) {
             return conn->isSyncComplete();
