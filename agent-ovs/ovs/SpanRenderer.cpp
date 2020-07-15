@@ -29,6 +29,7 @@ namespace opflexagent {
 
     void SpanRenderer::stop() {
         LOG(DEBUG) << "stopping span renderer";
+        JsonRpcRenderer::stop();
         agent.getSpanManager().unregisterListener(this);
     }
 
@@ -55,13 +56,8 @@ namespace opflexagent {
             const opflex::modb::URI& spanURI) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
-            string cat = string(ec.category().name());
-            LOG(DEBUG) << "timer error " << cat << ":" << ec.value();
-            if (!(cat == "system" &&
-                ec.value() == 125)) {
-                connection_timer->cancel();
-                timerStarted = false;
-            }
+            LOG(WARNING) << "reset timer";
+            connection_timer.reset();
             return;
         }
         spanUpdated(spanURI);

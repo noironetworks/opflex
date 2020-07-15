@@ -32,7 +32,7 @@ public:
      * constructor for NetFlowRenderer
      * @param agent_ reference to an agent instance
      */
-    NetFlowRenderer(Agent& agent_);
+    explicit NetFlowRenderer(Agent& agent_);
 
     /**
      * Start the renderer
@@ -44,7 +44,7 @@ public:
     /**
      * Module stop
      */
-    void stop();
+    virtual void stop();
 
     /**
      * Called when netflow objects are updated.

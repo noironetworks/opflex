@@ -18,6 +18,8 @@
 
 #include <opflex/rpc/JsonRpcMessage.h>
 
+#include <utility>
+
 namespace opflexagent {
 
 using namespace opflex::jsonrpc;
@@ -57,7 +59,7 @@ public:
     /**
      * Destructor
      */
-    virtual ~OvsdbMessage() {};
+    virtual ~OvsdbMessage() = default;
 
     /**
      * Get request ID
@@ -122,26 +124,26 @@ public:
      * constructor
      * @param val value
      */
-    OvsdbValue(const std::string& val) : type(Dtype::STRING), sVal(val), iVal(-1), bVal(false) {}
+    explicit OvsdbValue(std::string val) : type(Dtype::STRING), sVal(std::move(val)), iVal(-1), bVal(false) {}
 
     /**
      * constructor
      * @param key_ the key string
      * @param val value
      */
-    OvsdbValue(const std::string& key_, const std::string& val) : key(key_), type(Dtype::STRING), sVal(val), iVal(-1), bVal(false) {}
+    OvsdbValue(std::string key_, std::string val) : key(std::move(key_)), type(Dtype::STRING), sVal(std::move(val)), iVal(-1), bVal(false) {}
 
     /**
      * constructor
      * @param val value
      */
-    OvsdbValue(bool val) : type(Dtype::BOOL), iVal(-1), bVal(val) {}
+    explicit OvsdbValue(bool val) : type(Dtype::BOOL), iVal(-1), bVal(val) {}
 
     /**
      * constructor
      * @param val value
      */
-    OvsdbValue(int val) : type(Dtype::INTEGER), iVal(val), bVal(false) {}
+    explicit OvsdbValue(int val) : type(Dtype::INTEGER), iVal(val), bVal(false) {}
 
     /**
      * constructor
@@ -149,14 +151,14 @@ public:
      * @param key_ the key string
      * @param val value
      */
-    OvsdbValue(Dtype type_, const std::string& key_, const std::map<std::string, std::string>& val) : key(key_), type(type_), iVal(-1), bVal(false), collection(val) {}
+    OvsdbValue(Dtype type_, std::string key_, std::map<std::string, std::string> val) : key(std::move(key_)), type(type_), iVal(-1), bVal(false), collection(std::move(val)) {}
 
     /**
      * Copy constructor
      *
      * @param copy Object to copy from
      */
-    OvsdbValue(const OvsdbValue& copy) : key(copy.key), type(copy.type), sVal(copy.sVal), iVal(copy.iVal), bVal(copy.bVal), collection(copy.collection) {}
+    OvsdbValue(const OvsdbValue& copy) = default;
 
     /**
      * Assignment operator
@@ -171,7 +173,7 @@ public:
     /**
      * Destructor
      */
-    virtual ~OvsdbValue() {}
+    virtual ~OvsdbValue() = default;
 
     /** Get key */
     const std::string& getKey() const {
@@ -232,28 +234,28 @@ public:
     /**
      * Default constructor
      */
-    OvsdbValues() {}
+    OvsdbValues() = default;
     /**
      * Copy constructor
      */
-    OvsdbValues(const OvsdbValues& s) : label(s.label), values(s.values) {}
+    OvsdbValues(const OvsdbValues& s) = default;
 
     /**
      * constructor that takes a label and set of values
      */
-    OvsdbValues(const std::string& l, const std::vector<OvsdbValue>& m) : label(l), values(m) {}
+    OvsdbValues(std::string l, std::vector<OvsdbValue> m) : label(std::move(l)), values(std::move(m)) {}
 
     /**
      * constructor that takes a set of values
      */
-    OvsdbValues(const std::vector<OvsdbValue>& m) : values(m) {}
+    explicit OvsdbValues(std::vector<OvsdbValue> m) : values(std::move(m)) {}
 
     /**
      * Assignment operator
      */
-    OvsdbValues& operator=(OvsdbValues& rhs) = default;
+    OvsdbValues& operator=(const OvsdbValues& rhs) = default;
 
-    virtual ~OvsdbValues() {}
+    virtual ~OvsdbValues() = default;
 
     /**
      * label if this is a collection type

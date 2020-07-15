@@ -110,6 +110,8 @@ public:
         pktInHandler.setPortMapper(&switchManager.getPortMapper(), NULL);
         pktInHandler.setFlowReader(&switchManager.getFlowReader());
 
+        intFlowManager.setDropLog("veth0", "192.168.1.2", 6081);
+        intFlowManager.setEndpointAdv(AdvertManager::EPADV_GRATUITOUS_BROADCAST, AdvertManager::EPADV_GARP_RARP_BROADCAST);
     }
     virtual ~BaseIntFlowManagerFixture() {
         intFlowManager.stop();

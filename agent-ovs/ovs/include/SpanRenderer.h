@@ -33,7 +33,7 @@ public:
      * constructor for SpanRenderer
      * @param agent_ reference to an agent instance
      */
-    SpanRenderer(Agent& agent_);
+    explicit SpanRenderer(Agent& agent_);
 
     /**
      * Start the renderer
@@ -45,7 +45,7 @@ public:
     /**
      * Module stop
      */
-    void stop();
+    virtual void stop();
 
     /**
      * handle updates to span artifacts
