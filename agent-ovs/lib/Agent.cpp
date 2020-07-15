@@ -562,25 +562,7 @@ void Agent::start() {
     Mutator mutator(framework, "init");
     std::shared_ptr<modelgbp::dmtree::Root> root =
         modelgbp::dmtree::Root::createRootElement(framework);
-    root->addPolicyUniverse();
-    root->addRelatorUniverse();
-    root->addSvcServiceUniverse();
-    root->addEprL2Universe();
-    root->addEprL3Universe();
-    root->addInvUniverse();
-    root->addEpdrL2Discovered();
-    root->addEpdrL3Discovered();
-    root->addGbpeVMUniverse();
-    root->addObserverEpStatUniverse();
-    root->addObserverSvcStatUniverse();
-    root->addObserverPolicyStatUniverse();
-    root->addObserverDropFlowConfigUniverse();
-    root->addSpanUniverse();
-    root->addEpdrExternalDiscovered();
-    root->addEpdrLocalRouteDiscovered();
-    root->addEprPeerRouteUniverse();
-    root->addFaultUniverse();
-    root->addObserverSysStatUniverse();
+    Agent::createUniverse(root);
     mutator.commit();
 
     // instantiate other components
@@ -755,6 +737,32 @@ void Agent::stop() {
     abort_timer.join();
 
     LOG(INFO) << "Agent stopped";
+}
+
+void Agent::createUniverse (std::shared_ptr<modelgbp::dmtree::Root> root)
+{
+    if (!root)
+        return;
+
+    root->addPolicyUniverse();
+    root->addRelatorUniverse();
+    root->addSvcServiceUniverse();
+    root->addEprL2Universe();
+    root->addEprL3Universe();
+    root->addInvUniverse();
+    root->addEpdrL2Discovered();
+    root->addEpdrL3Discovered();
+    root->addGbpeVMUniverse();
+    root->addObserverEpStatUniverse();
+    root->addObserverSvcStatUniverse();
+    root->addObserverPolicyStatUniverse();
+    root->addObserverDropFlowConfigUniverse();
+    root->addSpanUniverse();
+    root->addEpdrExternalDiscovered();
+    root->addEpdrLocalRouteDiscovered();
+    root->addEprPeerRouteUniverse();
+    root->addFaultUniverse();
+    root->addObserverSysStatUniverse();
 }
 
 inline StatMode Agent::getStatModeFromString(const std::string& mode) {

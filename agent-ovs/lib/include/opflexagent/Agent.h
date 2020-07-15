@@ -324,6 +324,12 @@ public:
      */
     const LogParams& getLogParams() { return logParams; }
 
+    /**
+     * Common function b/w Agent and Server to add all supported universes
+     * @param root pointer to DmtreeRoot under which the universes will be created
+     */
+    static void createUniverse(std::shared_ptr<modelgbp::dmtree::Root> root);
+
 private:
     boost::asio::io_service agent_io;
     std::unique_ptr<boost::asio::io_service::work> io_work;
@@ -409,6 +415,7 @@ private:
                                      const std::string& interval_prop,
                                      const boost::property_tree::ptree& properties,
                                      Agent::StatProps& props);
+
     long contractInterval;
     long securityGroupInterval;
     long interfaceInterval;
