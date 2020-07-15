@@ -167,6 +167,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string SERVICE_SOURCE_PATH("service-sources.filesystem");
     static const std::string SNAT_SOURCE_PATH("snat-sources.filesystem");
     static const std::string DROP_LOG_CFG_SOURCE_FSPATH("drop-log-config-sources.filesystem");
+    static const std::string FAULT_SOURCE_FSPATH("host-agent-fault-sources.filesystem");
     static const std::string PACKET_EVENT_NOTIF_SOCK("packet-event-notif.socket-name");
     static const std::string OPFLEX_PEERS("opflex.peers");
     static const std::string OPFLEX_SSL_MODE("opflex.ssl.mode");

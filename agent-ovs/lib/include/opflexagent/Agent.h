@@ -375,6 +375,7 @@ private:
     std::vector<std::unique_ptr<FSRDConfigSource>> rdConfigSources;
     std::vector<std::unique_ptr<LearningBridgeSource>> learningBridgeSources;
     std::string dropLogCfgSourcePath;
+    std::string hostAgentFaultPath;
     std::string packetEventNotifSockPath;
     std::unique_ptr<FSPacketDropLogConfigSource> dropLogCfgSource;
 
