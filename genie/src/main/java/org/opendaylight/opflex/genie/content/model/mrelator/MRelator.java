@@ -30,9 +30,7 @@ public class MRelator
             String aInName,
             String aInSourceGName,
             PointCardinality aInSourceCard,
-            String aInTargetGName,
-            PointCardinality aInTargetCard
-            )
+            String aInTargetGName)
     {
         MRelator lSrc = MRelator.get(aInSourceGName, true);
         MTarget lTarget = lSrc.getMTarget(aInTargetGName, true);
@@ -41,8 +39,7 @@ public class MRelator
                 lTarget,
                 aInName,
                 aInType,
-                aInSourceCard,
-                aInTargetCard);
+                aInSourceCard);
 
         MRelated lContr = MRelated.addRule(aInTargetGName, aInSourceGName);
 
