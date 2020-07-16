@@ -97,6 +97,7 @@ void AccessFlowManager::start() {
     agent.getEndpointManager().registerListener(this);
     agent.getLearningBridgeManager().registerListener(this);
     agent.getPolicyManager().registerListener(this);
+    agent.getExtraConfigManager().registerListener(this);
 
     for (size_t i = 0; i < sizeof(ID_NAMESPACES)/sizeof(char*); i++) {
         idGen.initNamespace(ID_NAMESPACES[i]);
@@ -597,12 +598,13 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
             uint64_t secGrpCookie =
                 idGen.getId("l24classifierRule", ruleURI.toString());
             boost::optional<const network::subnets_t&> remoteSubs;
-            if (!pc->getRemoteSubnets().empty())
+            if (!pc->getRemoteSubnets().empty()) {
                 remoteSubs = pc->getRemoteSubnets();
-            else
+            } else {
                 skipL34 = !agent.addL34FlowsWithoutSubnet();
-
-            LOG(DEBUG) << "skipL34 flows: " << skipL34;
+                LOG(DEBUG) << "skipL34 flows: " << skipL34
+                           << " for rule: " << ruleURI;
+            }
 
             flowutils::ClassAction act = flowutils::CA_DENY;
             if (pc->getAllow()) {
