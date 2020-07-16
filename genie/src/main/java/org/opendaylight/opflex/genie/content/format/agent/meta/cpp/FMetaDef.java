@@ -116,14 +116,6 @@ public class FMetaDef
         {
             return "ClassInfo::RELATIONSHIP";
         }
-        else if (isRelationshipTarget(aIn))
-        {
-            return "ClassInfo::REVERSE_RELATIONSHIP";
-        }
-        else  if (isRelationshipResolver(aIn))
-        {
-            return "ClassInfo::RESOLVER";
-        }
         else if (!aIn.isConcrete())
         {
             return "ClassInfo::ABSTRACT";
@@ -191,16 +183,6 @@ public class FMetaDef
         return aIn.isConcreteSuperclassOf("relator/Source");
     }
 
-    private static boolean isRelationshipTarget(MClass aIn)
-    {
-        return aIn.isConcreteSuperclassOf("relator/Target");
-    }
-
-    private static boolean isRelationshipResolver(MClass aIn)
-    {
-        return aIn.isConcreteSuperclassOf("relator/Resolver");
-    }
-
     private static String getOwner(MClass aIn)
     {
         Collection<MOwner> lOwners = aIn.findOwners();
@@ -230,7 +212,7 @@ public class FMetaDef
 
         if (lProps.size() + lConts.size() == 0)
         {
-            out.println(aInIndent, "std::vector<prop_id_t>(),");
+            out.println(aInIndent, "{}");
         }
         else
         {
@@ -251,12 +233,6 @@ public class FMetaDef
                                     (lIsFirst ?  "" : ",") + "(PropertyInfo(" + toUnsignedStr(lLocalId) + ", \"target\", PropertyInfo::REFERENCE, PropertyInfo::SCALAR)) // " + lProp.toString());
                         lIsFirst = false;
                     }
-                }
-                else if (lProp.getLID().getName().equalsIgnoreCase("source") && isRelationshipTarget(aInClass))
-                {
-                    out.println(aInIndent + 1,
-                                (lIsFirst ?  "" : ",") + "(PropertyInfo(" + toUnsignedStr(lLocalId) + ", \"source\", PropertyInfo::REFERENCE, PropertyInfo::SCALAR)) // " + lProp.toString());
-                    lIsFirst = false;
                 }
                 else if (Config.isEnumSupport() &&
                          (lHint.getInfo() == TypeInfo.ENUM ||
