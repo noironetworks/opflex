@@ -444,7 +444,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     // count.  Create a new state object or clear the object as
     // needed.
     std::unordered_set<reference_t> visited;
-    if (oi && ci.getType() != ClassInfo::REVERSE_RELATIONSHIP) {
+    if (oi) {
         BOOST_FOREACH(const ClassInfo::property_map_t::value_type& p,
                       ci.getProperties()) {
             if (p.second.getType() == PropertyInfo::REFERENCE) {
