@@ -13,7 +13,7 @@
 #ifndef OPFLEXAGENT_FSLISTENER_H
 #define OPFLEXAGENT_FSLISTENER_H
 
-#include <opflexagent/FaultSource.h>
+#include <opflexagent/EndpointSource.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/noncopyable.hpp>
