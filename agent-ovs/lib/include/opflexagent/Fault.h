@@ -6,11 +6,13 @@
 #include <opflex/modb/MAC.h>
 
 #include <boost/optional.hpp>
+#include <modelgbp/fault/SeverityEnumT.hpp>
 
 #include <string>
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
+#include <opflexagent/logging.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -63,7 +65,7 @@ Fault() {}
      *
      * @param severity for the fault raised
      */
-    void setSeverity(const std::string& severity) {
+    void setSeverity(const uint8_t severity) {
         this->severity = severity;
     }
 
@@ -72,7 +74,7 @@ Fault() {}
      * Get the severity for this fault raised
      * @return severity for the fault raised
      */
-    const std::string& getSeverity() const {
+    const uint8_t getSeverity() const {
         return severity;
     }
  
@@ -81,8 +83,8 @@ Fault() {}
      *
      * @param description for the fault 
      */
-    void setFSdescribe(const std::string& describe) {
-        this->describe = describe;
+    void setDescription(const std::string& Description) {
+        this->description = Description;
     }
  
      
@@ -90,8 +92,8 @@ Fault() {}
      * Get the description for this fault
      * @return description for the fault 
      */
-    const std::string& getFSdescribe() const {
-        return describe;
+    const std::string& getDescription() const {
+        return description;
     }
 
   /**
@@ -99,7 +101,7 @@ Fault() {}
      *
      * @param fault code 
      */
-    void setFaultcode(const std::string& faultcode) {
+    void setFaultcode(const uint64_t& faultcode) {
         this->faultcode = faultcode;
     }
 
@@ -108,7 +110,7 @@ Fault() {}
      * Get the fault code
      * @return fault code
      */
-    const std::string& getFaultcode() const {
+    const uint64_t& getFaultcode() const {
         return faultcode;
     }
 
@@ -153,13 +155,13 @@ Fault() {}
     }
 
    private:
-	std::string ep_uuid;
-        std::string fs_uuid;
-        std::string faultcode;
-        std::string severity;
-        std::string describe;
-        boost::optional<opflex::modb::MAC> mac;	
-        boost::optional<opflex::modb::URI> egURI;
+      std::string ep_uuid;
+      std::string fs_uuid;
+      uint64_t faultcode;
+      uint8_t severity;
+      std::string description;
+      boost::optional<opflex::modb::MAC> mac;	
+      boost::optional<opflex::modb::URI> egURI;
 
 };
 

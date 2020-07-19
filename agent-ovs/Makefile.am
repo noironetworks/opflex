@@ -108,10 +108,10 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/RDConfig.h \
 	lib/include/opflexagent/Renderer.h \
 	lib/include/opflexagent/TunnelEpManager.h \ 
-        lib/include/opflexagent/FaultManager.h \
-        lib/include/opflexagent/FaultSource.h \
-        lib/include/opflexagent/FSFaultSource.h \
-        lib/include/opflexagent/Fault.h \
+	lib/include/opflexagent/FaultManager.h \
+	lib/include/opflexagent/FaultSource.h \
+	lib/include/opflexagent/FSFaultSource.h \
+	lib/include/opflexagent/Fault.h \
 	lib/include/opflexagent/Agent.h \
 	lib/include/opflexagent/IdGenerator.h \
 	lib/include/opflexagent/KeyedRateLimiter.h \
@@ -210,9 +210,9 @@ libopflex_agent_la_SOURCES = \
 	lib/TunnelEpManager.cpp \
 	lib/cmd.cpp \
 	lib/logging.cpp \
-        lib/FaultManager.cpp \
-        lib/FaultSource.cpp \
-        lib/FSFaultSource.cpp \
+	lib/FaultManager.cpp \
+	lib/FaultSource.cpp \
+	lib/FSFaultSource.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
 	lib/CtZoneManager.cpp \

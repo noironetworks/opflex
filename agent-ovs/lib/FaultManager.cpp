@@ -16,6 +16,8 @@
 
 namespace opflexagent {
 
+using opflex::modb::URI;
+
 FaultManager::FaultManager(Agent& agent_, 
                            opflex::ofcore::OFFramework& framework_)
                            :agent(agent_), framework(framework_){}
@@ -25,22 +27,21 @@ FaultManager::~FaultManager() {}
 void FaultManager::createFault(Agent& agent, const Fault& fs){
    using opflex::modb::Mutator; 
    using namespace modelgbp;
-   LOG(INFO) << "inside fault manager";
-   auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
+
    std::unique_lock<std::mutex> guard(mutex);
-   opflex::modb::Mutator mutator(agent.getFramework(), "policyelement");
+   opflex::modb::Mutator mutator_policyreg(agent.getFramework(), "policyreg");
+   auto universe = modelgbp::policy::Universe::resolve(agent.getFramework()).get();
+   auto config = universe->addPlatformConfig(agent.getPolicyManager().getOpflexDomain());
+   mutator_policyreg.commit();
+
+   opflex::modb::Mutator mutator_policyelem(agent.getFramework(), "policyelement");
+   auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
    auto fi = fu.get()->addFaultInstance(fs.getFSUUID());
-   fi->setSeverity(modelgbp::fault::SeverityEnumT::CONST_CRITICAL);
-   fi->setDescription(fs.getFSdescribe());
-   fi->setFaultCode(opflexagent::FaultCodes::SAMPLE_FAULT);
-
-   //std::shared_ptr<modelgbp::policy::Universe> universe;
-   //std::shared_ptr<modelgbp::platform::Config> config;
-   //universe = modelgbp::policy::Universe::resolve(framework).get();
-   //config = universe->addPlatformConfig(agent.getPolicyManager().getOpflexDomain());
-
-   fi->setAffectedObject("/PolicyUniverse/PlatformConfig/default/");
-   mutator.commit();
-
+   fi->setSeverity(fs.getSeverity());
+   fi->setDescription(fs.getDescription());
+   fi->setFaultCode(fs.getFaultcode());
+   auto affectedObj = URI(config->getURI()); 
+   fi->setAffectedObject(affectedObj.toString());
+   mutator_policyelem.commit();
 }
 } /* namespace opflexagent */

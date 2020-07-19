@@ -345,7 +345,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
 
     if (hostAgentFaultSrc) {
         for (const ptree::value_type &v : hostAgentFaultSrc.get())
-        hostAgentFaultPath = v.second.data();
+        hostAgentFaultPaths.insert(v.second.data());
     }
     
     optional<const ptree&> packetEventNotifSock =
@@ -665,8 +665,9 @@ void Agent::start() {
         dropLogCfgSource.reset(new FSPacketDropLogConfigSource(&extraConfigManager,
                         fsWatcher, dropLogCfgSourcePath, uri));
     }
-    if(!hostAgentFaultPath.empty()) {
-        FaultSource* source = new FSFaultSource(&faultManager, fsWatcher, hostAgentFaultPath, *this);
+    for (const std::string& path : hostAgentFaultPaths) {
+        FaultSource* source =
+             new FSFaultSource(&faultManager, fsWatcher, path, *this);
         faultSources.emplace_back(source);
     }
     fsWatcher.start();
