@@ -862,7 +862,8 @@ public class FClassDef extends ItemFormatterTask
         out.println(aInIndent,"{");
         if (aInTargetClass != null && lClassProp != null)
         {
-            out.println(aInIndent + 1, "const opflex::modb::class_id_t " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = " + aInTargetClass.getGID().getId() + ";");
+            String lValue = Strings.upFirstLetter(aInTargetClass.getModule().getLID().getName()) + Strings.upFirstLetter(aInTargetClass.getLID().getName());
+            out.println(aInIndent + 1, "static const std::string " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = \"" + lValue + "\";");
         }
         out.println(aInIndent + 1, "boost::shared_ptr<" + aInFormattedChildClassName + "> result =");
         out.println(aInIndent + 2, "boost::static_pointer_cast<" + aInFormattedChildClassName + ">(");
