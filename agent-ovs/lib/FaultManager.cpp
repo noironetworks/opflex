@@ -28,20 +28,19 @@ void FaultManager::createFault(Agent& agent, const Fault& fs){
    using opflex::modb::Mutator; 
    using namespace modelgbp;
 
+   string opflex_domain = agent.getPolicyManager().getOpflexDomain();
+   opflex::modb::URI compute_node_uri = opflex::modb::URIBuilder()
+                                              .addElement("PolicyUniverse")
+                                              .addElement("PlatformConfig")
+                                              .addElement(opflex_domain).build(); 
    std::unique_lock<std::mutex> guard(mutex);
-   opflex::modb::Mutator mutator_policyreg(agent.getFramework(), "policyreg");
-   auto universe = modelgbp::policy::Universe::resolve(agent.getFramework()).get();
-   auto config = universe->addPlatformConfig(agent.getPolicyManager().getOpflexDomain());
-   mutator_policyreg.commit();
-
    opflex::modb::Mutator mutator_policyelem(agent.getFramework(), "policyelement");
    auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
    auto fi = fu.get()->addFaultInstance(fs.getFSUUID());
    fi->setSeverity(fs.getSeverity());
    fi->setDescription(fs.getDescription());
    fi->setFaultCode(fs.getFaultcode());
-   auto affectedObj = URI(config->getURI()); 
-   fi->setAffectedObject(affectedObj.toString());
+   fi->setAffectedObject(compute_node_uri.toString());
    mutator_policyelem.commit();
 }
 } /* namespace opflexagent */

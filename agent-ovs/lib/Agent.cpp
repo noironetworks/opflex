@@ -345,7 +345,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
 
     if (hostAgentFaultSrc) {
         for (const ptree::value_type &v : hostAgentFaultSrc.get())
-        hostAgentFaultPaths.insert(v.second.data());
+            hostAgentFaultPaths.insert(v.second.data());
     }
     
     optional<const ptree&> packetEventNotifSock =

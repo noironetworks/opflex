@@ -42,7 +42,6 @@ FSFaultSource::FSFaultSource(FaultManager* manager_,
 
 static bool isfault(fs::path filePath) {
     string fstr = filePath.filename().string();
-    LOG(INFO) << "FILE NAME " << fstr;
     return (boost::algorithm::ends_with(fstr, ".fs") &&
             !boost::algorithm::starts_with(fstr, "."));
 }
@@ -65,21 +64,16 @@ void FSFaultSource::updated(const fs::path& filePath) {
         ptree properties;
         Fault newfs;
         typedef modelgbp::fault::SeverityEnumT SevEnum;
-
         string pathstr = filePath.string();
         read_json(pathstr, properties);
-        string fault_uuid = properties.get<string>(FS_UUID, "not_avaialable");
-        if (fault_uuid == "not_avaialable"){
-           LOG(ERROR) << "Fault UUID Unknown";
-           return;
-        } else { newfs.setFSUUID(fault_uuid); }
- 
+
+        newfs.setFSUUID(properties.get<string>(FS_UUID));
         optional<string> ep_uuid = properties.get_optional<string>(EP_UUID);
-        if(ep_uuid){
+        if (ep_uuid){
            newfs.setEPUUID(ep_uuid.get());
         }
-         
-        static const string severity = properties.get<string>(FS_SEVERITY, "not_available");
+      
+        string severity = properties.get<string>(FS_SEVERITY);
         if(severity == "critical"){
            newfs.setSeverity(SevEnum::CONST_CRITICAL);
         }else if(severity == "major"){
@@ -92,37 +86,28 @@ void FSFaultSource::updated(const fs::path& filePath) {
           newfs.setSeverity(SevEnum::CONST_WARNING);
         }else if(severity == "cleared"){
           newfs.setSeverity(SevEnum::CONST_CLEARED);
-        }else if(severity == "not_available"){
+        }else {
           LOG(ERROR) << "Fault Severity unknown";
           return;
         }
-        
-        string description = properties.get<string>(FS_DESCRIPTION, "not_available");
-        if (description == "not_available") return;
-        else newfs.setDescription(description);
-
-        uint64_t faultCode = properties.get<uint64_t>(FS_CODE,0);
-        if (faultCode == 0) return;
-        else{
-          newfs.setFaultcode(faultCode);
-        }
-
+       
+        newfs.setDescription(properties.get<string>(FS_DESCRIPTION));
+        newfs.setFaultcode(properties.get<uint64_t>(FS_CODE));
+ 
         optional<string> mac = properties.get_optional<string>(EP_MAC);
         if (mac) {
             newfs.setMAC(MAC(mac.get()));
         }
 
         optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
-        optional<string> ps_name = properties.get_optional<string>(EG_POLICY_SPACE);
-        if (!ps_name)
-          ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
+        optional<string> ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
         if (eg_name && ps_name) {
-          newfs.setEgURI(opflex::modb::URIBuilder()
-                         .addElement("PolicyUniverse")
-                         .addElement("PolicySpace")
-                         .addElement(ps_name.get())
-                         .addElement("GbpEpGroup")
-                         .addElement(eg_name.get()).build());
+           newfs.setEgURI(opflex::modb::URIBuilder()
+                                .addElement("PolicyUniverse")
+                                .addElement("PolicySpace")
+                                .addElement(ps_name.get())
+                                .addElement("GbpEpGroup")
+                                .addElement(eg_name.get()).build());
         }
         faultManager->createFault(agent,newfs);
                       
@@ -133,6 +118,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
       } 
 }
 void FSFaultSource::deleted(const fs::path& filePath){ 
+      //TODO 
 }
 
 }/* namespace opflexagent */
