@@ -70,6 +70,7 @@ void OvsdbConnection::stop() {
     }
     yajr::finiLoop(client_loop);
     threadManager.stopTask("OvsdbConnection");
+    cleanup();
 }
 
 void OvsdbConnection::on_state_change(yajr::Peer * p, void * data,
