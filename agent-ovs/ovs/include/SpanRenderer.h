@@ -19,8 +19,6 @@
 
 namespace opflexagent {
 
-const string ERSPAN_PORT_PREFIX = "erspan-";
-
 /**
  * class to render span config on a virtual switch
  */
@@ -67,16 +65,18 @@ public:
      * @param[in] remoteIp remote destination
      * @param[in] version erspan version
      * @param[in] sessionId ERSPAN session ID
+     * @param[in] outputPortName Output port name
      */
     void createMirrorAndOutputPort(const string& session, const set<string>& srcPorts,
-        const set<string>& dstPorts, const string& remoteIp, const uint8_t version, const uint16_t sessionId);
+        const set<string>& dstPorts, const string& remoteIp, const uint8_t version,
+        const uint16_t sessionId, const string& outputPortName);
 
     /**
      * deletes mirror session
-     * @param[in] session name of session
+     * @param[in] sessionName name of session
      * @return true if success, false otherwise.
      */
-    void deleteMirrorAndOutputPort(const string& session);
+    void deleteMirror(const string& sessionName);
 
 private:
     /**

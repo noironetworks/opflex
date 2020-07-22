@@ -41,7 +41,6 @@ namespace opflexagent {
     using namespace modelgbp::epr;
     namespace span = modelgbp::span;
     using namespace span;
-    using namespace modelgbp::gbp;
     using boost::optional;
 
 /**
@@ -194,20 +193,12 @@ public:
         const unsigned char dir);
 
     /**
-     * process EP group
-     * @param[in] uri uri pointing to src member
-     * @param[in] dir direction
-     */
-    void processEpGroup(const URI& uri, unsigned char dir);
-
-    /**
      * mutex for guarding span manager data structures.
     */
     static recursive_mutex updates;
 private:
 
     optional<shared_ptr<SrcMember>> findSrcMem(const URI& sessUri, const URI& uri);
-    boost::optional<shared_ptr<EpGroup>> getEpgIfPartOfSession(const URI& epgUri);
 
     opflex::ofcore::OFFramework& framework;
     /**
