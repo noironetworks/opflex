@@ -45,6 +45,24 @@ module[gbp]
                 cardinality=many;
                 ]
         }
+
+        dependency[provAsAnyContract;
+                   cardinality=many;
+                   ]
+        {
+            to[class=gbp/Contract;
+                cardinality=many;
+                ]
+        }
+        dependency[consAsAnyContract;
+                   cardinality=many;
+                   ]
+        {
+            to[class=gbp/Contract;
+                cardinality=many;
+                ]
+        }
+
         dependency[intraContract;
                    cardinality=many;
                    ]
