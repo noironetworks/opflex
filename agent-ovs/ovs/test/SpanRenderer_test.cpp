@@ -20,8 +20,10 @@
 namespace opflexagent {
 
 using namespace std;
-using namespace rapidjson;
 using namespace modelgbp;
+using modelgbp::gbp::DirectionEnumT;
+
+const string ERSPAN_PORT_PREFIX = "erspan-";
 
 BOOST_AUTO_TEST_SUITE(SpanRenderer_test)
 
@@ -36,7 +38,7 @@ public:
 
         // simulate results of monitor
         OvsdbRowDetails rowDetails;
-        std::string uuid = "9b7295f4-07a8-41ac-a681-e0ee82560262";
+        string uuid = "9b7295f4-07a8-41ac-a681-e0ee82560262";
         rowDetails["uuid"] = OvsdbValue(uuid);
         OvsdbTableDetails tableDetails;
         tableDetails["br-int"] = rowDetails;
@@ -113,7 +115,7 @@ public:
 
         OvsdbTableDetails interfaceDetails;
         OvsdbRowDetails interfaceDetail;
-        std::string interfaceUuid = "9b7295f4-07a8-41ac-a681-e0ee82123456";
+        string interfaceUuid = "9b7295f4-07a8-41ac-a681-e0ee82123456";
         interfaceDetail["uuid"] = OvsdbValue(interfaceUuid);
         interfaceDetail["name"] = OvsdbValue(ERSPAN_PORT_PREFIX);
         map<string, string> options;
@@ -149,12 +151,12 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
     }
 
     string sessionName("abc");
-    spr->deleteMirrorAndOutputPort(sessionName);
+    spr->deleteMirror(sessionName);
 
     set<string> src_ports = {"p1-tap", "p2-tap"};
     set<string> dst_ports = {"p1-tap", "p2-tap"};
     set<string> out_ports = {ERSPAN_PORT_PREFIX};
-    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1, 1);
+    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1, 1, ERSPAN_PORT_PREFIX);
     return true;
 }
 
@@ -165,7 +167,7 @@ BOOST_FIXTURE_TEST_CASE( verify_getport, SpanRendererFixture ) {
 BOOST_FIXTURE_TEST_CASE( delete_session, SpanRendererFixture ) {
     URI sessionUri("/SpanUniverse/SpanSession/abc/");
     string sessionName("abc");
-    shared_ptr<SessionState> sessionState = std::make_shared<SessionState>(sessionUri, sessionName);
+    shared_ptr<SessionState> sessionState = make_shared<SessionState>(sessionUri, sessionName);
     spr->spanDeleted(sessionState);
 }
 

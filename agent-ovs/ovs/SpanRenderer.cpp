@@ -75,7 +75,7 @@ namespace opflexagent {
 
     void SpanRenderer::sessionDeleted(const string& sessionName) {
         LOG(INFO) << "deleting session " << sessionName;
-        deleteMirrorAndOutputPort(sessionName);
+        deleteMirror(sessionName);
     }
 
     void SpanRenderer::handleSpanUpdate(const opflex::modb::URI& spanURI) {
@@ -176,7 +176,7 @@ namespace opflexagent {
 
         // get ERSPAN interface params if configured
         ErspanParams params;
-        if (!conn->getOvsdbState().getErspanParams(ERSPAN_PORT_PREFIX + seSt.get()->getName(), params)) {
+        if (!conn->getOvsdbState().getErspanParams(seSt.get()->getDestPort(), params)) {
             LOG(DEBUG) << "Unable to get ERSPAN parameters";
             return;
         }
@@ -207,30 +207,23 @@ namespace opflexagent {
             }
         }
         LOG(DEBUG) << "Updating mirror config with srcport count = " << srcPort.size() << " and dstport count = " << dstPort.size();
-        deleteMirrorAndOutputPort(seSt->getName());
+        deleteMirror(seSt->getName());
 
         LOG(DEBUG) << "creating mirror";
-        createMirrorAndOutputPort(seSt->getName(), srcPort, dstPort, seSt->getDestination().to_string(), seSt->getVersion(), seSt->getSessionId());
+        createMirrorAndOutputPort(seSt->getName(), srcPort, dstPort, seSt->getDestination().to_string(), seSt->getVersion(), seSt->getSessionId(), seSt->getDestPort());
     }
 
-    void SpanRenderer::deleteMirrorAndOutputPort(const string& sessionName) {
-        const string erspanOutputPortName = ERSPAN_PORT_PREFIX + sessionName;
-        LOG(DEBUG) << "deleting mirror " << sessionName << " and erspan port " << erspanOutputPortName;
+    void SpanRenderer::deleteMirror(const string& sessionName) {
+        LOG(DEBUG) << "deleting mirror " << sessionName;
         string sessionUuid;
         conn->getOvsdbState().getUuidForName(OvsdbTable::MIRROR, sessionName, sessionUuid);
         bool foundSession = !sessionUuid.empty();
         if (!foundSession) {
             LOG(INFO) << "Unable to find session " << sessionName << " to delete";
         }
-        string erspanPortUuid;
-        conn->getOvsdbState().getUuidForName(OvsdbTable::PORT, erspanOutputPortName, erspanPortUuid);
-        bool foundPort = !erspanPortUuid.empty();
-        if (!foundPort) {
-            LOG(DEBUG) << "Port is not present in OVSDB: " << erspanOutputPortName;
-        }
-        if (!foundPort && !foundSession) {
+        if (!foundSession) {
             // nothing to do
-            LOG(DEBUG) << "Unable to find port or session for name " << sessionName;
+            LOG(DEBUG) << "Unable to find session for name " << sessionName;
             return;
         }
 
@@ -239,25 +232,18 @@ namespace opflexagent {
         condSet.emplace("name", OvsdbFunction::EQ, switchName);
         msg.conditions = condSet;
 
-        if (foundSession) {
-            vector<OvsdbValue> values;
-            values.emplace_back("uuid", sessionUuid);
-            OvsdbValues tdSet = OvsdbValues(values);
-            msg.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::DELETE, tdSet));
-        }
-        if (foundPort) {
-            vector<OvsdbValue> values;
-            values.emplace_back("uuid", erspanPortUuid);
-            OvsdbValues tdSet = OvsdbValues(values);
-            msg.mutateRowData.emplace("ports", std::make_pair(OvsdbOperation::DELETE, tdSet));
-        }
+        vector<OvsdbValue> values;
+        values.emplace_back("uuid", sessionUuid);
+        OvsdbValues tdSet = OvsdbValues(values);
+        msg.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::DELETE, tdSet));
 
         const list<OvsdbTransactMessage> requests = {msg};
         sendAsyncTransactRequests(requests);
     }
 
     void SpanRenderer::createMirrorAndOutputPort(const string& sess, const set<string>& srcPorts,
-        const set<string>& dstPorts, const string& remoteIp, const uint8_t version, const uint16_t sessionId) {
+        const set<string>& dstPorts, const string& remoteIp, const uint8_t version, const uint16_t sessionId,
+        const string& outputPortName) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
         LOG(DEBUG) << "bridge uuid " << brUuid;
@@ -265,7 +251,6 @@ namespace opflexagent {
         list<OvsdbTransactMessage> requests;
 
         // first make sure the output port is present, create it if it's not
-        const string outputPortName(ERSPAN_PORT_PREFIX + sess);
         string outputPortUuid;
         conn->getOvsdbState().getUuidForName(OvsdbTable::PORT, outputPortName, outputPortUuid);
         const string portNamedUuid = "port1";
@@ -309,6 +294,8 @@ namespace opflexagent {
             values.emplace_back("erspan_ver", std::to_string(version));
             static const string erspanDir("1");
             values.emplace_back("erspan_dir", erspanDir);
+            static const string erspanHwId("4");
+            values.emplace_back("erspan_hwid", erspanHwId);
             values.emplace_back("remote_ip", remoteIp);
             values.emplace_back("key", std::to_string(sessionId));
             OvsdbValues tdSet5("map", values);
