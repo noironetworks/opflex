@@ -21,9 +21,6 @@ import org.opendaylight.opflex.modlan.utils.Strings;
 
 import java.util.*;
 
-import static org.opendaylight.opflex.genie.content.format.proxy.meta.cpp.FMetaDef.isRelationshipResolver;
-import static org.opendaylight.opflex.genie.content.format.proxy.meta.cpp.FMetaDef.isRelationshipTarget;
-
 /**
  * Created by midvorki on 11/20/14.
  */
@@ -56,9 +53,7 @@ public class FClassDef extends ItemFormatterTask
      */
     public static boolean shouldTriggerTask(Item aIn)
     {
-        return ((MClass)aIn).isConcrete() &&
-                !((MClass)aIn).isConcreteSuperclassOf("relator/Target") &&
-                !((MClass)aIn).isConcreteSuperclassOf("relator/Resolver");
+        return ((MClass)aIn).isConcrete();
     }
 
     /**
@@ -154,11 +149,8 @@ public class FClassDef extends ItemFormatterTask
         aInClass.getContainsClasses(lConts);
         for (MClass lThis : lConts.values())
         {
-            if (!isRelationshipResolver(lThis) && !isRelationshipTarget(lThis))
-            {
-                out.printIncodeComment(aInIndent, "contains: " + lThis);
-                out.println(aInIndent, getInclude(lThis), false);
-            }
+            out.printIncodeComment(aInIndent, "contains: " + lThis);
+            out.println(aInIndent, getInclude(lThis), false);
         }
     }
 
@@ -870,7 +862,8 @@ public class FClassDef extends ItemFormatterTask
         out.println(aInIndent,"{");
         if (aInTargetClass != null && lClassProp != null)
         {
-            out.println(aInIndent + 1, "const opflex::modb::class_id_t " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = " + aInTargetClass.getGID().getId() + ";");
+            String lValue = Strings.upFirstLetter(aInTargetClass.getModule().getLID().getName()) + Strings.upFirstLetter(aInTargetClass.getLID().getName());
+            out.println(aInIndent + 1, "static const std::string " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = \"" + lValue + "\";");
         }
         out.println(aInIndent + 1, "boost::shared_ptr<" + aInFormattedChildClassName + "> result =");
         out.println(aInIndent + 2, "boost::static_pointer_cast<" + aInFormattedChildClassName + ">(");
@@ -934,7 +927,7 @@ public class FClassDef extends ItemFormatterTask
                     if (!lMultipleChildren) break;
                 }
             }
-            else if (!isRelationshipResolver(aInChildClass) && !isRelationshipTarget(aInChildClass))
+            else
             {
                 genChildAdder(aInIndent, aInParentClass, aInChildClass, lNcs,
                         lFormattedChildClassName, lConcatenatedChildClassName,
