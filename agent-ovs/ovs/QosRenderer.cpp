@@ -47,7 +47,6 @@ namespace opflexagent {
 
     void QosRenderer::qosDeleted(const string& interface) {
         LOG(DEBUG) << "Process QosDeleted for interface " << interface;
-        unique_lock<mutex> lock(handlerMutex);
         if (!connect()) {
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -78,7 +77,6 @@ namespace opflexagent {
     void QosRenderer::handleEgressQosUpdate(const string& interface) {
         LOG(DEBUG) << "thread " << std::this_thread::get_id();
         LOG(DEBUG) << "interface: "<< interface;
-        unique_lock<mutex> lock(handlerMutex);
         QosManager &qosMgr = agent.getQosManager();
 
         optional<shared_ptr<QosConfigState>> qosConfigState =
@@ -107,7 +105,6 @@ namespace opflexagent {
     void QosRenderer::handleIngressQosUpdate(const string& interface) {
         LOG(DEBUG) << "thread " << std::this_thread::get_id();
         LOG(DEBUG) << "interface: "<< interface;
-        unique_lock<mutex> lock(handlerMutex);
         QosManager &qosMgr = agent.getQosManager();
 
         optional<shared_ptr<QosConfigState>> qosConfigState =
