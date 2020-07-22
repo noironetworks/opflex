@@ -145,11 +145,13 @@ public:
      */
     explicit OvsdbValue(int val) : type(Dtype::INTEGER), iVal(val), bVal(false) {}
 
+
     /**
      * constructor
      * @param val value
      */
     OvsdbValue(uint64_t val) : type(Dtype::INTEGER), iVal(val), bVal(false) {}
+
 
     /**
      * constructor
@@ -159,12 +161,14 @@ public:
      */
     OvsdbValue(Dtype type_, std::string key_, std::map<std::string, std::string> val) : key(std::move(key_)), type(type_), iVal(-1), bVal(false), collection(std::move(val)) {}
 
+
     /**
      * constructor
      * @param key_ the key string
      * @param val value
      */
     OvsdbValue(const std::string& key_, int val) : key(key_), type(Dtype::INTEGER), iVal(val),  bVal(false) {}
+
 
     /**
      * Copy constructor
