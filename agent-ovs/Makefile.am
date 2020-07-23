@@ -614,7 +614,8 @@ endif
 
 if ENABLE_GRPC
 gbp_client_stress_CXXFLAGS = \
-	-I$(top_srcdir)/server/include $(GRPC_CFLAGS)
+	-I$(top_srcdir)/server/include \
+	-I$(top_srcdir)/server $(GRPC_CFLAGS)
 gbp_client_stress_SOURCES = cmd/test/gbp_client_stress.cpp
 nodist_gbp_client_stress_SOURCES = server/gbp.pb.cc \
 			    server/gbp.grpc.pb.cc \
