@@ -32,7 +32,6 @@
 #include <opflexagent/logging.h>
 #include <opflexagent/cmd.h>
 #include <rapidjson/filereadstream.h>
-#include "Policies.h"
 #ifdef HAVE_GRPC_SUPPORT
 #include "GbpClient.h"
 #endif
@@ -73,8 +72,6 @@ int main(int argc, char** argv) {
              "Log to the specified file (default standard out)")
             ("level", po::value<string>()->default_value("info"),
              "Use the specified log level (default info)")
-            ("sample", po::value<string>()->default_value(""),
-             "Output a sample policy to the given file then exit")
             ("daemon", "Run the opflex server as a daemon")
 #ifdef HAVE_PROMETHEUS_SUPPORT
             ("disable-prometheus", "Disable exporting metrics to prometheus")
@@ -118,7 +115,6 @@ int main(int argc, char** argv) {
     std::string policy_file;
     boost::filesystem::path pf_path;
     boost::filesystem::path pf_dir;
-    std::string sample_file;
     std::string ssl_castore;
     std::string ssl_key;
     std::string ssl_pass;
@@ -156,7 +152,6 @@ int main(int argc, char** argv) {
         log_file = vm["log"].as<string>();
         level_str = vm["level"].as<string>();
         policy_file = vm["policy"].as<string>();
-        sample_file = vm["sample"].as<string>();
         ssl_castore = vm["ssl_castore"].as<string>();
         ssl_key = vm["ssl_key"].as<string>();
         ssl_pass = vm["ssl_pass"].as<string>();
@@ -209,19 +204,6 @@ int main(int argc, char** argv) {
     initLogging(level_str, false /*syslog*/, log_file, "opflex-server");
 
     try {
-        if (sample_file != "") {
-            opflex::ofcore::MockOFFramework mframework;
-            mframework.setModel(modelgbp::getMetadata());
-            mframework.start();
-            Policies::writeBasicInit(mframework);
-            Policies::writeTestPolicy(mframework);
-
-            mframework.dumpMODB(sample_file);
-
-            mframework.stop();
-            return 0;
-        }
-
         GbpOpflexServer::peer_vec_t peer_vec;
         for (const std::string& pstr : peers)
             peer_vec.push_back(make_pair(SERVER_ROLES, pstr));
