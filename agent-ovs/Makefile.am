@@ -339,7 +339,7 @@ if ENABLE_GPROF
 endif
 endif
 
-bin_PROGRAMS=opflex_agent gbp_inspect mcast_daemon opflex_server
+bin_PROGRAMS=opflex_agent gbp_inspect mcast_daemon opflex_server mock_server
 if ENABLE_GRPC
 bin_PROGRAMS += gbp_client_stress
 endif
@@ -517,8 +517,45 @@ if RENDERER_OVS
     ovs/test/OvsdbConnection_test.cpp
 endif
 
-opflex_server_CXXFLAGS = \
+
+mock_server_CXXFLAGS = \
 	-I$(top_srcdir)/cmd/test/include \
+	$(libopflex_CFLAGS) $(libmodelgbp_CFLAGS)
+if ENABLE_GRPC
+mock_server_CXXFLAGS += $(GRPC_CFLAGS)
+endif
+if ENABLE_TSAN
+mock_server_CXXFLAGS += -fsanitize=thread
+endif
+if ENABLE_ASAN
+mock_server_CXXFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+mock_server_CXXFLAGS += -fsanitize=undefined
+endif
+if ENABLE_COVERAGE
+mock_server_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+mock_server_CXXFLAGS += -pg
+endif
+
+mock_server_SOURCES = \
+	cmd/test/include/Policies.h \
+	cmd/test/Policies.cpp \
+	cmd/test/mock_server.cpp
+
+mock_server_LDADD = \
+	$(libopflex_LIBS) \
+	$(libmodelgbp_LIBS) \
+	$(BOOST_PROGRAM_OPTIONS_LIB) \
+	$(BOOST_FILESYSTEM_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	libopflex_agent.la
+
+
+opflex_server_CXXFLAGS = \
+	-I$(top_srcdir)/server/include \
 	$(libopflex_CFLAGS) $(libmodelgbp_CFLAGS)
 if ENABLE_GRPC
 opflex_server_CXXFLAGS += $(GRPC_CFLAGS)
@@ -540,25 +577,23 @@ opflex_server_CXXFLAGS += -pg
 endif
 
 opflex_server_SOURCES = \
-	cmd/test/include/Policies.h \
-	cmd/test/Policies.cpp \
-	cmd/test/opflex_server.cpp
+	server/opflex_server.cpp
 if ENABLE_PROMETHEUS
-opflex_server_SOURCES += cmd/test/ServerPrometheusManager.cpp
+opflex_server_SOURCES += server/ServerPrometheusManager.cpp
 endif
 if ENABLE_GRPC
 %.grpc.pb.cc %.grpc.pb.h %.pb.cc %.pb.h: %.proto
 	protoc --cpp_out=. $^
 	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` $^
-opflex_server_SOURCES += cmd/test/GbpClient.cpp
-BUILT_SOURCES = cmd/test/gbp.pb.cc \
-                cmd/test/gbp.grpc.pb.cc \
-                cmd/test/gbp.pb.h \
-                cmd/test/gbp.grpc.pb.h
-nodist_opflex_server_SOURCES = cmd/test/gbp.pb.cc \
-                             cmd/test/gbp.grpc.pb.cc \
-                             cmd/test/gbp.pb.h \
-                             cmd/test/gbp.grpc.pb.h
+opflex_server_SOURCES += server/GbpClient.cpp
+BUILT_SOURCES = server/gbp.pb.cc \
+                server/gbp.grpc.pb.cc \
+                server/gbp.pb.h \
+                server/gbp.grpc.pb.h
+nodist_opflex_server_SOURCES = server/gbp.pb.cc \
+                             server/gbp.grpc.pb.cc \
+                             server/gbp.pb.h \
+                             server/gbp.grpc.pb.h
 endif
 
 opflex_server_LDADD = \
@@ -576,14 +611,15 @@ if ENABLE_GRPC
 opflex_server_LDADD += $(GRPC_LIBS) $(PROTOBUF_LIBS) -lgrpc++_reflection
 endif
 
+
 if ENABLE_GRPC
 gbp_client_stress_CXXFLAGS = \
-	-I$(top_srcdir)/cmd/test/include $(GRPC_CFLAGS)
+	-I$(top_srcdir)/server/include $(GRPC_CFLAGS)
 gbp_client_stress_SOURCES = cmd/test/gbp_client_stress.cpp
-nodist_gbp_client_stress_SOURCES = cmd/test/gbp.pb.cc \
-			    cmd/test/gbp.grpc.pb.cc \
-			    cmd/test/gbp.pb.h \
-			    cmd/test/gbp.grpc.pb.h
+nodist_gbp_client_stress_SOURCES = server/gbp.pb.cc \
+			    server/gbp.grpc.pb.cc \
+			    server/gbp.pb.h \
+			    server/gbp.grpc.pb.h
 gbp_client_stress_LDADD = $(GRPC_LIBS) $(PROTOBUF_LIBS) -lgrpc++_reflection
 endif
 
@@ -732,7 +768,7 @@ clean-doc:
 clean-local: clean-doc
 	rm -f *.rpm *.deb
 if ENABLE_GRPC
-	-rm -rf cmd/test/gbp.grpc.pb.* cmd/test/gbp.pb.*
+	-rm -rf server/gbp.grpc.pb.* server/gbp.pb.*
 endif
 
 EXTRA_DIST = \
