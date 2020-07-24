@@ -39,7 +39,7 @@ public:
 };
 
 BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
-
+ //check modb update
  const std::string& uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-1";
  fs::path path1(temp / (uuid1+".fs" ));
  fs::ofstream os(path1);
@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
  assert(faultcode == fu.get()->getFaultCode(100));
  assert(severity == fu.get()->getSeverity(100));
 
-//check for delete fucntion. Not sure how to go ahead with this. I have commented this for now. 
+ //check for delete function. I have questions. Will ping you. I have commented this for now. 
 
  //source.deleted(temp.string()+"/"+uuid1+".fs");
  //WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid1)), 500);
@@ -86,7 +86,7 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 }
 
 BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
-
+ //check the update function for existing file
  const std::string& uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-2";
  fs::path path1(temp / (uuid1+".fs" ));
  fs::ofstream os(path1);
