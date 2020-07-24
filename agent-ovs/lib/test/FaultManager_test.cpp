@@ -39,7 +39,7 @@ public:
 };
 
 BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
- //check modb update
+//check for modb update
  const std::string& uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-1";
  fs::path path1(temp / (uuid1+".fs" ));
  fs::ofstream os(path1);
@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
  assert(faultcode == fu.get()->getFaultCode(100));
  assert(severity == fu.get()->getSeverity(100));
 
- //check for delete function. I have questions. Will ping you. I have commented this for now. 
+//check for delete fucntion. Not sure how to go ahead with this. I have commented this for now. 
 
  //source.deleted(temp.string()+"/"+uuid1+".fs");
  //WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid1)), 500);
@@ -86,12 +86,13 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 }
 
 BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
- //check the update function for existing file
- const std::string& uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-2";
- fs::path path1(temp / (uuid1+".fs" ));
+
+ //check for the updates from already existing file
+ const std::string& uuid2 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-2";
+ fs::path path1(temp / (uuid2+".fs" ));
  fs::ofstream os(path1);
  os << "{"
-    << "\"fault_uuid\":\"" << uuid1 << "\","
+    << "\"fault_uuid\":\"" << uuid2 << "\","
     << "\"faultCode\":\"1\","
     << "\"description\":\"Broken bridge domain\","
     << "\"severity\":\"critical\","
@@ -102,25 +103,42 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
  FSFaultSource fu_source(&agent.getFaultManager(), watcher, temp.string(), agent);
  watcher.start();
  
- WAIT_FOR((fu_source.getUUID(temp.string()+"/"+uuid1+".fs")!= "null"),500);
- string uuid_test1 = fu_source.getUUID(temp.string()+"/"+uuid1+".fs");
- assert(uuid_test1 == uuid1);
+ WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
+ string ret_uuid = fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs");
+ assert(ret_uuid == uuid2);
+ 
+//update the file by giving different values to severiity, description and faultCode
 
- fs::path path2(temp / (uuid1+".fs" ));
- fs::ofstream os2(path2);
- os2 << "{"
-    << "\"fault_uuid\":\"" << uuid1 << "\","
-    << "\"faultCode\":\"2\","
-    << "\"description\":\"Broken routing domain\","
-    << "\"severity\":\"major\","
-    << "\"mac\":\"00:00:00:00:00:02\""
-    << "}" << std::endl;
- os2.close();
- FSFaultSource fu_source_2(&agent.getFaultManager(), watcher, temp.string(), agent);
- WAIT_FOR((fu_source_2.getUUID(temp.string()+"/"+uuid1+".fs")!= "null"),500);
- string uuid_test2 = fu_source_2.getUUID(temp.string()+"/"+uuid1+".fs");
- assert(uuid_test2 == uuid1);
- watcher.stop();
+   fs::path path2(temp / (uuid2+".fs" ));
+   fs::ofstream os2(path2);
+   os2 << "{"
+      << "\"fault_uuid\":\"" << uuid2 << "\","
+      << "\"faultCode\":\"2\","
+      << "\"description\":\"Broken routing domain\","
+      << "\"severity\":\"major\","
+      << "\"mac\":\"00:00:00:00:00:02\""
+      << "}" << std::endl;
+   os2.close();
+
+   //check resolveFault instance
+   auto fu_instance = modelgbp::fault::Universe::resolve(agent.getFramework());
+   //I have given 700 times because its taking time to update the new set of changes  to modb
+   WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid2)), 700);
+   auto fu = fu_instance.get()->resolveFaultInstance(uuid2);
+   //Assert the values that got updated against what's returned by the modb
+   uint8_t severity = 4;
+   uint32_t faultcode = 2;
+   string  description = "Broken routing domain";
+
+   assert(description == fu.get()->getDescription("default"));
+   assert(faultcode == fu.get()->getFaultCode(100));
+   assert(severity == fu.get()->getSeverity(100));
+
+  //Get the uuid from the map by passing pathstr as the key 
+   WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
+   string ret_uuid2 = fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs");
+   assert(ret_uuid2 == uuid2);
+   watcher.stop();
 }
  
 } /* namespace opflexagent */ 

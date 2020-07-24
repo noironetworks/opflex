@@ -33,8 +33,8 @@ public:
    virtual void updated(const boost::filesystem::path& filePath);
    // See Watcher
    virtual void deleted(const boost::filesystem::path& filePath);
-
-   std::string getUUID (std::string pathstr);
+  
+   string getFaultUUID (const string pathstr);
 
    Agent& agent;
    FaultManager* faultManager;

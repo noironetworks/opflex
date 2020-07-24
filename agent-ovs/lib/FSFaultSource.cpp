@@ -110,6 +110,14 @@ void FSFaultSource::updated(const fs::path& filePath) {
                                 .addElement("GbpEpGroup")
                                 .addElement(eg_name.get()).build());
         }
+
+        fault_map_t::const_iterator it =  knownFaults.find(pathstr);
+        if (it != knownFaults.end()) {
+           if (newfs.getFSUUID() != it->second) {
+              deleted(filePath);
+           }
+        }
+    
         knownFaults[pathstr] = newfs.getFSUUID();
         faultManager->createFault(agent,newfs);
   
@@ -147,13 +155,12 @@ void FSFaultSource::deleted(const fs::path& filePath){
     }
 }
 
-std::string FSFaultSource::getUUID (std::string pathstr){
-     LOG(INFO) << pathstr;
-     fault_map_t::const_iterator it = knownFaults.find(pathstr);
-     if (it != knownFaults.end()) {
+string FSFaultSource::getFaultUUID (const string pathstr) {
+   fault_map_t::const_iterator it = knownFaults.find(pathstr);
+   if (it != knownFaults.end()) {
          return it->second;
-     }
-     return "null";
+   }
+   return "null";
 }
 
 }/* namespace opflexagent */
