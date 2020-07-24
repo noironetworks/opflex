@@ -74,7 +74,7 @@ public:
      * Get the severity for this fault raised
      * @return severity for the fault raised
      */
-    const uint8_t getSeverity() const {
+    uint8_t getSeverity() const {
         return severity;
     }
  
