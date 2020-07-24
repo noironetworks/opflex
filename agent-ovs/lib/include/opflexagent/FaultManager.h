@@ -22,7 +22,21 @@ public:
 
   virtual ~FaultManager();
 
-  void createFault(Agent& agent, const Fault& fs);
+   /**
+    * Create the fault with the specified params from the fault
+    * manager
+    *
+    */
+   void createFault(Agent& agent, const Fault& fs);
+ 
+   /**
+    * Remove the fault with the specified UUID from the fault
+    * manager.
+    *
+    * @param uuid the UUID of the fault that no longer exists
+    */
+   void removeFault(const std::string& uuid);
+
 
   Agent& agent;
   opflex::ofcore::OFFramework& framework;

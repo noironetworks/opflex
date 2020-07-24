@@ -213,6 +213,7 @@ libopflex_agent_la_SOURCES = \
 	lib/FaultManager.cpp \
 	lib/FaultSource.cpp \
 	lib/FSFaultSource.cpp \
+	lib/Fault.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
 	lib/CtZoneManager.cpp \
@@ -473,6 +474,7 @@ agent_test_SOURCES = \
 	lib/test/SimStats_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
 	lib/test/SnatManager_test.cpp \
+	lib/test/FaultManager_test.cpp \
 	cmd/test/agent_test.cpp
 
 agent_test_LDADD = \

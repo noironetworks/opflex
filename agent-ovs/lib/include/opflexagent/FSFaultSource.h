@@ -34,8 +34,12 @@ public:
    // See Watcher
    virtual void deleted(const boost::filesystem::path& filePath);
 
+   std::string getUUID (std::string pathstr);
+
    Agent& agent;
    FaultManager* faultManager;
+   typedef std::unordered_map<std::string, std::string> fault_map_t;
+   fault_map_t knownFaults;
 };
 }
 

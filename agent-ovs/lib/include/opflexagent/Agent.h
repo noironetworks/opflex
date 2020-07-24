@@ -271,6 +271,12 @@ public:
      * A class used as a POD (Plain Old Data) object
      * to pass counter settings around.
      */
+
+    /**
+     * Get the fault manager object for this agent
+     */
+    FaultManager& getFaultManager() { return faultManager; }
+
     class StatProps {
         public:
         /**

@@ -22,9 +22,9 @@ namespace opflexagent {
 class Fault {
 public:
 
-Fault() {} 
+    Fault() {} 
 
- /**
+    /**
      * Set the UUID for this endpoint
      *
      * @param uuid the unique ID for the endpoint
@@ -34,7 +34,7 @@ Fault() {}
     }
 
 
- /**
+    /**
      * Get the UUID for this endpoint
      * @return the unique ID for the endpoint.
      */
@@ -42,7 +42,7 @@ Fault() {}
         return ep_uuid;
     }
 
-  /**
+    /**
      * Set the UUID for this fault raised
      *
      * @param uuid the unique ID for the fault raised
@@ -52,7 +52,7 @@ Fault() {}
     }
 
 
- /**
+    /**
      * Get the UUID for this fault raised
      * @return the unique ID for the fault raised
      */
@@ -60,7 +60,7 @@ Fault() {}
         return fs_uuid;
     }
 
-  /**
+    /**
      * Set the severity for this fault raised
      *
      * @param severity for the fault raised
@@ -70,7 +70,7 @@ Fault() {}
     }
 
 
- /**
+    /**
      * Get the severity for this fault raised
      * @return severity for the fault raised
      */
@@ -78,7 +78,7 @@ Fault() {}
         return severity;
     }
  
- /**
+    /**
      * Set the description for this fault 
      *
      * @param description for the fault 
@@ -88,7 +88,7 @@ Fault() {}
     }
  
      
- /** 
+    /** 
      * Get the description for this fault
      * @return description for the fault 
      */
@@ -96,7 +96,7 @@ Fault() {}
         return description;
     }
 
-  /**
+    /**
      * Set the fault code
      *
      * @param fault code 
@@ -106,7 +106,7 @@ Fault() {}
     }
 
 
- /**
+    /**
      * Get the fault code
      * @return fault code
      */
@@ -114,7 +114,7 @@ Fault() {}
         return faultcode;
     }
 
- /**
+    /**
      * Get the MAC address for this endpoint
      *
      * @return the MAC address
@@ -123,7 +123,7 @@ Fault() {}
         return mac;
     }
 
- /**
+    /**
      * Set the MAC address for the endpoint
      *
      * @param mac the MAC address
@@ -132,7 +132,7 @@ Fault() {}
         this->mac = mac;
     }
 
- /**
+    /**
      * Set the endpoint group URI associated with this endpoint.  The
      * endpoint group URI controls the policies that are applied to
      * the endpoint.
@@ -143,7 +143,7 @@ Fault() {}
         this->egURI = egURI;
     }
 
- /**
+    /**
      * Get the endpoint group associated with this address mapping.
      * This is the endpoint group into which the address mapping
      * address will be mapped.
@@ -164,6 +164,12 @@ Fault() {}
       boost::optional<opflex::modb::URI> egURI;
 
 };
+
+  /**
+   * Print fault object to an ostream
+   */
+    std::ostream & operator<<(std::ostream &os, const Fault& fs);
+
 
 } /* namespace opflexagent */
 

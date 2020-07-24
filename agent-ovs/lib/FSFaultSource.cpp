@@ -48,12 +48,12 @@ static bool isfault(fs::path filePath) {
 
 void FSFaultSource::updated(const fs::path& filePath) {
     if (!isfault(filePath)) return;
+    
+    //I might need ep_uuid. I will keep this to use in future
     static const std::string EP_UUID("ep_uuid");
     static const std::string FS_UUID("fault_uuid");
     static const std::string EP_MAC("mac");
-    static const std::string EP_GROUP("endpoint-group-name");
     static const std::string POLICY_SPACE_NAME("policy-space-name");
-    static const std::string EG_POLICY_SPACE("eg-policy-space");
     static const std::string EP_GROUP_NAME("endpoint-group-name");
     static const std::string FS_SEVERITY("severity");
     static const std::string FS_DESCRIPTION("description");
@@ -87,8 +87,9 @@ void FSFaultSource::updated(const fs::path& filePath) {
         }else if(severity == "cleared"){
           newfs.setSeverity(SevEnum::CONST_CLEARED);
         }else {
-          LOG(ERROR) << "Fault Severity unknown";
-          return;
+          LOG(ERROR) << "Could not load faults from: "
+                     << filePath << " Fault Severity Unknown";
+                     return;
         }
        
         newfs.setDescription(properties.get<string>(FS_DESCRIPTION));
@@ -109,16 +110,50 @@ void FSFaultSource::updated(const fs::path& filePath) {
                                 .addElement("GbpEpGroup")
                                 .addElement(eg_name.get()).build());
         }
+        knownFaults[pathstr] = newfs.getFSUUID();
         faultManager->createFault(agent,newfs);
+  
+        LOG(INFO) << "Updated Faults " << newfs << " from " << filePath;
                       
     } catch (const std::exception& ex) {
-        LOG(ERROR) << "Could not load faults from: "
+        LOG(ERROR) << "Could not load Faults from: "
                    << filePath << ": "
                    << ex.what();
       } 
 }
-void FSFaultSource::deleted(const fs::path& filePath){ 
-      //TODO 
+
+void FSFaultSource::deleted(const fs::path& filePath){
+    try {
+        Fault newfs;
+        string pathstr = filePath.string();
+        fault_map_t::const_iterator it =  knownFaults.find(pathstr);
+        LOG(INFO) << "Inside deleted";
+        if (it != knownFaults.end()) {
+           LOG(INFO) << "Removed Fault "
+                      << it->second
+                      << " at " << filePath;
+           faultManager->removeFault(it->second);
+           knownFaults.erase(it);
+
+        }
+
+    } catch (const std::exception& ex) {
+        LOG(ERROR) << "Could not delete Fault for "
+                   << filePath << ": "
+                   << ex.what();
+    } catch (...) {
+        LOG(ERROR) << "Unknown error while deleting Fault information for "
+                   << filePath;
+    }
+}
+
+std::string FSFaultSource::getUUID (std::string pathstr){
+     LOG(INFO) << pathstr;
+     fault_map_t::const_iterator it = knownFaults.find(pathstr);
+     if (it != knownFaults.end()) {
+         return it->second;
+     }
+     return "null";
 }
 
 }/* namespace opflexagent */
