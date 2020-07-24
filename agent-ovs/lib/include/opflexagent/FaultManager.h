@@ -8,6 +8,7 @@
 
 #include <opflex/ofcore/OFFramework.h>
 #include <opflexagent/Fault.h> 
+#include <mutex>
 
 namespace opflexagent {
 
@@ -41,6 +42,8 @@ public:
   Agent& agent;
   opflex::ofcore::OFFramework& framework;
 
+private:
+  std::mutex lock_modb_mutex;
 };
 
 } /* namespace opflexagent */

@@ -33,7 +33,7 @@ void FaultManager::createFault(Agent& agent, const Fault& fs){
                                               .addElement("PolicyUniverse")
                                               .addElement("PlatformConfig")
                                               .addElement(opflex_domain).build(); 
-   std::unique_lock<std::mutex> guard(mutex);
+   std::unique_lock<std::mutex> lock(lock_modb_mutex);
    opflex::modb::Mutator mutator_policyelem(agent.getFramework(), "policyelement");
    auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
    auto fi = fu.get()->addFaultInstance(fs.getFSUUID());
@@ -45,7 +45,7 @@ void FaultManager::createFault(Agent& agent, const Fault& fs){
 }
 
 void FaultManager::removeFault(const std::string& uuid){
-   std::unique_lock<std::mutex> guard(mutex);
+   std::unique_lock<std::mutex> lock(lock_modb_mutex);
    Mutator mutator(framework, "policyelement");
    opflex::modb::Mutator mutator_policyelem(agent.getFramework(), "policyelement");
    auto fu = modelgbp::fault::Instance::resolve(agent.getFramework(),uuid);
