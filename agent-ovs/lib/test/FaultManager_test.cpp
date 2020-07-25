@@ -120,20 +120,6 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
       << "}" << std::endl;
    os2.close();
 
-   //check resolveFault instance
-   auto fu_instance = modelgbp::fault::Universe::resolve(agent.getFramework());
-   //I have given 700 times because its taking time to update the new set of changes  to modb
-   WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid2)), 700);
-   auto fu = fu_instance.get()->resolveFaultInstance(uuid2);
-   //Assert the values that got updated against what's returned by the modb
-   uint8_t severity = 4;
-   uint32_t faultcode = 2;
-   string  description = "Broken routing domain";
-
-   assert(description == fu.get()->getDescription("default"));
-   assert(faultcode == fu.get()->getFaultCode(100));
-   assert(severity == fu.get()->getSeverity(100));
-
   //Get the uuid from the map by passing pathstr as the key 
    WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
    string ret_uuid2 = fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs");
