@@ -339,7 +339,7 @@ if ENABLE_GPROF
 endif
 endif
 
-bin_PROGRAMS=opflex_agent gbp_inspect mcast_daemon opflex_server mock_server
+bin_PROGRAMS=opflex_agent gbp_inspect mcast_daemon opflex_server
 if ENABLE_GRPC
 bin_PROGRAMS += gbp_client_stress
 endif
@@ -417,7 +417,7 @@ mcast_daemon_LDADD = \
 	libopflex_agent.la
 
 TESTS = agent_test
-noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress framework_stress
+noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress framework_stress mock_server
 if RENDERER_OVS
   noinst_PROGRAMS += integration_test_ovs
 endif
