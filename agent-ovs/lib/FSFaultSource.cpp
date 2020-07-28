@@ -28,8 +28,6 @@ namespace opflexagent {
 using boost::optional;
 namespace fs = boost::filesystem;
 using std::string;
-using std::runtime_error;
-using std::make_pair;
 using opflex::modb::URI;
 using opflex::modb::MAC;
 

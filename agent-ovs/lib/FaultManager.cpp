@@ -12,7 +12,6 @@
 
 #include <string>
 #include <iostream>
-#include <thread>
 
 namespace opflexagent {
 
