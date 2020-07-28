@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <string>
 #include <unordered_map>
+#include <mutex>
 
 namespace opflexagent {
 
@@ -38,8 +39,11 @@ public:
 
    Agent& agent;
    FaultManager* faultManager;
+
+private:
    typedef std::unordered_map<std::string, std::string> fault_map_t;
    fault_map_t knownFaults;
+   std::mutex lock_map_mutex;
 };
 }
 

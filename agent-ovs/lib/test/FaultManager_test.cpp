@@ -122,6 +122,7 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
 
   //Get the uuid from the map by passing pathstr as the key 
    WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
+   WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
    string ret_uuid2 = fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs");
    assert(ret_uuid2 == uuid2);
    watcher.stop();

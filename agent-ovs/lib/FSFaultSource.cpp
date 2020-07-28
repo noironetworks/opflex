@@ -111,6 +111,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
                                 .addElement(eg_name.get()).build());
         }
 
+        std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
@@ -132,8 +133,8 @@ void FSFaultSource::updated(const fs::path& filePath) {
 
 void FSFaultSource::deleted(const fs::path& filePath){
     try {
-        Fault newfs;
         string pathstr = filePath.string();
+        std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         LOG(INFO) << "Inside deleted";
         if (it != knownFaults.end()) {
@@ -156,6 +157,7 @@ void FSFaultSource::deleted(const fs::path& filePath){
 }
 
 string FSFaultSource::getFaultUUID (const string pathstr) {
+   std::unique_lock<std::mutex> lock(lock_map_mutex);
    fault_map_t::const_iterator it = knownFaults.find(pathstr);
    if (it != knownFaults.end()) {
          return it->second;

@@ -46,7 +46,6 @@ void FaultManager::createFault(Agent& agent, const Fault& fs){
 
 void FaultManager::removeFault(const std::string& uuid){
    std::unique_lock<std::mutex> lock(lock_modb_mutex);
-   Mutator mutator(framework, "policyelement");
    opflex::modb::Mutator mutator_policyelem(agent.getFramework(), "policyelement");
    auto fu = modelgbp::fault::Instance::resolve(agent.getFramework(),uuid);
    fu.get()->remove(agent.getFramework(), uuid);
