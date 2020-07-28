@@ -59,17 +59,11 @@ public:
 
     /**
      * create mirror
-     * @param[in] session name of mirror
+     * @param[in] sess session details
      * @param[in] srcPorts source ports
      * @param[in] dstPorts dest ports
-     * @param[in] remoteIp remote destination
-     * @param[in] version erspan version
-     * @param[in] sessionId ERSPAN session ID
-     * @param[in] outputPortName Output port name
      */
-    void createMirrorAndOutputPort(const string& session, const set<string>& srcPorts,
-        const set<string>& dstPorts, const string& remoteIp, const uint8_t version,
-        const uint16_t sessionId, const string& outputPortName);
+    void createMirrorAndOutputPort(const shared_ptr<SessionState>& sess, const set<string>& srcPorts, const set<string>& dstPorts);
 
     /**
      * deletes mirror session
@@ -87,8 +81,12 @@ private:
     void handleSpanUpdate(const opflex::modb::URI& spanURI);
     virtual void sessionDeleted(const string &sessionName);
     void updateMirrorConfig(const shared_ptr<SessionState>& seSt);
+    void updateOutputPort(const shared_ptr<SessionState>& session);
+    bool isOutputPortUpdateRequired(const shared_ptr<SessionState>& session);
     void updateConnectCb(const boost::system::error_code& ec, const opflex::modb::URI& uri);
     void delConnectPtrCb(const boost::system::error_code& ec, const shared_ptr<SessionState>& pSt);
+
+    static void buildPortSets(const shared_ptr<SessionState>& seSt, set<string>& srcPorts, set<string>& dstPorts);
 };
 }
 #endif //OPFLEX_SPANRENDERER_H
