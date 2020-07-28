@@ -156,7 +156,13 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
     set<string> src_ports = {"p1-tap", "p2-tap"};
     set<string> dst_ports = {"p1-tap", "p2-tap"};
     set<string> out_ports = {ERSPAN_PORT_PREFIX};
-    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1, 1, ERSPAN_PORT_PREFIX);
+    URI sessUri("/SpanUniverse/SpanSession/" + sessionName);
+    auto sess = std::make_shared<SessionState>(sessUri, sessionName);
+    sess->setDestination(boost::asio::ip::address::from_string("10.20.120.240"));
+    sess->setVersion(2);
+    sess->setSessionId(8);
+    sess->setDestPort(ERSPAN_PORT_PREFIX);
+    spr->createMirrorAndOutputPort(sess, src_ports, dst_ports);
     return true;
 }
 
