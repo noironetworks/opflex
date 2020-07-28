@@ -73,8 +73,8 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 
 //check for delete fucntion. Not sure how to go ahead with this. I have commented this for now. 
 
- //source.deleted(temp.string()+"/"+uuid1+".fs");
- //WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid1)), 500);
+   source.deleted(temp.string()+"/"+uuid1+".fs");
+   WAIT_FOR((!fu_instance.get()->resolveFaultInstance(uuid1)), 500);
 // auto fu_2 = fu_instance.get()->resolveFaultInstance(uuid1);
 // assert(fu_2.get()->getDescription("default") == "default");
 // assert(fu_2.get()->getAffectedObject("default") == "default");
