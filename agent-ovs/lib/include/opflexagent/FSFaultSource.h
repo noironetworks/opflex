@@ -35,7 +35,7 @@ public:
    // See Watcher
    virtual void deleted(const boost::filesystem::path& filePath);
   
-   string getFaultUUID (const string pathstr);
+   void getFaultUUID (string& uuid, const string& pathstr);
 
    Agent& agent;
    FaultManager* faultManager;

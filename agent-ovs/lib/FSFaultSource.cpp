@@ -47,7 +47,6 @@ static bool isfault(fs::path filePath) {
 void FSFaultSource::updated(const fs::path& filePath) {
     if (!isfault(filePath)) return;
     
-    //I might need ep_uuid. I will keep this to use in future
     static const std::string EP_UUID("ep_uuid");
     static const std::string FS_UUID("fault_uuid");
     static const std::string EP_MAC("mac");
@@ -134,7 +133,6 @@ void FSFaultSource::deleted(const fs::path& filePath){
         string pathstr = filePath.string();
         std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
-        LOG(INFO) << "Inside deleted";
         if (it != knownFaults.end()) {
            LOG(INFO) << "Removed Fault "
                       << it->second
@@ -154,13 +152,12 @@ void FSFaultSource::deleted(const fs::path& filePath){
     }
 }
 
-string FSFaultSource::getFaultUUID (const string pathstr) {
+void FSFaultSource::getFaultUUID (string& uuid, const string& pathstr){
    std::unique_lock<std::mutex> lock(lock_map_mutex);
    fault_map_t::const_iterator it = knownFaults.find(pathstr);
    if (it != knownFaults.end()) {
-         return it->second;
+      uuid = it->second;
    }
-   return "null";
 }
 
 }/* namespace opflexagent */

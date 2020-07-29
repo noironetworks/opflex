@@ -74,38 +74,41 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 //check for delete fucntion. Not sure how to go ahead with this. I have commented this for now. 
 
    source.deleted(temp.string()+"/"+uuid1+".fs");
-   WAIT_FOR((!fu_instance.get()->resolveFaultInstance(uuid1)), 500);
-// auto fu_2 = fu_instance.get()->resolveFaultInstance(uuid1);
-// assert(fu_2.get()->getDescription("default") == "default");
-// assert(fu_2.get()->getAffectedObject("default") == "default");
-// assert(fu_2.get()->getFaultCode(100)== 100);
-// assert(fu_2.get()->getSeverity(100) ==100 );
-   
+   WAIT_FOR((!fu_instance.get()->resolveFaultInstance(uuid1)), 500);   
    watcher.stop();
 
 }
 
+static bool hasFault(const string& pathstr, FSFaultSource& faultsource, string uuid){
+  string ret_uuid = "";
+  faultsource.getFaultUUID(ret_uuid, pathstr);
+  if(ret_uuid == uuid) {
+    return true;
+  }
+  return false;
+}
+   
 BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
 
  //check for the updates from already existing file
- const std::string& uuid2 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-2";
- fs::path path1(temp / (uuid2+".fs" ));
- fs::ofstream os(path1);
- os << "{"
-    << "\"fault_uuid\":\"" << uuid2 << "\","
-    << "\"faultCode\":\"1\","
-    << "\"description\":\"Broken bridge domain\","
-    << "\"severity\":\"critical\","
-    << "\"mac\":\"00:00:00:00:00:01\""
-    << "}" << std::endl;
- os.close();
- FSWatcher watcher;
- FSFaultSource fu_source(&agent.getFaultManager(), watcher, temp.string(), agent);
- watcher.start();
+  const std::string& uuid2 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-2";
+  fs::path path1(temp / (uuid2+".fs" ));
+  fs::ofstream os(path1);
+   os << "{"
+      << "\"fault_uuid\":\"" << uuid2 << "\","
+      << "\"faultCode\":\"1\","
+      << "\"description\":\"Broken bridge domain\","
+      << "\"severity\":\"critical\","
+      << "\"mac\":\"00:00:00:00:00:01\""
+      << "}" << std::endl;
+  os.close();
+  FSWatcher watcher;
+  FSFaultSource fu_source(&agent.getFaultManager(), watcher, temp.string(), agent);
+  watcher.start();
  
- WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
- string ret_uuid = fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs");
- assert(ret_uuid == uuid2);
+  WAIT_FOR((hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2)),500);
+  bool has_fault = hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2);
+  assert(true == has_fault);  
  
 //update the file by giving different values to severiity, description and faultCode
 
@@ -120,11 +123,9 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
       << "}" << std::endl;
    os2.close();
 
-  //Get the uuid from the map by passing pathstr as the key 
-   WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
-   WAIT_FOR((fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs")!= "null"),500);
-   string ret_uuid2 = fu_source.getFaultUUID(temp.string()+"/"+uuid2+".fs");
-   assert(ret_uuid2 == uuid2);
+   WAIT_FOR((hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2)),500);
+   bool has_fault_2 = hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2);
+   assert(true == has_fault_2);  
    watcher.stop();
 }
  
