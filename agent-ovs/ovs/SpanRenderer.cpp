@@ -226,19 +226,6 @@ namespace opflexagent {
         set<string> dstPorts;
         buildPortSets(seSt, srcPorts, dstPorts);
 
-        SessionState::srcEpSet srcEps;
-        seSt->getSrcEndpointSet(srcEps);
-        for (auto& src : srcEps) {
-            if (src.getDirection() == DirectionEnumT::CONST_BIDIRECTIONAL ||
-                src.getDirection() == DirectionEnumT::CONST_OUT) {
-                srcPorts.emplace(src.getPort());
-            }
-            if (src.getDirection() == DirectionEnumT::CONST_BIDIRECTIONAL ||
-                src.getDirection() == DirectionEnumT::CONST_IN) {
-                dstPorts.emplace(src.getPort());
-            }
-        }
-
         LOG(DEBUG) << "create/update mirror config with srcport count = " << srcPorts.size() << " and dstport count = " << dstPorts.size();
         createMirrorAndOutputPort(seSt, srcPorts, dstPorts);
     }

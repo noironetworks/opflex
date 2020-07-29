@@ -168,6 +168,9 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
 
 BOOST_FIXTURE_TEST_CASE( verify_getport, SpanRendererFixture ) {
     BOOST_CHECK_EQUAL(true,verifyCreateDestroy(spr, conn));
+
+    // test handling of delete for non-existant mirror
+    spr->deleteMirror("notpresent");
 }
 
 BOOST_FIXTURE_TEST_CASE( delete_session, SpanRendererFixture ) {
@@ -184,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
     auto space = pu->addPolicySpace("test");
     auto bd = space->addGbpBridgeDomain("bd");
     auto session = su->addSpanSession("ugh-vspan");
-    session->setState(0);
+    session->setState(platform::AdminStateEnumT::CONST_ON);
     mutator.commit();
 
     auto epr = epr::L2Universe::resolve(framework).get();
@@ -218,6 +221,20 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
         agent.getSpanManager().addEndpoint(localEp2, l2Ep2, DirectionEnumT::CONST_BIDIRECTIONAL);
     }
     spr->spanUpdated(session->getURI());
+
+    // test buildPortSets
+    auto sessionState =
+        make_shared<SessionState>(session->getURI(), session->getName().get());
+    SourceEndpoint srcEp("some-name", "veth1", DirectionEnumT::CONST_BIDIRECTIONAL);
+    sessionState->addSrcEndpoint(srcEp);
+
+    SourceEndpoint srcEp2("another-name", "veth2", DirectionEnumT::CONST_IN);
+    sessionState->addSrcEndpoint(srcEp2);
+
+    SourceEndpoint srcEp3("last-name", "veth3", DirectionEnumT::CONST_OUT);
+    sessionState->addSrcEndpoint(srcEp3);
+
+    spr->updateMirrorConfig(sessionState);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
