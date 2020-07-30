@@ -112,7 +112,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
-              deleted(filePath);
+              delete_fault(filePath);
            }
         }
     
@@ -128,7 +128,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
       } 
 }
 
-void FSFaultSource::deleted(const fs::path& filePath){
+void FSFaultSource::delete_fault(const fs::path& filePath){
     try {
         string pathstr = filePath.string();
         std::unique_lock<std::mutex> lock(lock_map_mutex);
@@ -139,7 +139,7 @@ void FSFaultSource::deleted(const fs::path& filePath){
                       << " at " << filePath;
            faultManager->removeFault(it->second);
            knownFaults.erase(it);
-
+           return;
         }
 
     } catch (const std::exception& ex) {
