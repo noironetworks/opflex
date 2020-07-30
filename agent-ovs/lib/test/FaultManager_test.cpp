@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
  assert(severity == fu.get()->getSeverity(100));
 
 
- source.deleted(temp.string()+"/"+uuid1+".fs");
+ source.delete_fault(temp.string()+"/"+uuid1+".fs");
  WAIT_FOR((!fu_instance.get()->resolveFaultInstance(uuid1)), 500);   
  watcher.stop();
 
