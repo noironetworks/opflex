@@ -27,9 +27,8 @@ public:
     FSFaultFixture()
        : BaseFixture(),
           temp(fs::temp_directory_path() / fs::unique_path()) {
-        LOG(INFO) << "temp path " << fs::temp_directory_path() << "unique path " <<  fs::unique_path();
-        fs::create_directory(temp);
-    }
+               fs::create_directory(temp);
+          }
 
     ~FSFaultFixture() {
         fs::remove_all(temp);
