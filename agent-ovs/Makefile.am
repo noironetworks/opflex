@@ -107,7 +107,11 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSRDConfigSource.h \
 	lib/include/opflexagent/RDConfig.h \
 	lib/include/opflexagent/Renderer.h \
-	lib/include/opflexagent/TunnelEpManager.h \
+	lib/include/opflexagent/TunnelEpManager.h \ 
+	lib/include/opflexagent/FaultManager.h \
+	lib/include/opflexagent/FaultSource.h \
+	lib/include/opflexagent/FSFaultSource.h \
+	lib/include/opflexagent/Fault.h \
 	lib/include/opflexagent/Agent.h \
 	lib/include/opflexagent/IdGenerator.h \
 	lib/include/opflexagent/KeyedRateLimiter.h \
@@ -206,6 +210,10 @@ libopflex_agent_la_SOURCES = \
 	lib/TunnelEpManager.cpp \
 	lib/cmd.cpp \
 	lib/logging.cpp \
+	lib/FaultManager.cpp \
+	lib/FaultSource.cpp \
+	lib/FSFaultSource.cpp \
+	lib/Fault.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
 	lib/CtZoneManager.cpp \
@@ -466,6 +474,7 @@ agent_test_SOURCES = \
 	lib/test/SimStats_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
 	lib/test/SnatManager_test.cpp \
+	lib/test/FaultManager_test.cpp \
 	cmd/test/agent_test.cpp
 
 agent_test_LDADD = \
@@ -677,6 +686,8 @@ inspectsock=${localstatedir}/run/opflex-agent-inspect.sock
 notifsock=${localstatedir}/run/opflex-agent-notif.sock
 cacertdir=${sysconfdir}/ssl/certs
 clientcertpath=${agentconfdir}/opflex-agent-cert.pem
+deffaultwatchdir=${localstatedir}/lib/opflex-agent-ovs/faults
+
 opflex-agent-ovs.conf: $(top_srcdir)/opflex-agent-ovs.conf.in
 	sed -e "s|DEFAULT_FS_ENDPOINT_DIR|${defepwatchdir}|" \
 	    -e "s|DEFAULT_FS_SERVICE_DIR|${defservwatchdir}|" \
@@ -685,6 +696,7 @@ opflex-agent-ovs.conf: $(top_srcdir)/opflex-agent-ovs.conf.in
 	    -e "s|DEFAULT_CA_CERT_DIR|${cacertdir}|" \
 	    -e "s|DEFAULT_CLIENT_CERT_PATH|${clientcertpath}|" \
 	    -e "s|DEFAULT_DROP_LOG_DIR|${defdroplogwatchdir}|" \
+            -e "s|DEFAULT_FS_FAULT_DIR|${deffaultwatchdir}|" \
 	$< > $@
 
 flowidcachedir=${localstatedir}/lib/opflex-agent-ovs/ids
