@@ -5,10 +5,8 @@
 #include <opflexagent/test/BaseFixture.h>
 #include <opflexagent/logging.h>
 #include <opflexagent/Agent.h>
-#include <modelgbp/fault/Instance.hpp>
 #include <modelgbp/fault/Universe.hpp>
 #include <boost/filesystem.hpp>
-#include <unordered_map> 
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
