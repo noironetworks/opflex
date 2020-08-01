@@ -7,7 +7,6 @@
 #include <opflexagent/Agent.h>
 #include <modelgbp/fault/Instance.hpp>
 #include <modelgbp/fault/Universe.hpp>
-#include <assert.h> 
 #include <boost/filesystem.hpp>
 #include <unordered_map> 
 
@@ -65,10 +64,10 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
                                               .addElement("PlatformConfig")
                                               .addElement(opflex_domain).build();
  string  affected_obj = compute_node_uri.toString();
- assert(description == fu.get()->getDescription("default"));
- assert(affected_obj == fu.get()->getAffectedObject("default"));
- assert(faultcode == fu.get()->getFaultCode(100));
- assert(severity == fu.get()->getSeverity(100));
+ BOOST_CHECK_EQUAL(description, fu.get()->getDescription("default"));
+ BOOST_CHECK_EQUAL(affected_obj, fu.get()->getAffectedObject("default"));
+ BOOST_CHECK_EQUAL(faultcode, fu.get()->getFaultCode(100));
+ BOOST_CHECK_EQUAL(severity, fu.get()->getSeverity(100));
 
 
  source.delete_fault(temp.string()+"/"+uuid1+".fs");
@@ -106,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
  
   WAIT_FOR((hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2)),500);
   bool has_fault = hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2);
-  assert(true == has_fault);  
+  BOOST_CHECK_EQUAL(true, has_fault);  
  
 //update the file by giving different values to severiity, description and faultCode
 
@@ -123,7 +122,7 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
 
    WAIT_FOR((hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2)),500);
    bool has_fault_2 = hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2);
-   assert(true == has_fault_2);  
+   BOOST_CHECK_EQUAL(true, has_fault_2);  
    watcher.stop();
 }
  
