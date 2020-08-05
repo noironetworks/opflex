@@ -5411,7 +5411,8 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                         // For external networks mapped to a NAT EPG,
                         // set the next hop action to NAT_OUT
                         if (natEpgVnid) {
-                            snr.action()
+                            snr.priority(151 + extsub->getPrefixLen(0))
+                                .action()
                                 .reg(MFF_REG2, netVnid)
                                 .reg(MFF_REG7, natEpgVnid.get())
                                 .metadata(flow::meta::out::NAT,
@@ -5434,7 +5435,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                 }
                 {
                     FlowBuilder snn;
-                    matchSubnet(snn, rdId, 150, addr,
+                    matchSubnet(snn, rdId, 151, addr,
                                 extsub->getPrefixLen(0), true);
                     snn.action()
                         .reg(MFF_REG0, netVnid)
