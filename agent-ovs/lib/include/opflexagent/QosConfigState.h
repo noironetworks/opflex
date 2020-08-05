@@ -36,7 +36,7 @@ private:
 
 public:
     /**
-     * constructor that takes a URI that points to a Session object
+     * constructor that takes a URI that points to a Bandwidth object
      * @param uri_ URI to a Session object
      * @param name_ name of Session object
      */

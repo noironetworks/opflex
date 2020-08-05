@@ -82,7 +82,7 @@ public:
      * @param rate ingress rate for interface.
      * @param burst ingress burst for interface.
      */
-    bool updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst);
+    void updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst);
 
     /**
      * called to update egress qos parameters  for an interface.
@@ -90,19 +90,19 @@ public:
      * @param rate egress rate of the interface.
      * @param burst egress burst of the interface.
      */
-    bool updateEgressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst);
+    void updateEgressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst);
 
     /**
      * delete ingress qos parameters update.
      * @param interface Name of the interface.
      */
-    bool deleteIngressQos(const string& interface);
+    void deleteIngressQos(const string& interface);
 
     /**
      * delete egress qos parameters update.
      * @param interface Name of the interface.
      */
-    bool deleteEgressQos(const string& interface);
+    void deleteEgressQos(const string& interface);
 
 
 private:

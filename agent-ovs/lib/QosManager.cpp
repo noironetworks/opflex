@@ -2,7 +2,7 @@
 /*
  * Implementation for QosManager class.
  *
- * Copyright (c) 2019 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2020 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -100,26 +100,7 @@ namespace opflexagent {
                     << " rate: "<< qosBandwidth->getRate();
                 processQosConfig(qosBandwidth);
                 qosmanager.notifyUpdate.insert(uri);
-
-                auto eItr = qosmanager.EgressPolInterface.find(uri);
-                if (eItr != qosmanager.EgressPolInterface.end()){
-                    unordered_set<string> &egressInterfaces = eItr->second;
-                    for(const string& interface : egressInterfaces){
-                        LOG(INFO) << "update egress bandwidth on interface: "<< interface;
-
-                    }
-                }
-
-                auto inItr = qosmanager.IngressPolInterface.find(uri);
-                if (inItr != qosmanager.IngressPolInterface.end()){
-                    unordered_set<string> &ingressInterfaces = inItr->second;
-                    for(const string& interface : ingressInterfaces){
-                        LOG(INFO) << "update ingress bandwidth on interface: "<< interface;
-                    }
-                }
-
             } 
-
         } 
 
         for (const URI& updatedUri : qosmanager.notifyUpdate) {
@@ -129,7 +110,7 @@ namespace opflexagent {
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
                     LOG(DEBUG) << "notifyUpdateIngress "<<interface;
-                    std::string taskId = updatedUri.toString()+ interface + std::string("Ingress");
+                    string taskId = updatedUri.toString()+ interface + string("Ingress");
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
                             qosmanager.notifyListeners(interface, "Ingress");
                             });
@@ -142,7 +123,7 @@ namespace opflexagent {
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
                     LOG(DEBUG) << "notifyUpdateEgress "<<interface;
-                    std::string taskId = updatedUri.toString() + interface + std::string("Egress");
+                    string taskId = updatedUri.toString() + interface + string("Egress");
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
                             qosmanager.notifyListeners(interface, "Egress");
                             });
@@ -154,13 +135,12 @@ namespace opflexagent {
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
                     LOG(DEBUG) << "notifyUpdateBoth "<< interface;
-                    std::string taskId = updatedUri.toString() + interface + std::string("Both");
+                    string taskId = updatedUri.toString() + interface + string("Both");
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
                             qosmanager.notifyListeners(interface, "Both");
                             });
                 }		     
             }
-
         }
         qosmanager.notifyUpdate.clear();
     }
@@ -168,12 +148,6 @@ namespace opflexagent {
     void QosManager::endpointUpdated(const string& uuid){
         if (stopping) return;
         taskQueue.dispatch(uuid, [=]() { handleEndpointUpdate(uuid); });
-    }
-
-    void QosManager::localExternalDomainUpdated(const opflex::modb::URI& egURI){
-    }
-
-    void QosManager::remoteEndpointUpdated(const string& uuid){
     }
 
     void QosManager::handleEndpointUpdate(const string& uuid){
@@ -189,7 +163,7 @@ namespace opflexagent {
         const optional<string>& ofPortName = endpoint.getInterfaceName();
 
         if (epQosPol && ofPortName){
-            const std::string &interface = ofPortName.get();
+            const string &interface = ofPortName.get();
             const opflex::modb::URI newReq = epQosPol.get();
             updateInterfacePolicyMap(interface, newReq);
 

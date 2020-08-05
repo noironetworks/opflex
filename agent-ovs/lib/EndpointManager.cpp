@@ -250,11 +250,6 @@ void EndpointManager::updateEndpoint(const Endpoint& endpoint) {
     }
 
 
-    if (endpoint.getEpQosPol()){
-	    const boost::optional<opflex::modb::URI>& epQosPol = endpoint.getEpQosPol();
-	    LOG(DEBUG) << "QosPolUri" << epQosPol.get().toString();
-    }
-
     // update security group mapping
     const set<URI>& oldSecGroups = es.endpoint->getSecurityGroups();
     const set<URI>& secGroups = endpoint.getSecurityGroups();

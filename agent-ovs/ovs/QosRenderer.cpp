@@ -157,7 +157,7 @@ namespace opflexagent {
         qosDeleted(interface);
     }
 
-    bool QosRenderer::updateEgressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst){
+    void QosRenderer::updateEgressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst){
         OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::INTERFACE);
         set<tuple<string, OvsdbFunction, string>> conditionSet;
         conditionSet.emplace("name", OvsdbFunction::EQ, interface);
@@ -176,14 +176,13 @@ namespace opflexagent {
         const list<OvsdbTransactMessage> requests = {msg1};
         sendAsyncTransactRequests(requests) ;
 
-        return true;
     }
 
-    bool QosRenderer::deleteEgressQos(const string& interface){
-        return updateEgressQosParams(interface, 0, 0);
+    void QosRenderer::deleteEgressQos(const string& interface){
+        updateEgressQosParams(interface, 0, 0);
     }
     
-    bool QosRenderer::updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst){
+    void QosRenderer::updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst){
         vector<OvsdbValue> values;
         OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::QUEUE);
 
@@ -237,11 +236,9 @@ namespace opflexagent {
         const list<OvsdbTransactMessage> requests = {msg1,msg2,msg3};
 
         sendAsyncTransactRequests(requests);
-        return true;
     }
 
-    bool QosRenderer::deleteIngressQos(const string& interface){
-        return true;
+    void QosRenderer::deleteIngressQos(const string& interface){
     }
 
 }

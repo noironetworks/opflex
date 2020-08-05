@@ -156,18 +156,6 @@ public:
     virtual void endpointUpdated(const std::string& uuid);
 
     /**
-     * Listen to endpointManager for new endpoints.
-     * @param[in] uuid Uuid of a new endpoint.
-     */
-    virtual void remoteEndpointUpdated(const std::string& uuid);
-
-    /**
-     * Listen to endpointManager for new endpoints.
-     * @param[in] uri.
-     */
-    virtual void localExternalDomainUpdated(const opflex::modb::URI& uri);
-    
-    /**
      * Handle endpoint update from endpointManager.
      * @param[in] uuid Uuid of a new endpoint.
      */
