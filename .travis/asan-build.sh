@@ -34,7 +34,7 @@ popd
 git apply .travis/agent_test_log.patch
 pushd agent-ovs
 ./autogen.sh &> /dev/null
-./configure --enable-asan &> /dev/null
+./configure --enable-asan --enable-grpc &> /dev/null
 make -j2
 sudo make install
 set +e
