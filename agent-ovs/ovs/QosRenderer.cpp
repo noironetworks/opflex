@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) 2014-2019 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014-2020 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -8,14 +8,11 @@
  */
 
 #include <vector>
-
 #include "QosRenderer.h"
 #include <opflexagent/logging.h>
 #include <opflexagent/QosManager.h>
-
 #include <boost/optional.hpp>
 #include <boost/format.hpp>
-
 
 namespace opflexagent {
     using boost::optional;
@@ -175,7 +172,6 @@ namespace opflexagent {
 
         const list<OvsdbTransactMessage> requests = {msg1};
         sendAsyncTransactRequests(requests) ;
-
     }
 
     void QosRenderer::deleteEgressQos(const string& interface){
@@ -234,7 +230,6 @@ namespace opflexagent {
         msg3.rowData["qos"] = tdSet4;
 
         const list<OvsdbTransactMessage> requests = {msg1,msg2,msg3};
-
         sendAsyncTransactRequests(requests);
     }
 

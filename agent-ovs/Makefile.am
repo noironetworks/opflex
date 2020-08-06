@@ -472,6 +472,7 @@ agent_test_SOURCES = \
 	lib/test/SimStats_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
 	lib/test/SnatManager_test.cpp \
+	lib/test/QosManager_test.cpp \
 	cmd/test/agent_test.cpp
 
 agent_test_LDADD = \
@@ -518,6 +519,7 @@ if RENDERER_OVS
 	ovs/test/TableState_test.cpp \
 	ovs/test/SpanRenderer_test.cpp \
 	ovs/test/NetFlowRenderer_test.cpp \
+	ovs/test/QosRenderer_test.cpp \
 	ovs/test/PacketDecoder_test.cpp \
 	ovs/test/TableDropStatsManager_test.cpp \
     ovs/test/OvsdbConnection_test.cpp

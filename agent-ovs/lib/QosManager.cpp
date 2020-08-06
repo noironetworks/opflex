@@ -109,7 +109,6 @@ namespace opflexagent {
             if (itr != qosmanager.IngressPolInterface.end()){
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
-                    LOG(DEBUG) << "notifyUpdateIngress "<<interface;
                     string taskId = updatedUri.toString()+ interface + string("Ingress");
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
                             qosmanager.notifyListeners(interface, "Ingress");
@@ -122,7 +121,6 @@ namespace opflexagent {
             if (itr != qosmanager.EgressPolInterface.end()){
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
-                    LOG(DEBUG) << "notifyUpdateEgress "<<interface;
                     string taskId = updatedUri.toString() + interface + string("Egress");
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
                             qosmanager.notifyListeners(interface, "Egress");
@@ -134,7 +132,6 @@ namespace opflexagent {
             if (itr != qosmanager.ReqToInterface.end()){
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
-                    LOG(DEBUG) << "notifyUpdateBoth "<< interface;
                     string taskId = updatedUri.toString() + interface + string("Both");
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
                             qosmanager.notifyListeners(interface, "Both");
@@ -184,12 +181,10 @@ namespace opflexagent {
     }
 
     void QosManager::notifyListeners(const string& interface, const string& direction) {
-        LOG(DEBUG) << "notify listener for interface: "<<interface;
         lock_guard<mutex> guard1(listener_mutex);
         lock_guard<recursive_mutex> guard2(opflexagent::QosManager::interface_mutex);
 
         if (direction == "Egress" || direction == "Both"){
-            LOG(DEBUG) << "Egress/Both " << interface;		
             for (QosListener *listener : qosListeners) {
                 listener->egressQosUpdated(interface);
             }
@@ -197,9 +192,7 @@ namespace opflexagent {
         }
 
         if (direction == "Ingress" || direction == "Both"){
-            LOG(DEBUG) << "Ingress/Both " << interface;		
             for (QosListener *listener : qosListeners) {
-                LOG(DEBUG) << "calling qos listener updated method";
                 listener->ingressQosUpdated(interface);
             }
         }
@@ -207,7 +200,6 @@ namespace opflexagent {
 
 
     void QosManager::notifyListeners(const unordered_set<string>& interfaces) {
-        LOG(DEBUG) << "notifying delete listener";
         lock_guard<mutex> guard(listener_mutex);
         for (auto itr : interfaces){
             const string& interface = itr;
@@ -239,11 +231,16 @@ namespace opflexagent {
             } else {
                 const URI& reqUri = itr->second;
                 auto polIter = ReqToPol.find(reqUri);
-                if (polIter == ReqToPol.end()) return boost::none;
+                if (polIter == ReqToPol.end()) { 
+                    return boost::none;
+                }
 
                 pair<boost::optional<URI>, boost::optional<URI> > pols = polIter->second;
-                if (pols.first) return getQosConfigState(pols.first.get());
-                else return boost::none;		    
+                if (pols.first) {
+                    return getQosConfigState(pols.first.get());
+                } else {
+                    return boost::none;
+                }
             }
         }
 
@@ -258,71 +255,73 @@ namespace opflexagent {
             } else {
                 const URI& reqUri = itr->second;
                 auto polIter = ReqToPol.find(reqUri);
-                if (polIter == ReqToPol.end()) return boost::none;
+                if (polIter == ReqToPol.end()) {
+                    return boost::none;
+                }
 
                 pair<boost::optional<URI>, boost::optional<URI> > pols = polIter->second;
-                if (pols.second) return getQosConfigState(pols.second.get());
-                else return boost::none;		    
+                if (pols.second) {
+                    return getQosConfigState(pols.second.get());
+                } else {
+                    return boost::none;
+                }
             }
-
         }
 
 
     void QosManager::updateQosConfigState(const shared_ptr<modelgbp::qos::BandwidthLimit>& qosconfig) {
-             lock_guard<recursive_mutex> guard(opflexagent::QosManager::qos_config_mutex);
-	     LOG(INFO) << "BandwidthLimitUri: " << qosconfig->getURI().toString();
+        lock_guard<recursive_mutex> guard(opflexagent::QosManager::qos_config_mutex);
+        LOG(INFO) << "BandwidthLimitUri: " << qosconfig->getURI().toString();
 
-	     auto itr = BwToConfig.find(qosconfig->getURI());
-	     if (itr != BwToConfig.end()){
-		     BwToConfig.erase(itr);
-	     }
-	     shared_ptr<QosConfigState> qosConfig = make_shared<QosConfigState>(qosconfig->getURI(), qosconfig->getName().get());
-	     boost::optional<uint64_t> rate =   qosconfig->getRate();
-	     if (rate) {
-		     qosConfig->setRate(rate.get());
-	     }
-	     boost::optional<uint64_t> burst = qosconfig->getBurst();
-	     if (burst)
-	     {
-		     qosConfig->setBurst(burst.get());
-	     }
-	     BwToConfig.insert(make_pair(qosconfig->getURI(), qosConfig));
-
+        auto itr = BwToConfig.find(qosconfig->getURI());
+        if (itr != BwToConfig.end()){
+            BwToConfig.erase(itr);
+        }
+        shared_ptr<QosConfigState> qosConfig = make_shared<QosConfigState>(qosconfig->getURI(), qosconfig->getName().get());
+        boost::optional<uint64_t> rate =   qosconfig->getRate();
+        if (rate) {
+            qosConfig->setRate(rate.get());
+        }
+        boost::optional<uint64_t> burst = qosconfig->getBurst();
+        if (burst) {
+            qosConfig->setBurst(burst.get());
+        }
+        BwToConfig.insert(make_pair(qosconfig->getURI(), qosConfig));
     }
 
 
     void QosManager::updateQosConfigState(const shared_ptr<modelgbp::qos::Requirement>& qosconfig) {
-	    lock_guard<recursive_mutex> guard(opflexagent::QosManager::interface_mutex);
-	    LOG(INFO) << "Requirement URI: " << qosconfig->getURI().toString();
-	     
-	    optional<shared_ptr<modelgbp::qos::RequirementToEgressRSrc> > RsEgress = 
-		     qosconfig->resolveQosRequirementToEgressRSrc();
-	    optional<URI> EgressUri;
-	    const URI ReqUri = qosconfig->getURI();
+        lock_guard<recursive_mutex> guard(opflexagent::QosManager::interface_mutex);
+        LOG(INFO) << "Requirement URI: " << qosconfig->getURI().toString();
 
-	    clearEntry(ReqUri);
-	    
-	     if (RsEgress){
-		     EgressUri = RsEgress.get()->getTargetURI();
-		     if (EgressUri){
-		         LOG(INFO) << "Egress URI: " << EgressUri.get().toString();
-			 updateEntry(ReqUri, EgressUri.get(), EgressPolInterface);
-	             }
-	     }
+        optional<shared_ptr<modelgbp::qos::RequirementToEgressRSrc> > RsEgress = 
+            qosconfig->resolveQosRequirementToEgressRSrc();
+        optional<URI> EgressUri;
+        const URI ReqUri = qosconfig->getURI();
 
-	     optional<shared_ptr<modelgbp::qos::RequirementToIngressRSrc> > RsIngress =
-		     qosconfig->resolveQosRequirementToIngressRSrc();
-	     optional<URI> IngressUri;
+        clearEntry(ReqUri);
 
-	     if (RsIngress){
-		     IngressUri = RsIngress.get()->getTargetURI();
-		     if (IngressUri){
-		         LOG(INFO) << "Ingress URI: " << IngressUri.get().toString();
-			 updateEntry(ReqUri, IngressUri.get(), IngressPolInterface);
-		     }
-	     }
+        if (RsEgress){
+            EgressUri = RsEgress.get()->getTargetURI();
+            if (EgressUri){
+                LOG(INFO) << "Egress URI: " << EgressUri.get().toString();
+                updateEntry(ReqUri, EgressUri.get(), EgressPolInterface);
+            }
+        }
 
-	     ReqToPol.insert(make_pair(qosconfig->getURI(), make_pair(EgressUri,IngressUri)));
+        optional<shared_ptr<modelgbp::qos::RequirementToIngressRSrc> > RsIngress =
+            qosconfig->resolveQosRequirementToIngressRSrc();
+        optional<URI> IngressUri;
+
+        if (RsIngress){
+            IngressUri = RsIngress.get()->getTargetURI();
+            if (IngressUri){
+                LOG(INFO) << "Ingress URI: " << IngressUri.get().toString();
+                updateEntry(ReqUri, IngressUri.get(), IngressPolInterface);
+            }
+        }
+
+        ReqToPol.insert(make_pair(qosconfig->getURI(), make_pair(EgressUri,IngressUri)));
     }
 
     void QosManager::QosUniverseListener::processQosConfig(const shared_ptr<modelgbp::qos::Requirement>& qosconfig) {
