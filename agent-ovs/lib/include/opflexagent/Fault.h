@@ -119,7 +119,7 @@ public:
      *
      * @return the MAC address
      */
-    const boost::optional<opflex::modb::MAC>& getMAC() const {
+    const std::string& getMAC() const {
         return mac;
     }
 
@@ -128,7 +128,7 @@ public:
      *
      * @param mac the MAC address
      */
-    void setMAC(const opflex::modb::MAC& mac) {
+    void setMAC(const std::string& mac) {
         this->mac = mac;
     }
 
@@ -160,7 +160,7 @@ public:
       uint64_t faultcode;
       uint8_t severity;
       std::string description;
-      boost::optional<opflex::modb::MAC> mac;	
+      std::string  mac;	
       boost::optional<opflex::modb::URI> egURI;
 
 };

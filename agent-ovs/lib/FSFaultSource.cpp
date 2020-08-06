@@ -65,6 +65,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
         read_json(pathstr, properties);
 
         newfs.setFSUUID(properties.get<string>(FS_UUID));
+
         optional<string> ep_uuid = properties.get_optional<string>(EP_UUID);
         if (ep_uuid){
            newfs.setEPUUID(ep_uuid.get());
@@ -94,7 +95,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
  
         optional<string> mac = properties.get_optional<string>(EP_MAC);
         if (mac) {
-            newfs.setMAC(MAC(mac.get()));
+            newfs.setMAC(mac.get());
         }
 
         optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
@@ -113,12 +114,20 @@ void FSFaultSource::updated(const fs::path& filePath) {
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
               delete_fault(filePath);
+              //On delete of the fault file, I will delete the entry in the map which contains pending faults
+              faultManager->clearPendingFaults(it->second); 
            }
         }
-    
+ 
         knownFaults[pathstr] = newfs.getFSUUID();
-        faultManager->createFault(agent,newfs);
-  
+     //if ep uuid is present, I will call createEpFault
+        if(ep_uuid) {
+           faultManager->createEpFault(agent,newfs);
+        }
+     // else create PlatformFault. Reason is that affected object is different in both case and for ep faults, I need to populate the map if its not created
+        else {
+           faultManager->createPlatformFault(agent,newfs);
+        }
         LOG(INFO) << "Updated Faults " << newfs << " from " << filePath;
                       
     } catch (const std::exception& ex) {
