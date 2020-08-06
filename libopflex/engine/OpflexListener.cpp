@@ -193,6 +193,7 @@ void OpflexListener::addPendingUpdate(opflex::modb::class_id_t class_id,
                                       const opflex::modb::URI& uri,
                                       opflex::gbp::PolicyUpdateOp op) {
     if (!active) return;
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
         if (conn->getUri(uri))
             conn->addPendingUpdate(class_id, uri, op);
@@ -203,6 +204,7 @@ void OpflexListener::addPendingUpdate(opflex::modb::class_id_t class_id,
 
 void OpflexListener::sendUpdates() {
     if (!active) return;
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
         conn->sendUpdates();
     }
@@ -210,6 +212,7 @@ void OpflexListener::sendUpdates() {
 
 void OpflexListener::sendTimeouts() {
     if (!active) return;
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     BOOST_FOREACH(OpflexServerConnection* conn, conns) {
         conn->sendTimeouts();
     }

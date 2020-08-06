@@ -20,8 +20,10 @@
 namespace opflexagent {
 
 using namespace std;
-using namespace rapidjson;
 using namespace modelgbp;
+using modelgbp::gbp::DirectionEnumT;
+
+const string ERSPAN_PORT_PREFIX = "erspan-";
 
 BOOST_AUTO_TEST_SUITE(SpanRenderer_test)
 
@@ -36,7 +38,7 @@ public:
 
         // simulate results of monitor
         OvsdbRowDetails rowDetails;
-        std::string uuid = "9b7295f4-07a8-41ac-a681-e0ee82560262";
+        string uuid = "9b7295f4-07a8-41ac-a681-e0ee82560262";
         rowDetails["uuid"] = OvsdbValue(uuid);
         OvsdbTableDetails tableDetails;
         tableDetails["br-int"] = rowDetails;
@@ -113,7 +115,7 @@ public:
 
         OvsdbTableDetails interfaceDetails;
         OvsdbRowDetails interfaceDetail;
-        std::string interfaceUuid = "9b7295f4-07a8-41ac-a681-e0ee82123456";
+        string interfaceUuid = "9b7295f4-07a8-41ac-a681-e0ee82123456";
         interfaceDetail["uuid"] = OvsdbValue(interfaceUuid);
         interfaceDetail["name"] = OvsdbValue(ERSPAN_PORT_PREFIX);
         map<string, string> options;
@@ -149,23 +151,32 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
     }
 
     string sessionName("abc");
-    spr->deleteMirrorAndOutputPort(sessionName);
+    spr->deleteMirror(sessionName);
 
     set<string> src_ports = {"p1-tap", "p2-tap"};
     set<string> dst_ports = {"p1-tap", "p2-tap"};
     set<string> out_ports = {ERSPAN_PORT_PREFIX};
-    spr->createMirrorAndOutputPort("sess1", src_ports, dst_ports, "10.20.120.240", 1, 1);
+    URI sessUri("/SpanUniverse/SpanSession/" + sessionName);
+    auto sess = std::make_shared<SessionState>(sessUri, sessionName);
+    sess->setDestination(boost::asio::ip::address::from_string("10.20.120.240"));
+    sess->setVersion(2);
+    sess->setSessionId(8);
+    sess->setDestPort(ERSPAN_PORT_PREFIX);
+    spr->createMirrorAndOutputPort(sess, src_ports, dst_ports);
     return true;
 }
 
 BOOST_FIXTURE_TEST_CASE( verify_getport, SpanRendererFixture ) {
     BOOST_CHECK_EQUAL(true,verifyCreateDestroy(spr, conn));
+
+    // test handling of delete for non-existant mirror
+    spr->deleteMirror("notpresent");
 }
 
 BOOST_FIXTURE_TEST_CASE( delete_session, SpanRendererFixture ) {
     URI sessionUri("/SpanUniverse/SpanSession/abc/");
     string sessionName("abc");
-    shared_ptr<SessionState> sessionState = std::make_shared<SessionState>(sessionUri, sessionName);
+    shared_ptr<SessionState> sessionState = make_shared<SessionState>(sessionUri, sessionName);
     spr->spanDeleted(sessionState);
 }
 
@@ -176,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
     auto space = pu->addPolicySpace("test");
     auto bd = space->addGbpBridgeDomain("bd");
     auto session = su->addSpanSession("ugh-vspan");
-    session->setState(0);
+    session->setState(platform::AdminStateEnumT::CONST_ON);
     mutator.commit();
 
     auto epr = epr::L2Universe::resolve(framework).get();
@@ -210,6 +221,20 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
         agent.getSpanManager().addEndpoint(localEp2, l2Ep2, DirectionEnumT::CONST_BIDIRECTIONAL);
     }
     spr->spanUpdated(session->getURI());
+
+    // test buildPortSets
+    auto sessionState =
+        make_shared<SessionState>(session->getURI(), session->getName().get());
+    SourceEndpoint srcEp("some-name", "veth1", DirectionEnumT::CONST_BIDIRECTIONAL);
+    sessionState->addSrcEndpoint(srcEp);
+
+    SourceEndpoint srcEp2("another-name", "veth2", DirectionEnumT::CONST_IN);
+    sessionState->addSrcEndpoint(srcEp2);
+
+    SourceEndpoint srcEp3("last-name", "veth3", DirectionEnumT::CONST_OUT);
+    sessionState->addSrcEndpoint(srcEp3);
+
+    spr->updateMirrorConfig(sessionState);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

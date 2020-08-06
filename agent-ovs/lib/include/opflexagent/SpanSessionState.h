@@ -20,6 +20,7 @@
 #include <modelgbp/platform/AdminStateEnumT.hpp>
 #include <modelgbp/span/ErspanVersionEnumT.hpp>
 #include <boost/asio.hpp>
+#include <utility>
 
 
 namespace opflexagent {
@@ -39,8 +40,8 @@ class SourceEndpoint {
          * @param[in] port_ source port name on the vswitch
          * @param[in] dir_ direction to be set
          */
-        SourceEndpoint(const string& name_, const string& port_, const unsigned char dir_) :
-            name(name_), port(port_), dir(dir_) {};
+        SourceEndpoint(string name_, string port_, const unsigned char dir_) :
+            name(std::move(name_)), port(std::move(port_)), dir(dir_) {};
 
         /**
          * Copy constructor
@@ -122,10 +123,11 @@ class SessionState {
          * @param uri_ URI of a Session object
          * @param name_ name of Session object
          */
-        SessionState(const URI& uri_, const string& name_) :
-            uri(uri_), name(name_),
+        SessionState(const URI& uri_, string name_) :
+            uri(uri_), name(std::move(name_)),
             adminState(modelgbp::platform::AdminStateEnumT::CONST_OFF),
-            version(modelgbp::span::ErspanVersionEnumT::CONST_V2) {};
+            version(modelgbp::span::ErspanVersionEnumT::CONST_V2),
+            sessionId(1) {};
 
         /**
          * gets the URI, which points to a Session object
@@ -204,12 +206,24 @@ class SessionState {
         */
        void setSessionId(uint16_t id) { sessionId = id; }
 
+       /**
+         * Get the dest port name
+         * @return session ID
+         */
+        const string& getDestPort() const { return destPort; }
+
+        /**
+         * Set the dest port name
+         */
+        void setDestPort(const string& port) { destPort = port; }
+
     private:
         URI uri;
         string name;
         uint8_t adminState;
         uint8_t version;
         uint16_t sessionId;
+        string destPort;
 
         srcEpSet srcEndpoints;
         // mapping DstSummary to dst IP

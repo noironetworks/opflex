@@ -16,6 +16,8 @@
 
 namespace opflexagent {
 
+using namespace modelgbp::gbp;
+
 class SimStatsFixture : public BaseFixture {
 public:
     SimStatsFixture() : BaseFixture(), epSource(&agent.getEndpointManager()), simStats(agent) {

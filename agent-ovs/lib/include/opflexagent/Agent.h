@@ -49,17 +49,22 @@
 #include <thread>
 #include <tuple>
 
+#include <opflexagent/FaultManager.h>
+#include <opflexagent/FaultSource.h>
+
 namespace opflexagent {
 
 class Renderer;
 class RendererPlugin;
 class EndpointSource;
+class FaultSource;
 class ServiceSource;
 class FSRDConfigSource;
 class LearningBridgeSource;
 class SnatSource;
 class SimStats;
 class FSPacketDropLogConfigSource;
+class FSFaultSource;
 typedef std::tuple<std::string, bool, std::string> LogParams;
 enum StatMode { REAL, SIM, OFF };
 /**
@@ -273,6 +278,12 @@ public:
      * A class used as a POD (Plain Old Data) object
      * to pass counter settings around.
      */
+
+    /**
+     * Get the fault manager object for this agent
+     */
+    FaultManager& getFaultManager() { return faultManager; }
+
     class StatProps {
         public:
         /**
@@ -353,7 +364,8 @@ private:
     SnatManager snatManager;
     NotifServer notifServer;
     FSWatcher fsWatcher;
-    opflex_elem_t rendererFwdMode;
+    opflex_elem_t rendererFwdMode; 
+    FaultManager faultManager;
 
     boost::optional<std::string> opflexName;
     boost::optional<std::string> opflexDomain;
@@ -382,6 +394,7 @@ private:
     std::vector<std::unique_ptr<FSRDConfigSource>> rdConfigSources;
     std::vector<std::unique_ptr<LearningBridgeSource>> learningBridgeSources;
     std::string dropLogCfgSourcePath;
+    std::set<std::string> hostAgentFaultPaths;
     std::string packetEventNotifSockPath;
     std::unique_ptr<FSPacketDropLogConfigSource> dropLogCfgSource;
 
@@ -390,6 +403,7 @@ private:
 
     std::set<std::string> snatSourcePaths;
     std::vector<std::unique_ptr<SnatSource>> snatSources;
+    std::vector<std::unique_ptr<FaultSource>> faultSources;
 
     std::unordered_set<std::string> rendPluginLibs;
     std::unordered_set<void*> rendPluginHandles;
