@@ -22,7 +22,6 @@
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <modelgbp/dmtree/Root.hpp>
 #include <modelgbp/metadata/metadata.hpp>
@@ -63,7 +62,6 @@ void sighandler(int sig) {
 #define DEF_INSPECT_SOCKET LOCALSTATEDIR"/run/opflex-server-inspect.sock"
 
 int main(int argc, char** argv) {
-    const char * const execStr = argv[0];
     signal(SIGPIPE, SIG_IGN);
     // Parse command line options
     po::options_description desc("Allowed options");
@@ -137,11 +135,8 @@ int main(int argc, char** argv) {
                   options(desc).run(), vm);
         po::notify(vm);
 
-        // Check argv[0] to curb LGTM warning:
-        // https://lgtm.com/rules/2163130737/
-        if (vm.count("help")
-            || !boost::algorithm::ends_with(std::string(execStr),"opflex_server")) {
-            std::cout << "Usage: ./opflex_server" << " [options]\n";
+        if (vm.count("help")) {
+            std::cout << "Usage: " << argv[0] << " [options]\n";
             std::cout << desc;
             return 0;
         }
@@ -297,7 +292,9 @@ int main(int argc, char** argv) {
                     /* should be stopped after client */
                     server.stop();
                     framework.stop();
-                    if (execv(execStr, argv)) {
+                    // Check argv[0] to curb LGTM warning:
+                    // https://lgtm.com/rules/2163130737/
+                    if (execv("/usr/local/bin/opflex_server", argv)) {
                         LOG(ERROR) << "opflex_server failed to restart self"
                                    << strerror(errno);
                         goto cleanup;
