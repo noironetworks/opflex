@@ -130,7 +130,7 @@ void Processor::addRef(obj_state_by_exp::iterator& it,
         LOG(DEBUG2) << "addref " << uit->uri.toString()
                     << " (from " << it->uri.toString() << ")"
                     << " " << uit->details->refcount
-                    << " state " << uit->details->state;
+                    << " state " << ItemStateMap[uit->details->state];
 
         it->details->urirefs.insert(up);
     }
@@ -148,7 +148,7 @@ void Processor::removeRef(obj_state_by_exp::iterator& it,
             LOG(DEBUG2) << "removeref " << uit->uri.toString()
                         << " (from " << it->uri.toString() << ")"
                         << " " << uit->details->refcount
-                        << " state " << uit->details->state;
+                        << " state " << ItemStateMap[uit->details->state];
             if (uit->details->refcount <= 0) {
                 uint64_t nexp = now(proc_loop)+processingDelay;
                 uri_index.modify(uit, Processor::change_expiration(nexp));
@@ -376,7 +376,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
                << " item " << it->uri.toString()
                << " of class " << ci.getName()
                << " and type " << ci.getType()
-               << " in state " << curState;
+               << " in state " << ItemStateMap[curState];
 
     ItemState newState;
 
@@ -523,7 +523,8 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
             break;
         }
 
-        LOG(DEBUG) << "Purging state for " << it->uri.toString();
+        LOG(DEBUG) << "Purging state for " << it->uri.toString()
+                   << " in state " << ItemStateMap[it->details->state];
         exp_index.erase(it);
     } else {
         it->details->state = newState;
