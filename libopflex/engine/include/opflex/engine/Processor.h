@@ -323,6 +323,20 @@ private:
         DELETED
     };
 
+    /**
+     * map of ItemState to String
+     */
+    std::map<int, std::string> ItemStateMap = {
+        { NEW, "new" },
+        { UPDATED, "updated" },
+        { IN_SYNC, "in_sync" },
+        { REMOTE, "remote" },
+        { UNRESOLVED, "unresolved" },
+        { RESOLVED, "resolved" },
+        { PENDING_DELETE, "pending_delete" },
+        { DELETED, "deleted" }
+    };
+
     class item_details {
     public:
         /**
