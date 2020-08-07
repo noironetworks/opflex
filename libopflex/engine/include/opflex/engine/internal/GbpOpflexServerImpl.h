@@ -19,6 +19,7 @@
 #include "opflex/engine/internal/OpflexHandler.h"
 #include "opflex/engine/internal/OpflexServerHandler.h"
 
+#include <mutex>
 #include <thread>
 #include <atomic>
 #include <boost/asio.hpp>
@@ -206,6 +207,7 @@ private:
     std::unique_ptr<boost::asio::deadline_timer> prr_timer;
     std::atomic_bool stopping;
     int prr_interval_secs;
+    std::mutex prr_timer_mutex;
 };
 
 } /* namespace internal */
