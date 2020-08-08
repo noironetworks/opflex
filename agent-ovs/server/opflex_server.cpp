@@ -292,7 +292,9 @@ int main(int argc, char** argv) {
                     /* should be stopped after client */
                     server.stop();
                     framework.stop();
-                    if (execv(argv[0], argv)) {
+                    // Check argv[0] to curb LGTM warning:
+                    // https://lgtm.com/rules/2163130737/
+                    if (execv("/usr/local/bin/opflex_server", argv)) {
                         LOG(ERROR) << "opflex_server failed to restart self"
                                    << strerror(errno);
                         goto cleanup;
