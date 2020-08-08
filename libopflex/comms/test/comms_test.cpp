@@ -80,7 +80,7 @@ struct CommsTests {
 
 };
 
-opflex::logging::StdOutLogHandler CommsTests::commsTestLogger_(DEBUG4);
+opflex::logging::StdOutLogHandler CommsTests::commsTestLogger_(TRACE);
 
 BOOST_GLOBAL_FIXTURE( CommsTests );
 
@@ -283,7 +283,7 @@ class CommsFixture {
 
         if (oldDbgLog != newDbgLog) {
             oldDbgLog = newDbgLog;
-            LOG(DEBUG3)  << newDbgLog;
+            LOG(TRACE)  << newDbgLog;
         }
 
         return std::make_pair(final_peers, transient_peers);

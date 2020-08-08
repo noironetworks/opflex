@@ -276,7 +276,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
                                                          *notifs);
                         }
                     } else {
-                        LOG(DEBUG2) << "No parent present for "
+                        LOG(DEBUG) << "No parent present for "
                                     << uri.toString();
                     }
                 } catch (const std::out_of_range& e) {
@@ -334,7 +334,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
         }
 
         if (remoteUpdated) {
-            LOG(DEBUG2) << "Updated object " << uri;
+            LOG(DEBUG) << "Updated object " << uri;
             if (notifs)
                 client.queueNotification(ci.getId(), uri, *notifs);
             PolicyUpdateOp op = replaceChildren ? PolicyUpdateOp::REPLACE

@@ -67,34 +67,9 @@ private:
 #define TRACE opflex::logging::OFLogHandler::TRACE
 
 /**
- * Convenience macro for debug log level 0
+ * Convenience macro for debug log level
  */
-#define DEBUG0 opflex::logging::OFLogHandler::DEBUG0
-
-/**
- * Convenience macro for debug log level 1
- */
-#define DEBUG1 opflex::logging::OFLogHandler::DEBUG1
-
-/**
- * Alias for DEBUG0
- */
-#define DEBUG DEBUG0
-
-/**
- * Convenience macro for debug log level 2
- */
-#define DEBUG2 opflex::logging::OFLogHandler::DEBUG2
-
-/**
- * Convenience macro for debug log level 3
- */
-#define DEBUG3 opflex::logging::OFLogHandler::DEBUG3
-
-/**
- * Convenience macro for debug log level 4
- */
-#define DEBUG4 opflex::logging::OFLogHandler::DEBUG4
+#define DEBUG opflex::logging::OFLogHandler::DEBUG
 
 /**
  * Convenience macro for info log level

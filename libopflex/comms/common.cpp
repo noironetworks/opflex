@@ -29,9 +29,7 @@ int ::yajr::initLoop(uv_loop_t * loop) {
 
 void ::yajr::finiLoop(uv_loop_t * loop) {
     LOG(INFO);
-
     static_cast< ::yajr::comms::internal::Peer::LoopData *>(loop->data)->destroy();
-
 }
 
 
@@ -61,7 +59,6 @@ using namespace yajr::comms::internal;
 namespace internal {
 
 char const * getUvHandleType(uv_handle_t * h) {
-
     char const * type;
 
     switch (h->type) {
@@ -74,11 +71,9 @@ char const * getUvHandleType(uv_handle_t * h) {
     }
 
     return type;
-
 }
 
 char const * getUvHandleField(uv_handle_t * h, internal::Peer * peer) {
-
     char const * hType = "???";
 
     if (h == reinterpret_cast< uv_handle_t * >(&peer->keepAliveTimer_)) {
@@ -90,11 +85,9 @@ char const * getUvHandleField(uv_handle_t * h, internal::Peer * peer) {
     }
 
     return hType;
-
 }
 
 void on_close(uv_handle_t * h) {
-
     if (!h) {
         LOG(ERROR) << "NULL handle";
         return;
@@ -102,18 +95,11 @@ void on_close(uv_handle_t * h) {
 
     CommunicationPeer * peer = Peer::get<CommunicationPeer>(h);
 
-    LOG(DEBUG1)
-        << peer
-        << " down() for an on_close("
-        << static_cast< void * >(h)
-        <<") "
-        << getUvHandleField(h, peer)
-        << " handle of type "
-        << getUvHandleType(h)
-    ;
+    LOG(DEBUG) << peer << " down() for an on_close("
+        << static_cast< void * >(h) <<") " << getUvHandleField(h, peer)
+        << " handle of type " << getUvHandleType(h);
 
     peer->choked_ = 1;
-
     peer->down();
 }
 
