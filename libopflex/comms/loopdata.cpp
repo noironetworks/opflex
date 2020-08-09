@@ -28,9 +28,7 @@ namespace yajr {
     namespace comms {
         namespace internal {
 
-std::ostream& operator << (
-        std::ostream& os,
-        Peer::LoopData const * lD);
+std::ostream& operator << (std::ostream& os, Peer::LoopData const * lD);
 
 
 void internal::Peer::LoopData::onPrepareLoop() {
@@ -83,11 +81,7 @@ void internal::Peer::LoopData::onPrepareLoop() {
 
     if ((now - lastRun_ > 15000) && !peers[RETRY_TO_LISTEN].empty()) {
 
-        LOG(INFO)
-            << "retrying all "
-            << peers[RETRY_TO_LISTEN].size()
-            << "RETRY_TO_LISTEN peers"
-        ;
+        LOG(INFO) << "retrying all " << peers[RETRY_TO_LISTEN].size() << "RETRY_TO_LISTEN peers";
 
         /* retry all listeners */
         peers[RETRY_TO_LISTEN]
@@ -102,7 +96,7 @@ prepared:
         /* We need to make sure we unblock */
 
         if (!uv_is_active((uv_handle_t *)&prepareAgain_)) {
-            LOG(DEBUG4) << " Starting prepareAgain_ @" << reinterpret_cast<void *>(&prepareAgain_);
+            LOG(TRACE) << " Starting prepareAgain_ @" << reinterpret_cast<void *>(&prepareAgain_);
         } // else we are just pushing it out in time :)
         uv_timer_start(&prepareAgain_, prepareAgainCB, 1250, 0);
     }
@@ -137,14 +131,7 @@ void internal::Peer::LoopData::destroy(bool now) {
 }
 
 std::ostream& operator << (std::ostream& os, Peer::LoopData const * lD) {
-    return os
-        << "{"
-        << reinterpret_cast<void const *>(lD)
-        << "}"
-        << "["
-        << lD->refCount_
-        << "]"
-    ;
+    return os << "{" << reinterpret_cast<void const *>(lD) << "}[" << lD->refCount_ << "]";
 }
 
 void internal::Peer::LoopData::walkAndCloseHandlesCb(
@@ -170,7 +157,6 @@ void internal::Peer::LoopData::walkAndCloseHandlesCb(
         << reinterpret_cast<void const *>(h);
 
     uv_close(h, closeHandle->closeCb);
-
 }
 
 
@@ -204,37 +190,25 @@ void internal::Peer::LoopData::walkAndCountHandlesCb(
 
     /** we assert() here, but everything will be cleaned up in production code */
     assert(uv_is_closing(h));
-
 }
 
-void Peer::LoopData::RetryPeer::operator () (Peer *peer)
-{
+void Peer::LoopData::RetryPeer::operator () (Peer *peer) {
     peer->retry();
 }
 
-void Peer::LoopData::PeerDeleter::operator () (Peer *peer)
-{
-    LOG(DEBUG1) << peer << " deleting abruptedly";
+void Peer::LoopData::PeerDeleter::operator () (Peer *peer) {
+    LOG(DEBUG) << peer << " deleting abruptedly";
     assert(!"peers should never get deleted this way");
     delete peer;
 }
 
 void Peer::LoopData::up() {
-    LOG(DEBUG2)
-        << this
-        << " LoopRefCnt: "
-        << refCount_
-        << " -> "
-        << refCount_ + 1
-    ;
-
+    LOG(DEBUG) << this << " LoopRefCnt: " << refCount_ << " -> " << refCount_ + 1;
     ++refCount_;
 }
 
 void Peer::LoopData::down() {
-
     assert(refCount_);
-
     --refCount_;
 
     if (destroying_ && !refCount_) {
@@ -244,8 +218,7 @@ void Peer::LoopData::down() {
 }
 
 Peer::LoopData::~LoopData() {
-
-    LOG(DEBUG1) << this << " is being deleted" ;
+    LOG(DEBUG) << this << " is being deleted" ;
 
     const std::lock_guard<std::recursive_mutex> lock(peerMutex);
     for (size_t i=0; i < Peer::LoopData::TOTAL_STATES; ++i) {
@@ -256,8 +229,7 @@ Peer::LoopData::~LoopData() {
     }
 }
 
-void Peer::LoopData::PeerDisposer::operator () (Peer *peer)
-{
+void Peer::LoopData::PeerDisposer::operator () (Peer *peer) {
     LOG(INFO) << peer << " destroy() because this communication thread is shutting down";
     peer->destroy(now_);
 }

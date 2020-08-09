@@ -121,7 +121,7 @@ namespace yajr {
                 )
                 : InboundError(peer, params, id)
                 {
-                    LOG(DEBUG3) << M->s;
+                    LOG(TRACE) << M->s;
                 }
 
             virtual void process() const;

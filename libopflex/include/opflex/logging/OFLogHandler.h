@@ -57,11 +57,7 @@ public:
      */
     enum Level {
         TRACE,
-        DEBUG4,
-        DEBUG3,
-        DEBUG2,
-        DEBUG1,
-        DEBUG0,
+        DEBUG,
         INFO,
         WARNING,
         ERROR,

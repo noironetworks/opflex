@@ -145,7 +145,7 @@ void on_active_connection(uv_connect_t *req, int status) {
 
         /* the peer might have been deleted, so we have to avoid accessing any
          * of its members */
-        LOG(DEBUG1) << peer << " has had a connection attempt canceled";
+        LOG(DEBUG) << peer << " has had a connection attempt cancelled";
         peer->onError(status);
         return;
     }
@@ -156,12 +156,7 @@ void on_active_connection(uv_connect_t *req, int status) {
     }
 
     if (status < 0) {
-        LOG(WARNING)
-            << "connect: ["
-            << uv_err_name(status)
-            << "] "
-            << uv_strerror(status)
-        ;
+        LOG(WARNING) << "connect: [" << uv_err_name(status) << "] " << uv_strerror(status);
         peer->onFailedConnect(status);
         return;
     }
@@ -198,11 +193,8 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
     }
 
     if (status < 0) {
-        LOG(WARNING)
-            << "getaddrinfo callback error: ["
-            << uv_err_name(status)
-            << "] "
-            << uv_strerror(status);
+        LOG(WARNING) << "getaddrinfo callback error: [" << uv_err_name(status)
+            << "] " << uv_strerror(status);
         peer->status_ = Peer::kPS_FAILED_TO_RESOLVE;
         uv_freeaddrinfo(resp);
 
@@ -213,7 +205,6 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
     peer->status_ = Peer::kPS_RESOLVED;
 
     int rc;
-
     if ((rc = peer->tcpInit())) {
 
         peer->down();
@@ -223,10 +214,7 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
 
     peer->_.ai_next = peer->_.ai = resp;
     if ((rc = connect_to_next_address(peer))) {
-        LOG(WARNING)
-            << "connect_to_next_address: ["
-            << uv_err_name(rc)
-            << "] "
+        LOG(WARNING) << "connect_to_next_address: [" << uv_err_name(rc) << "] "
             << uv_strerror(rc);
         if (!uv_is_closing(peer->getHandle())) {
             uv_close(peer->getHandle(), on_close);
@@ -250,7 +238,7 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
 
 void debug_address(struct addrinfo const * ai, size_t m = 0) {
 
-    if (!LOG_SHOULD_EMIT(DEBUG3)) {
+    if (!LOG_SHOULD_EMIT(TRACE)) {
         return;
     }
 
@@ -283,7 +271,7 @@ void debug_address(struct addrinfo const * ai, size_t m = 0) {
                        NI_NUMERICHOST | NI_NUMERICSERV
                       );
 
-    LOG(DEBUG4)
+    LOG(TRACE)
         << msg[m][0]
         <<           host
         << msg[m][1]
@@ -301,11 +289,9 @@ void debug_address(struct addrinfo const * ai, size_t m = 0) {
         <<    " ai_canonname="
         << (ai->ai_canonname ?: "")
     ;
-
 }
 
 void swap_stack_on_close(uv_handle_t * h) {
-
     ActiveTcpPeer * peer = Peer::get<ActiveTcpPeer>(h);  // can't possibly crash yet
 
     int rc;
@@ -328,13 +314,10 @@ void swap_stack_on_close(uv_handle_t * h) {
         }
         return retry_later(peer);
     }
-
 }
 
 int connect_to_next_address(ActiveTcpPeer * peer, bool swap_stack) {
-
     struct addrinfo const * ai = peer->_.ai_next;
-
     debug_address(ai);
 
     /* BAIL if destroying */
@@ -352,15 +335,10 @@ int connect_to_next_address(ActiveTcpPeer * peer, bool swap_stack) {
                     reinterpret_cast<uv_tcp_t *>(peer->getHandle()),
                     ai->ai_addr,
                     on_active_connection))) {
-        LOG(ai ? INFO : WARNING)
-            << "uv_tcp_connect: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
+        LOG(ai ? INFO : WARNING) << "uv_tcp_connect: ["
+            << uv_err_name(rc) << "] " << uv_strerror(rc);
 
         if (swap_stack) {
-
             switch (rc) {
                 case -ECONNABORTED:
                     /* your kernel hates you */

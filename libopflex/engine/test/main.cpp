@@ -21,6 +21,6 @@ public:
     static StdOutLogHandler testLogger;
 };
 
-StdOutLogHandler EngineTest::testLogger(OFLogHandler::DEBUG2);
+StdOutLogHandler EngineTest::testLogger(OFLogHandler::DEBUG);
 
 BOOST_GLOBAL_FIXTURE(EngineTest);
