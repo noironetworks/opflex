@@ -184,7 +184,6 @@ void OpflexListener::sendToAll(OpflexMessage* message) {
 
 void OpflexListener::sendToOne(OpflexServerConnection* conn, OpflexMessage* message) {
     std::unique_ptr<OpflexMessage> messagep(message);
-    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (!active) return;
     conn->sendMessage(message->clone());
 }
