@@ -16,8 +16,6 @@
 
 #include <stdexcept>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/modb/internal/ObjectStore.h"
 
 namespace opflex {
@@ -105,7 +103,7 @@ Region* ObjectStore::getRegion(class_id_t class_id) {
 }
 
 void ObjectStore::getOwners(/* out */ std::unordered_set<std::string>& output) {
-    BOOST_FOREACH(const region_owner_map_t::value_type v, region_owner_map) {
+    for (const region_owner_map_t::value_type& v : region_owner_map) {
         output.insert(v.first);
     }
 }

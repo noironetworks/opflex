@@ -14,8 +14,6 @@
 #  include <config.h>
 #endif
 
-#include <boost/foreach.hpp>
-
 #include "opflex/modb/internal/Region.h"
 #include "opflex/modb/internal/ObjectStore.h"
 

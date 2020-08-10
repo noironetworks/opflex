@@ -15,7 +15,7 @@
 #endif
 
 
-#include <boost/assert.hpp>
+#include <cassert>
 
 #include "opflex/modb/PropertyInfo.h"
 
@@ -56,7 +56,7 @@ PropertyInfo::PropertyInfo(prop_id_t prop_id_,
       prop_type(type_), 
       class_id(class_id_),
       cardinality(cardinality_) {
-    BOOST_ASSERT(prop_type == COMPOSITE);
+    assert(prop_type == COMPOSITE);
 }
 
 PropertyInfo::~PropertyInfo() {

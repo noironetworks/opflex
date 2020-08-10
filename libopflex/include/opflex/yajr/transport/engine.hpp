@@ -13,7 +13,7 @@
 #include <uv.h>
 
 #include <boost/type_traits/is_base_of.hpp>
-#include <boost/static_assert.hpp>
+#include <cassert>
 
 #include <vector>
 #include <new>
@@ -72,12 +72,7 @@ class Transport {
      */
     template< class E >
     E * getEngine() const {
-
-        BOOST_STATIC_ASSERT_MSG(
-                (boost::is_base_of<Transport::Engine, E>::value),
-                "engine type must be a descendant of Transport::Engine"
-                );
-
+        assert((boost::is_base_of<Transport::Engine, E>::value));
         return static_cast< E * >(data_);
     }
 
@@ -140,12 +135,7 @@ Transport::Callbacks Cb< E >::kCb = {
 
 template< class E >
 void Cb< E >::__on_delete(Transport::Engine * data) {
-
-    BOOST_STATIC_ASSERT_MSG(
-            (boost::is_base_of<Transport::Engine, E>::value),
-            "engine type must be a descendant of Transport::Engine"
-            );
-
+    assert((boost::is_base_of<Transport::Engine, E>::value));
     if (!data) {
         return;
     }
@@ -174,10 +164,7 @@ TransportEngine< E >::TransportEngine(E * e)
           , e
         )
     {
-        BOOST_STATIC_ASSERT_MSG(
-                (boost::is_base_of<Transport::Engine, E>::value),
-                "engine type must be a descendant of Transport::Engine"
-                );
+        assert((boost::is_base_of<Transport::Engine, E>::value));
     }
 
 template< class E >

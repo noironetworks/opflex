@@ -16,8 +16,6 @@
 
 #include <cstdio>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/test/GbpOpflexServer.h"
 #include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/engine/internal/GbpOpflexServerImpl.h"
@@ -219,7 +217,7 @@ public:
 
         writer.String("replace");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, replace) {
+        for (const modb::reference_t& p : replace) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  true);
@@ -228,7 +226,7 @@ public:
 
         writer.String("merge_children");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, merge_children) {
+        for (const modb::reference_t& p : merge_children) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  false);
@@ -237,7 +235,7 @@ public:
 
         writer.String("delete");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, del) {
+        for (const modb::reference_t& p : del) {
             const modb::ClassInfo& ci =
                 server.getStore().getClassInfo(p.first);
             writer.StartObject();
@@ -305,7 +303,7 @@ public:
 
         writer.String("replace");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, replace) {
+        for (const modb::reference_t& p : replace) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  true);
@@ -314,7 +312,7 @@ public:
 
         writer.String("delete");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, del) {
+        for (const modb::reference_t& p : del) {
             const modb::ClassInfo& ci =
                 server.getStore().getClassInfo(p.first);
             writer.StartObject();

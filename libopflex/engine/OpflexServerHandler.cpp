@@ -17,7 +17,6 @@
 
 #include <sstream>
 
-#include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 
 #include "opflex/logging/internal/logging.hpp"
@@ -114,7 +113,7 @@ public:
         writer.EndArray();
         writer.String("peers");
         writer.StartArray();
-        BOOST_FOREACH(const GbpOpflexServer::peer_t& peer, peers) {
+        for (const GbpOpflexServer::peer_t& peer : peers) {
             writer.StartObject();
             writer.String("role");
             writer.StartArray();
@@ -169,7 +168,7 @@ public:
         writer.StartObject();
         writer.String("policy");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, mos) {
+        for (const modb::reference_t& p : mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -212,7 +211,7 @@ public:
         writer.StartObject();
         writer.String("endpoint");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, mos) {
+        for (const modb::reference_t& p : mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -435,7 +434,7 @@ void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
     }
     if (flakyMode) {
         bool shouldFlake = false;
-        BOOST_FOREACH(StoreClient::notif_t::value_type v, notifs) {
+        for (const StoreClient::notif_t::value_type& v : notifs) {
             modb::reference_t r(v.second, v.first);
             if (declarations.find(r) == declarations.end()) {
                 client.remove(v.second, v.first, false, NULL);

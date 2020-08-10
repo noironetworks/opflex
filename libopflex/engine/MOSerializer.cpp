@@ -17,8 +17,6 @@
 #include <cstdio>
 #include <sstream>
 
-#include <boost/utility.hpp>
-#include <boost/foreach.hpp>
 #include <boost/next_prior.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/filewritestream.h>
@@ -311,7 +309,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
                                        it->second.getClassId(),
                                        curChildren);
 
-                    BOOST_FOREACH(URI& child, curChildren) {
+                    for (URI& child : curChildren) {
                         if (children.find(child.toString()) == children.end()) {
                             // this child isn't in the list of children
                             // set in the update
@@ -357,7 +355,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
 static void getRoots(ObjectStore* store, Region::obj_set_t& roots) {
     std::unordered_set<string> owners;
     store->getOwners(owners);
-    BOOST_FOREACH(const string& owner, owners) {
+    for (const string& owner : owners) {
         try {
             Region* r = store->getRegion(owner);
             r->getRoots(roots);
@@ -373,7 +371,7 @@ void MOSerializer::dumpUnResolvedMODB(FILE* pfile) {
     rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(ws);
     writer.StartArray();
     StoreClient& client = store->getReadOnlyStoreClient();
-    BOOST_FOREACH (Region::obj_set_t::value_type r, roots) {
+    for (const Region::obj_set_t::value_type& r : roots) {
         try {
             serializeUnresolved(r.first, r.second, client, writer, true);
         } catch (const std::out_of_range& e) {
@@ -391,7 +389,7 @@ void MOSerializer::dumpMODB(FILE* pfile) {
     rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(ws);
     writer.StartArray();
     StoreClient& client = store->getReadOnlyStoreClient();
-    BOOST_FOREACH(Region::obj_set_t::value_type r, roots) {
+    for (const Region::obj_set_t::value_type& r : roots) {
         try {
             serialize(r.first, r.second, client, writer, true);
         } catch (const std::out_of_range& e) { }
@@ -681,7 +679,7 @@ void MOSerializer::displayObject(std::ostream& ostream,
             lineLength += 6;
         }
         ostream << pprefix << "{" << std::endl;
-        BOOST_FOREACH(dmap::value_type v, dispProps) {
+        for (dmap::value_type& v : dispProps) {
             ostream << pprefix << "  ";
             ostream.width(maxPropName);
             ostream << std::left << v.first << " : ";
@@ -738,7 +736,7 @@ void MOSerializer::displayMODB(std::ostream& ostream,
     Region::obj_set_t roots;
     getRoots(store, roots);
 
-    BOOST_FOREACH(Region::obj_set_t::value_type r, roots) {
+    for (const Region::obj_set_t::value_type& r : roots) {
         try {
             displayObject(ostream, r.first, r.second,
                           tree, true, includeProps,
@@ -752,7 +750,7 @@ void MOSerializer::displayUnresolved(std::ostream& ostream, bool tree,
     Region::obj_set_t roots;
     getRoots(store, roots);
 
-    BOOST_FOREACH (Region::obj_set_t::value_type r, roots) {
+    for (const Region::obj_set_t::value_type& r : roots) {
         try {
             displayUnresolvedObject(ostream, r.first, r.second, tree, utf8);
         } catch (const std::out_of_range& e) {
