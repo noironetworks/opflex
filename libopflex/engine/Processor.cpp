@@ -22,7 +22,6 @@
 #include <random>
 
 #include <boost/tuple/tuple.hpp>
-#include <boost/foreach.hpp>
 #include "opflex/engine/internal/OpflexPEHandler.h"
 #include "opflex/engine/internal/ProcessorMessage.h"
 #include "opflex/engine/Processor.h"
@@ -442,8 +441,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     // needed.
     std::unordered_set<reference_t> visited;
     if (oi) {
-        BOOST_FOREACH(const ClassInfo::property_map_t::value_type& p,
-                      ci.getProperties()) {
+        for (const ClassInfo::property_map_t::value_type& p : ci.getProperties()) {
             if (p.second.getType() == PropertyInfo::REFERENCE) {
                 if (p.second.getCardinality() == PropertyInfo::SCALAR) {
                     if (oi->isSet(p.first,
@@ -465,7 +463,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
         }
     }
     std::unordered_set<reference_t> existing(it->details->urirefs);
-    BOOST_FOREACH(const reference_t& up, existing) {
+    for (const reference_t& up : existing) {
         if (visited.find(up) == visited.end()) {
             removeRef(it, up);
         }
@@ -715,7 +713,7 @@ OpflexHandler* Processor::newHandler(OpflexConnection* conn) {
 
 void Processor::handleNewConnections() {
     const std::lock_guard<std::mutex> lock(item_mutex);
-    BOOST_FOREACH(const item& i, obj_state) {
+    for (const item& i : obj_state) {
         uint64_t newexp = 0;
         const ClassInfo& ci = store->getClassInfo(i.details->class_id);
         if (i.details->state == IN_SYNC) {
@@ -745,7 +743,7 @@ void Processor::responseReceived(uint64_t reqId) {
 
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
 
-    BOOST_FOREACH(const URI& uri, items) {
+    for (const URI& uri : items) {
         obj_state_by_uri::iterator uit = uri_index.find(uri);
         if (uit == uri_index.end()) continue;
 

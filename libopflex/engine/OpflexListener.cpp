@@ -17,8 +17,6 @@
 
 #include <stdexcept>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/engine/internal/OpflexListener.h"
 #include "opflex/engine/internal/OpflexPool.h"
 #include "opflex/logging/internal/logging.hpp"
@@ -79,7 +77,7 @@ void OpflexListener::on_cleanup_async(uv_async_t* handle) {
     {
         const std::lock_guard<std::recursive_mutex> lock(listener->conn_mutex);
         conn_set_t conns(listener->conns);
-        BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+        for (OpflexServerConnection* conn : conns) {
             conn->close();
         }
         if (!listener->conns.empty()) return;
@@ -93,7 +91,7 @@ void OpflexListener::on_cleanup_async(uv_async_t* handle) {
 void OpflexListener::on_writeq_async(uv_async_t* handle) {
     OpflexListener* listener = (OpflexListener*)handle->data;
     const std::lock_guard<std::recursive_mutex> lock(listener->conn_mutex);
-    BOOST_FOREACH(OpflexServerConnection* conn, listener->conns) {
+    for (OpflexServerConnection* conn : listener->conns) {
         conn->processWriteQueue();
     }
 }
@@ -176,7 +174,7 @@ void OpflexListener::sendToAll(OpflexMessage* message) {
     std::unique_ptr<OpflexMessage> messagep(message);
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     if (!active) return;
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (OpflexServerConnection* conn : conns) {
         // this is inefficient but we only use this for testing
         conn->sendMessage(message->clone());
     }
@@ -194,7 +192,7 @@ void OpflexListener::addPendingUpdate(opflex::modb::class_id_t class_id,
                                       opflex::gbp::PolicyUpdateOp op) {
     if (!active) return;
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (OpflexServerConnection* conn : conns) {
         if (conn->getUri(uri))
             conn->addPendingUpdate(class_id, uri, op);
         else
@@ -205,7 +203,7 @@ void OpflexListener::addPendingUpdate(opflex::modb::class_id_t class_id,
 void OpflexListener::sendUpdates() {
     if (!active) return;
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (OpflexServerConnection* conn : conns) {
         conn->sendUpdates();
     }
 }
@@ -213,14 +211,14 @@ void OpflexListener::sendUpdates() {
 void OpflexListener::sendTimeouts() {
     if (!active) return;
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (OpflexServerConnection* conn : conns) {
         conn->sendTimeouts();
     }
 }
 
 bool OpflexListener::applyConnPred(conn_pred_t pred, void* user) {
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
-    BOOST_FOREACH(OpflexServerConnection* conn, conns) {
+    for (OpflexServerConnection* conn : conns) {
         if (!pred(conn, user)) return false;
     }
     return true;

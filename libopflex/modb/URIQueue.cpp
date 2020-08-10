@@ -14,7 +14,6 @@
 #  include <config.h>
 #endif
 
-#include <boost/foreach.hpp>
 #include "opflex/modb/internal/URIQueue.h"
 #include "opflex/logging/internal/logging.hpp"
 
@@ -43,7 +42,7 @@ void URIQueue::proc_async_func(uv_async_t* handle) {
             toProcess.swap(queue->item_queue);
         }
 
-        BOOST_FOREACH (const URIQueue::item& d, toProcess) {
+        for (const URIQueue::item& d : toProcess) {
             if (!queue->proc_shouldRun) return;
             try {
                 queue->processor->processItem(d.uri, d.data);
