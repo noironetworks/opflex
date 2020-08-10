@@ -185,6 +185,8 @@ void OpflexListener::sendToAll(OpflexMessage* message) {
 void OpflexListener::sendToOne(OpflexServerConnection* conn, OpflexMessage* message) {
     std::unique_ptr<OpflexMessage> messagep(message);
     if (!active) return;
+
+    // conn_mutex is held at OpflexServerConnection::on_policy_update_async()
     conn->sendMessage(message->clone());
 }
 

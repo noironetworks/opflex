@@ -251,7 +251,8 @@ void OpflexServerConnection::on_prr_timer_async(uv_async_t* handle) {
     OpflexServerConnection* conn = (OpflexServerConnection *)handle->data;
     GbpOpflexServerImpl* server = dynamic_cast<GbpOpflexServerImpl*>
         (conn->listener->getHandlerFactory());
-    std::lock_guard<std::mutex> lock(conn->uri_map_mutex);
+    const std::lock_guard<std::recursive_mutex> guard(conn->listener->conn_mutex);
+    const std::lock_guard<std::mutex> lock(conn->uri_map_mutex);
 
     auto it = conn->uri_map.begin();
     while (it != conn->uri_map.end()) {
