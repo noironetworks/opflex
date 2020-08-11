@@ -24,7 +24,6 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <opflex/modb/URIBuilder.h>
 
-#include <opflexagent/FSFaultSource.h>
 #include <opflexagent/FSEndpointSource.h>
 #include <opflexagent/Agent.h>
 #include <opflexagent/EndpointManager.h>
