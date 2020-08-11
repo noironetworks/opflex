@@ -16,12 +16,12 @@ if ! [ "$(ls -A .)" ]; then
     mkdir -p ../cmake-tmp
     sh cmake-linux.sh -- --skip-license --prefix=../cmake-tmp
     rm cmake-linux.sh
-    cmake --version
+    ../cmake-tmp/bin/cmake --version
     git clone --recurse-submodules -b v1.31.0 https://github.com/grpc/grpc
     pushd grpc
     mkdir -p cmake/build
     pushd cmake/build
-    cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local ../..
+    ../cmake-tmp/bin/cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local ../..
     make -j4
     popd
     popd
