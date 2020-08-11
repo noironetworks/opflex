@@ -24,6 +24,9 @@ public:
 
     Fault() {} 
 
+  
+    Fault(const Fault&) {}
+
     /**
      * Set the UUID for this endpoint
      *

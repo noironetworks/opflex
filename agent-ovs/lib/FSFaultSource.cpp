@@ -66,11 +66,6 @@ void FSFaultSource::updated(const fs::path& filePath) {
 
         newfs.setFSUUID(properties.get<string>(FS_UUID));
 
-        optional<string> ep_uuid = properties.get_optional<string>(EP_UUID);
-        if (ep_uuid){
-           newfs.setEPUUID(ep_uuid.get());
-        }
-      
         string severity = properties.get<string>(FS_SEVERITY);
         if(severity == "critical"){
            newfs.setSeverity(SevEnum::CONST_CRITICAL);
@@ -92,42 +87,37 @@ void FSFaultSource::updated(const fs::path& filePath) {
        
         newfs.setDescription(properties.get<string>(FS_DESCRIPTION));
         newfs.setFaultcode(properties.get<uint64_t>(FS_CODE));
- 
-        optional<string> mac = properties.get_optional<string>(EP_MAC);
-        if (mac) {
-            newfs.setMAC(mac.get());
-        }
-
-        optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
-        optional<string> ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
-        if (eg_name && ps_name) {
+   
+        optional<string> ep_uuid = properties.get_optional<string>(EP_UUID); 
+        if (ep_uuid){
+           newfs.setEPUUID(ep_uuid.get());
+           optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
+           optional<string> ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
+           newfs.setMAC(properties.get<string>(EP_MAC));
+           if (eg_name && ps_name) {
            newfs.setEgURI(opflex::modb::URIBuilder()
                                 .addElement("PolicyUniverse")
                                 .addElement("PolicySpace")
                                 .addElement(ps_name.get())
                                 .addElement("GbpEpGroup")
                                 .addElement(eg_name.get()).build());
-        }
+           faultManager->createEpFault(agent,newfs);
+           }
+
+         } else {
+           faultManager->createPlatformFault(agent,newfs);
+          }
 
         std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
               delete_fault(filePath);
-              //On delete of the fault file, I will delete the entry in the map which contains pending faults
               faultManager->clearPendingFaults(it->second); 
            }
         }
  
         knownFaults[pathstr] = newfs.getFSUUID();
-     //if ep uuid is present, I will call createEpFault
-        if(ep_uuid) {
-           faultManager->createEpFault(agent,newfs);
-        }
-     // else create PlatformFault. Reason is that affected object is different in both case and for ep faults, I need to populate the map if its not created
-        else {
-           faultManager->createPlatformFault(agent,newfs);
-        }
         LOG(INFO) << "Updated Faults " << newfs << " from " << filePath;
                       
     } catch (const std::exception& ex) {

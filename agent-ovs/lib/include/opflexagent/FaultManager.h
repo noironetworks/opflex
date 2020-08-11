@@ -45,20 +45,16 @@ public:
     /* Interface: EndpointListener */
    virtual void endpointUpdated(const std::string& uuid);
 
-  Agent& agent;
-  opflex::ofcore::OFFramework& framework;
+   Agent& agent;
+   opflex::ofcore::OFFramework& framework;
 
-  std::map<std::string, std::map<std::string, std::string>> pendingFaults;
 
-  void addPendingFaults(const Fault& fs);
-
-  void clearPendingFaults(const std::string& faultUUID);  
-
-  void updateEpFault(Agent& agent, const std::string& uuid);
-
+   void createPendingFault(Agent& agent, const Fault& fs);
+   std::map<std::string, Fault> pendingFaults;
+   void clearPendingFaults(const std::string& faultUUID);
 
 private:
-  std::mutex lock_modb_mutex;
+   std::mutex lock_modb_mutex;
 };
 
 } /* namespace opflexagent */
