@@ -33,6 +33,7 @@ popd
 
 git apply .travis/agent_test_log.patch
 pushd agent-ovs
+export LD_LIBRARY_PATH=/usr/local/lib
 ./autogen.sh &> /dev/null
 ./configure --enable-asan --enable-grpc &> /dev/null
 make -j2
