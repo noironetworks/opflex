@@ -39,7 +39,6 @@ public:
   
    void getFaultUUID (string& uuid, const string& pathstr);
 
-   std::set<std::string> faultSet; 
    Agent& agent;
    FaultManager* faultManager;
    std::map<std::string, std::set<std::string>> pendingFaults;
