@@ -27,7 +27,7 @@ if ! [ "$(ls -A .)" ]; then
 else
     echo "using cached grpc"
 fi
-pushd grpc
+pushd grpc/cmake/build
 sudo make install
 popd
 popd
