@@ -131,6 +131,5 @@ void FaultManager::removeFault(const std::string& uuid){
     mutator_policyelem.commit();
 }
 
-}
 
 } /* namespace opflexagent */
