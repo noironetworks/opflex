@@ -67,7 +67,7 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
                   .addElement("EprL2Universe")
                   .addElement("EprL2Ep")
                   .addElement(bd_uri)
-                  .addElement(MAC(fs.getMAC())).build();
+                  .addElement(fs.getMAC().get()).build();
 
        auto l2Ep = L2Ep::resolve(agent.getFramework(), l2epr);
        if (l2Ep) {
@@ -98,7 +98,7 @@ void FaultManager::createPendingFault(Agent& agent, const Fault& fs) {
                   .addElement("EprL2Universe")
                   .addElement("EprL2Ep")
                   .addElement(bd_uri)
-                  .addElement(MAC(fs.getMAC())).build();
+                  .addElement(fs.getMAC().get()).build();
 
        auto l2Ep = L2Ep::resolve(agent.getFramework(), l2epr);
        if (l2Ep) {

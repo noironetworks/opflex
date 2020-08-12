@@ -93,7 +93,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
            newfs.setEPUUID(ep_uuid.get());
            optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
            optional<string> ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
-           newfs.setMAC(properties.get<string>(EP_MAC));
+           newfs.setMAC(MAC(properties.get<string>(EP_MAC)));
            if (eg_name && ps_name) {
            newfs.setEgURI(opflex::modb::URIBuilder()
                                 .addElement("PolicyUniverse")

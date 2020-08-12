@@ -24,8 +24,7 @@ public:
 
     Fault() {} 
 
-  
-    Fault(const Fault&) {}
+    Fault& operator = (const Fault &t) { return *this; }
 
     /**
      * Set the UUID for this endpoint
@@ -122,7 +121,7 @@ public:
      *
      * @return the MAC address
      */
-    const std::string& getMAC() const {
+    const boost::optional<opflex::modb::MAC>&  getMAC() const {
         return mac;
     }
 
@@ -131,7 +130,7 @@ public:
      *
      * @param mac the MAC address
      */
-    void setMAC(const std::string& mac) {
+    void setMAC(const opflex::modb::MAC& mac) {
         this->mac = mac;
     }
 
@@ -163,7 +162,7 @@ public:
       uint64_t faultcode;
       uint8_t severity;
       std::string description;
-      std::string  mac;	
+      boost::optional<opflex::modb::MAC>  mac;	
       boost::optional<opflex::modb::URI> egURI;
 
 };
