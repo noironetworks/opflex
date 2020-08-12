@@ -131,5 +131,12 @@ void FaultManager::removeFault(const std::string& uuid){
     mutator_policyelem.commit();
 }
 
+void FaultManager::getPendingFault(const std::string& faultUUID, bool& ret_val) {
+     std::unique_lock<std::mutex> lock(lock_modb_mutex);
+     if (pendingFaults.find(faultUUID) != pendingFaults.end()) {
+         ret_val = true;
+     }
+     else ret_val = false;
+}
 
 } /* namespace opflexagent */

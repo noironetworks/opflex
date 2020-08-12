@@ -10,7 +10,6 @@
 #include <opflexagent/Fault.h> 
 #include <opflexagent/EndpointListener.h>
 #include <mutex>
-//#include <opflexagent/Agent.h>
 
 namespace opflexagent {
 
@@ -52,7 +51,7 @@ public:
    void createPendingFault(Agent& agent, const Fault& fs);
    std::map<std::string, Fault> pendingFaults;
    void clearPendingFaults(const std::string& faultUUID);
-
+   void getPendingFault(const std::string& faultUUID, bool& ret_val);
 private:
    std::mutex lock_modb_mutex;
 };
