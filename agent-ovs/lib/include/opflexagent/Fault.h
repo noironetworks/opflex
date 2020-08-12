@@ -22,9 +22,10 @@ namespace opflexagent {
 class Fault {
 public:
 
-    Fault() {} 
+    Fault() { } 
 
-    Fault& operator = (const Fault &t) { return *this; }
+
+    ~Fault() { } 
 
     /**
      * Set the UUID for this endpoint
