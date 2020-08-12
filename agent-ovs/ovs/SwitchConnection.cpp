@@ -246,8 +246,8 @@ SwitchConnection::Monitor() {
             if (!isDisconnecting) {
                 int err = doConnectOF();
                 /**
-                 * Treating ENOENT error specifically as this error can
-                 * persist without resolution
+                 *Treating ENOENT error specifically as this error can
+                 *persist without resolution
                  */
                 if (err == ENOENT) {
                     if(++counterEnoent == maxSocketFileMissingFailure) {

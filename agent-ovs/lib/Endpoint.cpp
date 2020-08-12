@@ -65,9 +65,9 @@ std::ostream & operator<<(std::ostream &os, const Endpoint& ep) {
         os << "]";
     }
 
-    const boost::optional<opflex::modb::URI>& epQosPol = ep.getEpQosPol();
-    if (epQosPol){
-	os << ", EpQosPol= "<< epQosPol.get().toString();
+    const boost::optional<opflex::modb::URI>& qosPolicy = ep.getQosPolicy();
+    if (qosPolicy){
+	os << ", QosPolicy= "<< qosPolicy.get().toString();
     }
 
     const boost::optional<opflex::modb::MAC>& m = ep.getMAC();

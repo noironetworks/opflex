@@ -76,11 +76,6 @@ namespace opflexagent {
         LOG(DEBUG) << "interface: "<< interface;
         QosManager &qosMgr = agent.getQosManager();
 
-        optional<shared_ptr<QosConfigState>> qosConfigState =
-            qosMgr.getEgressQosConfigState(interface);
-        if (!qosConfigState) {
-            return;
-        }
         if (!connect()) {
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
 
@@ -92,6 +87,14 @@ namespace opflexagent {
             LOG(DEBUG) << "conn timer " << connection_timer << ", timerStarted: " << timerStarted;
             return;
         }
+
+        deleteEgressQos(interface);
+        optional<shared_ptr<QosConfigState>> qosConfigState =
+            qosMgr.getEgressQosConfigState(interface);
+        if (!qosConfigState) {
+            return;
+        }
+
         uint64_t rate = qosConfigState.get()->getRate();
         uint64_t burst = qosConfigState.get()->getBurst();
 
@@ -104,11 +107,6 @@ namespace opflexagent {
         LOG(DEBUG) << "interface: "<< interface;
         QosManager &qosMgr = agent.getQosManager();
 
-        optional<shared_ptr<QosConfigState>> qosConfigState =
-            qosMgr.getIngressQosConfigState(interface);
-        if (!qosConfigState) {
-            return;
-        }
         if (!connect()) {
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
 
@@ -120,6 +118,14 @@ namespace opflexagent {
             LOG(DEBUG) << "conn timer " << connection_timer << ", timerStarted: " << timerStarted;
             return;
         }
+
+        deleteIngressQos(interface);
+        optional<shared_ptr<QosConfigState>> qosConfigState =
+            qosMgr.getIngressQosConfigState(interface);
+        if (!qosConfigState) {
+            return;
+        }
+
         uint64_t rate = qosConfigState.get()->getRate();
         uint64_t burst = qosConfigState.get()->getBurst();
 
@@ -150,7 +156,7 @@ namespace opflexagent {
             connection_timer.reset();
             return;
         }
-        LOG(DEBUG) << "timer span del cb";
+        LOG(DEBUG) << "timer qos del cb";
         qosDeleted(interface);
     }
 
@@ -177,7 +183,7 @@ namespace opflexagent {
     void QosRenderer::deleteEgressQos(const string& interface){
         updateEgressQosParams(interface, 0, 0);
     }
-    
+
     void QosRenderer::updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst){
         vector<OvsdbValue> values;
         OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::QUEUE);
@@ -233,7 +239,18 @@ namespace opflexagent {
         sendAsyncTransactRequests(requests);
     }
 
-    void QosRenderer::deleteIngressQos(const string& interface){
+    void QosRenderer::deleteIngressQos(const string& interface) {
+        OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::PORT);
+        vector<OvsdbValue> values;
+        OvsdbValues emptySet("set", values);
+        msg1.rowData.emplace("qos", emptySet);
+
+        set<tuple<string, OvsdbFunction, string>> conditionSet;
+        conditionSet.emplace("name", OvsdbFunction::EQ, interface);
+        msg1.conditions = conditionSet;
+
+        const list<OvsdbTransactMessage> requests = {msg1};
+        sendAsyncTransactRequests(requests);
     }
 
 }

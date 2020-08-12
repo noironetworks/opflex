@@ -71,13 +71,11 @@ BOOST_FIXTURE_TEST_CASE( verify_artifacts, QosFixture ) {
     WAIT_FOR(checkQosRate(agent.getQosManager().getQosConfigState(qosCfg->getURI()), qosCfg), 500);
     WAIT_FOR(checkQosBurst(agent.getQosManager().getQosConfigState(qosCfg->getURI()), qosCfg), 500);
 
-    // remove qosCfg
     const URI& qosUri = qosCfg->getURI();
     Mutator mutator(framework, "policyreg");
     qosCfg->remove();
     mutator.commit();
 
-//  WAIT_FOR(!span::Session::resolve(framework, sessionUri), 500);
     WAIT_FOR(!qos::BandwidthLimit::resolve(framework, qosUri), 500);
 }
 

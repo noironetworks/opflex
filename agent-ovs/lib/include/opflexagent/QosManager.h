@@ -2,7 +2,7 @@
 /*
  * Include file for QosManager
  *
- * Copyright (c) 2019 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2020 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -245,19 +245,22 @@ private:
     list<QosListener*> qosListeners;
     mutex listener_mutex;
     TaskQueue taskQueue;
-    static recursive_mutex qos_config_mutex; 
-    static recursive_mutex interface_mutex;
+
+    /**
+     * Mutex used to prevent simultaneous read/write in qos config cache data structures.
+     */
+    static recursive_mutex qos_mutex; 
   
     std::atomic<bool> stopping;
    
-    unordered_map<string, URI> InterfaceToReq;
-    unordered_map<URI, unordered_set<string>> ReqToInterface;
+    unordered_map<string, URI> interfaceToReq;
+    unordered_map<URI, unordered_set<string>> reqToInterface;
 
-    unordered_map<URI, pair<boost::optional<URI>, boost::optional<URI> > > ReqToPol;
-    unordered_map<URI, unordered_set<string>> EgressPolInterface;
-    unordered_map<URI, unordered_set<string>> IngressPolInterface;
+    unordered_map<URI, pair<boost::optional<URI>, boost::optional<URI> > > reqToPol;
+    unordered_map<URI, unordered_set<string>> egressPolInterface;
+    unordered_map<URI, unordered_set<string>> ingressPolInterface;
     
-    unordered_map<URI, shared_ptr<QosConfigState>> BwToConfig;
+    unordered_map<URI, shared_ptr<QosConfigState>> bwToConfig;
 
     unordered_set<URI> notifyUpdate;
     unordered_set<URI> notifyDelete;

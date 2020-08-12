@@ -218,7 +218,7 @@ void FSEndpointSource::updated(const fs::path& filePath) {
                 optional<string> qosPolicyName =
                     v.second.get_optional<string>(SEC_GROUP_NAME);
                 if (qosPolicyName && qosPolicySpace) {
-                    newep.setEpQosPol(opflex::modb::URIBuilder()
+                    newep.setQosPolicy(opflex::modb::URIBuilder()
                             .addElement("PolicyUniverse")
                             .addElement("PolicySpace")
                             .addElement(qosPolicySpace.get())
