@@ -115,9 +115,9 @@ void FaultManager::createPendingFault(Agent& agent, const Fault& fs) {
 
 void FaultManager::clearPendingFaults(const std::string& faultUUID) {
      std::unique_lock<std::mutex> lock(lock_modb_mutex);
-     if (pendingFaults.find(faultUUID) != pendingFaults.end()) {
-       pendingFaults.erase(faultUUID);
-     }
+     if (pendingFaults.find(faultUUID) == pendingFaults.end()) return;
+     else
+       pendingFaults.erase(faultUUID);     
 }
 
 void FaultManager::removeFault(const std::string& uuid){
