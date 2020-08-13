@@ -91,18 +91,16 @@ void FSFaultSource::updated(const fs::path& filePath) {
         optional<string> ep_uuid = properties.get_optional<string>(EP_UUID); 
         if (ep_uuid){
            newfs.setEPUUID(ep_uuid.get());
-           optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
-           optional<string> ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
+           string eg_name = properties.get<string>(EP_GROUP_NAME);
+           string ps_name = properties.get<string>(POLICY_SPACE_NAME);
            newfs.setMAC(MAC(properties.get<string>(EP_MAC)));
-           if (eg_name && ps_name) {
            newfs.setEgURI(opflex::modb::URIBuilder()
                                 .addElement("PolicyUniverse")
                                 .addElement("PolicySpace")
-                                .addElement(ps_name.get())
+                                .addElement(ps_name)
                                 .addElement("GbpEpGroup")
-                                .addElement(eg_name.get()).build());
+                                .addElement(eg_name).build());
            faultManager->createEpFault(agent,newfs);
-           }
 
          } else {
            faultManager->createPlatformFault(agent,newfs);
