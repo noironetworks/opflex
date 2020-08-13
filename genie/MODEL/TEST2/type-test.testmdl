@@ -31,29 +31,6 @@ module[testo]
 
         const[crazy; value=777]
 
-        validate[crazy]
-        {
-            range[default;
-                  min="222";
-                  max="33";
-                  size="12"]
-
-            content[default;
-                    regex=jhjdshjasd&63636
-                    ]
-        }
-
-        validate[supah]
-        {
-            range[default;
-                  min="222";
-                  max="33";
-                  size="12"]
-
-            content[default;
-                    regex=jhjdshjasd&63636
-                    ]
-        }
     }
 
     type[derint; super=scalar/int]
@@ -74,38 +51,6 @@ module[testo]
                 target=someconst
                 ]
 
-        clobber-validate[default]
-        {
-
-            range[blah;
-                  min="222";
-                  max="33";
-                  size="12"]
-
-            content[blah;
-                    regex=jhjdshjasd&63636
-                    ]
-        }
-
-        validate[supah]
-        {
-
-            range[blah;
-                  min="222";
-                  max="33";
-                  size="12"]
-
-            range[blahblah;
-                  min="333";
-                  max="44";
-                  size="32"]
-
-            content[blah;
-                    regex=poshel&63636
-                    ]
-
-
-        }
     }
 }
 
