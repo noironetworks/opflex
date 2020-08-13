@@ -35,7 +35,6 @@ popd
 popd
 
 pushd agent-ovs
-echo $LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/local/lib
 ./autogen.sh &> /dev/null
 ./configure --enable-coverage --enable-gprof --enable-grpc &> /dev/null
