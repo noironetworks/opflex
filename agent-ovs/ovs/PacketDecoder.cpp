@@ -462,6 +462,10 @@ int PacketDecoder::configure() {
         sptrGeneveOptTableIdLayerVariant(new GeneveOptTableIdLayerVariant());
     sptrGeneveOptTableIdLayerVariant->configure();
     registerLayer(sptrGeneveOptTableIdLayerVariant);
+    shared_ptr<PacketDecoderLayerVariant>
+        sptrGeneveOptCaptureReasonLayerVariant(new GeneveOptCaptureReasonLayerVariant());
+    sptrGeneveOptCaptureReasonLayerVariant->configure();
+    registerLayer(sptrGeneveOptCaptureReasonLayerVariant);
     /*Set the base layer id*/
     baseLayerId = sptrGeneve->getId();
     return 0;

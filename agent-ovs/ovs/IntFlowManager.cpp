@@ -4887,6 +4887,7 @@ void IntFlowManager::createStaticFlows() {
         }
         FlowBuilder().tlv(0xffff, 11, 16, 11).buildTlv(tlvFlows);
         FlowBuilder().tlv(0xffff, 12, 4, 12).buildTlv(tlvFlows);
+        FlowBuilder().tlv(0xffff, 13, 4, 13).buildTlv(tlvFlows);
         switchManager.writeTlv("DropLogStatic", tlvFlows);
     }
     {

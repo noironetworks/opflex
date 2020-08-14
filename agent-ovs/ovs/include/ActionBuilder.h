@@ -43,6 +43,14 @@ public:
     ActionBuilder(FlowBuilder& fb);
     ActionBuilder();
     ~ActionBuilder();
+    /**
+     * Reason for capturing this packet to control plane
+     */
+    enum CaptureReason {
+        NO_MATCH=0,
+        POLICY_DENY=1,
+        POLICY_PERMIT=2
+    };
 
     /**
      * Construct and install the action structure to 'dstEntry'
@@ -393,8 +401,9 @@ public:
      * Fill tunnel metadata with current openflow state
      *
      * @param table_id the table in which the drop/log occured.
+     * @param reason reason for the capture - miss,deny,permit.
      */
-    ActionBuilder& dropLog(uint32_t table_id);
+    ActionBuilder& dropLog(uint32_t table_id, CaptureReason reason = CaptureReason::NO_MATCH);
 
     /**
      * Load the given four bytes into the given tunnel metadata register

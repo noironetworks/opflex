@@ -89,6 +89,18 @@ public:
 };
 
 /**
+ * Variant implementing CaptureReason
+ */
+class GeneveOptCaptureReasonLayerVariant: public PacketDecoderLayerVariant {
+public:
+    GeneveOptCaptureReasonLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "CaptureReason", 5, 2){};
+    virtual ~GeneveOptCaptureReasonLayerVariant() {};
+    virtual int configure();
+    virtual void getFormatString(boost::format &fmtStr);
+    virtual void reParse(ParseInfo &p);
+};
+
+/**
  * Layer implementing ARP
  */
 class ARPLayer: public PacketDecoderLayer {
