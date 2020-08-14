@@ -185,12 +185,9 @@ public class Node
             this.item = (null == lRes || null == lRes.getSecond()) ?
                             getAncestorItem() : lRes.getSecond();
 
-            if (null != this.item)
+            if (null != this.item && hasComments())
             {
-                if (hasComments())
-                {
-                    this.item.addParsingDataNode(this);
-                }
+                this.item.addParsingDataNode(this);
             }
 
             switch ((null == lRes || null == lRes.getFirst()) ?
@@ -278,12 +275,12 @@ public class Node
 
     /**
      * INTERNAL: DO NOT CALL EXPLICITLY!
-     * node vlaue mutator. sets this node's value
+     * node value mutator. sets this node's value
      * @param aIn value passed in
      */
     public void setValue(String aIn)
     {
-        addNVP(Strings.VALUE, value = aIn);
+        addNVP(Strings.VALUE, aIn);
     }
 
     /**
@@ -462,7 +459,6 @@ public class Node
 
     private final String name;
     private String qual = null;
-    private String value = null;
     private Map<String,String> nvps = null;
     private java.util.LinkedList<String> comments = null;
     private java.util.TreeMap<String, java.util.LinkedList<Node>> children = null;

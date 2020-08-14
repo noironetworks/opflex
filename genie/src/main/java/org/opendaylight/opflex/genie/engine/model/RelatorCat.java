@@ -152,13 +152,10 @@ public class RelatorCat extends Cat
             Cat aInToCat,
             String aInToGName)
     {
-        //System.out.println("\n\n### Relator.add(" + aInFromCat + "," + aInFromGName + ", " + aInToCat + ", "  + aInToGName + ")");
         Relator lDirectRel = doAdd(this, aInFromCat, aInFromGName,
                                    RelatorCat.getCreateToDirect(
                                            this.getName(), this.getCardinality(), true),
                                    aInToCat, aInToGName);
-
-        //System.out.println("### Relator.add() : added direct: " + lDirectRel);
 
         RelatorCat lInvFromRelatorCat = RelatorCat.getCreateFromInverse(
                 this.getName(),
@@ -170,12 +167,7 @@ public class RelatorCat extends Cat
                 Cardinality.MULTI, // YES, INVERSE IS ALWAYS MULTI this.getCardinality(),
                 true);
 
-
-        Relator lInvRelator = doAdd(
-                lInvFromRelatorCat, aInToCat, aInToGName,
-                lInvToRelatorCat, aInFromCat, aInFromGName);
-
-        //System.out.println("### Relator.add() : added inverse: " + lInvRelator);
+        doAdd(lInvFromRelatorCat, aInToCat, aInToGName, lInvToRelatorCat, aInFromCat, aInFromGName);
 
         return lDirectRel;
     }
@@ -188,7 +180,7 @@ public class RelatorCat extends Cat
             Cat aInToCat,
             String aInToGName)
     {
-        Relator lFromRelator = aInFromRelatorCat.getRelator(aInFromGName);//aInFromRelatorCat.getNodes().getItem(aInFromGName);
+        Relator lFromRelator = aInFromRelatorCat.getRelator(aInFromGName);
 
         if (null == lFromRelator)
         {
@@ -243,10 +235,6 @@ public class RelatorCat extends Cat
         {
             Severity.DEATH.report(aIn.toString(), "register", "duplicate", "name already defined; must be unique");
         }
-        if (null != idToCatTable.put(aIn.getId(), aIn))
-        {
-            Severity.DEATH.report(aIn.toString(), "register", "duplicate", "id already defined; must be unique");
-        }
     }
 
     private RelatorCat(
@@ -266,5 +254,4 @@ public class RelatorCat extends Cat
     private final Type type;
     private final Direction direction;
     private static final Map<String, RelatorCat> nameToCatTable = new TreeMap<>();
-    private static final Map<Number, RelatorCat> idToCatTable = new TreeMap<>();
 }
