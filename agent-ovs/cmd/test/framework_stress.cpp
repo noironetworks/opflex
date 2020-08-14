@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <time.h>
 
 #include <boost/program_options.hpp>
 
@@ -190,7 +191,10 @@ int main(int argc, char** argv) {
             int c = 0;
             while (gotconfig < 2 && c < 500) {
                 c += 1;
-                usleep(1000);
+                struct timespec ts;
+                ts.tv_sec = 0;
+                ts.tv_nsec = 1000000L;
+                nanosleep(&ts, NULL);
             }
             framework.prettyPrintMODB(opflexagent::Logger(INFO, __FILE__,
                                                           __LINE__,

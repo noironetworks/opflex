@@ -9,6 +9,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <time.h>
 #include <opflex/modb/ObjectListener.h>
 #include <modelgbp/ascii/StringMatchTypeEnumT.hpp>
 #include <modelgbp/gbp/RoutingModeEnumT.hpp>
@@ -1096,7 +1097,10 @@ BOOST_FIXTURE_TEST_CASE( remoteEndpoint, BaseFixture ) {
     WAIT_FOR(listener.numUpdates() == 3, 500);
 
     // Wait for egDomain and remoteEp updates to settle down
-    usleep(100000);
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 100000000L;
+    nanosleep(&ts, NULL);
     listener.clear();
     // update epg for ep
     rep1->addInvRemoteInventoryEpToGroupRSrc()
