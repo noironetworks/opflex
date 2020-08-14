@@ -28,6 +28,10 @@ namespace opflexagent {
 
     recursive_mutex QosManager::qos_mutex;
 
+    static const std::string EGRESS("Egress");
+    static const std::string INGRESS("Ingress");
+    static const std::string BOTH("Both");
+
     QosManager::QosManager(Agent& agent_,opflex::ofcore::OFFramework &framework_,
                              boost::asio::io_service& agent_io_) :
             qosUniverseListener(*this), agent(agent_), framework(framework_),
@@ -105,9 +109,9 @@ namespace opflexagent {
             if (itr != qosmanager.ingressPolInterface.end()){
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
-                    string taskId = updatedUri.toString()+ interface + string("Ingress");
+                    string taskId = updatedUri.toString()+ interface + INGRESS;
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
-                            qosmanager.notifyListeners(interface, "Ingress");
+                            qosmanager.notifyListeners(interface, INGRESS);
                             });
                 }
             }
@@ -117,9 +121,9 @@ namespace opflexagent {
             if (itr != qosmanager.egressPolInterface.end()){
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
-                    string taskId = updatedUri.toString() + interface + string("Egress");
+                    string taskId = updatedUri.toString() + interface + EGRESS;
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
-                            qosmanager.notifyListeners(interface, "Egress");
+                            qosmanager.notifyListeners(interface, EGRESS);
                             });
                 }
             }
@@ -128,9 +132,9 @@ namespace opflexagent {
             if (itr != qosmanager.reqToInterface.end()){
                 unordered_set<string> &interfaces = itr->second;
                 for( const string& interface : interfaces){
-                    string taskId = updatedUri.toString() + interface + string("Both");
+                    string taskId = updatedUri.toString() + interface + BOTH;
                     qosmanager.taskQueue.dispatch(taskId, [=]() {
-                            qosmanager.notifyListeners(interface, "Both");
+                            qosmanager.notifyListeners(interface, BOTH);
                             });
                 }
             }
@@ -157,11 +161,11 @@ namespace opflexagent {
 
         if (epQosPol && ofPortName){
             const string &interface = ofPortName.get();
-            const URI newReq = epQosPol.get();
+            const URI &newReq = epQosPol.get();
             updateInterfacePolicyMap(interface, newReq);
 
             LOG(DEBUG) << "Interface:  " << ofPortName.get() << ", RequirementUri: " << epQosPol.get().toString();
-            notifyListeners(ofPortName.get(), "Both");
+            notifyListeners(ofPortName.get(), BOTH);
         }
     }
 
@@ -179,14 +183,14 @@ namespace opflexagent {
     void QosManager::notifyListeners(const string& interface, const string& direction) {
         lock_guard<mutex> guard1(listener_mutex);
 
-        if (direction == "Egress" || direction == "Both"){
+        if (direction == EGRESS || direction == BOTH){
             for (QosListener *listener : qosListeners) {
                 listener->egressQosUpdated(interface);
             }
 
         }
 
-        if (direction == "Ingress" || direction == "Both"){
+        if (direction == INGRESS || direction == BOTH){
             for (QosListener *listener : qosListeners) {
                 listener->ingressQosUpdated(interface);
             }
@@ -216,9 +220,8 @@ namespace opflexagent {
         }
 
     optional<shared_ptr<QosConfigState>>
-        QosManager::getEgressQosConfigState(const string& interface) const {
+        QosManager::getQosConfig(const string& interface, bool egress) const {
             lock_guard<recursive_mutex> guard1(qos_mutex);
-
             auto itr = interfaceToReq.find(interface);
             if (itr == interfaceToReq.end()) {
                 return boost::none;
@@ -230,8 +233,10 @@ namespace opflexagent {
                 }
 
                 pair<boost::optional<URI>, boost::optional<URI> > pols = polIter->second;
-                if (pols.first) {
+                if (egress && pols.first) {
                     return getQosConfigState(pols.first.get());
+                } else if (!egress && pols.second){
+                    return getQosConfigState(pols.second.get());
                 } else {
                     return boost::none;
                 }
@@ -239,26 +244,13 @@ namespace opflexagent {
         }
 
     optional<shared_ptr<QosConfigState>>
+        QosManager::getEgressQosConfigState(const string& interface) const {
+            return getQosConfig(interface, true);
+        }
+
+    optional<shared_ptr<QosConfigState>>
         QosManager::getIngressQosConfigState(const string& interface) const {
-            lock_guard<recursive_mutex> guard1(qos_mutex);
-
-            auto itr = interfaceToReq.find(interface);
-            if (itr == interfaceToReq.end()) {
-                return boost::none;
-            } else {
-                const URI& reqUri = itr->second;
-                auto polIter = reqToPol.find(reqUri);
-                if (polIter == reqToPol.end()) {
-                    return boost::none;
-                }
-
-                pair<boost::optional<URI>, boost::optional<URI> > pols = polIter->second;
-                if (pols.second) {
-                    return getQosConfigState(pols.second.get());
-                } else {
-                    return boost::none;
-                }
-            }
+            return getQosConfig(interface, false);
         }
 
 
@@ -287,34 +279,34 @@ namespace opflexagent {
         lock_guard<recursive_mutex> guard(opflexagent::QosManager::qos_mutex);
         LOG(INFO) << "Requirement URI: " << qosconfig->getURI().toString();
 
-        optional<shared_ptr<modelgbp::qos::RequirementToEgressRSrc> > RsEgress =
+        optional<shared_ptr<modelgbp::qos::RequirementToEgressRSrc> > rsEgress =
             qosconfig->resolveQosRequirementToEgressRSrc();
-        optional<URI> EgressUri;
+        optional<URI> egressUri;
         const URI ReqUri = qosconfig->getURI();
 
         clearEntry(ReqUri);
 
-        if (RsEgress){
-            EgressUri = RsEgress.get()->getTargetURI();
-            if (EgressUri){
-                LOG(INFO) << "Egress URI: " << EgressUri.get().toString();
-                updateEntry(ReqUri, EgressUri.get(), egressPolInterface);
+        if (rsEgress){
+            egressUri = rsEgress.get()->getTargetURI();
+            if (egressUri){
+                LOG(INFO) << "Egress URI: " << egressUri.get().toString();
+                updateEntry(ReqUri, egressUri.get(), egressPolInterface);
             }
         }
 
-        optional<shared_ptr<modelgbp::qos::RequirementToIngressRSrc> > RsIngress =
+        optional<shared_ptr<modelgbp::qos::RequirementToIngressRSrc> > rsIngress =
             qosconfig->resolveQosRequirementToIngressRSrc();
-        optional<URI> IngressUri;
+        optional<URI> ingressUri;
 
-        if (RsIngress){
-            IngressUri = RsIngress.get()->getTargetURI();
-            if (IngressUri){
-                LOG(INFO) << "Ingress URI: " << IngressUri.get().toString();
-                updateEntry(ReqUri, IngressUri.get(), ingressPolInterface);
+        if (rsIngress){
+            ingressUri = rsIngress.get()->getTargetURI();
+            if (ingressUri){
+                LOG(INFO) << "Ingress URI: " << ingressUri.get().toString();
+                updateEntry(ReqUri, ingressUri.get(), ingressPolInterface);
             }
         }
 
-        reqToPol.insert(make_pair(qosconfig->getURI(), make_pair(EgressUri,IngressUri)));
+        reqToPol.insert(make_pair(qosconfig->getURI(), make_pair(egressUri,ingressUri)));
     }
 
     void QosManager::QosUniverseListener::processQosConfig(const shared_ptr<modelgbp::qos::Requirement>& qosconfig) {
@@ -328,11 +320,7 @@ namespace opflexagent {
     void QosManager::clearEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap){
 	    auto itr = policyMap.find(uri);
 	    if (itr != policyMap.end()){
-		    unordered_set<string> &interfaces = itr->second;
-		    auto itr = interfaces.find(interface);
-		    if (itr != interfaces.end()){
-			    interfaces.erase(interface);
-		    }
+		    itr->second.erase(interface);
 	    }
     }
 
@@ -372,10 +360,8 @@ namespace opflexagent {
                 for(const auto& intf : reqInterfaces){
                     updateInterfaces.erase(intf);
                 }
-
             }
         }
-
     }
 
     void QosManager::updateEntry(const URI& reqUri, const URI& dirUri, unordered_map<URI, unordered_set<string>>& policyMap){

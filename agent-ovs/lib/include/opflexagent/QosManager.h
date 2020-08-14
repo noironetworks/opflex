@@ -80,6 +80,14 @@ public:
     boost::optional<shared_ptr<QosConfigState>> getQosConfigState(const URI& uri) const;
 
     /**
+     * get shared ptr to egress or ingress qosConfigState
+     * @param[in] interface Name of the interface
+     * @param[in] egress flag to determine direction
+     * @return shared ptr to QosConfigState.
+     */
+    boost::optional<shared_ptr<QosConfigState>> getQosConfig(const string& interface, bool egress) const;
+
+    /**
      * get shared ptr to ingress config for an interface.
      * @param[in] interface name of the interface.
      * @return shared ptr to QosConfigState or none.
