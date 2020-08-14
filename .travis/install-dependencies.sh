@@ -9,13 +9,14 @@ sudo dpkg -i libnoiro-openvswitch_2.12.0-1_amd64.deb
 sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
 sudo dpkg -i prometheus-cpp_0.9.0_amd64.deb
 
+wget -q -O cmake-linux.sh https://github.com/Kitware/CMake/releases/download/v3.17.0/cmake-3.17.0-Linux-x86_64.sh
+mkdir -p ../cmake-tmp
+sh cmake-linux.sh -- --skip-license --prefix=../cmake-tmp
+rm cmake-linux.sh
+
 mkdir -p ../grpc
 pushd ../grpc
 if ! [ "$(ls -A .)" ]; then
-    wget -q -O cmake-linux.sh https://github.com/Kitware/CMake/releases/download/v3.17.0/cmake-3.17.0-Linux-x86_64.sh
-    mkdir -p ../cmake-tmp
-    sh cmake-linux.sh -- --skip-license --prefix=../cmake-tmp
-    rm cmake-linux.sh
     git clone --recurse-submodules -b v1.31.0 https://github.com/grpc/grpc
     pushd grpc
     mkdir -p cmake/build
