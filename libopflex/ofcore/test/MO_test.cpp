@@ -49,9 +49,9 @@ BOOST_FIXTURE_TEST_CASE( model, FrameworkFixture ) {
     mutator1.commit();
 
     Mutator mutator2(framework, "owner2");
-    std::shared_ptr<testmodel::class3> c3 = c2->addClass3(17, "test");
+    c2->addClass3(17, "test");
 
-    std::shared_ptr<testmodel::class4> c4 = root->addClass4("class4name");
+    root->addClass4("class4name");
     std::shared_ptr<testmodel::class5> c5 = root->addClass5("class5name");
     c5->addClass4Ref("class4name");
     mutator2.commit();
