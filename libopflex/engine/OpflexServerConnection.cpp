@@ -234,6 +234,9 @@ void OpflexServerConnection::on_policy_update_async(uv_async_t* handle) {
     OpflexServerConnection* conn = (OpflexServerConnection *)handle->data;
     GbpOpflexServerImpl* server = dynamic_cast<GbpOpflexServerImpl*>
         (conn->listener->getHandlerFactory());
+    if (!server)
+        return;
+
     const std::lock_guard<std::recursive_mutex> guard(conn->listener->conn_mutex);
     const std::lock_guard<std::mutex> lock(conn->ref_vec_mutex);
 
@@ -251,6 +254,9 @@ void OpflexServerConnection::on_prr_timer_async(uv_async_t* handle) {
     OpflexServerConnection* conn = (OpflexServerConnection *)handle->data;
     GbpOpflexServerImpl* server = dynamic_cast<GbpOpflexServerImpl*>
         (conn->listener->getHandlerFactory());
+    if (!server)
+        return;
+
     const std::lock_guard<std::recursive_mutex> guard(conn->listener->conn_mutex);
     const std::lock_guard<std::mutex> lock(conn->uri_map_mutex);
 
