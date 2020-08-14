@@ -17,18 +17,9 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/asio.hpp>
 
 #include <string>
-#include <iostream>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <random>
-#include <atomic>
-
-#include <csignal>
 
 using std::string;
 using boost::uuids::to_string;
@@ -46,7 +37,7 @@ basic_random_generator<std::mt19937> uuidGen(urng);
 
 class TestAgent {
 public:
-    TestAgent(std::string domain, std::string identity) :
+    TestAgent(const std::string& domain, const std::string& identity) :
         framework(new opflex::ofcore::OFFramework()),
         agent(new opflexagent::Agent(*framework,
                                      std::make_tuple("debug",false,""))) {
@@ -128,13 +119,12 @@ public:
         fi->setSeverity(modelgbp::fault::SeverityEnumT::CONST_CRITICAL);
         fi->setFaultCode(opflexagent::FaultCodes::SAMPLE_FAULT);
         auto l2Ep = *(l2Eps.begin());
-        fi->setAffectedObject(l2Ep.get()->getURI().toString());
+        fi->setAffectedObject(l2Ep->getURI().toString());
         mutator.commit();
     }
 
     void updateContractCounters(opflexagent::Agent& a, const uint64_t genId) {
         auto& polMgr = a.getPolicyManager();
-        auto pu = modelgbp::policy::Universe::resolve(a.getFramework());
         auto su =
             modelgbp::observer::PolicyStatUniverse::resolve(a.getFramework());
 
@@ -184,7 +174,7 @@ public:
     }
 
     void start() {
-        if (timer_interval <= 0) return;
+        if (timer_interval == 0) return;
 
         LOG(INFO) << "Starting stats simulator";
 

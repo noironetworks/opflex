@@ -278,9 +278,8 @@ void OpflexPEHandler::handleSendIdentityRes(uint64_t reqId,
             if (p != string::npos) {
                 string host = ci.substr(0, p);
                 string portstr = ci.substr(p + 1);
-                int port;
                 try {
-                    port = boost::lexical_cast<int>( portstr );
+                    int port = boost::lexical_cast<int>( portstr );
                     if (pool.getPeer(host, port) == NULL)
                         pool.addPeer(host, port, false);
 
