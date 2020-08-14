@@ -770,7 +770,8 @@ bool operator==(const PolicyRule& lhs, const PolicyRule& rhs) {
             (lhs.getAllow() == rhs.getAllow()) &&
             (lhs.getRemoteSubnets() == rhs.getRemoteSubnets()) &&
             (*lhs.getL24Classifier() == *rhs.getL24Classifier()) &&
-            (lhs.getRedirectDestGrpURI() == rhs.getRedirectDestGrpURI()));
+            (lhs.getRedirectDestGrpURI() == rhs.getRedirectDestGrpURI()) &&
+            (lhs.getLog() == rhs.getLog()));
 }
 
 bool operator!=(const PolicyRule& lhs, const PolicyRule& rhs) {
@@ -785,6 +786,7 @@ std::ostream & operator<<(std::ostream &os, const PolicyRule& rule) {
        << rule.getL24Classifier()->getURI()
        << ",allow=" << rule.getAllow()
        << ",redirect=" << rule.getRedirect()
+       << ",Log=" << rule.getLog()
        << ",prio=" << rule.getPriority()
        << ",direction=";
 
@@ -1056,7 +1058,7 @@ template <typename Parent, typename Subject, typename Rule>
 static bool updatePolicyRules(OFFramework& framework,
                               const URI& parentURI, bool& notFound,
                               PolicyManager::rule_list_t& oldRules,
-                              PolicyManager::uri_set_t &oldRedirGrps,
+                              PolicyManager::uri_set_t &oldRedirGrps, bool log,
                               PolicyManager::uri_set_t &newRedirGrps)
 {
     using modelgbp::gbpe::L24Classifier;
@@ -1114,6 +1116,7 @@ static bool updatePolicyRules(OFFramework& framework,
             vector<shared_ptr<RuleToActionRSrc> > actRel;
             rule->resolveGbpRuleToActionRSrc(actRel);
             bool ruleAllow = true;
+            bool ruleLog = false;
             bool ruleRedirect = false;
             uint32_t minOrder = UINT32_MAX;
             optional<shared_ptr<RedirectDestGroup>> redirDstGrp;
@@ -1154,6 +1157,11 @@ static bool updatePolicyRules(OFFramework& framework,
                     RedirectDestGroup::resolve(framework, destGrpUri.get());
                     newRedirGrps.insert(destGrpUri.get());
                 }
+                optional<shared_ptr<modelgbp::gbp::LogAction> > log = 
+                    modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
+                if (log) {
+                   ruleLog = log.get()->getLog(100) != 0 ;
+                }
             }
 
             uint16_t clsPrio = 0;
@@ -1163,7 +1171,7 @@ static bool updatePolicyRules(OFFramework& framework,
                                                            rulePrio - clsPrio,
                                                            c, ruleAllow,
                                                            remoteSubnets,
-                                                           ruleRedirect,
+                                                           ruleRedirect, ruleLog,
                                                            destGrpUri));
                 if (clsPrio < 127)
                     clsPrio += 1;
@@ -1199,20 +1207,22 @@ static bool updatePolicyRules(OFFramework& framework,
 bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
     using namespace modelgbp::gbp;
     uri_set_t oldRedirGrps, newRedirGrps;
+    bool log = false;
     return updatePolicyRules<SecGroup, SecGroupSubject,
                              SecGroupRule>(framework, secGrpURI,
                                            notFound, secGrpMap[secGrpURI],
-                                           oldRedirGrps, newRedirGrps);
+                                           oldRedirGrps, log, newRedirGrps);
 }
 
 bool PolicyManager::updateContractRules(const URI& contrURI, bool& notFound) {
     using namespace modelgbp::gbp;
     uri_set_t oldRedirGrps, newRedirGrps;
     ContractState& cs = contractMap[contrURI];
+    bool log = false;
     bool updated = updatePolicyRules<Contract, Subject,
                                      Rule>(framework, contrURI,
                                            notFound, cs.rules,
-                                           oldRedirGrps,
+                                           oldRedirGrps, log,
                                            newRedirGrps);
     for (const URI& u : oldRedirGrps) {
         if(redirGrpMap.find(u) != redirGrpMap.end()) {

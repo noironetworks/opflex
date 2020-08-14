@@ -18,6 +18,7 @@
 #include <modelgbp/arp/OpcodeEnumT.hpp>
 
 #include <boost/asio/ip/address.hpp>
+#include <opflexagent/logging.h>
 
 #include <vector>
 #include <functional>
@@ -123,7 +124,7 @@ static flow_func make_flow_functor(const network::subnet_t& ss,
     return std::bind(applyRemoteSub, _1, func, addr, ss.second, _2);
 }
 
-void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act,
+void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                               uint8_t nextTable, uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
@@ -144,7 +145,7 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act,
     entries.push_back(f.build());
 }
 
-void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
+void add_classifier_entries(L24Classifier& clsfr, ClassAction act,  bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
                             uint8_t nextTable, uint16_t priority,
@@ -261,6 +262,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
 
                         switch (act) {
                         case flowutils::CA_DENY:
+ 			      if(log) LOG(INFO) << "The traffic is denied";
                         case flowutils::CA_ALLOW:
                         case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_FWD:
@@ -304,6 +306,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
                             f.action().go(nextTable);
                             break;
                         case flowutils::CA_DENY:
+			    if (log) LOG (INFO) << "The traffic is denied";
                         default:
                             // nothing
                             break;
