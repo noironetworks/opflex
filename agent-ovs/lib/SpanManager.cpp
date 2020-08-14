@@ -357,7 +357,6 @@ namespace opflexagent {
                 if (pSmem) {
                     optional<const unsigned char> dir = pSmem.get()->getDir();
                     if (dir) {
-                        URI uri = itr->second->getURI();
                         addEndpoint(itr->second, l2Ep, dir.get());
                         l2EpUri.erase(itr);
                     }

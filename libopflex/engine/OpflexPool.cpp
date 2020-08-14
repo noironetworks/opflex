@@ -72,7 +72,7 @@ void OpflexPool::clearPendingItems (OpflexClientConnection* conn)
 void OpflexPool::removePendingItem(OpflexClientConnection* conn, const std::string& uri) {
     const std::string& hostName = conn->getHostname();
     std::unique_lock<std::mutex> lock(modify_uri_mutex);
-    std::set<std::string>::iterator rem = pendingResolution[hostName].find(uri);
+    auto rem = pendingResolution[hostName].find(uri);
     if (rem != pendingResolution[hostName].end()) {
         pendingResolution[hostName].erase(rem);
         conn->getOpflexStats()->decrPolUnresolvedCount();
@@ -207,9 +207,9 @@ void OpflexPool::updatePeerStatus(const string& hostname, int port,
                                   PeerStatusListener::PeerStatus status) {
     PeerStatusListener::Health newHealth = PeerStatusListener::DOWN;
     bool notifyHealth = false;
-    bool hasReadyConnection = false;
-    bool hasDegradedConnection = false;
     {
+        bool hasReadyConnection = false;
+        bool hasDegradedConnection = false;
         const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
         for (conn_map_t::value_type& v : connections) {
             if (v.second.conn->isReady())
