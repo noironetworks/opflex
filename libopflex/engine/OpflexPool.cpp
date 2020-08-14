@@ -448,6 +448,9 @@ void OpflexPool::validatePeerSet(OpflexClientConnection * conn, const peer_name_
     for (const conn_map_t::value_type& cv : conns) {
         OpflexClientConnection* c = cv.second.conn;
         OpflexClientConnection* srcPeer = getPeer(conn->getHostname(), conn->getPort());
+        if (!srcPeer)
+            continue;
+
         peer_name_t peer_name = make_pair(c->getHostname(), c->getPort());
         if ((peers.find(peer_name) == peers.end()) &&
             (configured_peers.find(peer_name) == configured_peers.end()) &&

@@ -248,6 +248,8 @@ void OpflexServerHandler::handleSendIdentityReq(const rapidjson::Value& id,
 void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
                                                  const Value& payload) {
     OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
 
     LOG(DEBUG) << "Got policy_resolve req from " << conn->getRemotePeer();
 
@@ -332,6 +334,8 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
 void OpflexServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
                                                    const rapidjson::Value& payload) {
     OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
 
     LOG(DEBUG) << "Got policy_unresolve req from " << conn->getRemotePeer();
     Value::ConstValueIterator it;
