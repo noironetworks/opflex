@@ -110,7 +110,7 @@ enum ClassAction {
  * @param entries List to append entry to
  */
 void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
-                            ClassAction act,  bool log,
+                            ClassAction act,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
                             uint8_t nextTable, uint16_t priority,
@@ -133,7 +133,7 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
  * @param entries List to append entry to
  */
 void add_l2classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
-                              ClassAction act,  bool log,
+                              ClassAction act,
                               uint8_t nextTable, uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
