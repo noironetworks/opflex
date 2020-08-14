@@ -5658,9 +5658,12 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
         const shared_ptr<L24Classifier>& cls = pc->getL24Classifier();
         const opflex::modb::URI& ruleURI = cls.get()->getURI();
         uint64_t cookie = getId(L24Classifier::CLASS_ID, ruleURI);
+        bool log = false;
         flowutils::ClassAction act = flowutils::CA_DENY;
         if (pc->getAllow())
             act = flowutils::CA_ALLOW;
+        if (pc->getLog())
+            log = pc->getLog();
 
         if (dir == DirectionEnumT::CONST_BIDIRECTIONAL &&
             !allowBidirectional) {
@@ -5668,7 +5671,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
         }
         if (dir == DirectionEnumT::CONST_IN ||
             dir == DirectionEnumT::CONST_BIDIRECTIONAL) {
-            flowutils::add_classifier_entries(*cls, act,
+            flowutils::add_classifier_entries(*cls, act, log,
                                               boost::none,
                                               boost::none,
                                               IntFlowManager::STATS_TABLE_ID,
@@ -5680,7 +5683,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
         }
         if (dir == DirectionEnumT::CONST_OUT ||
             dir == DirectionEnumT::CONST_BIDIRECTIONAL) {
-            flowutils::add_classifier_entries(*cls, act,
+            flowutils::add_classifier_entries(*cls, act, log,
                                               boost::none,
                                               boost::none,
                                               IntFlowManager::STATS_TABLE_ID,
