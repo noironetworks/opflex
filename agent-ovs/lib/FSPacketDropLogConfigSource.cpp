@@ -80,7 +80,7 @@ static inline bool validateIpAddress(const boost::optional<string> ipAddress,
 }
 
 static inline bool validateMacAddress(const boost::optional<string> macAddress,
-        optional<opflex::modb::MAC> &_targetMacAddress, string inputField) {
+        optional<opflex::modb::MAC> &_targetMacAddress, const string &inputField) {
     opflex::modb::MAC targetMacAddress;
     if(!macAddress) {
         return true;

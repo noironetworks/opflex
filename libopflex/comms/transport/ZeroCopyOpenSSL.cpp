@@ -136,7 +136,6 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToEncrypt(
 
     ssize_t totalWrite = 0;
     ssize_t nwrite = 0;
-    ssize_t tryWrite;
 
     std::vector<iovec> iovIn =
         ::yajr::comms::internal::get_iovec(
@@ -147,7 +146,7 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToEncrypt(
     std::vector<iovec>::iterator iovInIt;
     for (iovInIt = iovIn.begin(); iovInIt != iovIn.end(); ++iovInIt) {
 
-        tryWrite = iovInIt->iov_len;
+        ssize_t tryWrite = iovInIt->iov_len;
 
         assert(tryWrite);
 

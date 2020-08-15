@@ -196,7 +196,7 @@ void IdGenerator::cleanup() {
                     std::set<id_range>::iterator prev;
                     if (ub != idmap.freeIds.end()) {
                         prev = ub;
-                        prev--;
+                        --prev;
                     } else {
                         prev = idmap.freeIds.begin();
                     }
@@ -387,7 +387,7 @@ void IdGenerator::collectGarbage(const std::string& ns,
     IdMap& map = nitr->second;
 
     for (IdMap::Str2IdMap::iterator uit = map.ids.begin();
-         uit != map.ids.end(); uit++) {
+         uit != map.ids.end(); ++uit) {
         if (cb(ns, uit->first))
             continue;
 
