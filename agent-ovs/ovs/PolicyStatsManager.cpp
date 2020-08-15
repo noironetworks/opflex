@@ -328,12 +328,11 @@ void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,
 
     // look in existing oldFlowCounterMap
     auto it = counterState.oldFlowCounterMap.find(flowEntryKey);
-    uint64_t packet_count, byte_count;
     if (it != counterState.oldFlowCounterMap.end()) {
         FlowCounters_t& oldFlowCounters = it->second;
         /* compute diffs and mark the entry as visited */
-        packet_count = oldFlowCounters.last_packet_count.get();
-        byte_count = oldFlowCounters.last_byte_count.get();
+        uint64_t packet_count = oldFlowCounters.last_packet_count.get();
+        uint64_t byte_count = oldFlowCounters.last_byte_count.get();
 
         oldFlowCounters.visited = true;
         if ((flow_packet_count - packet_count) > 0) {
@@ -408,6 +407,7 @@ void PolicyStatsManager::handleMessage(int msgType,
         return;
     }
     if (msgType == OFPTYPE_FLOW_STATS_REPLY) {
+        bool ret = false;
         std::lock_guard<std::mutex> lock(pstatMtx);
         ofp_header *msgHdr = (ofp_header *)msg->data;
         ovs_be32 recvXid = msgHdr->xid;

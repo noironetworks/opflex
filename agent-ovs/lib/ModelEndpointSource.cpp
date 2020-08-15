@@ -81,10 +81,9 @@ void ModelEndpointSource::objectUpdated (opflex::modb::class_id_t class_id,
         return;
     }
 
-    LocalInventoryEp& ep = *(optep.get());
-    Endpoint newep;
-
     try {
+        LocalInventoryEp& ep = *(optep.get());
+        Endpoint newep;
         newep.setUUID(ep.getUuid().get());
         if (ep.isEgMappingAliasSet())
             newep.setEgMappingAlias(ep.getEgMappingAlias().get());
