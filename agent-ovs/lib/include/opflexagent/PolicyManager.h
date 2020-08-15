@@ -52,6 +52,7 @@ public:
      * otherwise
      * @param remoteSubnets_ remote subnets to which this rule applies
      * @param redirect_ points to a redirect action
+     * @param log_ if the LogAction is set by the leaf; false
      * @param rDG redirect URI
      */
     PolicyRule(const uint8_t dir,
@@ -60,10 +61,11 @@ public:
                bool allow_,
                const network::subnets_t& remoteSubnets_,
                bool redirect_,
+               bool log_,
                const boost::optional<opflex::modb::URI>& rDG
                ) :
         direction(dir), prio(prio_), l24Classifier(c), allow(allow_),
-        redirect(redirect_), remoteSubnets(remoteSubnets_),
+        redirect(redirect_), remoteSubnets(remoteSubnets_), log(log_),
         redirDstGrp(rDG) {
     }
 
@@ -125,13 +127,23 @@ public:
         return redirect;
     }
 
+   /**
+     * Get the value of log if it has been set
+     * @return true if log is set, false otherwise
+     */
+    bool getLog() const {
+        return log;
+    }
+
+
 private:
     uint8_t direction;
     uint16_t prio;
     std::shared_ptr<modelgbp::gbpe::L24Classifier> l24Classifier;
     bool allow;
     bool redirect;
-    network::subnets_t remoteSubnets;
+    network::subnets_t remoteSubnets; 
+    bool log;
     boost::optional<opflex::modb::URI> redirDstGrp;
     friend bool operator==(const PolicyRule& lhs, const PolicyRule& rhs);
 };
