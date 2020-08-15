@@ -257,12 +257,11 @@ void CommunicationPeer::readBuffer(char * buffer, size_t nread, bool canWriteJus
 }
 
 void CommunicationPeer::readBufferZ(char const * buffer, size_t nread) {
-    size_t chunk_size;
     if (!connected_) {
         LOG(WARNING) << "skipping read as not connected";
     }
     while ((--nread > 0) && connected_) {
-        chunk_size = readChunk(buffer);
+        size_t chunk_size = readChunk(buffer);
         nread -= chunk_size++;
 
         if (!nread) {

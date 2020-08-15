@@ -38,9 +38,9 @@ std::ostream & operator<<(std::ostream &os, const LearningBridgeIface& i) {
     if (iface)
         os << ",iface=" << iface.get();
 
-    bool first = true;
     if (i.getTrunkVlans().size() > 0) {
         os << ",trunk_vlans=[";
+        bool first = true;
         for (auto& range : i.getTrunkVlans()) {
             if (first) first = false;
             else os << ",";
