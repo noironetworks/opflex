@@ -307,7 +307,7 @@ updateServiceStatsObjects(ServiceCounterMap_t *newCountersMap) {
     // walk through newCountersMap to update new set of MOs
     for (ServiceCounterMap_t:: iterator itr = newCountersMap->begin();
          itr != newCountersMap->end();
-         itr++) {
+         ++itr) {
         
         const ServiceFlowMatchKey_t& flowKey = itr->first;
         FlowStats_t&  newCounters = itr->second;

@@ -33,7 +33,7 @@ ObjectStore::~ObjectStore() {
 
     region_owner_map_t::const_iterator it;
     for (it = region_owner_map.begin();
-         it != region_owner_map.end(); it++) {
+         it != region_owner_map.end(); ++it) {
         delete it->second;
     }
 }
