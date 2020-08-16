@@ -161,20 +161,8 @@ void setLoggingLevel(const std::string& newLevelstr) {
     std::transform(levelstr.begin(), levelstr.end(),
                    levelstr.begin(), ::tolower);
 
-    if (levelstr == "debug" || levelstr == "debug0") {
-        level = OFLogHandler::DEBUG0;
-        logLevel = DEBUG;
-    } else if (levelstr == "debug1") {
-        level = OFLogHandler::DEBUG1;
-        logLevel = DEBUG;
-    } else if (levelstr == "debug2") {
-        level = OFLogHandler::DEBUG2;
-        logLevel = DEBUG;
-    } else if (levelstr == "debug3") {
-        level = OFLogHandler::DEBUG3;
-        logLevel = DEBUG;
-    } else if (levelstr == "debug4") {
-        level = OFLogHandler::DEBUG4;
+    if (levelstr == "debug") {
+        level = OFLogHandler::DEBUG;
         logLevel = DEBUG;
     } else if (levelstr == "trace") {
         level = OFLogHandler::TRACE;

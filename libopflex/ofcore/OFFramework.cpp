@@ -17,7 +17,6 @@
 #include <cstdio>
 
 #include <boost/assign.hpp>
-#include <boost/foreach.hpp>
 
 #include "opflex/ofcore/OFFramework.h"
 #include "opflex/engine/Processor.h"

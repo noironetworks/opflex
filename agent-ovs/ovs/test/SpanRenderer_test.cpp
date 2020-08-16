@@ -114,19 +114,37 @@ public:
         conn->getOvsdbState().fullUpdate(OvsdbTable::MIRROR, mirrorDetails);
 
         OvsdbTableDetails interfaceDetails;
-        OvsdbRowDetails interfaceDetail;
-        string interfaceUuid = "9b7295f4-07a8-41ac-a681-e0ee82123456";
-        interfaceDetail["uuid"] = OvsdbValue(interfaceUuid);
-        interfaceDetail["name"] = OvsdbValue(ERSPAN_PORT_PREFIX);
-        map<string, string> options;
-        const string version = "2";
-        options["erspan_ver"] = version;
-        const string remoteIp = "99.99.99.99";
-        options["remote_ip"] = remoteIp;
-        const string key = "1";
-        options["key"] = key;
-        interfaceDetail["options"] = OvsdbValue(Dtype::MAP, "map", options);
-        interfaceDetails[interfaceUuid] = interfaceDetail;
+        {
+            OvsdbRowDetails interfaceDetail;
+            string interfaceUuid = "9b7295f4-07a8-41ac-a681-e0ee82123456";
+            interfaceDetail["uuid"] = OvsdbValue(interfaceUuid);
+            interfaceDetail["name"] = OvsdbValue(ERSPAN_PORT_PREFIX);
+            map<string, string> options;
+            const string version = "2";
+            options["erspan_ver"] = version;
+            const string remoteIp = "99.99.99.99";
+            options["remote_ip"] = remoteIp;
+            const string key = "1";
+            options["key"] = key;
+            interfaceDetail["options"] = OvsdbValue(Dtype::MAP, "map", options);
+            interfaceDetails[interfaceUuid] = interfaceDetail;
+        }
+
+        {
+            OvsdbRowDetails interfaceDetail;
+            string interfaceUuid = "aaaaaaaa-07a8-41ac-a681-e0ee82123456";
+            interfaceDetail["uuid"] = OvsdbValue(interfaceUuid);
+            interfaceDetail["name"] = OvsdbValue(ERSPAN_PORT_PREFIX + "test");
+            map<string, string> options;
+            const string version = "2";
+            options["erspan_ver"] = version;
+            const string remoteIp = "99.99.99.12";
+            options["remote_ip"] = remoteIp;
+            const string key = "5";
+            options["key"] = key;
+            interfaceDetail["options"] = OvsdbValue(Dtype::MAP, "map", options);
+            interfaceDetails[interfaceUuid] = interfaceDetail;
+        }
         conn->getOvsdbState().fullUpdate(OvsdbTable::INTERFACE, interfaceDetails);
     }
 
@@ -163,6 +181,16 @@ static bool verifyCreateDestroy(const shared_ptr<SpanRenderer>& spr, unique_ptr<
     sess->setSessionId(8);
     sess->setDestPort(ERSPAN_PORT_PREFIX);
     spr->createMirrorAndOutputPort(sess, src_ports, dst_ports);
+
+    // hits case where mirror isn't already present
+    string sessionName2("not-present");
+    URI sessUri2("/SpanUniverse/SpanSession/" + sessionName2);
+    sess = std::make_shared<SessionState>(sessUri2, sessionName2);
+    sess->setDestination(boost::asio::ip::address::from_string("10.20.120.240"));
+    sess->setVersion(2);
+    sess->setSessionId(8);
+    sess->setDestPort(ERSPAN_PORT_PREFIX);
+    spr->createMirrorAndOutputPort(sess, src_ports, dst_ports);
     return true;
 }
 
@@ -188,6 +216,22 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
     auto bd = space->addGbpBridgeDomain("bd");
     auto session = su->addSpanSession("ugh-vspan");
     session->setState(platform::AdminStateEnumT::CONST_ON);
+    auto srcGrp1 = session->addSpanSrcGrp("SrcGrp1");
+    auto srcMem1 = srcGrp1->addSpanSrcMember("SrcMem1");
+
+    shared_ptr<span::DstGrp> dstGrp1 = session->addSpanDstGrp("DstGrp1");
+    shared_ptr<span::DstMember> dstMem1 = dstGrp1->addSpanDstMember("DstMem1");
+    auto dstSumm1 = dstMem1->addSpanDstSummary();
+    auto lEp1 = session->addSpanLocalEp("localEp1");
+    lEp1->setName("p1-tap");
+    srcMem1->addSpanMemberToRefRSrc()->setTargetLocalEp(lEp1->getURI());
+    srcMem1->setDir('0');
+    srcGrp1->addSpanSrcMember(srcMem1->getName().get());
+
+    dstGrp1->addSpanDstMember(dstMem1->getName().get());
+    dstSumm1->setDest("192.168.20.100");
+    dstSumm1->setVersion(1);
+
     mutator.commit();
 
     auto epr = epr::L2Universe::resolve(framework).get();
@@ -233,6 +277,11 @@ BOOST_FIXTURE_TEST_CASE( verify_get_erspan_params, SpanRendererFixture ) {
 
     SourceEndpoint srcEp3("last-name", "veth3", DirectionEnumT::CONST_OUT);
     sessionState->addSrcEndpoint(srcEp3);
+
+    sessionState->setDestPort(ERSPAN_PORT_PREFIX + "abc");
+    sessionState->setDestination(boost::asio::ip::address::from_string("1.2.3.4"));
+    sessionState->setVersion(2);
+    sessionState->setAdminState(platform::AdminStateEnumT::CONST_ON);
 
     spr->updateMirrorConfig(sessionState);
 }

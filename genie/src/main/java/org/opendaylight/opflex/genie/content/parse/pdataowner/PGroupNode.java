@@ -1,10 +1,8 @@
 package org.opendaylight.opflex.genie.content.parse.pdataowner;
 
-import org.opendaylight.opflex.genie.content.model.mownership.DefinitionScope;
 import org.opendaylight.opflex.genie.engine.model.Item;
 import org.opendaylight.opflex.genie.engine.model.Pair;
 import org.opendaylight.opflex.genie.engine.parse.model.ParseNode;
-import org.opendaylight.opflex.genie.engine.parse.model.ProcessorNode;
 import org.opendaylight.opflex.genie.engine.parse.modlan.Node;
 import org.opendaylight.opflex.genie.engine.parse.modlan.ParseDirective;
 
@@ -22,11 +20,4 @@ public class PGroupNode extends ParseNode
     {
         return null;
     }
-
-    protected void addParent(ProcessorNode aInParent)
-    {
-        super.addParent(aInParent);
-        DefinitionScope scope = DefinitionScope.get(aInParent.getName());
-    }
-
 }

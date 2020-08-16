@@ -9,8 +9,6 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-#include <iostream>
-
 #include <opflexagent/AgentLogHandler.h>
 #include <opflexagent/logging.h>
 
@@ -43,11 +41,7 @@ void AgentLogHandler::handleMessage(const std::string& file,
     case OFLogHandler::TRACE:
         agentLevel = opflexagent::TRACE;
         break;
-    case OFLogHandler::DEBUG4:
-    case OFLogHandler::DEBUG3:
-    case OFLogHandler::DEBUG2:
-    case OFLogHandler::DEBUG1:
-    case OFLogHandler::DEBUG0:
+    case OFLogHandler::DEBUG:
         agentLevel = opflexagent::DEBUG;
         break;
     case OFLogHandler::INFO:

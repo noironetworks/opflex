@@ -17,8 +17,6 @@
 
 #include <utility>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/modb/mo-internal/ObjectInstance.h"
 
 namespace opflex {
@@ -507,14 +505,12 @@ bool operator!=(const ObjectInstance::Value& lhs,
 }
 
 bool operator==(const ObjectInstance& lhs, const ObjectInstance& rhs) {
-    BOOST_FOREACH(const ObjectInstance::prop_map_t::value_type& v,
-                  lhs.prop_map) {
+    for (const ObjectInstance::prop_map_t::value_type& v : lhs.prop_map) {
         auto it = rhs.prop_map.find(v.first);
         if (it == rhs.prop_map.end()) return false;
         if (v.second != it->second) return false;
     }
-    BOOST_FOREACH(ObjectInstance::prop_map_t::value_type v,
-                  rhs.prop_map) {
+    for (const ObjectInstance::prop_map_t::value_type& v : rhs.prop_map) {
         auto it = lhs.prop_map.find(v.first);
         if (it == rhs.prop_map.end()) return false;
     }

@@ -17,7 +17,6 @@
 
 #include <sstream>
 
-#include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 
 #include "opflex/logging/internal/logging.hpp"
@@ -114,7 +113,7 @@ public:
         writer.EndArray();
         writer.String("peers");
         writer.StartArray();
-        BOOST_FOREACH(const GbpOpflexServer::peer_t& peer, peers) {
+        for (const GbpOpflexServer::peer_t& peer : peers) {
             writer.StartObject();
             writer.String("role");
             writer.StartArray();
@@ -169,7 +168,7 @@ public:
         writer.StartObject();
         writer.String("policy");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, mos) {
+        for (const modb::reference_t& p : mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -212,7 +211,7 @@ public:
         writer.StartObject();
         writer.String("endpoint");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, mos) {
+        for (const modb::reference_t& p : mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -249,6 +248,8 @@ void OpflexServerHandler::handleSendIdentityReq(const rapidjson::Value& id,
 void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
                                                  const Value& payload) {
     OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
 
     LOG(DEBUG) << "Got policy_resolve req from " << conn->getRemotePeer();
 
@@ -333,6 +334,8 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
 void OpflexServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
                                                    const rapidjson::Value& payload) {
     OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
 
     LOG(DEBUG) << "Got policy_unresolve req from " << conn->getRemotePeer();
     Value::ConstValueIterator it;
@@ -435,7 +438,7 @@ void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
     }
     if (flakyMode) {
         bool shouldFlake = false;
-        BOOST_FOREACH(StoreClient::notif_t::value_type v, notifs) {
+        for (const StoreClient::notif_t::value_type& v : notifs) {
             modb::reference_t r(v.second, v.first);
             if (declarations.find(r) == declarations.end()) {
                 client.remove(v.second, v.first, false, NULL);

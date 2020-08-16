@@ -328,13 +328,11 @@ void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,
 
     // look in existing oldFlowCounterMap
     auto it = counterState.oldFlowCounterMap.find(flowEntryKey);
-    uint64_t packet_count = 0;
-    uint64_t byte_count = 0;
     if (it != counterState.oldFlowCounterMap.end()) {
         FlowCounters_t& oldFlowCounters = it->second;
         /* compute diffs and mark the entry as visited */
-        packet_count = oldFlowCounters.last_packet_count.get();
-        byte_count = oldFlowCounters.last_byte_count.get();
+        uint64_t packet_count = oldFlowCounters.last_packet_count.get();
+        uint64_t byte_count = oldFlowCounters.last_byte_count.get();
 
         oldFlowCounters.visited = true;
         if ((flow_packet_count - packet_count) > 0) {
@@ -404,7 +402,6 @@ void PolicyStatsManager::handleMessage(int msgType,
                                        ofpbuf *msg,
                                        const table_map_t& tableMap,
                                        struct ofputil_flow_removed *fentry) {
-    bool ret = false;
     if (msg == (ofpbuf *)NULL) {
         LOG(ERROR) << "Unexpected null message";
         return;
@@ -419,7 +416,7 @@ void PolicyStatsManager::handleMessage(int msgType,
                 return;
             }
         }
-        ret = handleFlowStats(msg, tableMap);
+        bool ret = handleFlowStats(msg, tableMap);
         {
             std::lock_guard<mutex> lock(txnMtx);
             if(ret) {
@@ -591,7 +588,7 @@ generatePolicyStatsObjects(PolicyCounterMap_t *newCountersMap1,
 
     for (PolicyCounterMap_t:: iterator itr = newCountersMap1->begin();
          itr != newCountersMap1->end();
-         itr++) {
+         ++itr) {
         const PolicyFlowMatchKey_t& flowKey = itr->first;
         FlowStats_t&  newCounters1 = itr->second;
         FlowStats_t  newCounters2;

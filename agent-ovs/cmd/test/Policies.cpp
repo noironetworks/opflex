@@ -82,7 +82,6 @@ void Policies::writeTestPolicy(opflex::ofcore::OFFramework& framework) {
     shared_ptr<Subnets> subnetsbd;
     shared_ptr<Subnet> subnetsbd1;
     shared_ptr<Subnets> subnetsrd;
-    shared_ptr<Subnet> subnetsrd1;
     shared_ptr<Subnets> subnets_ext;
     shared_ptr<Subnets> subnetsfd4;
     shared_ptr<Subnet> subnetsfd4_1;
@@ -218,7 +217,6 @@ void Policies::writeTestPolicy(opflex::ofcore::OFFramework& framework) {
     rd->addGbpRoutingDomainToIntSubnetsRSrc(subnetsbd1->getURI().toString());
 
     subnetsrd = space->addGbpSubnets("subnetsrd");
-    subnetsrd1 = subnetsrd->addGbpSubnet("subnetsrd1");
     rd->addGbpForwardingBehavioralGroupToSubnetsRSrc()
         ->setTargetSubnets(subnetsrd->getURI());
     rd->addGbpRoutingDomainToIntSubnetsRSrc(subnetsrd->getURI().toString());
@@ -638,7 +636,6 @@ void Policies::writeVrfUnEnforcedPolicy (
     shared_ptr<Subnets> subnetsbdUnEnf;
     shared_ptr<Subnet> subnetsbd1UnEnf;
     shared_ptr<Subnets> subnetsrdUnEnf;
-    shared_ptr<Subnet> subnetsrd1UnEnf;
     fd1UnEnf = space.get()->addGbpFloodDomain("fd1UnEnf");
     fd2UnEnf = space.get()->addGbpFloodDomain("fd2UnEnf");
     bdUnEnf = space.get()->addGbpBridgeDomain("bdUnEnf");
@@ -687,7 +684,6 @@ void Policies::writeVrfUnEnforcedPolicy (
                                     subnetsbd1UnEnf->getURI().toString());
 
     subnetsrdUnEnf = space.get()->addGbpSubnets("subnetsrdUnEnf");
-    subnetsrd1UnEnf = subnetsrdUnEnf->addGbpSubnet("subnetsrd1UnEnf");
     rdUnEnf->addGbpForwardingBehavioralGroupToSubnetsRSrc()
            ->setTargetSubnets(subnetsrdUnEnf->getURI());
     rdUnEnf->addGbpRoutingDomainToIntSubnetsRSrc(

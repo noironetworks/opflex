@@ -245,8 +245,7 @@ void EndpointManager::updateEndpoint(const Endpoint& endpoint) {
     for (const string& ip : es.endpoint->getIPs()) {
         if (!validateIp(ip))
             continue;
-        if (ip_local_ep_map.find(ip) != ip_local_ep_map.end())
-            ip_local_ep_map.erase(ip);
+        ip_local_ep_map.erase(ip);
     }
 
 

@@ -28,7 +28,7 @@ void ActivePeer::destroy(bool now) {
     }
 
     if (alreadyBeingDestroyed) {
-        LOG(DEBUG1) << this << " multiple destroy()s detected";
+        LOG(DEBUG) << this << " multiple destroy()s detected";
         return;
     }
 

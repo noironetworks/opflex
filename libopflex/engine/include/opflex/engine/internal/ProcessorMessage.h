@@ -13,7 +13,6 @@
  */
 
 #include <rapidjson/document.h>
-#include <boost/foreach.hpp>
 
 #include "opflex/engine/Processor.h"
 #include "opflex/engine/internal/OpflexMessage.h"
@@ -83,7 +82,7 @@ public:
      */
     bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, policies) {
+        for (const modb::reference_t& p : policies) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -138,7 +137,7 @@ public:
      */
     bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, policies) {
+        for (const modb::reference_t& p : policies) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -192,7 +191,7 @@ public:
      */
     bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
+        for (const modb::reference_t& p : endpoints) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -248,7 +247,7 @@ public:
      */
     bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
+        for (const modb::reference_t& p : endpoints) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -310,7 +309,7 @@ public:
 
         writer.String("endpoint");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
+        for (const modb::reference_t& p : endpoints) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,
@@ -366,7 +365,7 @@ public:
     bool operator()(yajr::rpc::SendHandler& writer) const {
         writer.StartArray();
 
-        BOOST_FOREACH(const modb::reference_t& p, endpoints) {
+        for (const modb::reference_t& p : endpoints) {
             try {
                 writer.StartObject();
                 writer.String("subject");
@@ -429,7 +428,7 @@ public:
 
         writer.String("observable");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, observables) {
+        for (const modb::reference_t& p : observables) {
             try {
                 serializer.serialize(p.first, p.second,
                                      *client, writer,

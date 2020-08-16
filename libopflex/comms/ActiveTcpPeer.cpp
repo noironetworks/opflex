@@ -59,12 +59,7 @@ void ::yajr::comms::internal::ActiveTcpPeer::retry() {
                     getHostname(),
                     getService(),
                     &hints))) {
-        LOG(WARNING)
-            << "uv_getaddrinfo: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
+        LOG(WARNING) << "uv_getaddrinfo: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
         onError(rc);
         insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
     } else {
