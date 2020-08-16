@@ -242,7 +242,7 @@ void IdGenerator::cleanup() {
                 it = idmap.erasedIds.erase(it);
                 continue;
             }
-            it++;
+            ++it;
         }
         if (changed)
             persist(nmv.first, nmv.second);

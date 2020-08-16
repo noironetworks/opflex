@@ -271,7 +271,6 @@ OfpBuf compose_icmp6_neigh_ad(uint32_t naFlags,
     neigh_ad = (struct nd_neighbor_advert*)buf;
     buf += sizeof(struct nd_neighbor_advert);
     target_ll = (struct nd_opt_hdr*)buf;
-    buf += sizeof(struct nd_opt_hdr) + 6;
 
     payload = (uint16_t*)neigh_ad;
     payloadLen = sizeof(struct nd_neighbor_advert) +
@@ -556,7 +555,6 @@ OfpBuf compose_dhcpv4_reply(uint8_t message_type,
         buf += iface_mtu_len;
     }
     end = (struct dhcp_option_hdr_base*)buf;
-    buf += 1;
 
     // initialize ethernet header
     memcpy(eth->eth_src, srcMac, eth::ADDR_LEN);
@@ -837,7 +835,6 @@ OfpBuf compose_dhcpv6_reply(uint8_t message_type,
     }
     if (rapid) {
         rapid_opt = (struct dhcp6_opt_hdr*)buf;
-        buf += opt_hdr_len;
     }
 
     // initialize ethernet header
@@ -1006,7 +1003,6 @@ OfpBuf compose_arp(uint16_t op,
     thaptr = (uint8_t*)buf;
     buf += eth::ADDR_LEN;
     tpaptr = (uint32_t*)buf;
-    buf += 4;
 
     // initialize ethernet header
     memcpy(eth->eth_src, srcMac, eth::ADDR_LEN);

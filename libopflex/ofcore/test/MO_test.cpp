@@ -120,7 +120,6 @@ BOOST_FIXTURE_TEST_CASE( model, FrameworkFixture ) {
     BOOST_CHECK(r4);
     BOOST_CHECK(r5);
 
-    reference_t u = r5.get()->getClass4Ref(0);
     BOOST_CHECK_EQUAL(r4.get()->getURI().toString(),
                       r5.get()->getClass4Ref(0).second.toString());
 

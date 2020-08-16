@@ -407,7 +407,6 @@ void PolicyStatsManager::handleMessage(int msgType,
         return;
     }
     if (msgType == OFPTYPE_FLOW_STATS_REPLY) {
-        bool ret = false;
         std::lock_guard<std::mutex> lock(pstatMtx);
         ofp_header *msgHdr = (ofp_header *)msg->data;
         ovs_be32 recvXid = msgHdr->xid;
@@ -417,7 +416,7 @@ void PolicyStatsManager::handleMessage(int msgType,
                 return;
             }
         }
-        ret = handleFlowStats(msg, tableMap);
+        bool ret = handleFlowStats(msg, tableMap);
         {
             std::lock_guard<mutex> lock(txnMtx);
             if(ret) {

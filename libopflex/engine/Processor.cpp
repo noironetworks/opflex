@@ -740,7 +740,7 @@ void Processor::responseReceived(uint64_t reqId) {
     std::unordered_set<URI> items;
     while (xi0 != xi1) {
         items.insert(xi0->uri);
-        xi0++;
+        ++xi0;
     }
 
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();

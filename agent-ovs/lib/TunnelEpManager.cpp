@@ -176,7 +176,6 @@ void TunnelEpManager::on_timer(const error_code& ec) {
     string bestAddress;
     string bestIface;
     string bestMac;
-    bool bestAddrIsV4 = false;
     if(renderer && renderer->isUplinkAddressImplemented()) {
         boost::asio::ip::address bestAddr = renderer->getUplinkAddress();
         if(!bestAddr.is_unspecified()) {
@@ -188,6 +187,7 @@ void TunnelEpManager::on_timer(const error_code& ec) {
         }
     } else {
 #ifdef HAVE_IFADDRS_H
+    bool bestAddrIsV4 = false;
     // This is linux-specific.  Other plaforms will require their own
     // platform-specific interface enumeration.
 
@@ -268,7 +268,6 @@ void TunnelEpManager::on_timer(const error_code& ec) {
         bestMac = getInterfaceMac(bestIface);
     }
     terminationIpIsV4 = bestAddrIsV4;
-
 #endif
     }
 
