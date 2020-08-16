@@ -80,7 +80,7 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       serviceStatsFlowDisabled(false), serviceStatsEnabled(true), serviceStatsInterval(0),
       secGroupStatsEnabled(true), secGroupStatsInterval(0),
       tableDropStatsEnabled(true), tableDropStatsInterval(0),
-      spanRenderer(agent_), netflowRenderer(agent_), started(false),
+      spanRenderer(agent_), netflowRenderer(agent_), qosRenderer(agent_), started(false),
       dropLogRemotePort(6081), dropLogLocalPort(50000), pktLogger(pktLoggerIO, exporterIO) {
 
 }
@@ -243,6 +243,7 @@ void OVSRenderer::start() {
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
         spanRenderer.start(intBridgeName, ovsdbConnection.get());
     netflowRenderer.start(intBridgeName, ovsdbConnection.get());
+    qosRenderer.start(intBridgeName, ovsdbConnection.get());
 }
 
 void OVSRenderer::stop() {
@@ -276,7 +277,7 @@ void OVSRenderer::stop() {
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
         spanRenderer.stop();
     netflowRenderer.stop();
-
+    qosRenderer.stop();
     ovsdbConnection->stop();
 
     if (encapType == IntFlowManager::ENCAP_VXLAN ||

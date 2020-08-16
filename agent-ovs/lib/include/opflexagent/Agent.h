@@ -26,6 +26,8 @@
 #include <opflexagent/SpanManager.h>
 #include <opflexagent/SnatManager.h>
 #include <opflexagent/NetFlowManager.h>
+#include <opflexagent/QosManager.h>
+
 #ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
 #endif
@@ -144,6 +146,11 @@ public:
      *  Get the netflow manager object for this agent
      */
      NetFlowManager& getNetFlowManager() { return netflowManager; }
+
+     /**
+      * Get the qos manager object for this agent
+      */
+     QosManager& getQosManager() { return qosManager; }
 
     /**
      * Get the endpoint manager object for this agent
@@ -436,6 +443,7 @@ private:
 
     SpanManager spanManager;
     NetFlowManager netflowManager;
+    QosManager qosManager;
 
     // feature flag array
     bool featureFlag[FeatureList::MAX];

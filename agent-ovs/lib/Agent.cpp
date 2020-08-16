@@ -73,6 +73,7 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
+      qosManager(*this,framework, agent_io),	
       prometheusEnabled(true),
       prometheusExposeLocalHostOnly(false),
       prometheusExposeEpSvcNan(false),
@@ -91,6 +92,7 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
+      qosManager(*this,framework,agent_io),
       behaviorL34FlowsWithoutSubnet(true),
       logParams(_logParams) {
 #endif
@@ -594,6 +596,7 @@ void Agent::start() {
     if (isFeatureEnabled(FeatureList::ERSPAN))
         spanManager.start();
     netflowManager.start();
+    qosManager.start();
     for (auto& r : renderers) {
         r.second->start();
     }
@@ -727,6 +730,7 @@ void Agent::stop() {
     if (isFeatureEnabled(FeatureList::ERSPAN))
         spanManager.stop();
     netflowManager.stop();
+    qosManager.stop();
 #ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.stop();
     LOG(DEBUG) << "Prometheus Manager stopped";

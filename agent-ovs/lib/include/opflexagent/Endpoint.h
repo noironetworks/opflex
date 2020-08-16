@@ -123,7 +123,7 @@ public:
      *
      * @return the list of qosPolicy policy labels
      */
-    const boost::optional<opflex::modb::URI>& getQosPol() const {
+    const boost::optional<opflex::modb::URI>& getQosPolicy() const {
         return qosPolicy;
     }
 
@@ -133,7 +133,7 @@ public:
      *
      * @param qosPolicy the set of security labels
      */
-    void setQosPol(const opflex::modb::URI& qosPolicy) {
+    void setQosPolicy(const opflex::modb::URI& qosPolicy) {
         this->qosPolicy = qosPolicy;
     }
 
