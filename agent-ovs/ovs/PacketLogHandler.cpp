@@ -163,6 +163,23 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
             (accTableDescMap.find(p.meta[1]) != accTableDescMap.end())) {
         dropReason = bridge + accTableDescMap[p.meta[1]].first;
     }
+    switch(p.meta[2]) {
+        case 0:
+        {
+            dropReason += " MISS";
+            break;
+        }
+        case 1:
+        {
+            dropReason += " DENY";
+            break;
+        }
+        case 2:
+        {
+            dropReason += " PERMIT";
+            break;
+        }
+    }
 }
 
 void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {

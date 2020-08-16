@@ -101,7 +101,7 @@
         ::yajr::Peer::UvLoopSelector uvLoopSelector
     ) {
 
-    LOG(DEBUG1) << socketName;
+    LOG(DEBUG) << socketName;
 
     ::yajr::comms::internal::ListeningUnixPeer * peer = NULL;
 #if __cpp_exceptions || __EXCEPTIONS
@@ -187,7 +187,7 @@ void ::yajr::comms::internal::ListeningTcpPeer::retry() {
     return;
 
 failed_after_init:
-    LOG(DEBUG1) << "closing tcp handle because of immediate failure after init";
+    LOG(DEBUG) << "closing tcp handle because of immediate failure after init";
     uv_close(getHandle(), on_close);
 
 failed_tcp_init:
@@ -255,7 +255,7 @@ void ::yajr::comms::internal::ListeningUnixPeer::retry() {
     return;
 
 failed_after_init:
-    LOG(DEBUG1) << "closing pipe handle because of immediate failure after init";
+    LOG(DEBUG) << "closing pipe handle because of immediate failure after init";
     uv_close(getHandle(), on_close);
 
 failed_unix_init:
@@ -299,12 +299,7 @@ void on_passive_connection(uv_stream_t * server_handle, int status)
 
     int rc;
     if ((rc = uv_accept(server_handle, (uv_stream_t*) peer->getHandle()))) {
-        LOG(DEBUG1)
-            << "uv_accept: ["
-            << uv_err_name(rc)
-            << "] "
-            << uv_strerror(rc)
-        ;
+        LOG(DEBUG) << "uv_accept: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
         peer->onError(rc);
         uv_close(peer->getHandle(), on_close);
         return;

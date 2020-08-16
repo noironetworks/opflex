@@ -4,8 +4,7 @@
     //     // Set the log level.
     //     // Possible values in descending order of verbosity:
     //     // "trace" (least level verbose logs"),
-    //     // "debug7"-"debug0", "debug" (synonym for "debug0"),
-    //     // "info", "warning", "error", "fatal"
+    //     // "debug", "info", "warning", "error", "fatal"
     //     // Default: "info"
     //     "level": "info"
     // },
@@ -160,6 +159,13 @@
         // Filesystem path to monitor for drop log control
         // Default: no drop log service
         "filesystem": ["DEFAULT_DROP_LOG_DIR"]
+    },
+  
+    // Files system to manage Host Agent faults
+    "host-agent-fault-sources": {
+        // Filesystem path to monitor fault injections from the host agent
+        // Default: no host agent faults
+        "filesystem": ["DEFAULT_FS_FAULT_DIR"]
     },
 
     // Dynamically loaded plugins can add new functionality to the

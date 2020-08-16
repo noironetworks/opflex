@@ -16,8 +16,6 @@
 
 #include <cstdio>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/test/GbpOpflexServer.h"
 #include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/engine/internal/GbpOpflexServerImpl.h"
@@ -113,11 +111,16 @@ void GbpOpflexServerImpl::enableSSL(const std::string& caStorePath,
 
 void GbpOpflexServerImpl::start() {
     db.start();
-    prr_timer.reset(new deadline_timer(io, seconds(prr_interval_secs)));
-    prr_timer->async_wait([this](const boost::system::error_code& ec) {
-        if (!stopping)
-            on_timer(ec);
-        });
+
+    {
+        const std::lock_guard<std::mutex> guard(prr_timer_mutex);
+        prr_timer.reset(new deadline_timer(io, seconds(prr_interval_secs)));
+        prr_timer->async_wait([this](const boost::system::error_code& ec) {
+            if (!stopping)
+                on_timer(ec);
+            });
+    }
+
     io_service_thread.reset(new std::thread([this]() { io.run(); }));
     listener.listen();
 }
@@ -125,9 +128,13 @@ void GbpOpflexServerImpl::start() {
 void GbpOpflexServerImpl::stop() {
     stopping = true;
 
-    if (prr_timer) {
-        prr_timer->cancel();
+    {
+        const std::lock_guard<std::mutex> guard(prr_timer_mutex);
+        if (prr_timer) {
+            prr_timer->cancel();
+        }
     }
+
     if (io_service_thread) {
         io_service_thread->join();
         io_service_thread.reset();
@@ -139,6 +146,7 @@ void GbpOpflexServerImpl::stop() {
 
 void GbpOpflexServerImpl::on_timer(const boost::system::error_code& ec) {
     if (ec) {
+        const std::lock_guard<std::mutex> guard(prr_timer_mutex);
         prr_timer.reset();
         return;
     }
@@ -146,6 +154,7 @@ void GbpOpflexServerImpl::on_timer(const boost::system::error_code& ec) {
     listener.sendTimeouts();
 
     if (!stopping) {
+        const std::lock_guard<std::mutex> guard(prr_timer_mutex);
         prr_timer->expires_at(prr_timer->expires_at() +
                               seconds(prr_interval_secs));
         prr_timer->async_wait([this](const boost::system::error_code& ec) {
@@ -208,7 +217,7 @@ public:
 
         writer.String("replace");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, replace) {
+        for (const modb::reference_t& p : replace) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  true);
@@ -217,7 +226,7 @@ public:
 
         writer.String("merge_children");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, merge_children) {
+        for (const modb::reference_t& p : merge_children) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  false);
@@ -226,7 +235,7 @@ public:
 
         writer.String("delete");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, del) {
+        for (const modb::reference_t& p : del) {
             const modb::ClassInfo& ci =
                 server.getStore().getClassInfo(p.first);
             writer.StartObject();
@@ -294,7 +303,7 @@ public:
 
         writer.String("replace");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, replace) {
+        for (const modb::reference_t& p : replace) {
             serializer.serialize(p.first, p.second,
                                  *client, writer,
                                  true);
@@ -303,7 +312,7 @@ public:
 
         writer.String("delete");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, del) {
+        for (const modb::reference_t& p : del) {
             const modb::ClassInfo& ci =
                 server.getStore().getClassInfo(p.first);
             writer.StartObject();

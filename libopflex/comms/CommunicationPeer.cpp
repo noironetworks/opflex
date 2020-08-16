@@ -78,7 +78,7 @@ void CommunicationPeer::startKeepAlive(
         uint64_t begin,
         uint64_t repeat,
         uint64_t interval) {
-    LOG(DEBUG1) << this << " interval=" << interval << " begin=" << begin << " repeat=" << repeat;
+    LOG(DEBUG) << this << " interval=" << interval << " begin=" << begin << " repeat=" << repeat;
 
     sendEchoReq();
     bumpLastHeard();
@@ -88,7 +88,7 @@ void CommunicationPeer::startKeepAlive(
 }
 
 void CommunicationPeer::stopKeepAlive() {
-    LOG(DEBUG1)<< this;
+    LOG(DEBUG)<< this;
     uv_timer_stop(&keepAliveTimer_);
     keepAliveInterval_ = 0;
 }
@@ -106,7 +106,7 @@ void CommunicationPeer::onConnect() {
     status_ = internal::Peer::kPS_ONLINE;
 
     keepAliveTimer_.data = this;
-    LOG(DEBUG1) << this << " up() for a timer init";
+    LOG(DEBUG) << this << " up() for a timer init";
     up();
     uv_timer_init(getUvLoop(), &keepAliveTimer_);
     uv_unref((uv_handle_t*) &keepAliveTimer_);
@@ -119,7 +119,7 @@ void CommunicationPeer::onConnect() {
 }
 
 void CommunicationPeer::onDisconnect() {
-    LOG(DEBUG1) << this << " connected_ = " << connected_;
+    LOG(DEBUG) << this << " connected_ = " << connected_;
     if (!uv_is_closing(getHandle())) {
         uv_close(getHandle(), on_close);
     }
@@ -145,17 +145,17 @@ void CommunicationPeer::onDisconnect() {
     unlink();
 
     if (destroying_) {
-        LOG(DEBUG2) << this << " already destroying";
+        LOG(DEBUG) << this << " already destroying";
         return;
     }
 
     if (!passive_) {
-        LOG(DEBUG2) << this << " active => retry queue";
+        LOG(DEBUG) << this << " active => retry queue";
         /* we should attempt to reconnect later */
         insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
         status_ = kPS_DISCONNECTED;
     } else {
-        LOG(DEBUG2) << this << " passive => eventually drop";
+        LOG(DEBUG) << this << " passive => eventually drop";
         /* whoever it was, hopefully will reconnect again */
         insert(internal::Peer::LoopData::PENDING_DELETE);
         status_ = kPS_PENDING_DELETE;
@@ -192,9 +192,8 @@ void CommunicationPeer::readBufNoNull(char* buffer, size_t nread) {
 
     buffer[nread++] = '\0';
 
-    size_t chunk_size;
     while ((--nread > 0) && connected_) {
-        chunk_size = readChunk(buffer);
+        size_t chunk_size = readChunk(buffer);
         if (chunk_size == 0) {
             break;
         }
@@ -257,12 +256,11 @@ void CommunicationPeer::readBuffer(char * buffer, size_t nread, bool canWriteJus
 }
 
 void CommunicationPeer::readBufferZ(char const * buffer, size_t nread) {
-    size_t chunk_size;
     if (!connected_) {
         LOG(WARNING) << "skipping read as not connected";
     }
     while ((--nread > 0) && connected_) {
-        chunk_size = readChunk(buffer);
+        size_t chunk_size = readChunk(buffer);
         nread -= chunk_size++;
 
         if (!nread) {
@@ -339,7 +337,7 @@ void CommunicationPeer::timeout() {
 
     if (uvRefCnt_ == 1) {
         /* we already have a pending close */
-        LOG(DEBUG4) << this << " Already closing";
+        LOG(TRACE) << this << " Already closing";
         return;
     }
 

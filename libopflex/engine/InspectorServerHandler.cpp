@@ -16,8 +16,6 @@
 
 #include <sstream>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/engine/internal/InspectorServerHandler.h"
 #include "opflex/engine/Inspector.h"
@@ -72,7 +70,7 @@ public:
         writer.StartObject();
         writer.String("policy");
         writer.StartArray();
-        BOOST_FOREACH(const modb::reference_t& p, mos) {
+        for (const modb::reference_t& p : mos) {
             try {
                 serializer.serialize(p.first, p.second,
                                      client, writer,
@@ -136,7 +134,7 @@ void InspectorServerHandler::handlePolicyQueryReq(const Value& id,
                 std::unordered_set<modb::URI> uris;
                 inspector->db->getReadOnlyStoreClient()
                     .getObjectsForClass(ci.getId(), uris);
-                BOOST_FOREACH(const modb::URI& uri, uris) {
+                for (const modb::URI& uri : uris) {
                     modb::reference_t mo(ci.getId(), uri);
                     mos.push_back(mo);
                 }

@@ -22,7 +22,6 @@
 #include <random>
 
 #include <boost/tuple/tuple.hpp>
-#include <boost/foreach.hpp>
 #include "opflex/engine/internal/OpflexPEHandler.h"
 #include "opflex/engine/internal/ProcessorMessage.h"
 #include "opflex/engine/Processor.h"
@@ -118,19 +117,17 @@ void Processor::addRef(obj_state_by_exp::iterator& it,
         obj_state_by_uri::iterator uit = uri_index.find(up.second);
 
         if (uit == uri_index.end()) {
-            LOG(DEBUG2) << "Tracking new nonlocal item "
-                        << up.second << " from reference";
-
+            LOG(DEBUG) << "Tracking new nonlocal item " << up.second << " from reference";
             obj_state.insert(item(up.second, up.first,
                                   0, policyRefTimerDuration,
                                   UNRESOLVED, false));
             uit = uri_index.find(up.second);
         }
         uit->details->refcount += 1;
-        LOG(DEBUG2) << "addref " << uit->uri.toString()
-                    << " (from " << it->uri.toString() << ")"
-                    << " " << uit->details->refcount
-                    << " state " << uit->details->state;
+        LOG(DEBUG) << "addref " << uit->uri.toString()
+                   << " (from " << it->uri.toString() << ")"
+                   << " " << uit->details->refcount
+                   << " state " << ItemStateMap[uit->details->state];
 
         it->details->urirefs.insert(up);
     }
@@ -145,10 +142,10 @@ void Processor::removeRef(obj_state_by_exp::iterator& it,
         obj_state_by_uri::iterator uit = uri_index.find(up.second);
         if (uit != uri_index.end()) {
             uit->details->refcount -= 1;
-            LOG(DEBUG2) << "removeref " << uit->uri.toString()
-                        << " (from " << it->uri.toString() << ")"
-                        << " " << uit->details->refcount
-                        << " state " << uit->details->state;
+            LOG(DEBUG) << "removeref " << uit->uri.toString()
+                       << " (from " << it->uri.toString() << ")"
+                       << " " << uit->details->refcount
+                       << " state " << ItemStateMap[uit->details->state];
             if (uit->details->refcount <= 0) {
                 uint64_t nexp = now(proc_loop)+processingDelay;
                 uri_index.modify(uit, Processor::change_expiration(nexp));
@@ -275,7 +272,7 @@ bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
     switch (type) {
     case ClassInfo::POLICY:
         {
-            LOG(DEBUG2) << "Resolving policy " << i.uri;
+            LOG(DEBUG) << "Resolving policy " << i.uri;
             i.details->resolve_time = curTime;
             vector<reference_t> refs;
             refs.emplace_back(i.details->class_id, i.uri);
@@ -338,7 +335,7 @@ bool Processor::declareObj(ClassInfo::class_type_t type, const item& i,
         return true;
     case ClassInfo::OBSERVABLE:
         if (isParentSyncObject(i) && reportObservables && isObservableReportable(i.details->class_id)) {
-            LOG(DEBUG3) << "Declaring local observable " << i.uri;
+            LOG(TRACE) << "Declaring local observable " << i.uri;
             i.details->resolve_time = curTime;
             vector<reference_t> refs;
             refs.emplace_back(i.details->class_id, i.uri);
@@ -372,11 +369,11 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     }
 
     const ClassInfo& ci = store->getClassInfo(it->details->class_id);
-    LOG(DEBUG2) << "Processing " << (local ? "local" : "nonlocal")
+    LOG(DEBUG) << "Processing " << (local ? "local" : "nonlocal")
                << " item " << it->uri.toString()
                << " of class " << ci.getName()
                << " and type " << ci.getType()
-               << " in state " << curState;
+               << " in state " << ItemStateMap[curState];
 
     ItemState newState;
 
@@ -416,8 +413,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
             {
                 // requeue new items so if there are any pending references
                 // we won't remove them right away
-                LOG(DEBUG2) << "Queuing delete for orphan "
-                            << it->uri.toString();
+                LOG(DEBUG) << "Queuing delete for orphan " << it->uri.toString();
                 newState = PENDING_DELETE;
                 newexp = now(proc_loop) + processingDelay;
                 obj_state_by_exp& exp_index = obj_state.get<expiration_tag>();
@@ -445,8 +441,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     // needed.
     std::unordered_set<reference_t> visited;
     if (oi) {
-        BOOST_FOREACH(const ClassInfo::property_map_t::value_type& p,
-                      ci.getProperties()) {
+        for (const ClassInfo::property_map_t::value_type& p : ci.getProperties()) {
             if (p.second.getType() == PropertyInfo::REFERENCE) {
                 if (p.second.getCardinality() == PropertyInfo::SCALAR) {
                     if (oi->isSet(p.first,
@@ -468,7 +463,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
         }
     }
     std::unordered_set<reference_t> existing(it->details->urirefs);
-    BOOST_FOREACH(const reference_t& up, existing) {
+    for (const reference_t& up : existing) {
         if (visited.find(up) == visited.end()) {
             removeRef(it, up);
         }
@@ -490,7 +485,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
         switch (ci.getType()) {
         case ClassInfo::POLICY:
             if (it->details->resolve_time > 0) {
-                LOG(DEBUG2) << "Unresolving " << it->uri.toString();
+                LOG(DEBUG) << "Unresolving " << it->uri.toString();
                 vector<reference_t> refs;
                 refs.emplace_back(it->details->class_id, it->uri);
                 PolicyUnresolveReq* req =
@@ -523,7 +518,10 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
             break;
         }
 
-        LOG(DEBUG) << "Purging state for " << it->uri.toString();
+        if (ci.getType() != ClassInfo::OBSERVABLE) {
+            LOG(DEBUG) << "Purging state for " << it->uri.toString()
+                       << " in state " << ItemStateMap[it->details->state];
+        }
         exp_index.erase(it);
     } else {
         it->details->state = newState;
@@ -649,9 +647,8 @@ void Processor::objectUpdated(modb::class_id_t class_id,
 
     if (uit == uri_index.end()) {
         if (present) {
-            LOG(DEBUG2) << "Tracking new "
-                        << (local ? "local" : "nonlocal")
-                        << " item " << uri << " from update";
+            LOG(DEBUG) << "Tracking new " << (local ? "local" : "nonlocal")
+                       << " item " << uri << " from update";
             uint64_t nexp = 0;
             if (local) nexp = curtime+processingDelay;
             double prrRange1 = prrTimerDuration/3;
@@ -718,7 +715,7 @@ OpflexHandler* Processor::newHandler(OpflexConnection* conn) {
 
 void Processor::handleNewConnections() {
     const std::lock_guard<std::mutex> lock(item_mutex);
-    BOOST_FOREACH(const item& i, obj_state) {
+    for (const item& i : obj_state) {
         uint64_t newexp = 0;
         const ClassInfo& ci = store->getClassInfo(i.details->class_id);
         if (i.details->state == IN_SYNC) {
@@ -743,12 +740,12 @@ void Processor::responseReceived(uint64_t reqId) {
     std::unordered_set<URI> items;
     while (xi0 != xi1) {
         items.insert(xi0->uri);
-        xi0++;
+        ++xi0;
     }
 
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
 
-    BOOST_FOREACH(const URI& uri, items) {
+    for (const URI& uri : items) {
         obj_state_by_uri::iterator uit = uri_index.find(uri);
         if (uit == uri_index.end()) continue;
 

@@ -19,8 +19,6 @@
 
 namespace opflexagent {
 
-const string ERSPAN_PORT_PREFIX = "erspan-";
-
 /**
  * class to render span config on a virtual switch
  */
@@ -61,22 +59,24 @@ public:
 
     /**
      * create mirror
-     * @param[in] session name of mirror
+     * @param[in] sess session details
      * @param[in] srcPorts source ports
      * @param[in] dstPorts dest ports
-     * @param[in] remoteIp remote destination
-     * @param[in] version erspan version
-     * @param[in] sessionId ERSPAN session ID
      */
-    void createMirrorAndOutputPort(const string& session, const set<string>& srcPorts,
-        const set<string>& dstPorts, const string& remoteIp, const uint8_t version, const uint16_t sessionId);
+    void createMirrorAndOutputPort(const shared_ptr<SessionState>& sess, const set<string>& srcPorts, const set<string>& dstPorts);
 
     /**
      * deletes mirror session
-     * @param[in] session name of session
+     * @param[in] sessionName name of session
      * @return true if success, false otherwise.
      */
-    void deleteMirrorAndOutputPort(const string& session);
+    void deleteMirror(const string& sessionName);
+
+    /**
+     * Update mirror config using passed session state
+     * @param session session
+     */
+    void updateMirrorConfig(const shared_ptr<SessionState>& session);
 
 private:
     /**
@@ -86,9 +86,12 @@ private:
      */
     void handleSpanUpdate(const opflex::modb::URI& spanURI);
     virtual void sessionDeleted(const string &sessionName);
-    void updateMirrorConfig(const shared_ptr<SessionState>& seSt);
+    void updateOutputPort(const shared_ptr<SessionState>& session);
+    bool isOutputPortUpdateRequired(const shared_ptr<SessionState>& session);
     void updateConnectCb(const boost::system::error_code& ec, const opflex::modb::URI& uri);
     void delConnectPtrCb(const boost::system::error_code& ec, const shared_ptr<SessionState>& pSt);
+
+    static void buildPortSets(const shared_ptr<SessionState>& seSt, set<string>& srcPorts, set<string>& dstPorts);
 };
 }
 #endif //OPFLEX_SPANRENDERER_H

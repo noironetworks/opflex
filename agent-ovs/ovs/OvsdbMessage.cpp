@@ -15,7 +15,9 @@
 namespace opflexagent {
 
 void OvsdbMessage::serializePayload(yajr::rpc::SendHandler& writer) const {
-    LOG(DEBUG) << "serializePayload send handler - reqId " << std::to_string(getReqId());
+    if (getReqId() != 0) {
+        LOG(DEBUG) << "serializePayload send handler - reqId " << std::to_string(getReqId());
+    }
     (*this)(writer);
 }
 

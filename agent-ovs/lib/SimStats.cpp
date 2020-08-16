@@ -10,8 +10,6 @@
  */
 
 #include <opflexagent/SimStats.h>
-#include <modelgbp/gbpe/SecGrpClassifierCounter.hpp>
-#include <modelgbp/gbpe/L24ClassifierCounter.hpp>
 
 
 namespace opflexagent {
@@ -45,7 +43,6 @@ void SimStats::updateInterfaceCounters() {
 void SimStats::updateContractCounters() {
 
     auto& polMgr = agent.getPolicyManager();
-    auto pu = modelgbp::policy::Universe::resolve(agent.getFramework());
     auto su =
         modelgbp::observer::PolicyStatUniverse::resolve(agent.getFramework());
 

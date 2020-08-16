@@ -934,7 +934,7 @@ void PolicyManager::updateRedirectDestGroup(const URI& uri,
 }
 
 void PolicyManager::updateRedirectDestGroups(uri_set_t &notifyGroup) {
-    for (auto itr = redirGrpMap.begin(); itr != redirGrpMap.end(); itr++) {
+    for (auto itr = redirGrpMap.begin(); itr != redirGrpMap.end(); ++itr) {
         updateRedirectDestGroup(itr->first, notifyGroup);
     }
 }
@@ -964,7 +964,7 @@ void PolicyManager::deleteRoutingDomain(const URI& rd) {
         if (rdset.empty())
             it1 = subnets_rd_map.erase(it1);
         else
-           it1++;
+           ++it1;
     }
 }
 
@@ -2325,7 +2325,7 @@ void PolicyManager::updateStaticRoute(class_id_t class_id, const URI& uri,
     }
     if(class_id == StaticNextHop::CLASS_ID) {
         ext_node_map_t::iterator itr;
-        for(itr = ext_node_map.begin(); itr != ext_node_map.end(); itr++) {
+        for(itr = ext_node_map.begin(); itr != ext_node_map.end(); ++itr) {
             updateStaticRoutes(ExternalNode::CLASS_ID,
                                itr->first,
                                notifyStaticRoutes,
@@ -2643,7 +2643,7 @@ void PolicyManager::updateRemoteRoute(class_id_t class_id, const URI& uri,
         while(iter != rd_map.end()) {
             updateRemoteRoutes(iter->first, notifyRemoteRoutes,
                                notifyLocalRoutes);
-            iter++;
+            ++iter;
         }
     }
 }

@@ -35,7 +35,7 @@ int Cb< PlainText >::send_cb(CommunicationPeer * peer) {
 
     if (!peer->getPendingBytes()) {
         /* great success! */
-        LOG(DEBUG4) << "Nothing left to be sent!";
+        LOG(TRACE) << "Nothing left to be sent!";
         return 0;
     }
 
@@ -73,7 +73,7 @@ void Cb< PlainText >::on_read(uv_stream_t * h, ssize_t nread, uv_buf_t const * b
     }
 
     if (nread < 0) {
-        LOG(DEBUG2)
+        LOG(DEBUG)
             << peer << " nread = " <<  nread << " ["
             << uv_err_name(nread) << "] "
             << uv_strerror(nread) << " => closing";

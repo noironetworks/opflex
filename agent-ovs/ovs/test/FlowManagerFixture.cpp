@@ -246,6 +246,8 @@ Bldr& Bldr::dropLog(uint32_t table_id) {
     std::snprintf(buf, 64,"0x%x->NXM_NX_TUN_METADATA12[960..991]",table_id);
     string s(buf);
     a("load", s );
+    std::snprintf(buf, 64,"0->NXM_NX_TUN_METADATA13[960..991]");
+    a("load", buf );
     return *this;
 }
 
