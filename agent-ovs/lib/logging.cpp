@@ -43,7 +43,7 @@ public:
      * Constructor that accepts the output stream to write logs to.
      * @param outStream The stream to send messages to.
      */
-    OStreamLogSink(std::ostream& outStream) : out(&outStream) {
+    explicit OStreamLogSink(std::ostream& outStream) : out(&outStream) {
         static const boost::posix_time::time_facet facet;
         out->imbue(std::locale(out->getloc(), &facet));
     }
@@ -53,7 +53,7 @@ public:
      * appended.
      * @param fileName The filename to send log messages to.
      */
-    OStreamLogSink(const std::string& fileName) :
+    explicit OStreamLogSink(const std::string& fileName) :
         fileStream(fileName.c_str(), std::ios_base::out | std::ios_base::app) {
         if (!fileStream.good()) {
             out = &std::cout;
@@ -105,7 +105,7 @@ const char * OStreamLogSink::LEVEL_STR_FATAL = "fatal";
  */
 class SyslogLogSink : public LogSink {
 public:
-    SyslogLogSink(const std::string& name) : syslog_name(name) {
+    explicit SyslogLogSink(const std::string& name) : syslog_name(name) {
         openlog(syslog_name.c_str(), LOG_CONS | LOG_PID, LOG_DAEMON);
     }
     ~SyslogLogSink() {

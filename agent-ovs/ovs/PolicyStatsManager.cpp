@@ -645,7 +645,7 @@ generatePolicyStatsObjects(PolicyCounterMap_t *newCountersMap1,
     if (!newCountersMap1->size() && newCountersMap2) {
         for (PolicyCounterMap_t:: iterator itr = newCountersMap2->begin();
              itr != newCountersMap2->end();
-             itr++) {
+             ++itr) {
             const PolicyFlowMatchKey_t& flowKey = itr->first;
             FlowStats_t&  outCounters = itr->second;
             FlowStats_t   inCounters;

@@ -11,4 +11,3 @@
 [Prometheus integration](docs/prometheus.md)
 
 [Configuring and using drop logs](docs/drop_logs.md)
-

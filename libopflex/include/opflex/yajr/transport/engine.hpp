@@ -152,7 +152,7 @@ class TransportEngine : public Transport {
     /**
      * Construct a transport engine
      */
-    TransportEngine(E *);
+    explicit TransportEngine(E *);
     ~TransportEngine();
 };
 
