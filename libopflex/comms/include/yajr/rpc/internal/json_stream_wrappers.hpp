@@ -26,7 +26,7 @@ class IStreamWrapper {
   public:
     typedef char Ch;
 
-    IStreamWrapper(std::istream& is)
+    explicit IStreamWrapper(std::istream& is)
         : is_(is)
         {}
 

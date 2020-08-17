@@ -31,7 +31,7 @@ using namespace opflexagent;
 
 class BlockingFlowReader {
 public:
-    BlockingFlowReader(SwitchConnection *c) {
+    explicit BlockingFlowReader(SwitchConnection *c) {
         conn = c;
         reader.installListenersForConnection(conn);
         cb = boost::bind(&BlockingFlowReader::gotFlow, this, _1, _2);

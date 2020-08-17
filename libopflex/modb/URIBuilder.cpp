@@ -36,7 +36,7 @@ public:
         uri_stream << '/';
     }
 
-    URIBuilderImpl(const URI& uri) { 
+    explicit URIBuilderImpl(const URI& uri) {
         uri_stream.fill('0');
         uri_stream << uri.toString();
     }

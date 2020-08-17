@@ -39,7 +39,7 @@ class GeneratorFromValue {
      * Generate JSON from value
      * @param v rapidjson value
      */
-    GeneratorFromValue(rapidjson::Value const & v) : v_(v) {}
+    explicit GeneratorFromValue(rapidjson::Value const & v) : v_(v) {}
 
     /** () operator */
     virtual bool operator()(yajr::rpc::SendHandler& h) {
@@ -139,7 +139,7 @@ class RemoteIdentifier : virtual public Identifier {
      * Construct a remote identitier
      * @param id JSON ID
      */
-    RemoteIdentifier(rapidjson::Value const & id) : id_(id) {}
+    explicit RemoteIdentifier(rapidjson::Value const & id) : id_(id) {}
 
     /**
      * Emit the identifier
