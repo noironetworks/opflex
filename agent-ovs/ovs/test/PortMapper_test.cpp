@@ -82,7 +82,7 @@ public:
     void MakePort(uint32_t portNo, ofputil_phy_port *port) {
         memset(port, 0, sizeof(*port));
         port->port_no = portNo;
-        sprintf(port->name, "test-port-%d", portNo);
+        sprintf(port->name, "test-port-%u", portNo);
     }
 
     void SetReplyFlags(ofp_header *reply, uint16_t flags) {

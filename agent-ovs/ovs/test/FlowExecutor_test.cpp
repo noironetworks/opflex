@@ -108,7 +108,6 @@ BOOST_FIXTURE_TEST_CASE(reconnect, FlowExecutorFixture) {
 BOOST_AUTO_TEST_SUITE_END()
 
 int MockExecutorConnection::SendMessage(OfpBuf& msg) {
-    uint16_t COMM[] = {OFPFC_ADD, OFPFC_MODIFY_STRICT, OFPFC_DELETE_STRICT};
     ofp_header *msgHdr = (ofp_header *)msg.data();
     ofptype type;
     ofptype_decode(&type, msgHdr);
@@ -117,6 +116,7 @@ int MockExecutorConnection::SendMessage(OfpBuf& msg) {
     BOOST_CHECK(type == OFPTYPE_FLOW_MOD ||
             type == OFPTYPE_BARRIER_REQUEST);
     if (type == OFPTYPE_FLOW_MOD) {
+        uint16_t COMM[] = {OFPFC_ADD, OFPFC_MODIFY_STRICT, OFPFC_DELETE_STRICT};
         ofputil_flow_mod fm;
         ofpbuf ofpacts;
         ofpbuf_init(&ofpacts, 64);

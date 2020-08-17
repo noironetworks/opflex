@@ -350,8 +350,7 @@ void EndpointManager::removeEndpoint(const std::string& uuid) {
         for (const string& ip : es.endpoint->getIPs()) {
             if (!validateIp(ip))
                 continue;
-            if (ip_local_ep_map.find(ip) != ip_local_ep_map.end())
-                ip_local_ep_map.erase(ip);
+            ip_local_ep_map.erase(ip);
         }
         for (const URI& l2ep : es.l2EPs) {
             // The contained objects dont get deleted during make check tests.
