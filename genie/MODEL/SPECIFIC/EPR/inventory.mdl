@@ -424,6 +424,22 @@ module[inv]
         }
     }
 
+    # Type of the remote endpoint
+    type[EpType; super=scalar/Enum8]
+    {
+        # default type for regular endpoints
+        const[name=default; value=0]
+
+        # ext policy endpoint
+        const[name=extpol; value=1]
+
+        # csr direct endpoint
+        const[name=csrdirect; value=2]
+
+        # csr indirect endpoint
+        const[name=csrindirect; value=3]
+    }
+
     # an endpoint with network identifiers or a remote subnet
     class[RemoteInventoryEp;
           super=inv/InventoryEp;
@@ -449,8 +465,14 @@ module[inv]
         # mac address of the end-point
         member[mac; type=address/MAC]
 
+        # proxy mac address to reach the end-point(s)
+        member[proxyMac; type=address/MAC]
+
         # Next hop remote tunnel endpoint
         member[nextHopTunnel; type=address/IP]
+
+        # Type of the endpoint
+        member[epType; type=inv/EpType]
 
         dependency[group;
                    cardinality=single;
@@ -459,6 +481,25 @@ module[inv]
             to[class=gbp/EpGroup;
                 cardinality=many;
                 ]
+        }
+    }
+
+    # Remote ep with multiple next hops
+    class[NextHopLink;
+          super=gbp/BaseNextHop;
+          concrete;
+          ]
+    {
+        contained
+        {
+            parent[class=inv/RemoteInventoryEp]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=ip]
+            }
         }
     }
 }
