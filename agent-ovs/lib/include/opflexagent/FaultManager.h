@@ -47,11 +47,10 @@ public:
    Agent& agent;
    opflex::ofcore::OFFramework& framework;
 
-
-   void createPendingFault(Agent& agent, const Fault& fs);
+   std::recursive_mutex map_mutex;
    std::map<std::string, Fault> pendingFaults;
+   bool getPendingFault(const std::string& faultUUID);
    void clearPendingFaults(const std::string& faultUUID);
-   void getPendingFault(const std::string& faultUUID, bool& ret_val);
 private:
    std::mutex lock_modb_mutex;
 };

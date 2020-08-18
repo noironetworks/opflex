@@ -106,11 +106,10 @@ void FSFaultSource::updated(const fs::path& filePath) {
            faultManager->createPlatformFault(agent,newfs);
           }
 
-        std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
-              delete_fault(filePath);
+              deleted(filePath);
               faultManager->clearPendingFaults(it->second); 
            }
         }
@@ -125,20 +124,20 @@ void FSFaultSource::updated(const fs::path& filePath) {
       } 
 }
 
-void FSFaultSource::delete_fault(const fs::path& filePath){
+void FSFaultSource::deleted(const fs::path& filePath){
     try {
-        string pathstr = filePath.string();
-        std::unique_lock<std::mutex> lock(lock_map_mutex);
-        fault_map_t::const_iterator it =  knownFaults.find(pathstr);
-        if (it != knownFaults.end()) {
-           LOG(INFO) << "Removed Fault "
+        string pathstr = filePath.string(); 
+        if (!fs::exists(filePath)){ 
+           std::unique_lock<std::mutex> lock(lock_map_mutex);
+           fault_map_t::const_iterator it =  knownFaults.find(pathstr);
+           if (it != knownFaults.end()) {
+               LOG(INFO) << "Removed Fault "
                       << it->second
                       << " at " << filePath;
-           faultManager->removeFault(it->second);
-           knownFaults.erase(it);
-           return;
+               faultManager->removeFault(it->second);
+               knownFaults.erase(it);
+           }
         }
-
     } catch (const std::exception& ex) {
         LOG(ERROR) << "Could not delete Fault for "
                    << filePath << ": "
