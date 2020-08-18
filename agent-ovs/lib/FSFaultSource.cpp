@@ -116,7 +116,6 @@ void FSFaultSource::updated(const fs::path& filePath) {
  
         knownFaults[pathstr] = newfs.getFSUUID();
         LOG(INFO) << "Updated Faults " << newfs << " from " << filePath;
-                      
     } catch (const std::exception& ex) {
         LOG(ERROR) << "Could not load Faults from: "
                    << filePath << ": "

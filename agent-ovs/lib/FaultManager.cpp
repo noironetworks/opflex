@@ -30,16 +30,12 @@ FaultManager::FaultManager(Agent& agent_,
 FaultManager::~FaultManager() { agent.getEndpointManager().unregisterListener(this);}
 
 void FaultManager::endpointUpdated(const std::string& uuid) {
-     shared_ptr<const Endpoint> ep = agent.getEndpointManager().getEndpoint(uuid);
-     if (!ep) return;
-     else {
-        std::unique_lock<std::mutex> lock(lock_modb_mutex);
-        for (auto it=pendingFaults.begin(); it != pendingFaults.end(); it++) {
-           if (it->second.getEPUUID() == uuid) {
-              createEpFault(agent,it->second);
+       std::unique_lock<std::mutex> lock(lock_modb_mutex);
+           for (auto it=pendingFaults.begin(); it != pendingFaults.end(); it++) {
+              if (it->second.getEPUUID() == uuid) {
+                 createEpFault(agent,it->second);
+              } 
            }
-        }
-     }
 }
 
 void FaultManager::createPlatformFault(Agent& agent, const Fault& fs){
@@ -115,7 +111,7 @@ void FaultManager::removeFault(const std::string& uuid){
 }
 
 bool FaultManager::getPendingFault(const std::string& faultUUID) {
-     std::unique_lock<std::mutex> lock(lock_modb_mutex);
+     lock_guard<recursive_mutex> lock(map_mutex);
      if (pendingFaults.find(faultUUID) != pendingFaults.end()) {
          return true;
      }

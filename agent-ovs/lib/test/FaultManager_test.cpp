@@ -101,6 +101,7 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 }
 
 static bool hasPendingFault(FaultManager& manager, string uuid){
+  WAIT_FOR((manager.getPendingFault(uuid)),500)
   bool ret_bool = manager.getPendingFault(uuid);
   return ret_bool; 
 }
@@ -259,7 +260,6 @@ BOOST_FIXTURE_TEST_CASE( epPendingFaultCheck, FSFaultFixture ) {
    watcher.start();
    WAIT_FOR((hasPendingFault(agent.getFaultManager(), uuid4)),500); 
    bool has_fault = hasPendingFault(agent.getFaultManager(), uuid4);
-   LOG(INFO) << has_fault;
    BOOST_CHECK_EQUAL(true, has_fault);
    watcher.stop();
 }
