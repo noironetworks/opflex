@@ -49,7 +49,10 @@ public:
     shared_ptr<policy::Space> common;
     shared_ptr<EpGroup> eg1;
     shared_ptr<BridgeDomain> bd;
+     shared_ptr<EpGroup> eg2;
+    shared_ptr<BridgeDomain> bd1;
     shared_ptr<L2Ep> l2E1;
+    shared_ptr<L2Ep> l2E2;
     std::mutex lock_modb_mutex;
     fs::path temp;
 
@@ -59,53 +62,68 @@ BOOST_AUTO_TEST_SUITE(FaultManager_test)
 
 BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 //check for modb update
-   const std::string& uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-1";
-   fs::path path1(temp / (uuid1+".fs" ));
-   fs::ofstream os(path1);
-   os << "{"
-      << "\"fault_uuid\":\"" << uuid1 << "\","
-      << "\"faultCode\":\"1\","
-      << "\"description\":\"Broken bridge domain\","
-      << "\"severity\":\"critical\""
-      << "}" << std::endl;
-   os.close();
- 
-   FSWatcher watcher;
-   FSFaultSource source(&agent.getFaultManager(), watcher, temp.string(), agent);
-   watcher.start();
-   auto fu_instance = modelgbp::fault::Universe::resolve(agent.getFramework());
-   WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid1)), 500);
-   auto fu = fu_instance.get()->resolveFaultInstance(uuid1);
-   uint8_t severity = 5;
-   uint32_t faultcode = 1;
-   string  description = "Broken bridge domain";
-   string opflex_domain = agent.getPolicyManager().getOpflexDomain();
-   opflex::modb::URI compute_node_uri = opflex::modb::URIBuilder()
+ const std::string& uuid1 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-1";
+ fs::path path1(temp / (uuid1+".fs" ));
+ fs::ofstream os(path1);
+ os << "{"
+    << "\"fault_uuid\":\"" << uuid1 << "\","
+    << "\"faultCode\":\"1\","
+    << "\"description\":\"Broken bridge domain\","
+    << "\"severity\":\"critical\""
+    << "}" << std::endl;
+ os.close();
+
+ FSWatcher watcher;
+ FSFaultSource source(&agent.getFaultManager(), watcher, temp.string(), agent);
+ watcher.start();
+ auto fu_instance = modelgbp::fault::Universe::resolve(agent.getFramework());
+ WAIT_FOR((fu_instance.get()->resolveFaultInstance(uuid1)), 500);
+ auto fu = fu_instance.get()->resolveFaultInstance(uuid1);
+ uint8_t severity = 5;
+ uint32_t faultcode = 1;
+ string  description = "Broken bridge domain";
+ string opflex_domain = agent.getPolicyManager().getOpflexDomain();
+ opflex::modb::URI compute_node_uri = opflex::modb::URIBuilder()
                                               .addElement("PolicyUniverse")
                                               .addElement("PlatformConfig")
                                               .addElement(opflex_domain).build();
-   string  affected_obj = compute_node_uri.toString();
-   BOOST_CHECK_EQUAL(description, fu.get()->getDescription("default"));
-   BOOST_CHECK_EQUAL(affected_obj, fu.get()->getAffectedObject("default"));
-   BOOST_CHECK_EQUAL(faultcode, fu.get()->getFaultCode(100));
-   BOOST_CHECK_EQUAL(severity, fu.get()->getSeverity(100));
+ string  affected_obj = compute_node_uri.toString();
+ BOOST_CHECK_EQUAL(description, fu.get()->getDescription("default"));
+ BOOST_CHECK_EQUAL(affected_obj, fu.get()->getAffectedObject("default"));
+ BOOST_CHECK_EQUAL(faultcode, fu.get()->getFaultCode(100));
+ BOOST_CHECK_EQUAL(severity, fu.get()->getSeverity(100));
 
-   fs::remove_all(temp / (uuid1+".fs" ));
-   source.deleted(temp.string()+"/"+uuid1+".fs");
-   WAIT_FOR((!fu_instance.get()->resolveFaultInstance(uuid1)), 500);   
-   watcher.stop();
+ fs::remove_all(temp / (uuid1+".fs" ));
+ source.deleted(temp.string()+"/"+uuid1+".fs");
+ WAIT_FOR((!fu_instance.get()->resolveFaultInstance(uuid1)), 500);   
+ watcher.stop();
 
+}
+
+static bool hasPendingFault(FaultManager& manager, string uuid){
+  bool ret_bool = manager.getPendingFault(uuid);
+  return ret_bool; 
 }
 
 static bool hasFault(const string& pathstr, FSFaultSource& faultsource, string uuid){
-   string ret_uuid = "";
-   faultsource.getFaultUUID(ret_uuid, pathstr);
-   if(ret_uuid == uuid) {
+  string ret_uuid = "";
+  faultsource.getFaultUUID(ret_uuid, pathstr);
+  if(ret_uuid == uuid) {
      return true;
-   }
-   return false;
+  }
+  return false;
 }
-   
+
+template<typename T>
+bool hasEPREntry(OFFramework& framework, const URI& uri,
+                 const boost::optional<std::string>& uuid = boost::none) {
+    boost::optional<std::shared_ptr<T> > entry =
+        T::resolve(framework, uri);
+    if (!entry) return false;
+    if (uuid) return (entry.get()->getUuid("") == uuid);
+    return true;
+}
+
 BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
 
  //check for the updates from already existing file
@@ -123,11 +141,11 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
   FSWatcher watcher;
   FSFaultSource fu_source(&agent.getFaultManager(), watcher, temp.string(), agent);
   watcher.start();
- 
+
   WAIT_FOR((hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2)),500);
   bool has_fault = hasFault(temp.string()+"/"+uuid2+".fs", fu_source, uuid2);
   BOOST_CHECK_EQUAL(true, has_fault);  
- 
+
 //update the file by giving different values to severiity, description and faultCode
 
    fs::path path2(temp / (uuid2+".fs" ));
@@ -147,31 +165,17 @@ BOOST_FIXTURE_TEST_CASE( faultsource, FSFaultFixture ) {
    watcher.stop();
 }
 
-static bool hasPendingFault(FaultManager& manager, string uuid){
-  return (manager.getPendingFault(uuid));
-}
-
-template<typename T>
-bool hasEPREntry(OFFramework& framework, const URI& uri,
-                 const boost::optional<std::string>& uuid = boost::none) {
-    boost::optional<std::shared_ptr<T> > entry =
-                                   T::resolve(framework, uri);
-    if (!entry) return false;
-    if (uuid) return (entry.get()->getUuid("") == uuid);
-    return true;
-}
-
 BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
 
-    shared_ptr<policy::Universe> pUniverse = policy::Universe::resolve(framework).get();
-    Mutator mutator(framework, "policyreg");
-    space = pUniverse->addPolicySpace("test");
-    common = pUniverse->addPolicySpace("common");
-    bd = space->addGbpBridgeDomain("bd");
-    eg1 = space->addGbpEpGroup("group1");
-    eg1->addGbpEpGroupToNetworkRSrc()
+   shared_ptr<policy::Universe> pUniverse = policy::Universe::resolve(framework).get();
+   Mutator mutator(framework, "policyreg");
+   space = pUniverse->addPolicySpace("test");
+   common = pUniverse->addPolicySpace("common");
+   bd = space->addGbpBridgeDomain("bd");
+   eg1 = space->addGbpEpGroup("group1");
+   eg1->addGbpEpGroupToNetworkRSrc()
          ->setTargetBridgeDomain(bd->getURI());
-    mutator.commit();
+   mutator.commit();
 
     Endpoint ep1("e82e883b-851d-4cc6-bedb-fb5e27530043");
     ep1.setMAC(MAC("00:00:00:00:00:01"));
@@ -255,14 +259,9 @@ BOOST_FIXTURE_TEST_CASE( epPendingFaultCheck, FSFaultFixture ) {
    watcher.start();
    WAIT_FOR((hasPendingFault(agent.getFaultManager(), uuid4)),500); 
    bool has_fault = hasPendingFault(agent.getFaultManager(), uuid4);
+   LOG(INFO) << has_fault;
    BOOST_CHECK_EQUAL(true, has_fault);
    watcher.stop();
 }
 BOOST_AUTO_TEST_SUITE_END()
-
-
- 
 } /* namespace opflexagent */ 
- 
-
-
