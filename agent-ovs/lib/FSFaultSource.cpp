@@ -105,7 +105,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
          } else {
            faultManager->createPlatformFault(agent,newfs);
           }
-
+        std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
