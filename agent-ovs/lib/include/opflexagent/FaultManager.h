@@ -41,18 +41,25 @@ public:
 
    void createEpFault(Agent& agent, const Fault& fs);
   
-    /* Interface: EndpointListener */
+   /* Interface: EndpointListener */
    virtual void endpointUpdated(const std::string& uuid);
+
+
+   /* check if the faults which are not 
+    * processed gets added to the map 
+    */
+    bool hasPendingFault(const std::string& faultUUID);
+
+   /* Clear the pending faults */
+    void clearPendingFaults(const std::string& faultUUID);
 
    Agent& agent;
    opflex::ofcore::OFFramework& framework;
-
-   std::recursive_mutex map_mutex;
    std::map<std::string, Fault> pendingFaults;
-   bool getPendingFault(const std::string& faultUUID);
-   void clearPendingFaults(const std::string& faultUUID);
+
 private:
    std::mutex lock_modb_mutex;
+   std::recursive_mutex map_mutex;
 };
 
 } /* namespace opflexagent */

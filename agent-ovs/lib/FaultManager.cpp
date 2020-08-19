@@ -30,29 +30,30 @@ FaultManager::FaultManager(Agent& agent_,
 FaultManager::~FaultManager() { agent.getEndpointManager().unregisterListener(this);}
 
 void FaultManager::endpointUpdated(const std::string& uuid) {
-       std::unique_lock<std::mutex> lock(lock_modb_mutex);
-           for (auto it=pendingFaults.begin(); it != pendingFaults.end(); it++) {
-              if (it->second.getEPUUID() == uuid) {
-                 createEpFault(agent,it->second);
-              } 
-           }
+         
+     lock_guard<recursive_mutex> lock(map_mutex);
+     for (auto it=pendingFaults.begin(); it != pendingFaults.end(); it++) {
+         if (it->second.getEPUUID() == uuid) {
+             createEpFault(agent,it->second);
+          } 
+      }
 }
 
 void FaultManager::createPlatformFault(Agent& agent, const Fault& fs){
 
-    string opflex_domain = agent.getPolicyManager().getOpflexDomain();
-    URI compute_node_uri = URIBuilder()
+     const string& opflex_domain = agent.getPolicyManager().getOpflexDomain();
+     URI compute_node_uri = URIBuilder()
                                 .addElement("PolicyUniverse")
                                 .addElement("PlatformConfig")
                                 .addElement(opflex_domain).build(); 
-    Mutator mutator_policyelem(agent.getFramework(), "policyelement");
-    auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
-    auto fi = fu.get()->addFaultInstance(fs.getFSUUID());
-    fi->setSeverity(fs.getSeverity());
-    fi->setDescription(fs.getDescription());
-    fi->setFaultCode(fs.getFaultcode());
-    fi->setAffectedObject(compute_node_uri.toString());
-    mutator_policyelem.commit();
+     Mutator mutator_policyelem(agent.getFramework(), "policyelement");
+     auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
+     auto fi = fu.get()->addFaultInstance(fs.getFSUUID());
+     fi->setSeverity(fs.getSeverity());
+     fi->setDescription(fs.getDescription());
+     fi->setFaultCode(fs.getFaultcode());
+     fi->setAffectedObject(compute_node_uri.toString());
+     mutator_policyelem.commit();
 }
 
 void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
@@ -61,7 +62,7 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
      bd = agent.getPolicyManager().getBDForGroup(epURI.get());
      shared_ptr<const Endpoint> ep = agent.getEndpointManager().getEndpoint(fs.getEPUUID());     
      if ((bd) && (ep)){
-       string bd_uri = bd.get()->getURI().toString();
+       const string& bd_uri = bd.get()->getURI().toString();
        URI l2epr = URIBuilder()
                   .addElement("EprL2Universe")
                   .addElement("EprL2Ep")
@@ -81,15 +82,17 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
            mutator_policyelem.commit();
            std::unique_lock<std::mutex> lock(lock_modb_mutex);
            pendingFaults.erase(fs.getFSUUID()); 
-       }
-       else {
-            LOG(INFO) << "Not able to create a Fault : l2EP was not resolved";
+       } else {
+            LOG(INFO) << "Not able to create a Fault : l2EP was not resolved "
+                      << "MAC " << fs.getMAC();
             lock_guard<recursive_mutex> lock(map_mutex);
             pendingFaults.insert(pair <std::string, Fault> (fs.getFSUUID(), fs));
        }
    } else {
-           if (!bd) LOG(INFO) << "Not able to create a Fault : BD not found";
-           if (!ep) LOG(INFO) << "Not able to create a Fault : Endpoint not found";
+           if (!bd) LOG(INFO) << "Not able to create a Fault : BD not found " 
+                              << "FaultUUID = " << fs.getFSUUID() << "EPUUID = " << fs.getEPUUID();
+           if (!ep) LOG(INFO) << "Not able to create a Fault : Endpoint not found " 
+			      << "FaultUUID = " << fs.getFSUUID() << "EPUUID = " << fs.getEPUUID();	
            lock_guard<recursive_mutex> lock(map_mutex);
            pendingFaults.insert(pair <std::string, Fault> (fs.getFSUUID(), fs));
        }
@@ -110,7 +113,7 @@ void FaultManager::removeFault(const std::string& uuid){
     }
 }
 
-bool FaultManager::getPendingFault(const std::string& faultUUID) {
+bool FaultManager::hasPendingFault(const std::string& faultUUID) {
      lock_guard<recursive_mutex> lock(map_mutex);
      if (pendingFaults.find(faultUUID) != pendingFaults.end()) {
          return true;
