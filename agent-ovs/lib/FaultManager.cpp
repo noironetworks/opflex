@@ -105,7 +105,7 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
 
 
 void FaultManager::clearPendingFaults(const std::string& faultUUID) {
-     std::unique_lock<std::mutex> lock(lock_modb_mutex);
+     std::unique_lock<std::mutex> lock(lock_map_mutex);
      pendingFaults.erase(faultUUID);     
 }
 
