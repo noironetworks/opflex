@@ -30,12 +30,17 @@ FaultManager::FaultManager(Agent& agent_,
 FaultManager::~FaultManager() { agent.getEndpointManager().unregisterListener(this);}
 
 void FaultManager::endpointUpdated(const std::string& uuid) {
-         
-     lock_guard<recursive_mutex> lock(map_mutex);
+     handleEndpointUpdate(uuid);
+}
+
+void FaultManager::handleEndpointUpdate(const std::string& uuid){
+     shared_ptr<const Endpoint> ep = agent.getEndpointManager().getEndpoint(uuid);
+     if (!ep) return;
+     std::unique_lock<std::mutex> lock(lock_map_mutex);
      for (auto it=pendingFaults.begin(); it != pendingFaults.end(); it++) {
          if (it->second.getEPUUID() == uuid) {
              createEpFault(agent,it->second);
-          } 
+          }
       }
 }
 

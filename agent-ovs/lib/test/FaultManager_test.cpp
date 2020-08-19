@@ -102,17 +102,13 @@ BOOST_FIXTURE_TEST_CASE( faultmodb, FSFaultFixture ) {
 
 static bool hasPendingFault(FaultManager& manager, string uuid){
   WAIT_FOR((manager.hasPendingFault(uuid)),500);
-  return true;
-  //return manager.hasPendingFault(uuid);
+  return (manager.hasPendingFault(uuid));
 }
 
 static bool hasFault(const string& pathstr, FSFaultSource& faultsource, string uuid){
   string ret_uuid = "";
   faultsource.getFaultUUID(ret_uuid, pathstr);
-  if(ret_uuid == uuid) {
-     return true;
-  }
-  return false;
+  return (ret_uuid == uuid); 
 }
 
 template<typename T>

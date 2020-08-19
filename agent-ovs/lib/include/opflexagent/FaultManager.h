@@ -53,6 +53,8 @@ public:
    /* Clear the pending faults */
     void clearPendingFaults(const std::string& faultUUID);
 
+   /* handle endpoint object */
+    void handleEndpointUpdate(const std::string& uuid);
    Agent& agent;
    opflex::ofcore::OFFramework& framework;
    std::map<std::string, Fault> pendingFaults;
@@ -60,6 +62,7 @@ public:
 private:
    std::mutex lock_modb_mutex;
    std::recursive_mutex map_mutex;
+   std::mutex lock_map_mutex;
 };
 
 } /* namespace opflexagent */
