@@ -60,9 +60,7 @@ public:
    std::map<std::string, Fault> pendingFaults;
 
 private:
-   std::mutex lock_modb_mutex;
    std::recursive_mutex map_mutex;
-   std::mutex lock_map_mutex;
 };
 
 } /* namespace opflexagent */

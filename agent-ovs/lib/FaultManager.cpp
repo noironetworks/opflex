@@ -36,7 +36,7 @@ void FaultManager::endpointUpdated(const std::string& uuid) {
 void FaultManager::handleEndpointUpdate(const std::string& uuid){
      shared_ptr<const Endpoint> ep = agent.getEndpointManager().getEndpoint(uuid);
      if (!ep) return;
-     std::unique_lock<std::mutex> lock(lock_map_mutex);
+     lock_guard<recursive_mutex> lock(map_mutex);
      for (auto it=pendingFaults.begin(); it != pendingFaults.end(); it++) {
          if (it->second.getEPUUID() == uuid) {
              createEpFault(agent,it->second);
@@ -85,7 +85,7 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
            fi->setFaultCode(fs.getFaultcode());
            fi->setAffectedObject(epURI.toString());
            mutator_policyelem.commit();
-           std::unique_lock<std::mutex> lock(lock_modb_mutex);
+	   lock_guard<recursive_mutex> lock(map_mutex);
            pendingFaults.erase(fs.getFSUUID()); 
        } else {
             LOG(INFO) << "Not able to create a Fault : l2EP was not resolved "
@@ -105,7 +105,7 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
 
 
 void FaultManager::clearPendingFaults(const std::string& faultUUID) {
-     std::unique_lock<std::mutex> lock(lock_map_mutex);
+     lock_guard<recursive_mutex> lock(map_mutex);
      pendingFaults.erase(faultUUID);     
 }
 
