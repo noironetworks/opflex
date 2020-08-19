@@ -85,7 +85,7 @@ void FaultManager::createEpFault(Agent& agent, const Fault& fs) {
            fi->setFaultCode(fs.getFaultcode());
            fi->setAffectedObject(epURI.toString());
            mutator_policyelem.commit();
-	   lock_guard<recursive_mutex> lock(map_mutex);
+           lock_guard<recursive_mutex> lock(map_mutex);
            pendingFaults.erase(fs.getFSUUID()); 
        } else {
             LOG(INFO) << "Not able to create a Fault : l2EP was not resolved "
