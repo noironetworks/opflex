@@ -512,7 +512,7 @@ bool operator==(const ObjectInstance& lhs, const ObjectInstance& rhs) {
     }
     for (const ObjectInstance::prop_map_t::value_type& v : rhs.prop_map) {
         auto it = lhs.prop_map.find(v.first);
-        if (it == rhs.prop_map.end()) return false;
+        if (it == lhs.prop_map.end()) return false;
     }
     return true;
 }
