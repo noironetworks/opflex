@@ -65,11 +65,7 @@ void FSFaultSource::updated(const fs::path& filePath) {
         read_json(pathstr, properties);
 
         newfs.setFSUUID(properties.get<string>(FS_UUID));
-        optional<string> ep_uuid = properties.get_optional<string>(EP_UUID);
-        if (ep_uuid){
-           newfs.setEPUUID(ep_uuid.get());
-        }
-      
+
         string severity = properties.get<string>(FS_SEVERITY);
         if(severity == "critical"){
            newfs.setSeverity(SevEnum::CONST_CRITICAL);
@@ -91,36 +87,35 @@ void FSFaultSource::updated(const fs::path& filePath) {
        
         newfs.setDescription(properties.get<string>(FS_DESCRIPTION));
         newfs.setFaultcode(properties.get<uint64_t>(FS_CODE));
- 
-        optional<string> mac = properties.get_optional<string>(EP_MAC);
-        if (mac) {
-            newfs.setMAC(MAC(mac.get()));
-        }
-
-        optional<string> eg_name = properties.get_optional<string>(EP_GROUP_NAME);
-        optional<string> ps_name = properties.get_optional<string>(POLICY_SPACE_NAME);
-        if (eg_name && ps_name) {
+   
+        optional<string> ep_uuid = properties.get_optional<string>(EP_UUID); 
+        if (ep_uuid){
+           newfs.setEPUUID(ep_uuid.get());
+           string eg_name = properties.get<string>(EP_GROUP_NAME);
+           string ps_name = properties.get<string>(POLICY_SPACE_NAME);
+           newfs.setMAC(MAC(properties.get<string>(EP_MAC)));
            newfs.setEgURI(opflex::modb::URIBuilder()
                                 .addElement("PolicyUniverse")
                                 .addElement("PolicySpace")
-                                .addElement(ps_name.get())
+                                .addElement(ps_name)
                                 .addElement("GbpEpGroup")
-                                .addElement(eg_name.get()).build());
-        }
+                                .addElement(eg_name).build());
+           faultManager->createEpFault(agent,newfs);
 
+         } else {
+           faultManager->createPlatformFault(agent,newfs);
+          }
         std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
            if (newfs.getFSUUID() != it->second) {
-              delete_fault(filePath);
+              deleted(filePath);
+              faultManager->clearPendingFaults(it->second); 
            }
         }
-    
+ 
         knownFaults[pathstr] = newfs.getFSUUID();
-        faultManager->createFault(agent,newfs);
-  
         LOG(INFO) << "Updated Faults " << newfs << " from " << filePath;
-                      
     } catch (const std::exception& ex) {
         LOG(ERROR) << "Could not load Faults from: "
                    << filePath << ": "
@@ -128,20 +123,20 @@ void FSFaultSource::updated(const fs::path& filePath) {
       } 
 }
 
-void FSFaultSource::delete_fault(const fs::path& filePath){
+void FSFaultSource::deleted(const fs::path& filePath){
     try {
-        string pathstr = filePath.string();
-        std::unique_lock<std::mutex> lock(lock_map_mutex);
-        fault_map_t::const_iterator it =  knownFaults.find(pathstr);
-        if (it != knownFaults.end()) {
-           LOG(INFO) << "Removed Fault "
+        string pathstr = filePath.string(); 
+        if (!fs::exists(filePath)){ 
+           std::unique_lock<std::mutex> lock(lock_map_mutex);
+           fault_map_t::const_iterator it =  knownFaults.find(pathstr);
+           if (it != knownFaults.end()) {
+               LOG(INFO) << "Removed Fault "
                       << it->second
                       << " at " << filePath;
-           faultManager->removeFault(it->second);
-           knownFaults.erase(it);
-           return;
+               faultManager->removeFault(it->second);
+               knownFaults.erase(it);
+           }
         }
-
     } catch (const std::exception& ex) {
         LOG(ERROR) << "Could not delete Fault for "
                    << filePath << ": "

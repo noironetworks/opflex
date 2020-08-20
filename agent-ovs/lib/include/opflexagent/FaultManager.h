@@ -8,13 +8,14 @@
 
 #include <opflex/ofcore/OFFramework.h>
 #include <opflexagent/Fault.h> 
+#include <opflexagent/EndpointListener.h>
 #include <mutex>
 
 namespace opflexagent {
 
 class Agent;
 
-class FaultManager {
+class FaultManager: public EndpointListener{
 public:
 
   FaultManager(Agent& agent,
@@ -28,7 +29,7 @@ public:
     * manager
     *
     */
-   void createFault(Agent& agent, const Fault& fs);
+   void createPlatformFault(Agent& agent, const Fault& fs);
  
    /**
     * Remove the fault with the specified UUID from the fault
@@ -38,12 +39,28 @@ public:
     */
    void removeFault(const std::string& uuid);
 
+   void createEpFault(Agent& agent, const Fault& fs);
+  
+   /* Interface: EndpointListener */
+   virtual void endpointUpdated(const std::string& uuid);
 
-  Agent& agent;
-  opflex::ofcore::OFFramework& framework;
+
+   /* check if the faults which are not 
+    * processed gets added to the map 
+    */
+    bool hasPendingFault(const std::string& faultUUID);
+
+   /* Clear the pending faults */
+    void clearPendingFaults(const std::string& faultUUID);
+
+   /* handle endpoint object */
+    void handleEndpointUpdate(const std::string& uuid);
+   Agent& agent;
+   opflex::ofcore::OFFramework& framework;
+   std::map<std::string, Fault> pendingFaults;
 
 private:
-  std::mutex lock_modb_mutex;
+   std::recursive_mutex map_mutex;
 };
 
 } /* namespace opflexagent */

@@ -22,7 +22,10 @@ namespace opflexagent {
 class Fault {
 public:
 
-    Fault() {} 
+    Fault() { } 
+
+
+    ~Fault() { } 
 
     /**
      * Set the UUID for this endpoint
@@ -119,7 +122,7 @@ public:
      *
      * @return the MAC address
      */
-    const boost::optional<opflex::modb::MAC>& getMAC() const {
+    const boost::optional<opflex::modb::MAC>&  getMAC() const {
         return mac;
     }
 
@@ -160,7 +163,7 @@ public:
       uint64_t faultcode;
       uint8_t severity;
       std::string description;
-      boost::optional<opflex::modb::MAC> mac;	
+      boost::optional<opflex::modb::MAC>  mac;	
       boost::optional<opflex::modb::URI> egURI;
 
 };
