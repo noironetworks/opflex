@@ -449,6 +449,9 @@ module[inv]
         # mac address of the end-point
         member[mac; type=address/MAC]
 
+        # proxy mac address to reach the end-point(s)
+        member[proxyMac; type=address/MAC]
+
         # Next hop remote tunnel endpoint
         member[nextHopTunnel; type=address/IP]
 
@@ -459,6 +462,25 @@ module[inv]
             to[class=gbp/EpGroup;
                 cardinality=many;
                 ]
+        }
+    }
+
+    # Remote ep with multiple next hops
+    class[NextHopLink;
+          super=gbp/BaseNextHop;
+          concrete;
+          ]
+    {
+        contained
+        {
+            parent[class=inv/RemoteInventoryEp]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=ip]
+            }
         }
     }
 }

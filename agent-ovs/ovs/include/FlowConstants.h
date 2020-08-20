@@ -154,6 +154,11 @@ extern const uint64_t REMOTE_TUNNEL;
  */
 extern const uint64_t HOST_ACCESS;
 
+/**
+ * Remote tunnel to a proxy
+ */
+extern const uint64_t REMOTE_TUNNEL_PROXY;
+
 } // namespace out
 
 
