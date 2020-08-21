@@ -157,7 +157,7 @@ namespace opflexagent {
         }
         const Endpoint& endpoint = *epWrapper.get();
         const optional<URI>& epQosPol = endpoint.getQosPolicy();
-        const optional<string>& ofPortName = endpoint.getInterfaceName();
+        const optional<string>& ofPortName = endpoint.getAccessInterface();
 
         if (epQosPol && ofPortName){
             const string &interface = ofPortName.get();
