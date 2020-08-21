@@ -602,7 +602,8 @@ if ENABLE_GRPC
 %.grpc.pb.cc %.grpc.pb.h %.pb.cc %.pb.h: %.proto
 	protoc --cpp_out=. $^
 	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` $^
-opflex_server_SOURCES += server/GbpClient.cpp
+opflex_server_SOURCES += server/GbpClient.cpp \
+                         server/StatsIO.cpp
 BUILT_SOURCES = server/gbp.pb.cc \
                 server/gbp.grpc.pb.cc \
                 server/gbp.pb.h \

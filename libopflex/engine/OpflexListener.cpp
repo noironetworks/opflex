@@ -170,6 +170,14 @@ void OpflexListener::connectionClosed(OpflexServerConnection* conn) {
         uv_async_send(&cleanup_async);
 }
 
+void OpflexListener::getOpflexPeerStats(std::unordered_map<string, std::shared_ptr<OFServerStats>>& stats) {
+    const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
+    if (!active) return;
+    for (OpflexServerConnection* conn : conns) {
+        stats.emplace(std::make_pair(conn->getRemotePeer(), conn->getOpflexStats()));
+    }
+}
+
 void OpflexListener::sendToAll(OpflexMessage* message) {
     std::unique_ptr<OpflexMessage> messagep(message);
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
@@ -205,6 +213,7 @@ void OpflexListener::sendUpdates() {
     if (!active) return;
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     for (OpflexServerConnection* conn : conns) {
+        conn->getOpflexStats()->incrPolUpdates();
         conn->sendUpdates();
     }
 }

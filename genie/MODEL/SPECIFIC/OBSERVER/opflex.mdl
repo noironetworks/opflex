@@ -15,8 +15,8 @@ module[observer]
         }
     }
 
-    # OpFlex protocol related counters
-    class[OpflexCounter;
+    # OpFlex protocol related counters in opflex-agent
+    class[OpflexAgentCounter;
           super=observer/Observable;
           concrete;
           ]
@@ -95,5 +95,71 @@ module[observer]
  
         # the number of unresolved policies 
         member[polUnresolvedCount; type=scalar/UInt64]
+    }
+
+    # OpFlex protocol related counters in opflex-server
+    class[OpflexServerCounter;
+          super=observer/Observable;
+          concrete;
+          ]
+    {
+        contained
+        {
+            parent[class=observer/SysStatUniverse]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[prefix=opflex;
+                          member=peer]
+            }
+        }
+
+        member[peer; type=ascii/String]
+
+        # the number of identity requests received
+        member[identReqs; type=scalar/UInt64]
+
+        # number of policy updates received from gbp server
+        # and sent to a connection
+        member[polUpdates; type=scalar/UInt64]
+
+        # number of policy resolves received
+        member[polResolves; type=scalar/UInt64]
+        # number of policies unavailable on received resolves
+        member[polUnavailableResolves; type=scalar/UInt64]
+        # number of policy resolves received errors
+        member[polResolveErrs; type=scalar/UInt64]
+
+        # number of policy unresolves received
+        member[polUnresolves; type=scalar/UInt64]
+        # number of policy unresolves received errors
+        member[polUnresolveErrs; type=scalar/UInt64]
+
+        # number of endpoint declares received
+        member[epDeclares; type=scalar/UInt64]
+        # number of endpoint declares received errors
+        member[epDeclareErrs; type=scalar/UInt64]
+
+        # number of endpoint declares received
+        member[epUndeclares; type=scalar/UInt64]
+        # number of endpoint declares received errors
+        member[epUndeclareErrs; type=scalar/UInt64]
+
+        # number of endpoint resolves received
+        member[epResolves; type=scalar/UInt64]
+        # number of endpoint resolves received errors
+        member[epResolveErrs; type=scalar/UInt64]
+
+        # number of endpoint resolves received
+        member[epUnresolves; type=scalar/UInt64]
+        # number of endpoint resolves received errors
+        member[epUnresolveErrs; type=scalar/UInt64]
+
+        # the number of state reports received
+        member[stateReports; type=scalar/UInt64]
+        # the number of state reports received errors
+        member[stateReportErrs; type=scalar/UInt64]
     }
 }

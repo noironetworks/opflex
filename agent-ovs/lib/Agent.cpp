@@ -673,7 +673,7 @@ void Agent::start() {
     } else {
         // disable reporting of some stats for now (MODB only)
         LOG(INFO) << "Disable unsupported stat reporting";
-        framework.overrideObservableReporting(modelgbp::observer::OpflexCounter::CLASS_ID, false);
+        framework.overrideObservableReporting(modelgbp::observer::OpflexAgentCounter::CLASS_ID, false);
         framework.overrideObservableReporting(modelgbp::gbpe::EpToSvcCounter::CLASS_ID, false);
         framework.overrideObservableReporting(modelgbp::gbpe::SvcToEpCounter::CLASS_ID, false);
         framework.overrideObservableReporting(modelgbp::gbpe::TableDropCounter::CLASS_ID, false);

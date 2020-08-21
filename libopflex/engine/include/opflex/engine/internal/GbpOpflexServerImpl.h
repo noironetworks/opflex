@@ -179,14 +179,22 @@ public:
                                      gbp::PolicyUpdateOp op);
 
     /**
-     * on timer callback
+     * on timer callback for prr
      */
-    void on_timer(const boost::system::error_code& ec);
+    void on_timer_prr(const boost::system::error_code& ec);
 
     /**
      * Get prr timer callback interval
      */
     int getPrrIntervalSecs() { return prr_interval_secs; }
+
+    /**
+     * Retrieve OpFlex server stats for each available peer
+     *
+     * @param stats Map of named peers to associated OpFlex stats
+     */
+    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFServerStats>>& stats);
+
 private:
     uint16_t port;
     uint8_t roles;
@@ -204,8 +212,8 @@ private:
 
     std::unique_ptr<std::thread> io_service_thread;
     boost::asio::io_service io;
-    std::unique_ptr<boost::asio::deadline_timer> prr_timer;
     std::atomic_bool stopping;
+    std::unique_ptr<boost::asio::deadline_timer> prr_timer;
     int prr_interval_secs;
     std::mutex prr_timer_mutex;
 };

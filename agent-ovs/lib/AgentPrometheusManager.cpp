@@ -10,7 +10,7 @@
  */
 
 #include <opflexagent/Agent.h>
-#include <opflex/ofcore/OFStats.h>
+#include <opflex/ofcore/OFAgentStats.h>
 #include <opflexagent/PrometheusManager.h>
 #include <modelgbp/gbpe/L24Classifier.hpp>
 #include <map>
@@ -2845,7 +2845,7 @@ void AgentPrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
 
 /* Function called from PolicyStatsManager to update OFPeerStats */
 void AgentPrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
-                                                    const std::shared_ptr<OFStats> stats)
+                                                    const std::shared_ptr<OFAgentStats> stats)
 {
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(ofpeer_stats_mutex);

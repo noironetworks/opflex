@@ -232,7 +232,12 @@ protected:
 
 void OpflexServerHandler::handleSendIdentityReq(const rapidjson::Value& id,
                                                 const Value& payload) {
-    LOG(DEBUG) << "Got send_identity req";
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got send_identity req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrIdentReqs();
     std::stringstream sb;
     sb << "127.0.0.1:" << server->getPort();
     SendIdentityRes* res =
@@ -241,7 +246,7 @@ void OpflexServerHandler::handleSendIdentityReq(const rapidjson::Value& id,
                             server->getRoles(),
                             server->getPeers(),
                             server->getProxies());
-    getConnection()->sendMessage(res, true);
+    conn->sendMessage(res, true);
     ready();
 }
 
@@ -252,6 +257,7 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
         return;
 
     LOG(DEBUG) << "Got policy_resolve req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrPolResolves();
 
     bool found = true;
     Value::ConstValueIterator it;
@@ -259,23 +265,28 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
         if (!it->HasMember("subject")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
         if (it->HasMember("policy_ident")) {
             sendErrorRes(id, "EUNSUPPORTED",
                          "Policy resolution by ident is not supported");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
         if (!it->HasMember("policy_uri")) {
             sendErrorRes(id, "ERROR", "Malformed message: no policy_uri");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
         if (!it->HasMember("prr")) {
             sendErrorRes(id, "ERROR", "Malformed message: no prr");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
 
@@ -284,11 +295,13 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
         if (!subjectv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: subject is not a string");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
         if (!puriv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: policy_uri is not a string");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
 
@@ -296,6 +309,7 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
         if (!prrv.IsInt64()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: prr is not an integer");
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
         int64_t lifetime = prrv.GetInt64();
@@ -317,9 +331,13 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
                          subjectv.GetString());
+            conn->getOpflexStats()->incrPolResolveErrs();
             return;
         }
     }
+
+    if (!found)
+        conn->getOpflexStats()->incrPolUnavailableResolves();
 
     if (flakyMode && !found) {
         LOG(INFO) << "Flaking out";
@@ -338,23 +356,28 @@ void OpflexServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
         return;
 
     LOG(DEBUG) << "Got policy_unresolve req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrPolUnresolves();
     Value::ConstValueIterator it;
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
         if (!it->HasMember("subject")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint");
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
         if (it->HasMember("policy_ident")) {
             sendErrorRes(id, "EUNSUPPORTED",
                          "Policy resolution by ident is not supported");
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
         if (!it->HasMember("policy_uri")) {
             sendErrorRes(id, "ERROR", "Malformed message: no policy_uri");
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
 
@@ -363,11 +386,13 @@ void OpflexServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
         if (!subjectv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: subject is not a string");
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
         if (!puriv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: policy_uri is not a string");
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
 
@@ -384,6 +409,7 @@ void OpflexServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
                          subjectv.GetString());
+            conn->getOpflexStats()->incrPolUnresolveErrs();
             return;
         }
     }
@@ -396,7 +422,12 @@ void OpflexServerHandler::handlePolicyUnresolveReq(const rapidjson::Value& id,
 
 void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
                                              const rapidjson::Value& payload) {
-    LOG(DEBUG) << "Got endpoint_declare req";
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got endpoint_declare req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrEpDeclares();
     StoreClient::notif_t notifs;
     StoreClient& client = *server->getSystemClient();
     MOSerializer& serializer = server->getSerializer();
@@ -405,14 +436,17 @@ void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrEpDeclareErrs();
             return;
         }
         if (!it->HasMember("endpoint")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint");
+            conn->getOpflexStats()->incrEpDeclareErrs();
             return;
         }
         if (!it->HasMember("prr")) {
             sendErrorRes(id, "ERROR", "Malformed message: no prr");
+            conn->getOpflexStats()->incrEpDeclareErrs();
             return;
         }
 
@@ -422,11 +456,13 @@ void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
         if (!endpoint.IsArray()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: endpoint is not an array");
+            conn->getOpflexStats()->incrEpDeclareErrs();
             return;
         }
         if (!prr.IsInt()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: prr is not an integer");
+            conn->getOpflexStats()->incrEpDeclareErrs();
             return;
         }
 
@@ -456,11 +492,17 @@ void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
     OpflexMessage* res =
         new GenericOpflexMessage("endpoint_declare",
                                  OpflexMessage::RESPONSE, &id);
-    getConnection()->sendMessage(res, true);
+    conn->sendMessage(res, true);
 }
 
 void OpflexServerHandler::handleEPUndeclareReq(const rapidjson::Value& id,
                                                const rapidjson::Value& payload) {
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got endpoint_unndeclare req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrEpUndeclares();
     StoreClient::notif_t notifs;
     StoreClient& client = *server->getSystemClient();
 
@@ -468,14 +510,17 @@ void OpflexServerHandler::handleEPUndeclareReq(const rapidjson::Value& id,
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrEpUndeclareErrs();
             return;
         }
         if (!it->HasMember("subject")) {
             sendErrorRes(id, "ERROR", "Malformed message: no subject");
+            conn->getOpflexStats()->incrEpUndeclareErrs();
             return;
         }
         if (!it->HasMember("endpoint_uri")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint_uri");
+            conn->getOpflexStats()->incrEpUndeclareErrs();
             return;
         }
 
@@ -484,11 +529,13 @@ void OpflexServerHandler::handleEPUndeclareReq(const rapidjson::Value& id,
         if (!subjectv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: subject is not a string");
+            conn->getOpflexStats()->incrEpUndeclareErrs();
             return;
         }
         if (!euriv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: endpoint_uri is not a string");
+            conn->getOpflexStats()->incrEpUndeclareErrs();
             return;
         }
         try {
@@ -501,6 +548,7 @@ void OpflexServerHandler::handleEPUndeclareReq(const rapidjson::Value& id,
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
                          subjectv.GetString());
+            conn->getOpflexStats()->incrEpUndeclareErrs();
             return;
         }
 
@@ -510,29 +558,39 @@ void OpflexServerHandler::handleEPUndeclareReq(const rapidjson::Value& id,
     OpflexMessage* res =
         new GenericOpflexMessage("endpoint_undeclare",
                                  OpflexMessage::RESPONSE, &id);
-    getConnection()->sendMessage(res, true);
+    conn->sendMessage(res, true);
 }
 
 void OpflexServerHandler::handleEPResolveReq(const rapidjson::Value& id,
                                              const rapidjson::Value& payload) {
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got endpoint_resolve req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrEpResolves();
     Value::ConstValueIterator it;
     std::vector<modb::reference_t> mos;
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
         if (!it->HasMember("subject")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint");
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
         if (it->HasMember("endpoint_ident")) {
             sendErrorRes(id, "EUNSUPPORTED",
                          "Endpoint resolution by ident is not supported");
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
         if (!it->HasMember("endpoint_uri")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint_uri");
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
 
@@ -541,11 +599,13 @@ void OpflexServerHandler::handleEPResolveReq(const rapidjson::Value& id,
         if (!subjectv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: subject is not a string");
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
         if (!puriv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: endpoint_uri is not a string");
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
 
@@ -563,35 +623,45 @@ void OpflexServerHandler::handleEPResolveReq(const rapidjson::Value& id,
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
                          subjectv.GetString());
+            conn->getOpflexStats()->incrEpResolveErrs();
             return;
         }
     }
 
     EndpointResolveRes* res =
         new EndpointResolveRes(id, *server, mos);
-    getConnection()->sendMessage(res, true);
+    conn->sendMessage(res, true);
 }
 
 void OpflexServerHandler::handleEPUnresolveReq(const rapidjson::Value& id,
                                                const rapidjson::Value& payload) {
-    LOG(DEBUG) << "Got endpoint_unresolve req";
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got endpoint_unresolve req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrEpUnresolves();
     Value::ConstValueIterator it;
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
         if (!it->HasMember("subject")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint");
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
         if (it->HasMember("endpoint_ident")) {
             sendErrorRes(id, "EUNSUPPORTED",
                          "Endpoint resolution by ident is not supported");
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
         if (!it->HasMember("endpoint_uri")) {
             sendErrorRes(id, "ERROR", "Malformed message: no endpoint_uri");
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
 
@@ -600,11 +670,13 @@ void OpflexServerHandler::handleEPUnresolveReq(const rapidjson::Value& id,
         if (!subjectv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: subject is not a string");
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
         if (!puriv.IsString()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: endpoint_uri is not a string");
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
 
@@ -620,6 +692,7 @@ void OpflexServerHandler::handleEPUnresolveReq(const rapidjson::Value& id,
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
                          subjectv.GetString());
+            conn->getOpflexStats()->incrEpUnresolveErrs();
             return;
         }
     }
@@ -627,7 +700,7 @@ void OpflexServerHandler::handleEPUnresolveReq(const rapidjson::Value& id,
     OpflexMessage* res =
         new GenericOpflexMessage("endpoint_unresolve",
                                  OpflexMessage::RESPONSE, &id);
-    getConnection()->sendMessage(res, true);
+    conn->sendMessage(res, true);
 }
 
 void OpflexServerHandler::handleEPUpdateRes(uint64_t reqId,
@@ -637,7 +710,12 @@ void OpflexServerHandler::handleEPUpdateRes(uint64_t reqId,
 
 void OpflexServerHandler::handleStateReportReq(const rapidjson::Value& id,
                                                const rapidjson::Value& payload) {
-    LOG(DEBUG) << "Got state_report req";
+    OpflexServerConnection* conn = dynamic_cast<OpflexServerConnection*>(getConnection());
+    if (!conn)
+        return;
+
+    LOG(DEBUG) << "Got state_report req from " << conn->getRemotePeer();
+    conn->getOpflexStats()->incrStateReports();
     StoreClient::notif_t notifs;
     StoreClient& client = *server->getSystemClient();
     MOSerializer& serializer = server->getSerializer();
@@ -646,10 +724,12 @@ void OpflexServerHandler::handleStateReportReq(const rapidjson::Value& id,
     for (it = payload.Begin(); it != payload.End(); ++it) {
         if (!it->IsObject()) {
             sendErrorRes(id, "ERROR", "Malformed message: not an object");
+            conn->getOpflexStats()->incrStateReportErrs();
             return;
         }
         if (!it->HasMember("observable")) {
             sendErrorRes(id, "ERROR", "Malformed message: no observable");
+            conn->getOpflexStats()->incrStateReportErrs();
             return;
         }
 
@@ -658,6 +738,7 @@ void OpflexServerHandler::handleStateReportReq(const rapidjson::Value& id,
         if (!observable.IsArray()) {
             sendErrorRes(id, "ERROR",
                          "Malformed message: observable is not an array");
+            conn->getOpflexStats()->incrStateReportErrs();
             return;
         }
 
@@ -672,7 +753,7 @@ void OpflexServerHandler::handleStateReportReq(const rapidjson::Value& id,
     OpflexMessage* res =
         new GenericOpflexMessage("state_report",
                                  OpflexMessage::RESPONSE, &id);
-    getConnection()->sendMessage(res, true);
+    conn->sendMessage(res, true);
 }
 
 bool OpflexServerHandler::hasResolution(modb::class_id_t class_id,

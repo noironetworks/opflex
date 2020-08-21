@@ -234,7 +234,6 @@ BOOST_FIXTURE_TEST_CASE( dereference, Fixture ) {
     BOOST_CHECK_EQUAL(0, processor.getRefCount(c4u));
     WAIT_FOR(!itemPresent(client2, 6, c6u), 1000);
 }
-
 static bool connReady(OpflexPool& pool, const char* host, int port) {
     OpflexConnection* conn = pool.getPeer(host, port);
     return (conn != NULL && conn->isReady());
@@ -261,7 +260,6 @@ void BasePFixture::testPeerSwap(void) {
                               vector<std::string>(), md, 60);
     GbpOpflexServerImpl peer2(8010, SERVER_ROLES, list_of(p1),
                               vector<std::string>(), md, 60);
-
     anycastServer.start();
     peer1.start();
     peer2.start();
@@ -922,5 +920,4 @@ BOOST_FIXTURE_TEST_CASE( test_override_observale_reporting, BasePFixture ) {
     processor.overrideObservableReporting(classId, true);
     BOOST_CHECK(processor.isObservableReportable(classId));
 }
-
 BOOST_AUTO_TEST_SUITE_END()

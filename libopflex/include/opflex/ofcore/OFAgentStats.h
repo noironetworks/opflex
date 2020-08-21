@@ -1,6 +1,6 @@
 /* -*- C++ -*-; c-basic-offset: 4; indent-tabs-mode: nil */
 /*!
- * @file OFStats.h
+ * @file OFAgentStats.h
  * @brief Interface definition file for OFFramework
  */
 /*
@@ -18,19 +18,19 @@
 /**
  * OpFlex client stats counters
  */
-class OFStats {
+class OFAgentStats {
 
 public:
 
     /**
      * Create a new instance
      */
-    OFStats() {};
+    OFAgentStats() {};
 
     /**
      * Destroy the instance
      */
-    virtual ~OFStats() {};
+    virtual ~OFAgentStats() {};
 
     /** get the number of identity requests sent */
     uint64_t getIdentReqs() { return identReqs; }
