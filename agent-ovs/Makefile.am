@@ -594,7 +594,8 @@ opflex_server_CXXFLAGS += -pg
 endif
 
 opflex_server_SOURCES = \
-	server/opflex_server.cpp
+	server/opflex_server.cpp \
+	server/StatsIO.cpp
 if ENABLE_PROMETHEUS
 opflex_server_SOURCES += server/ServerPrometheusManager.cpp
 endif
@@ -602,8 +603,7 @@ if ENABLE_GRPC
 %.grpc.pb.cc %.grpc.pb.h %.pb.cc %.pb.h: %.proto
 	protoc --cpp_out=. $^
 	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` $^
-opflex_server_SOURCES += server/GbpClient.cpp \
-                         server/StatsIO.cpp
+opflex_server_SOURCES += server/GbpClient.cpp
 BUILT_SOURCES = server/gbp.pb.cc \
                 server/gbp.grpc.pb.cc \
                 server/gbp.pb.h \
