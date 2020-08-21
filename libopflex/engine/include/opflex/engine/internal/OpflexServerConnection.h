@@ -15,6 +15,7 @@
 #include <uv.h>
 #include <mutex>
 
+#include <include/opflex/ofcore/OFServerStats.h>
 #include "opflex/engine/internal/OpflexConnection.h"
 #include "opflex/modb/URI.h"
 #include "opflex/modb/PropertyInfo.h"
@@ -29,7 +30,6 @@ namespace opflex {
 namespace engine {
 namespace internal {
 
-class OpflexPool;
 class OpflexListener;
 
 /**
@@ -124,6 +124,7 @@ public:
      */
     void sendTimeouts();
 
+    std::shared_ptr<OFServerStats> getOpflexStats() { return opflexStats; }
 private:
     OpflexListener* listener;
 
@@ -157,6 +158,8 @@ private:
     static void on_prr_timer_async(uv_async_t* handle);
 
     yajr::Peer* peer;
+
+    std::shared_ptr<OFServerStats> opflexStats;
 };
 
 

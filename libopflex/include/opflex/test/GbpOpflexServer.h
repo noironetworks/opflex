@@ -11,12 +11,14 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <memory>
 #include <vector>
 #include <utility>
 #include <rapidjson/document.h>
 
 #include "opflex/modb/ModelMetadata.h"
 #include "opflex/gbp/Policy.h"
+#include <opflex/ofcore/OFServerStats.h>
 
 #pragma once
 #ifndef OPFLEX_TEST_GBPOPFLEXSERVER_H
@@ -140,6 +142,13 @@ public:
      * @return a bitmask containing the server roles
      */
     uint8_t getRoles() const;
+
+    /**
+     * Retrieve OpFlex server stats for each available peer
+     *
+     * @param stats Map of named peers to associated OpFlex stats
+     */
+    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFServerStats>>& stats);
 
 private:
     engine::internal::GbpOpflexServerImpl* pimpl;

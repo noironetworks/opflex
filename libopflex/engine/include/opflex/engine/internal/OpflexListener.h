@@ -180,6 +180,10 @@ public:
      */
     bool isListening();
 
+    /**
+     * Return opflex stats per peer connection
+     */
+    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFServerStats>>& stats);
 private:
     HandlerFactory& handlerFactory;
 

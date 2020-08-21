@@ -594,7 +594,8 @@ opflex_server_CXXFLAGS += -pg
 endif
 
 opflex_server_SOURCES = \
-	server/opflex_server.cpp
+	server/opflex_server.cpp \
+	server/StatsIO.cpp
 if ENABLE_PROMETHEUS
 opflex_server_SOURCES += server/ServerPrometheusManager.cpp
 endif

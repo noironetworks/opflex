@@ -40,7 +40,7 @@ OpflexClientConnection::OpflexClientConnection(HandlerFactory& handlerFactory,
       pool(pool_), hostname(hostname_), port(port_), role(0), peer(NULL),
       started(false), active(false), closing(false), ready(false),
       failureCount(0), handshake_timer(NULL) {
-    opflexStats = std::make_shared<OFStats>();
+    opflexStats = std::make_shared<OFAgentStats>();
 }
 
 OpflexClientConnection::~OpflexClientConnection() {

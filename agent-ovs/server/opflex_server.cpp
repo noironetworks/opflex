@@ -39,6 +39,7 @@
 #include <opflexagent/PrometheusManager.h>
 #endif
 #include <opflexagent/Agent.h>
+#include "StatsIO.h"
 
 using std::string;
 using std::make_pair;
@@ -97,7 +98,9 @@ int main(int argc, char** argv) {
             ("grpc_conf", po::value<string>()->default_value(""),
              "GRPC config file, should be in same directory as policy file")
             ("prr_interval_secs", po::value<int>()->default_value(60),
-             "How often to wakeup prr thread to check for prr timeouts")
+             "How often to wakeup io thread to check for prr timeouts")
+            ("stats_interval_secs", po::value<int>()->default_value(15),
+             "How often to wakeup io thread to check for stats timeouts")
             ("server_port", po::value<int>()->default_value(8009),
              "Port on which server passively listens");
     } catch (const boost::bad_lexical_cast& e) {
@@ -120,7 +123,7 @@ int main(int argc, char** argv) {
     std::string ssl_pass;
     std::vector<std::string> peers;
     std::vector<std::string> transport_mode_proxies;
-    int prr_interval_secs, server_port;
+    int prr_interval_secs, stats_interval_secs, server_port;
 #ifdef HAVE_GRPC_SUPPORT
     std::string grpc_address;
     std::string grpc_conf_file;
@@ -189,6 +192,7 @@ int main(int argc, char** argv) {
             grpc_address = vm["grpc_address"].as<string>();
 #endif
         prr_interval_secs = vm["prr_interval_secs"].as<int>();
+        stats_interval_secs = vm["stats_interval_secs"].as<int>();
         server_port = vm["server_port"].as<int>();
     } catch (const po::unknown_option& e) {
         std::cerr << e.what() << std::endl;
@@ -236,7 +240,12 @@ int main(int argc, char** argv) {
         ServerPrometheusManager prometheusManager;
         if (enable_prometheus)
             prometheusManager.start(enable_localhost_only);
+        StatsIO statsIO(prometheusManager,
+                        server, framework, stats_interval_secs);
+#else
+        StatsIO statsIO(server, framework, stats_interval_secs);
 #endif
+        statsIO.start();
 
         if (policy_file != "") {
             server.readPolicy(policy_file);
@@ -283,6 +292,7 @@ int main(int argc, char** argv) {
 
                 if ((event->mask & IN_CLOSE_WRITE) && event->len > 0) {
                     LOG(INFO) << "Policy/Config dir modified : " << pf_dir;
+                    statsIO.stop();
 #ifdef HAVE_PROMETHEUS_SUPPORT
                     prometheusManager.stop();
 #endif
@@ -305,6 +315,7 @@ int main(int argc, char** argv) {
             }
         }
 cleanup:
+        statsIO.stop();
 #ifdef HAVE_PROMETHEUS_SUPPORT
         prometheusManager.stop();
 #endif

@@ -36,6 +36,7 @@ OpflexServerConnection::OpflexServerConnection(OpflexListener* listener_)
     : OpflexConnection(listener_->handlerFactory),
       listener(listener_), peer(NULL) {
 
+      opflexStats = std::make_shared<OFServerStats>();
       uv_loop_init(&server_loop);
       policy_update_async.data = this;
       uv_async_init(&server_loop, &policy_update_async, on_policy_update_async);

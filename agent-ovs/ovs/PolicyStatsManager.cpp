@@ -280,14 +280,14 @@ on_timer_base(const error_code& ec,
 
     // flush OpFlex client stats
     // TODO: Move these to a separate class to avoid polluting Policy/FlowStatsManager
-    std::unordered_map<string, std::shared_ptr<OFStats>> stats;
+    std::unordered_map<string, std::shared_ptr<OFAgentStats>> stats;
     agent->getFramework().getOpflexPeerStats(stats);
     Mutator mutator(agent->getFramework(), "policyelement");
     optional<shared_ptr<SysStatUniverse> > ssu =
         SysStatUniverse::resolve(agent->getFramework());
     if (ssu) {
         for (const auto& peerStat : stats) {
-            ssu.get()->addObserverOpflexCounter(peerStat.first)
+            ssu.get()->addObserverOpflexAgentCounter(peerStat.first)
                     ->setIdentReqs(peerStat.second->getIdentReqs())
                     .setIdentResps(peerStat.second->getIdentResps())
                     .setIdentErrs(peerStat.second->getIdentErrs())

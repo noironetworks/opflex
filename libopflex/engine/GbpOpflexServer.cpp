@@ -37,6 +37,10 @@ GbpOpflexServer::~GbpOpflexServer() {
     delete pimpl;
 }
 
+void GbpOpflexServer::getOpflexPeerStats (std::unordered_map<std::string, std::shared_ptr<OFServerStats>>& stats) {
+    pimpl->getOpflexPeerStats(stats);
+}
+
 void GbpOpflexServer::enableSSL(const std::string& caStorePath,
                                 const std::string& serverKeyPath,
                                 const std::string& serverKeyPass,
@@ -117,7 +121,7 @@ void GbpOpflexServerImpl::start() {
         prr_timer.reset(new deadline_timer(io, seconds(prr_interval_secs)));
         prr_timer->async_wait([this](const boost::system::error_code& ec) {
             if (!stopping)
-                on_timer(ec);
+                on_timer_prr(ec);
             });
     }
 
@@ -144,13 +148,18 @@ void GbpOpflexServerImpl::stop() {
     client = NULL;
 }
 
-void GbpOpflexServerImpl::on_timer(const boost::system::error_code& ec) {
+void GbpOpflexServerImpl::getOpflexPeerStats (std::unordered_map<std::string, std::shared_ptr<OFServerStats>>& stats) {
+    listener.getOpflexPeerStats(stats);
+}
+
+void GbpOpflexServerImpl::on_timer_prr (const boost::system::error_code& ec) {
     if (ec) {
         const std::lock_guard<std::mutex> guard(prr_timer_mutex);
         prr_timer.reset();
         return;
     }
 
+    LOG(DEBUG) << "prr timer invoked";
     listener.sendTimeouts();
 
     if (!stopping) {
@@ -158,7 +167,7 @@ void GbpOpflexServerImpl::on_timer(const boost::system::error_code& ec) {
         prr_timer->expires_at(prr_timer->expires_at() +
                               seconds(prr_interval_secs));
         prr_timer->async_wait([this](const boost::system::error_code& ec) {
-                on_timer(ec);
+                on_timer_prr(ec);
             });
     }
 }

@@ -584,7 +584,7 @@
 #include "opflex/ofcore/MainLoopAdaptor.h"
 #include "opflex/ofcore/OFConstants.h"
 #include "boost/asio/ip/address_v4.hpp"
-#include "opflex/ofcore/OFStats.h"
+#include "opflex/ofcore/OFAgentStats.h"
 #include <opflex/modb/URI.h>
 #include <opflex/modb/PropertyInfo.h>
 
@@ -897,7 +897,7 @@ public:
      *
      * @param stats Map of named peers to associated OpFlex stats
      */
-    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFStats>>& stats);
+    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFAgentStats>>& stats);
 
     /**
      * Enable/Disable reporting of observable changes to registered observers

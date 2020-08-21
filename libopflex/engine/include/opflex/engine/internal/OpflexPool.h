@@ -350,7 +350,7 @@ public:
      *
      * @param stats Map of named peers to associated OpFlex stats
      */
-    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFStats>>& stats);
+    void getOpflexPeerStats(std::unordered_map<std::string, std::shared_ptr<OFAgentStats>>& stats);
 
 private:
     HandlerFactory& factory;

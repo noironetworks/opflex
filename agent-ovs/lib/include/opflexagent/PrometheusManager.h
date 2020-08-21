@@ -394,7 +394,7 @@ public:
      * @param stats   opflex stats corresponding to the peer
      */
     void addNUpdateOFPeerStats(const std::string& peer,
-                               const std::shared_ptr<OFStats> stats);
+                               const std::shared_ptr<OFAgentStats> stats);
 
 
     /* SvcCounter related APIs */
