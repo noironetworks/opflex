@@ -112,7 +112,7 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToDecrypt(
         peer->onDisconnect();
     }
 
-    LOG(totalRead ? DEBUG4 : DEBUG3) << peer << " Returning: " << (totalRead ?: nread);
+    LOG(TRACE) << peer << " Returning: " << (totalRead ?: nread);
     /* short-circuit a single non-positive nread */
     return totalRead ?: nread;
 }
@@ -122,13 +122,13 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToEncrypt(
 
     assert(!peer->getPendingBytes());
     if (peer->getPendingBytes()) {
-        LOG(DEBUG3) << peer << " has already got pending bytes. Should have not tried!";
+        LOG(TRACE) << peer << " has already got pending bytes. Should have not tried!";
         return 0;
     }
 
     /* we have to encrypt the plaintext data, if any is available */
     if (peer->getStringQueue().deque_.empty()) {
-        LOG(DEBUG4) << peer << " has no data to send";
+        LOG(TRACE) << peer << " has no data to send";
         return 0;
     }
 
@@ -136,7 +136,6 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToEncrypt(
 
     ssize_t totalWrite = 0;
     ssize_t nwrite = 0;
-    ssize_t tryWrite;
 
     std::vector<iovec> iovIn =
         ::yajr::comms::internal::get_iovec(
@@ -147,7 +146,7 @@ ssize_t Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToEncrypt(
     std::vector<iovec>::iterator iovInIt;
     for (iovInIt = iovIn.begin(); iovInIt != iovIn.end(); ++iovInIt) {
 
-        tryWrite = iovInIt->iov_len;
+        ssize_t tryWrite = iovInIt->iov_len;
 
         assert(tryWrite);
 
@@ -200,7 +199,7 @@ int Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToSend(
             e->bioExternal_,
             (char**)&buf.iov_base);
 
-    LOG(DEBUG4) << peer << ": " << nread << " bytes to be sent";
+    LOG(TRACE) << peer << ": " << nread << " bytes to be sent";
 
     if (nread <= 0) {
         return 0;
@@ -341,30 +340,15 @@ void Cb< ZeroCopyOpenSSL >::on_read(
         bool giveUp = false;
 
         if (whereTheWriteShouldHaveStarted != buf->base) {
-
-            LOG(ERROR)
-                << peer
-                << "unexpected discrepancy: buf->base = "
-                << buf->base
-                << " whereTheWriteShouldHaveStarted = "
-                << whereTheWriteShouldHaveStarted
-                << " will disconnect"
-            ;
-
+            LOG(ERROR) << peer << "unexpected discrepancy: buf->base = "
+                << buf->base << " whereTheWriteShouldHaveStarted = "
+                << whereTheWriteShouldHaveStarted << " will disconnect";
             giveUp = true;
         }
 
         if (advancement != nread) {
-
-            LOG(ERROR)
-                << peer
-                << "unexpected discrepancy: nread = "
-                << nread
-                << " advancement = "
-                << advancement
-                << " will disconnect"
-            ;
-
+            LOG(ERROR) << peer << "unexpected discrepancy: nread = "
+                << nread << " advancement = " << advancement << " will disconnect";
             giveUp = true;
         }
 
@@ -385,29 +369,21 @@ void Cb< ZeroCopyOpenSSL >::on_read(
                 (void) Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToSend(peer);
 
                 if (peer->getPendingBytes()) {
-                    LOG(DEBUG4) << peer << " Retried to send and emitted " << peer->getPendingBytes() << " bytes";
+                    LOG(TRACE) << peer << " Retried to send and emitted " << peer->getPendingBytes() << " bytes";
                     return;
                 }
 
-                if (Cb< ZeroCopyOpenSSL >::StaticHelpers::
-                        tryToEncrypt(peer)) {
+                if (Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToEncrypt(peer)) {
                     /* kick the can */
-                    (void) Cb< ZeroCopyOpenSSL >::StaticHelpers::
-                        tryToSend(peer);
+                    (void) Cb< ZeroCopyOpenSSL >::StaticHelpers::tryToSend(peer);
 
-                    LOG(DEBUG4)
-                        << peer
-                        << " Found no handshake data,"
-                           " but found actual payload and sent "
-                        << peer->getPendingBytes()
-                        << " bytes"
-                    ;
+                    LOG(TRACE) << peer << " Found no handshake data,"
+                        << " but found actual payload and sent "
+                        << peer->getPendingBytes() << " bytes";
                 }
             }
         }
-
     }
-
 }
 
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
@@ -455,17 +431,11 @@ void ZeroCopyOpenSSL::lockingCallback(
 #endif
 
 int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
-
     LOG(INFO);
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
     assert(!rwlock);
-
     if (rwlock) {
-
-        LOG(ERROR)
-            << "OpenSSL was already initialized"
-        ;
-
+        LOG(ERROR) << "OpenSSL was already initialized";
         return UV_EEXIST;
     }
     SSL_library_init();
@@ -477,15 +447,9 @@ int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
     OpenSSL_add_all_algorithms();
     if (forMultipleThreads) {
-
         rwlock = new (std::nothrow) uv_rwlock_t[CRYPTO_num_locks()];
-
         if (!rwlock) {
-
-            LOG(ERROR)
-                << "Unable to allocate rwlock's for OpenSSL"
-            ;
-
+            LOG(ERROR) << "Unable to allocate rwlock's for OpenSSL";
             return UV_ENOMEM;
         }
 
@@ -494,7 +458,6 @@ int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
         }
 
         CRYPTO_set_locking_callback(lockingCallback);
-
     }
 #endif
     return 0;
@@ -503,9 +466,7 @@ int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
 #include <openssl/conf.h>
 #include <openssl/engine.h>
 void ZeroCopyOpenSSL::finiOpenSSL() {
-
     LOG(INFO);
-
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
     if (rwlock) {
 
@@ -569,13 +530,9 @@ ZeroCopyOpenSSL::ZeroCopyOpenSSL(ZeroCopyOpenSSL::Ctx * ctx, bool passive)
 #endif
 
     if (passive) {
-
         SSL_set_accept_state(ssl_);
-
     } else {
-
         SSL_set_connect_state(ssl_);
-
     }
 
     /* This is the best way I found to do nothing visible yet trigger the SSL
@@ -585,11 +542,9 @@ ZeroCopyOpenSSL::ZeroCopyOpenSSL(ZeroCopyOpenSSL::Ctx * ctx, bool passive)
      */
     BIO_read (bioSSL_, reinterpret_cast< void * >(1), 0);
     BIO_write(bioSSL_, reinterpret_cast< void * >(1), 0);
-
 }
 
 ZeroCopyOpenSSL::~ZeroCopyOpenSSL() {
-
     if (bioSSL_) {
         BIO_free_all(bioSSL_);
     }
@@ -597,17 +552,15 @@ ZeroCopyOpenSSL::~ZeroCopyOpenSSL() {
     if (bioExternal_) {
         BIO_free_all(bioExternal_);
     }
-
 }
 
 void ZeroCopyOpenSSL::infoCallback(SSL const *, int where, int ret) {
-
     switch (where) {
         case SSL_CB_HANDSHAKE_START:
-            LOG(DEBUG2) << " Handshake start!";
+            LOG(DEBUG) << " Handshake start!";
             break;
         case SSL_CB_HANDSHAKE_DONE:
-            LOG(DEBUG2) << " Handshake done!";
+            LOG(DEBUG) << " Handshake done!";
             break;
     }
 }
@@ -845,12 +798,9 @@ ZeroCopyOpenSSL::Ctx * ZeroCopyOpenSSL::Ctx::createCtx(
         }
 
         if (failure) {
-
             delete ctx;
             ctx = NULL;
-
         } else {
-
             SSL_CTX_set_info_callback(sslCtx, infoCallback);
 
             /* just ask for a certificate from the peer anyway */
@@ -861,9 +811,7 @@ ZeroCopyOpenSSL::Ctx * ZeroCopyOpenSSL::Ctx::createCtx(
 
             /* GREAT SUCCESS! */
             return ctx;
-
         }
-
     }
 
     assert(!ctx);

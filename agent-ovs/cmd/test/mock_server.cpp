@@ -8,10 +8,6 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-#if HAVE_CONFIG_H
-#  include <config.h>
-#endif
-
 #include <unistd.h>
 #include <csignal>
 #include <sys/inotify.h>
@@ -31,14 +27,8 @@
 
 #include <opflexagent/logging.h>
 #include <opflexagent/cmd.h>
-#include <rapidjson/filereadstream.h>
 #include "Policies.h"
-#ifdef HAVE_GRPC_SUPPORT
-#include "GbpClient.h"
-#endif
-#ifdef HAVE_PROMETHEUS_SUPPORT
-#include <opflexagent/PrometheusManager.h>
-#endif
+#include <opflexagent/Agent.h>
 
 using std::string;
 using std::make_pair;
@@ -46,6 +36,7 @@ namespace po = boost::program_options;
 using opflex::test::GbpOpflexServer;
 using opflex::ofcore::OFConstants;
 using namespace opflexagent;
+using opflex::modb::Mutator;
 
 void sighandler(int sig) {
     LOG(INFO) << "Got " << strsignal(sig) << " signal";
@@ -73,10 +64,6 @@ int main(int argc, char** argv) {
             ("sample", po::value<string>()->default_value(""),
              "Output a sample policy to the given file then exit")
             ("daemon", "Run the opflex server as a daemon")
-#ifdef HAVE_PROMETHEUS_SUPPORT
-            ("disable-prometheus", "Disable exporting metrics to prometheus")
-            ("enable-prometheus-localhost", "Export prometheus port only on localhost")
-#endif
             ("policy,p", po::value<string>()->default_value(""),
              "Read the specified policy file to seed the MODB")
             ("ssl_castore", po::value<string>()->default_value("/etc/ssl/certs/"),
@@ -90,12 +77,6 @@ int main(int argc, char** argv) {
             ("transport_mode_proxies", po::value<std::vector<string> >(),
              "3 transport_mode_proxy IPv4 addresses specified to return "
              "in identity response")
-            ("grpc_address", po::value<string>()->default_value("localhost:19999"),
-             "GRPC server address for policy updates")
-            ("grpc_conf", po::value<string>()->default_value(""),
-             "GRPC config file, should be in same directory as policy file")
-            ("prr_interval_secs", po::value<int>()->default_value(60),
-             "How often to wakeup prr thread to check for prr timeouts")
             ("server_port", po::value<int>()->default_value(8009),
              "Port on which server passively listens");
     } catch (const boost::bad_lexical_cast& e) {
@@ -104,10 +85,6 @@ int main(int argc, char** argv) {
     }
 
     bool daemon = false;
-#ifdef HAVE_PROMETHEUS_SUPPORT
-    bool enable_prometheus = true;
-    bool enable_localhost_only = false;
-#endif
     std::string log_file;
     std::string level_str;
     std::string policy_file;
@@ -119,11 +96,7 @@ int main(int argc, char** argv) {
     std::string ssl_pass;
     std::vector<std::string> peers;
     std::vector<std::string> transport_mode_proxies;
-    int prr_interval_secs, server_port;
-#ifdef HAVE_GRPC_SUPPORT
-    std::string grpc_address;
-    std::string grpc_conf_file;
-#endif
+    int server_port;
     char buf[EVENT_BUF_LEN];
     int fd, wd;
 
@@ -141,12 +114,6 @@ int main(int argc, char** argv) {
         if (vm.count("daemon")) {
             daemon = true;
         }
-#ifdef HAVE_PROMETHEUS_SUPPORT
-        if (vm.count("disable-prometheus"))
-            enable_prometheus = false;
-        if (vm.count("enable-prometheus-localhost"))
-            enable_localhost_only = true;
-#endif
         log_file = vm["log"].as<string>();
         level_str = vm["level"].as<string>();
         policy_file = vm["policy"].as<string>();
@@ -160,33 +127,6 @@ int main(int argc, char** argv) {
             transport_mode_proxies =
                 vm["transport_mode_proxies"].as<std::vector<string>>();
         }
-#ifdef HAVE_GRPC_SUPPORT
-        grpc_conf_file = vm["grpc_conf"].as<string>();
-        if (grpc_conf_file != "") {
-            FILE* fp = fopen(grpc_conf_file.c_str(), "r");
-            if (fp == NULL) {
-                LOG(ERROR) << "Could not open grpc_conf file "
-                           << grpc_conf_file << " for reading";
-            } else {
-                char buffer[1024];
-                rapidjson::FileReadStream f(fp, buffer, sizeof(buffer));
-                rapidjson::Document d;
-                d.ParseStream<0, rapidjson::UTF8<>,
-                    rapidjson::FileReadStream>(f);
-                fclose(fp);
-                if (d.IsObject()) {
-                    if (d.HasMember("grpc-address")) {
-                        const rapidjson::Value& grpc_addressv = d["grpc-address"];
-                        if (grpc_addressv.IsString())
-                            grpc_address = grpc_addressv.GetString();
-                   }
-                }
-            }
-        }
-        if (grpc_address == "")
-            grpc_address = vm["grpc_address"].as<string>();
-#endif
-        prr_interval_secs = vm["prr_interval_secs"].as<int>();
         server_port = vm["server_port"].as<int>();
     } catch (const po::unknown_option& e) {
         std::cerr << e.what() << std::endl;
@@ -199,7 +139,7 @@ int main(int argc, char** argv) {
     if (daemon)
         daemonize();
 
-    initLogging(level_str, false /*syslog*/, log_file, "opflex-server");
+    initLogging(level_str, false /*syslog*/, log_file, "mock-server");
 
     try {
         if (sample_file != "") {
@@ -224,20 +164,7 @@ int main(int argc, char** argv) {
 
         GbpOpflexServer server(server_port, SERVER_ROLES, peer_vec,
                                transport_mode_proxies,
-                               modelgbp::getMetadata(),
-                               prr_interval_secs);
-#ifdef HAVE_GRPC_SUPPORT
-        LOG(INFO) << "Connecting to gbp-server at address: "
-                  << grpc_address;
-        GbpClient client(grpc_address, server);
-#endif
-
-#ifdef HAVE_PROMETHEUS_SUPPORT
-        ServerPrometheusManager prometheusManager;
-        if (enable_prometheus)
-            prometheusManager.start(enable_localhost_only);
-#endif
-
+                               modelgbp::getMetadata(), 60);
         if (policy_file != "") {
             server.readPolicy(policy_file);
         }
@@ -283,16 +210,10 @@ int main(int argc, char** argv) {
 
                 if ((event->mask & IN_CLOSE_WRITE) && event->len > 0) {
                     LOG(INFO) << "Policy/Config dir modified : " << pf_dir;
-#ifdef HAVE_PROMETHEUS_SUPPORT
-                    prometheusManager.stop();
-#endif
-#ifdef HAVE_GRPC_SUPPORT
-                    client.Stop();
-#endif
                     /* should be stopped after client */
                     server.stop();
                     if (execv(argv[0], argv)) {
-                        LOG(ERROR) << "opflex_server failed to restart self"
+                        LOG(ERROR) << "mock_server failed to restart self"
                                    << strerror(errno);
                         goto cleanup;
                     }
@@ -302,12 +223,6 @@ int main(int argc, char** argv) {
             }
         }
 cleanup:
-#ifdef HAVE_PROMETHEUS_SUPPORT
-        prometheusManager.stop();
-#endif
-#ifdef HAVE_GRPC_SUPPORT
-        client.Stop();
-#endif
         server.stop();
     } catch (const std::exception& e) {
         LOG(ERROR) << "Fatal error: " << e.what();

@@ -32,7 +32,6 @@
 #include <modelgbp/fault/SeverityEnumT.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <opflexagent/logging.h>
 #include <opflexagent/Endpoint.h>
@@ -69,12 +68,9 @@ using std::pair;
 using boost::optional;
 using boost::uuids::to_string;
 using boost::uuids::basic_random_generator;
-using boost::asio::deadline_timer;
 using boost::asio::ip::address;
 using boost::asio::ip::address_v4;
 using boost::asio::ip::address_v6;
-using std::chrono::milliseconds;
-using std::unique_lock;
 using std::mutex;
 using opflex::modb::URI;
 using opflex::modb::MAC;
@@ -2098,7 +2094,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         anycastReturnIps.push_back(addr);
                     }
                 }
-                if (anycastReturnIps.size() == 0) {
+                if (anycastReturnIps.empty()) {
                     anycastReturnIps = ipAddresses;
                 }
 
@@ -2160,7 +2156,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
     }
 }
 
-void IntFlowManager::in6AddrToLong (address sAddr, uint32_t *pAddr)
+void IntFlowManager::in6AddrToLong (address& sAddr, uint32_t *pAddr)
 {
     boost::asio::ip::address_v6::bytes_type bytes = sAddr.to_v6().to_bytes();
     memcpy(pAddr, bytes.data(), sizeof(uint32_t) * 4);
@@ -4887,6 +4883,7 @@ void IntFlowManager::createStaticFlows() {
         }
         FlowBuilder().tlv(0xffff, 11, 16, 11).buildTlv(tlvFlows);
         FlowBuilder().tlv(0xffff, 12, 4, 12).buildTlv(tlvFlows);
+        FlowBuilder().tlv(0xffff, 13, 4, 13).buildTlv(tlvFlows);
         switchManager.writeTlv("DropLogStatic", tlvFlows);
     }
     {
@@ -5379,7 +5376,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         vector<shared_ptr<L3ExternalNetwork> > extNets;
         extDom->resolveGbpL3ExternalNetwork(extNets);
 
-        for (shared_ptr<L3ExternalNetwork> net : extNets) {
+        for (shared_ptr<L3ExternalNetwork>& net : extNets) {
             uint32_t netVnid = getExtNetVnid(net->getURI());
             vector<shared_ptr<ExternalSubnet> > extSubs;
             net->resolveGbpExternalSubnet(extSubs);
@@ -5393,7 +5390,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                         agent.getPolicyManager().getVnidForGroup(natEpg.get());
             }
 
-            for (shared_ptr<ExternalSubnet> extsub : extSubs) {
+            for (shared_ptr<ExternalSubnet>& extsub : extSubs) {
                 if (!extsub->isAddressSet() || !extsub->isPrefixLenSet())
                     continue;
                 address addr =
@@ -5409,7 +5406,8 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                         // For external networks mapped to a NAT EPG,
                         // set the next hop action to NAT_OUT
                         if (natEpgVnid) {
-                            snr.action()
+                            snr.priority(151 + extsub->getPrefixLen(0))
+                                .action()
                                 .reg(MFF_REG2, netVnid)
                                 .reg(MFF_REG7, natEpgVnid.get())
                                 .metadata(flow::meta::out::NAT,
@@ -5432,7 +5430,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                 }
                 {
                     FlowBuilder snn;
-                    matchSubnet(snn, rdId, 150, addr,
+                    matchSubnet(snn, rdId, 151, addr,
                                 extsub->getPrefixLen(0), true);
                     snn.action()
                         .reg(MFF_REG0, netVnid)
@@ -5577,14 +5575,13 @@ updateEndpointFloodGroup(const opflex::modb::URI& fgrpURI,
     const std::string& epUUID = endPoint.getUUID();
     uint32_t fgrpId = getId(FloodDomain::CLASS_ID, fgrpURI);
     string fgrpStrId = "fd:" + fgrpURI.toString();
-    FloodGroupMap::iterator fgrpItr = floodGroupMap.find(fgrpURI);
+    auto fgrpItr = floodGroupMap.find(fgrpURI);
     if(endPoint.isExternal()) {
         localExternalFdSet.insert(fgrpId);
     }
     if (fgrpItr != floodGroupMap.end()) {
         Ep2PortMap& epMap = fgrpItr->second;
-        Ep2PortMap::iterator epItr = epMap.find(epUUID);
-
+        auto epItr = epMap.find(epUUID);
         if (epItr == epMap.end()) {
             /* EP not attached to this flood-group, check and remove
              * if it was attached to a different one */
@@ -5624,7 +5621,7 @@ updateEndpointFloodGroup(const opflex::modb::URI& fgrpURI,
 }
 
 void IntFlowManager::removeEndpointFromFloodGroup(const std::string& epUUID) {
-    for (FloodGroupMap::iterator itr = floodGroupMap.begin();
+    for (auto itr = floodGroupMap.begin();
          itr != floodGroupMap.end();
          ++itr) {
         const URI& fgrpURI = itr->first;
@@ -5656,7 +5653,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
     for (const shared_ptr<PolicyRule>& pc : rules) {
         uint8_t dir = pc->getDirection();
         const shared_ptr<L24Classifier>& cls = pc->getL24Classifier();
-        const opflex::modb::URI& ruleURI = cls.get()->getURI();
+        const opflex::modb::URI& ruleURI = cls->getURI();
         uint64_t cookie = getId(L24Classifier::CLASS_ID, ruleURI);
         flowutils::ClassAction act = flowutils::CA_DENY;
         if (pc->getAllow())

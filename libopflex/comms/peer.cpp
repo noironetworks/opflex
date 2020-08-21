@@ -77,12 +77,12 @@ bool Peer::down() {
 std::recursive_mutex Peer::LoopData::peerMutex{};
 
 void Peer::insert(Peer::LoopData::PeerState peerState) {
-    LOG(DEBUG3) << this << " is being inserted in " << peerState;
+    LOG(TRACE) << this << " is being inserted in " << peerState;
     Peer::LoopData::addPeer(getUvLoop(), peerState, this);
 }
 
 void Peer::unlink() {
-    LOG(DEBUG4) << this << " manually unlinking";
+    LOG(TRACE) << this << " manually unlinking";
     SafeListBaseHook::unlink();
 }
 

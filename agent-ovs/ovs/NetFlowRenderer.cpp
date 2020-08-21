@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2014-2019 Cisco Systems, Inc. and others.  All rights reserved.
  *
@@ -15,7 +14,6 @@
 #include <modelgbp/netflow/CollectorVersionEnumT.hpp>
 
 #include <boost/optional.hpp>
-#include <boost/format.hpp>
 
 
 namespace opflexagent {
@@ -25,27 +23,23 @@ namespace opflexagent {
     }
 
     void NetFlowRenderer::start(const std::string& swName, OvsdbConnection* conn) {
-        LOG(DEBUG) << "starting NetFlowRenderer renderer";
+        LOG(DEBUG) << "starting NetFlow renderer";
         JsonRpcRenderer::start(swName, conn);
         agent.getNetFlowManager().registerListener(this);
     }
 
     void NetFlowRenderer::stop() {
-        LOG(DEBUG) << "stopping NetFlowRenderer renderer";
+        LOG(DEBUG) << "stopping NetFlow renderer";
+        JsonRpcRenderer::stop();
         agent.getNetFlowManager().unregisterListener(this);
     }
 
     void NetFlowRenderer::exporterUpdated(const opflex::modb::URI& netFlowURI) {
-        LOG(DEBUG) << "NetFlowRenderer exporter updated";
+        LOG(DEBUG) << "NetFlow exporter updated";
         handleNetFlowUpdate(netFlowURI);
     }
 
     void NetFlowRenderer::exporterDeleted(const shared_ptr<ExporterConfigState>& expSt) {
-        LOG(DEBUG) << "deleting exporter";
-        unique_lock<mutex> lock(handlerMutex);
-        if (!expSt) {
-            return;
-        }
         if (!connect()) {
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
@@ -56,6 +50,10 @@ namespace opflexagent {
             timerStarted = true;
             return;
         }
+        LOG(DEBUG) << "deleting exporter";
+        if (!expSt) {
+            return;
+        }
         if (expSt->getVersion() ==  CollectorVersionEnumT::CONST_V5) {
             deleteNetFlow();
         } else if(expSt->getVersion() == CollectorVersionEnumT::CONST_V9) {
@@ -64,17 +62,8 @@ namespace opflexagent {
     }
 
     void NetFlowRenderer::handleNetFlowUpdate(const opflex::modb::URI& netFlowURI) {
-        LOG(DEBUG) << "NetFlow handle update, thread " << std::this_thread::get_id();
-        unique_lock<mutex> lock(handlerMutex);
-        NetFlowManager &spMgr = agent.getNetFlowManager();
-        optional<shared_ptr<ExporterConfigState>> expSt =
-            spMgr.getExporterConfigState(netFlowURI);
-        // Is the exporter config state pointer set
-        if (!expSt) {
-            return;
-        }
         if (!connect()) {
-            LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
+            LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
 
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -83,6 +72,13 @@ namespace opflexagent {
                                                      boost::asio::placeholders::error, netFlowURI));
             timerStarted = true;
             LOG(DEBUG) << "conn timer " << connection_timer << ", timerStarted: " << timerStarted;
+            return;
+        }
+        NetFlowManager &spMgr = agent.getNetFlowManager();
+        optional<shared_ptr<ExporterConfigState>> expSt =
+            spMgr.getExporterConfigState(netFlowURI);
+        // Is the exporter config state pointer set
+        if (!expSt) {
             return;
         }
         std::string target = expSt.get()->getDstAddress() + ":";
@@ -212,26 +208,20 @@ namespace opflexagent {
         sendAsyncTransactRequests(requests);
     }
 
-    void NetFlowRenderer::updateConnectCb(const boost::system::error_code& ec,
-            const opflex::modb::URI& spanURI) {
+    void NetFlowRenderer::updateConnectCb(const boost::system::error_code& ec, const opflex::modb::URI& spanURI) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
-            string cat = string(ec.category().name());
-            LOG(DEBUG) << "timer error " << cat << ":" << ec.value();
-            if (!(cat == "system" &&
-                ec.value() == 125)) {
-                connection_timer->cancel();
-                timerStarted = false;
-            }
+            LOG(WARNING) << "reset timer";
+            connection_timer.reset();
             return;
         }
-
         exporterUpdated(spanURI);
     }
 
     void NetFlowRenderer::delConnectCb(const boost::system::error_code& ec,
                                        shared_ptr<ExporterConfigState>& expSt) {
         if (ec) {
+            LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
         }

@@ -9,6 +9,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <time.h>
 #include <opflex/ofcore/OFFramework.h>
 #include <opflex/ofcore/OFConstants.h>
 #include <modelgbp/metadata/metadata.hpp>
@@ -131,7 +132,10 @@ public:
         while (_c < count) {                               \
             if (condition) break;                          \
             _c += 1;                                       \
-            usleep(1000);                                  \
+            struct timespec ts;                            \
+            ts.tv_sec = 0;                                 \
+            ts.tv_nsec = 1000000L;                         \
+            nanosleep(&ts, NULL);                          \
             stmt;                                          \
         }                                                  \
         BOOST_CHECK((condition));                          \

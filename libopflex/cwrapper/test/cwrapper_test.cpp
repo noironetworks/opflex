@@ -119,7 +119,7 @@ void peerstatus_health(void* user_data,
 }
 
 BOOST_FIXTURE_TEST_CASE( init, ServerFixture ) {
-    ofloghandler_register(LOG_DEBUG1, handler);
+    ofloghandler_register(LOG_DEBUG, handler);
 
     offramework_p framework = NULL;
     ofpeerstatuslistener_p peer_listener = NULL;

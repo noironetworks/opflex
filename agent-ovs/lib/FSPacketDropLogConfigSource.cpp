@@ -59,7 +59,7 @@ static bool isPacketDropFlowConfig(fs::path filePath) {
 }
 
 static inline bool validateIpAddress(const boost::optional<string> ipAddress,
-        optional<boost::asio::ip::address> &_targetAddress,bool require_v4, string inputField) {
+        optional<boost::asio::ip::address> &_targetAddress,bool require_v4, const string &inputField) {
     address targetAddress;
     boost::system::error_code ec;
     if(!ipAddress) {
@@ -80,7 +80,7 @@ static inline bool validateIpAddress(const boost::optional<string> ipAddress,
 }
 
 static inline bool validateMacAddress(const boost::optional<string> macAddress,
-        optional<opflex::modb::MAC> &_targetMacAddress, string inputField) {
+        optional<opflex::modb::MAC> &_targetMacAddress, const string &inputField) {
     opflex::modb::MAC targetMacAddress;
     if(!macAddress) {
         return true;

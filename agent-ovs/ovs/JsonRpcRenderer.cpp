@@ -21,7 +21,17 @@ namespace opflexagent {
         conn = conn_;
     }
 
+    void JsonRpcRenderer::stop() {
+        if (timerStarted) {
+            timerStarted = false;
+            connection_timer->cancel();
+        }
+    }
+
     bool JsonRpcRenderer::connect() {
+        if (conn->isConnected()) {
+            return conn->isSyncComplete();
+        }
         // connect to OVSDB, destination is specified in agent config file.
         // If not the default is applied
         // If connection fails, a timer is started to retry and
@@ -36,6 +46,6 @@ namespace opflexagent {
             return false;
         }
         conn->connect();
-        return conn->isConnected();
+        return conn->isSyncComplete();
     }
 }

@@ -74,25 +74,12 @@ public:
          */
         LOCAL_ONLY,
         /**
-         * A special managed object that will be created by the
-         * framework and will contain state about pending managed
-         * object resolutions
-         */
-        RESOLVER,
-        /**
          * A type that represents a relationship between two managed
          * objects.  This type would contain a target reference
          * property that will allow the user to resolve related
          * managed objects.
          */
-        RELATIONSHIP,
-        /**
-         * A reverse relationship works just like a relationship
-         * except that it represents the reverse direction.  Though a
-         * reverse relationship contains a reference to the referring
-         * object, this reference will not be automatically resolved.
-         */
-        REVERSE_RELATIONSHIP
+        RELATIONSHIP
     };
 
     /**

@@ -56,7 +56,6 @@ void InspectorClientHandler::checkDone() {
 
 void InspectorClientHandler::handlePolicyQueryRes(const Value& payload) {
     StoreClient* storeClient = client->storeClient;
-    MOSerializer& serializer = client->serializer;
     StoreClient::notif_t notifs;
     if (payload.HasMember("policy")) {
         const Value& policy = payload["policy"];
@@ -69,7 +68,7 @@ void InspectorClientHandler::handlePolicyQueryRes(const Value& payload) {
         Value::ConstValueIterator it;
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
-            serializer.deserialize(mo, *storeClient, true, &notifs);
+            client->serializer.deserialize(mo, *storeClient, true, &notifs);
         }
     }
 

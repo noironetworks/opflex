@@ -15,8 +15,6 @@
 #endif
 
 
-#include <boost/foreach.hpp>
-
 #include "opflex/modb/EnumInfo.h"
 
 namespace opflex {
@@ -25,7 +23,7 @@ namespace modb {
 EnumInfo::EnumInfo(const std::string &name_,
          const std::vector<ConstInfo>& consts_)
     : name(name_) {
-    BOOST_FOREACH(const ConstInfo& cinst, consts_) {
+    for (const ConstInfo& cinst : consts_) {
         const_name_map[cinst.getName()] = cinst.getId();
         const_value_map[cinst.getId()] = cinst.getName();
     }

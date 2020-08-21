@@ -83,6 +83,9 @@ void BaseTableDropStatsManager::updateDropFlowStatsCounters(
 }
 
 void BaseTableDropStatsManager::start(bool register_listener) {
+    if(!connection) {
+        return;
+    }
     LOG(DEBUG) << "Starting "
                << connection->getSwitchName()
                << " Table Drop stats manager ("
@@ -119,6 +122,9 @@ void BaseTableDropStatsManager::start(bool register_listener) {
 }
 
 void BaseTableDropStatsManager::stop(bool unregister_listener) {
+    if(!connection) {
+        return;
+    }
     LOG(DEBUG) << "Stopping "
                << connection->getSwitchName()
                << " Table Drop stats manager";

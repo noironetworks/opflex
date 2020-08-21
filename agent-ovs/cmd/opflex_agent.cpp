@@ -71,7 +71,7 @@ static void readConfig(Agent& agent, const string& configFile) {
     } catch (pt::json_parser_error& e) {
         LOG(ERROR) << "Error parsing config file: " << configFile << "("
                    << e.line() << "): " << e.message();
-        throw e;
+        throw;
     }
     agent.setProperties(properties);
 }

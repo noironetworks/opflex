@@ -1172,9 +1172,8 @@ class ListeningTcpPeer : public ListeningPeer {
                   data,
                   listenerUvLoop,
                   uvLoopSelector
-          ) {
+          ), listen_on_(sockaddr_storage()) {
               createFail_ = 0;
-              listen_on_ = sockaddr_storage();
           }
 
     /**

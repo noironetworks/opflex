@@ -26,6 +26,8 @@
 #include <opflexagent/SpanManager.h>
 #include <opflexagent/SnatManager.h>
 #include <opflexagent/NetFlowManager.h>
+#include <opflexagent/QosManager.h>
+
 #ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
 #endif
@@ -47,17 +49,22 @@
 #include <thread>
 #include <tuple>
 
+#include <opflexagent/FaultManager.h>
+#include <opflexagent/FaultSource.h>
+
 namespace opflexagent {
 
 class Renderer;
 class RendererPlugin;
 class EndpointSource;
+class FaultSource;
 class ServiceSource;
 class FSRDConfigSource;
 class LearningBridgeSource;
 class SnatSource;
 class SimStats;
 class FSPacketDropLogConfigSource;
+class FSFaultSource;
 typedef std::tuple<std::string, bool, std::string> LogParams;
 enum StatMode { REAL, SIM, OFF };
 /**
@@ -139,6 +146,11 @@ public:
      *  Get the netflow manager object for this agent
      */
      NetFlowManager& getNetFlowManager() { return netflowManager; }
+
+     /**
+      * Get the qos manager object for this agent
+      */
+     QosManager& getQosManager() { return qosManager; }
 
     /**
      * Get the endpoint manager object for this agent
@@ -266,6 +278,12 @@ public:
      * A class used as a POD (Plain Old Data) object
      * to pass counter settings around.
      */
+
+    /**
+     * Get the fault manager object for this agent
+     */
+    FaultManager& getFaultManager() { return faultManager; }
+
     class StatProps {
         public:
         /**
@@ -324,6 +342,12 @@ public:
      */
     const LogParams& getLogParams() { return logParams; }
 
+    /**
+     * Common function b/w Agent and Server to add all supported universes
+     * @param root pointer to DmtreeRoot under which the universes will be created
+     */
+    static void createUniverse(std::shared_ptr<modelgbp::dmtree::Root> root);
+
 private:
     boost::asio::io_service agent_io;
     std::unique_ptr<boost::asio::io_service::work> io_work;
@@ -340,7 +364,8 @@ private:
     SnatManager snatManager;
     NotifServer notifServer;
     FSWatcher fsWatcher;
-    opflex_elem_t rendererFwdMode;
+    opflex_elem_t rendererFwdMode; 
+    FaultManager faultManager;
 
     boost::optional<std::string> opflexName;
     boost::optional<std::string> opflexDomain;
@@ -369,6 +394,7 @@ private:
     std::vector<std::unique_ptr<FSRDConfigSource>> rdConfigSources;
     std::vector<std::unique_ptr<LearningBridgeSource>> learningBridgeSources;
     std::string dropLogCfgSourcePath;
+    std::set<std::string> hostAgentFaultPaths;
     std::string packetEventNotifSockPath;
     std::unique_ptr<FSPacketDropLogConfigSource> dropLogCfgSource;
 
@@ -377,6 +403,7 @@ private:
 
     std::set<std::string> snatSourcePaths;
     std::vector<std::unique_ptr<SnatSource>> snatSources;
+    std::vector<std::unique_ptr<FaultSource>> faultSources;
 
     std::unordered_set<std::string> rendPluginLibs;
     std::unordered_set<void*> rendPluginHandles;
@@ -409,12 +436,14 @@ private:
                                      const std::string& interval_prop,
                                      const boost::property_tree::ptree& properties,
                                      Agent::StatProps& props);
+
     long contractInterval;
     long securityGroupInterval;
     long interfaceInterval;
 
     SpanManager spanManager;
     NetFlowManager netflowManager;
+    QosManager qosManager;
 
     // feature flag array
     bool featureFlag[FeatureList::MAX];

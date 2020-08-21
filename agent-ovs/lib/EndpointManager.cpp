@@ -245,9 +245,9 @@ void EndpointManager::updateEndpoint(const Endpoint& endpoint) {
     for (const string& ip : es.endpoint->getIPs()) {
         if (!validateIp(ip))
             continue;
-        if (ip_local_ep_map.find(ip) != ip_local_ep_map.end())
-            ip_local_ep_map.erase(ip);
+        ip_local_ep_map.erase(ip);
     }
+
 
     // update security group mapping
     const set<URI>& oldSecGroups = es.endpoint->getSecurityGroups();
@@ -350,8 +350,7 @@ void EndpointManager::removeEndpoint(const std::string& uuid) {
         for (const string& ip : es.endpoint->getIPs()) {
             if (!validateIp(ip))
                 continue;
-            if (ip_local_ep_map.find(ip) != ip_local_ep_map.end())
-                ip_local_ep_map.erase(ip);
+            ip_local_ep_map.erase(ip);
         }
         for (const URI& l2ep : es.l2EPs) {
             // The contained objects dont get deleted during make check tests.
@@ -919,7 +918,7 @@ bool EndpointManager::updateEndpointLocal(const std::string& uuid,
             }
 
             const optional<opflex::modb::URI>& qosPol =
-                    es.endpoint->getQosPol();
+                    es.endpoint->getQosPolicy();
             if (qosPol) {
                 l2e->addEpdrEndPointToQosRSrc()
                    ->setTargetRequirement(qosPol.get());

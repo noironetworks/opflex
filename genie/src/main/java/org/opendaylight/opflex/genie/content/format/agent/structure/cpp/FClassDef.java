@@ -1130,7 +1130,8 @@ public class FClassDef extends ItemFormatterTask
         out.println(aInIdent,"{");
         if (aInTargetClass != null && lClassProp != null)
         {
-            out.println(aInIdent + 1, "static const opflex::modb::class_id_t " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = " + aInTargetClass.getGID().getId() + ";");
+            String lValue = Strings.upFirstLetter(aInTargetClass.getModule().getLID().getName()) + Strings.upFirstLetter(aInTargetClass.getLID().getName());
+            out.println(aInIdent + 1, "static const std::string " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = \"" + lValue + "\";");
         }
         out.println(aInIdent + 1, "std::shared_ptr<" + aInFormattedChildClassName + "> result = addChild<" + aInFormattedChildClassName+ ">(");
         out.println(aInIdent + 2, "CLASS_ID, getURI(), " + toUnsignedStr(aInChildClass.getClassAsPropId(aInParentClass)) + ", " + aInChildClass.getGID().getId() + ",");
@@ -1234,7 +1235,8 @@ public class FClassDef extends ItemFormatterTask
         out.println(aInIdent,"{");
         if (aInTargetClass != null && lClassProp != null)
         {
-            out.println(aInIdent + 1, "static const opflex::modb::class_id_t " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = " + aInTargetClass.getGID().getId() + ";");
+            String lValue = Strings.upFirstLetter(aInTargetClass.getModule().getLID().getName()) + Strings.upFirstLetter(aInTargetClass.getLID().getName());
+            out.println(aInIdent + 1, "static const std::string " + getPropParamName(aInChildClass, lClassProp.getPropName()) + " = \"" + lValue + "\";");
         }
         out.println(aInIdent + 1, "return " + aInFormattedChildClassName + "::resolve(getFramework(), " + aInUriBuilder + ");");
         out.println(aInIdent,"}");

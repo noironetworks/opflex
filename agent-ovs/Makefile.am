@@ -92,6 +92,9 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSEndpointSource.h \
 	lib/include/opflexagent/FSExternalEndpointSource.h \
 	lib/include/opflexagent/ModelEndpointSource.h \
+        lib/include/opflexagent/QosConfigState.h \
+	lib/include/opflexagent/QosListener.h \
+	lib/include/opflexagent/QosManager.h \
 	lib/include/opflexagent/Service.h \
 	lib/include/opflexagent/ServiceListener.h \
 	lib/include/opflexagent/ServiceSource.h \
@@ -107,7 +110,11 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSRDConfigSource.h \
 	lib/include/opflexagent/RDConfig.h \
 	lib/include/opflexagent/Renderer.h \
-	lib/include/opflexagent/TunnelEpManager.h \
+	lib/include/opflexagent/TunnelEpManager.h \ 
+	lib/include/opflexagent/FaultManager.h \
+	lib/include/opflexagent/FaultSource.h \
+	lib/include/opflexagent/FSFaultSource.h \
+	lib/include/opflexagent/Fault.h \
 	lib/include/opflexagent/Agent.h \
 	lib/include/opflexagent/IdGenerator.h \
 	lib/include/opflexagent/KeyedRateLimiter.h \
@@ -171,6 +178,7 @@ noinst_HEADERS = \
 	ovs/include/eth.h \
 	ovs/include/JsonRpcRenderer.h \
 	ovs/include/NetFlowRenderer.h \
+	ovs/include/QosRenderer.h \
 	ovs/include/SpanRenderer.h \
 	ovs/include/PacketLogHandler.h \
 	ovs/include/PacketDecoder.h \
@@ -187,6 +195,7 @@ libopflex_agent_la_SOURCES = \
 	lib/FSWatcher.cpp \
 	lib/Endpoint.cpp \
 	lib/EndpointManager.cpp \
+	lib/QosManager.cpp \
 	lib/EndpointSource.cpp \
 	lib/FSEndpointSource.cpp \
 	lib/FSExternalEndpointSource.cpp \
@@ -206,6 +215,10 @@ libopflex_agent_la_SOURCES = \
 	lib/TunnelEpManager.cpp \
 	lib/cmd.cpp \
 	lib/logging.cpp \
+	lib/FaultManager.cpp \
+	lib/FaultSource.cpp \
+	lib/FSFaultSource.cpp \
+	lib/Fault.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
 	lib/CtZoneManager.cpp \
@@ -277,6 +290,7 @@ if RENDERER_OVS
 	ovs/ovs-shim.c \
 	ovs/JsonRpcRenderer.cpp \
 	ovs/NetFlowRenderer.cpp \
+	ovs/QosRenderer.cpp \
 	ovs/SpanRenderer.cpp \
 	ovs/PacketLogHandler.cpp \
 	ovs/PacketDecoder.cpp \
@@ -417,7 +431,7 @@ mcast_daemon_LDADD = \
 	libopflex_agent.la
 
 TESTS = agent_test
-noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress framework_stress
+noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress framework_stress mock_server
 if RENDERER_OVS
   noinst_PROGRAMS += integration_test_ovs
 endif
@@ -466,6 +480,9 @@ agent_test_SOURCES = \
 	lib/test/SimStats_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
 	lib/test/SnatManager_test.cpp \
+	lib/test/QosManager_test.cpp \
+	lib/test/FaultManager_test.cpp \
+	lib/test/QosManager_test.cpp \
 	cmd/test/agent_test.cpp
 
 agent_test_LDADD = \
@@ -512,13 +529,51 @@ if RENDERER_OVS
 	ovs/test/TableState_test.cpp \
 	ovs/test/SpanRenderer_test.cpp \
 	ovs/test/NetFlowRenderer_test.cpp \
+	ovs/test/QosRenderer_test.cpp \
 	ovs/test/PacketDecoder_test.cpp \
 	ovs/test/TableDropStatsManager_test.cpp \
     ovs/test/OvsdbConnection_test.cpp
 endif
 
-opflex_server_CXXFLAGS = \
+
+mock_server_CXXFLAGS = \
 	-I$(top_srcdir)/cmd/test/include \
+	$(libopflex_CFLAGS) $(libmodelgbp_CFLAGS)
+if ENABLE_GRPC
+mock_server_CXXFLAGS += $(GRPC_CFLAGS)
+endif
+if ENABLE_TSAN
+mock_server_CXXFLAGS += -fsanitize=thread
+endif
+if ENABLE_ASAN
+mock_server_CXXFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+mock_server_CXXFLAGS += -fsanitize=undefined
+endif
+if ENABLE_COVERAGE
+mock_server_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+mock_server_CXXFLAGS += -pg
+endif
+
+mock_server_SOURCES = \
+	cmd/test/include/Policies.h \
+	cmd/test/Policies.cpp \
+	cmd/test/mock_server.cpp
+
+mock_server_LDADD = \
+	$(libopflex_LIBS) \
+	$(libmodelgbp_LIBS) \
+	$(BOOST_PROGRAM_OPTIONS_LIB) \
+	$(BOOST_FILESYSTEM_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	libopflex_agent.la
+
+
+opflex_server_CXXFLAGS = \
+	-I$(top_srcdir)/server/include \
 	$(libopflex_CFLAGS) $(libmodelgbp_CFLAGS)
 if ENABLE_GRPC
 opflex_server_CXXFLAGS += $(GRPC_CFLAGS)
@@ -540,25 +595,23 @@ opflex_server_CXXFLAGS += -pg
 endif
 
 opflex_server_SOURCES = \
-	cmd/test/include/Policies.h \
-	cmd/test/Policies.cpp \
-	cmd/test/opflex_server.cpp
+	server/opflex_server.cpp
 if ENABLE_PROMETHEUS
-opflex_server_SOURCES += cmd/test/ServerPrometheusManager.cpp
+opflex_server_SOURCES += server/ServerPrometheusManager.cpp
 endif
 if ENABLE_GRPC
 %.grpc.pb.cc %.grpc.pb.h %.pb.cc %.pb.h: %.proto
 	protoc --cpp_out=. $^
 	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` $^
-opflex_server_SOURCES += cmd/test/GbpClient.cpp
-BUILT_SOURCES = cmd/test/gbp.pb.cc \
-                cmd/test/gbp.grpc.pb.cc \
-                cmd/test/gbp.pb.h \
-                cmd/test/gbp.grpc.pb.h
-nodist_opflex_server_SOURCES = cmd/test/gbp.pb.cc \
-                             cmd/test/gbp.grpc.pb.cc \
-                             cmd/test/gbp.pb.h \
-                             cmd/test/gbp.grpc.pb.h
+opflex_server_SOURCES += server/GbpClient.cpp
+BUILT_SOURCES = server/gbp.pb.cc \
+                server/gbp.grpc.pb.cc \
+                server/gbp.pb.h \
+                server/gbp.grpc.pb.h
+nodist_opflex_server_SOURCES = server/gbp.pb.cc \
+                             server/gbp.grpc.pb.cc \
+                             server/gbp.pb.h \
+                             server/gbp.grpc.pb.h
 endif
 
 opflex_server_LDADD = \
@@ -576,14 +629,16 @@ if ENABLE_GRPC
 opflex_server_LDADD += $(GRPC_LIBS) $(PROTOBUF_LIBS) -lgrpc++_reflection
 endif
 
+
 if ENABLE_GRPC
 gbp_client_stress_CXXFLAGS = \
-	-I$(top_srcdir)/cmd/test/include $(GRPC_CFLAGS)
+	-I$(top_srcdir)/server/include \
+	-I$(top_srcdir)/server $(GRPC_CFLAGS)
 gbp_client_stress_SOURCES = cmd/test/gbp_client_stress.cpp
-nodist_gbp_client_stress_SOURCES = cmd/test/gbp.pb.cc \
-			    cmd/test/gbp.grpc.pb.cc \
-			    cmd/test/gbp.pb.h \
-			    cmd/test/gbp.grpc.pb.h
+nodist_gbp_client_stress_SOURCES = server/gbp.pb.cc \
+			    server/gbp.grpc.pb.cc \
+			    server/gbp.pb.h \
+			    server/gbp.grpc.pb.h
 gbp_client_stress_LDADD = $(GRPC_LIBS) $(PROTOBUF_LIBS) -lgrpc++_reflection
 endif
 
@@ -640,6 +695,8 @@ inspectsock=${localstatedir}/run/opflex-agent-inspect.sock
 notifsock=${localstatedir}/run/opflex-agent-notif.sock
 cacertdir=${sysconfdir}/ssl/certs
 clientcertpath=${agentconfdir}/opflex-agent-cert.pem
+deffaultwatchdir=${localstatedir}/lib/opflex-agent-ovs/faults
+
 opflex-agent-ovs.conf: $(top_srcdir)/opflex-agent-ovs.conf.in
 	sed -e "s|DEFAULT_FS_ENDPOINT_DIR|${defepwatchdir}|" \
 	    -e "s|DEFAULT_FS_SERVICE_DIR|${defservwatchdir}|" \
@@ -648,6 +705,7 @@ opflex-agent-ovs.conf: $(top_srcdir)/opflex-agent-ovs.conf.in
 	    -e "s|DEFAULT_CA_CERT_DIR|${cacertdir}|" \
 	    -e "s|DEFAULT_CLIENT_CERT_PATH|${clientcertpath}|" \
 	    -e "s|DEFAULT_DROP_LOG_DIR|${defdroplogwatchdir}|" \
+            -e "s|DEFAULT_FS_FAULT_DIR|${deffaultwatchdir}|" \
 	$< > $@
 
 flowidcachedir=${localstatedir}/lib/opflex-agent-ovs/ids
@@ -732,7 +790,7 @@ clean-doc:
 clean-local: clean-doc
 	rm -f *.rpm *.deb
 if ENABLE_GRPC
-	-rm -rf cmd/test/gbp.grpc.pb.* cmd/test/gbp.pb.*
+	-rm -rf server/gbp.grpc.pb.* server/gbp.pb.*
 endif
 
 EXTRA_DIST = \

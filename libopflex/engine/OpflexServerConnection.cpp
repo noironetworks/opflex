@@ -205,7 +205,7 @@ bool OpflexServerConnection::clearUri(const opflex::modb::URI& uri) {
 void OpflexServerConnection::addPendingUpdate(opflex::modb::class_id_t class_id,
                                               const opflex::modb::URI& uri,
                                               PolicyUpdateOp op) {
-    std::lock_guard<std::mutex> lock(uri_map_mutex);
+    std::lock_guard<std::mutex> lock(ref_vec_mutex);
     switch (op) {
     case PolicyUpdateOp::REPLACE:
         replace.emplace_back(class_id, uri);
@@ -234,7 +234,11 @@ void OpflexServerConnection::on_policy_update_async(uv_async_t* handle) {
     OpflexServerConnection* conn = (OpflexServerConnection *)handle->data;
     GbpOpflexServerImpl* server = dynamic_cast<GbpOpflexServerImpl*>
         (conn->listener->getHandlerFactory());
-    std::lock_guard<std::mutex> lock(conn->uri_map_mutex);
+    if (!server)
+        return;
+
+    const std::lock_guard<std::recursive_mutex> guard(conn->listener->conn_mutex);
+    const std::lock_guard<std::mutex> lock(conn->ref_vec_mutex);
 
     if (conn->replace.empty() && conn->merge.empty() && conn->deleted.empty())
         return;
@@ -250,7 +254,11 @@ void OpflexServerConnection::on_prr_timer_async(uv_async_t* handle) {
     OpflexServerConnection* conn = (OpflexServerConnection *)handle->data;
     GbpOpflexServerImpl* server = dynamic_cast<GbpOpflexServerImpl*>
         (conn->listener->getHandlerFactory());
-    std::lock_guard<std::mutex> lock(conn->uri_map_mutex);
+    if (!server)
+        return;
+
+    const std::lock_guard<std::recursive_mutex> guard(conn->listener->conn_mutex);
+    const std::lock_guard<std::mutex> lock(conn->uri_map_mutex);
 
     auto it = conn->uri_map.begin();
     while (it != conn->uri_map.end()) {

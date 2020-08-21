@@ -4,7 +4,6 @@ import org.opendaylight.opflex.genie.content.model.mconst.*;
 import org.opendaylight.opflex.genie.engine.model.Item;
 import org.opendaylight.opflex.genie.engine.model.Pair;
 import org.opendaylight.opflex.genie.engine.parse.model.ParseNode;
-import org.opendaylight.opflex.genie.engine.parse.model.ProcessorNode;
 import org.opendaylight.opflex.genie.engine.parse.modlan.Node;
 import org.opendaylight.opflex.genie.engine.parse.modlan.ParseDirective;
 import org.opendaylight.opflex.modlan.utils.Strings;
@@ -22,12 +21,6 @@ public class PConstNode
     {
         super(aInName);
         action = ConstAction.get(aInName);
-    }
-
-    protected void addParent(ProcessorNode aInParent)
-    {
-        super.addParent(aInParent);
-        ConstScope scope = ConstScope.get(aInParent.getName());
     }
 
     public Pair<ParseDirective,Item> beginCB(Node aInData, Item aInParentItem)

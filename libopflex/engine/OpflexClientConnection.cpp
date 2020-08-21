@@ -16,7 +16,6 @@
 
 #include <stdexcept>
 
-#include <boost/lexical_cast.hpp>
 #include <openssl/err.h>
 
 #include "opflex/engine/internal/OpflexClientConnection.h"

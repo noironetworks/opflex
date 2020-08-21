@@ -195,9 +195,9 @@ struct ParseInfo {
      */
     PacketTuple packetTuple;
     /**
-     * Source Bridge and TableId
+     * Source Bridge,TableId,CaptureReason,TBD
      */
-    uint32_t meta[2];
+    uint32_t meta[4];
 };
 
 /* Allowed header field types */

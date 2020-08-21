@@ -11,7 +11,6 @@
 #include <sstream>
 #include <boost/test/unit_test.hpp>
 #include <boost/assign/list_of.hpp>
-#include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/format.hpp>
@@ -19,9 +18,10 @@
 #include <modelgbp/gbp/AddressResModeEnumT.hpp>
 #include <modelgbp/gbp/BcastFloodModeEnumT.hpp>
 #include <modelgbp/gbp/RoutingModeEnumT.hpp>
+#include <modelgbp/gbpe/EncapTypeEnumT.hpp>
 #include <modelgbp/platform/RemoteInventoryTypeEnumT.hpp>
+#include <modelgbp/policy/Universe.hpp>
 #include <modelgbp/gbp/EnforcementPreferenceTypeEnumT.hpp>
-#include <modelgbp/gbpe/SvcToEpCounter.hpp>
 #include <modelgbp/gbpe/EpToSvcCounter.hpp>
 
 #include <opflexagent/logging.h>
@@ -110,6 +110,8 @@ public:
         pktInHandler.setPortMapper(&switchManager.getPortMapper(), NULL);
         pktInHandler.setFlowReader(&switchManager.getFlowReader());
 
+        intFlowManager.setDropLog("veth0", "192.168.1.2", 6081);
+        intFlowManager.setEndpointAdv(AdvertManager::EPADV_GRATUITOUS_BROADCAST, AdvertManager::EPADV_GARP_RARP_BROADCAST);
     }
     virtual ~BaseIntFlowManagerFixture() {
         intFlowManager.stop();
@@ -372,7 +374,7 @@ void BaseIntFlowManagerFixture::epgTest() {
     /* Change flood domain to isolated */
     fd0->setBcastFloodMode(BcastFloodModeEnumT::CONST_ISOLATED);
     m1.commit();
-    optional<shared_ptr<modelgbp::gbp::FloodDomain> > fdptr;
+    optional<shared_ptr<FloodDomain> > fdptr;
     WAIT_FOR((fdptr = policyMgr.getFDForGroup(epg2->getURI()))
              ? (fdptr.get()
                 ->getBcastFloodMode(BcastFloodModeEnumT::CONST_NORMAL) ==
@@ -2549,11 +2551,11 @@ void BaseIntFlowManagerFixture::initExpIpMapping(bool natEpgMap, bool nextHop) {
          .controller(65535).done());
 
     if (natEpgMap) {
-        ADDF(Bldr().table(RT).priority(166).ipv6().reg(RD, 1)
+        ADDF(Bldr().table(RT).priority(167).ipv6().reg(RD, 1)
              .isIpv6Dst("fdf1::/16")
              .actions().load(DEPG, 0x80000001).load(OUTPORT, 0x4242)
              .mdAct(opflexagent::flow::meta::out::NAT).go(POL).done());
-        ADDF(Bldr().table(RT).priority(158).ip().reg(RD, 1)
+        ADDF(Bldr().table(RT).priority(159).ip().reg(RD, 1)
              .isIpDst("5.0.0.0/8")
              .actions().load(DEPG, 0x80000001).load(OUTPORT, 0x4242)
              .mdAct(opflexagent::flow::meta::out::NAT).go(POL).done());
@@ -2568,13 +2570,13 @@ void BaseIntFlowManagerFixture::initExpIpMapping(bool natEpgMap, bool nextHop) {
              .go(STAT).done());
     }
 
-    ADDF(Bldr().table(NAT).priority(166).ipv6().reg(RD, 1)
+    ADDF(Bldr().table(NAT).priority(167).ipv6().reg(RD, 1)
          .isIpv6Src("fdf1::/16").actions()
          .load(SEPG, 0x80000001)
          .meta(opflexagent::flow::meta::out::REV_NAT,
                opflexagent::flow::meta::out::MASK |
                opflexagent::flow::meta::POLICY_APPLIED).go(POL).done());
-    ADDF(Bldr().table(NAT).priority(158).ip().reg(RD, 1)
+    ADDF(Bldr().table(NAT).priority(159).ip().reg(RD, 1)
          .isIpSrc("5.0.0.0/8").actions()
          .load(SEPG, 0x80000001)
          .meta(opflexagent::flow::meta::out::REV_NAT,
@@ -3946,4 +3948,67 @@ BOOST_FIXTURE_TEST_CASE(testFlagUpdate, RawFlowManagerFixture) {
     WAIT_FOR(exec.IsEmpty(), 500)
     stop();
 }
+
+bool isDropLogEnabled(opflex::ofcore::OFFramework& framework, const URI& uri) {
+    auto cfg = modelgbp::observer::DropLogConfig::resolve(framework, uri);
+    return cfg && (cfg->get()->getDropLogEnable().get() == 1);
+}
+
+BOOST_FIXTURE_TEST_CASE(testdroplogcfg, BaseIntFlowManagerFixture) {
+    start();
+    intFlowManager.setEncapType(IntFlowManager::ENCAP_VLAN);
+    intFlowManager.start();
+    URI dummyUri("/");
+    intFlowManager.packetDropLogConfigUpdated(dummyUri);
+
+    Mutator mutator(agent.getFramework(), "init");
+    auto root = modelgbp::dmtree::Root::createRootElement(agent.getFramework());
+    auto pu = root->addPolicyUniverse();
+    mutator.commit();
+
+    Mutator mutator_pe(framework, "policyelement");
+    auto polUni =
+        modelgbp::policy::Universe::resolve(framework).get();
+    auto dropLogCfg = polUni->addObserverDropLogConfig();
+    dropLogCfg->setDropLogEnable(0);
+    mutator_pe.commit();
+    WAIT_FOR(modelgbp::observer::DropLogConfig::resolve(framework, dropLogCfg->getURI()), 500);
+
+    intFlowManager.packetDropLogConfigUpdated(dropLogCfg->getURI());
+
+    Mutator mutator_pe2(framework, "policyelement");
+    dropLogCfg = modelgbp::observer::DropLogConfig::resolve(framework, dropLogCfg->getURI()).get();
+    dropLogCfg->setDropLogEnable(1);
+    dropLogCfg->setDropLogMode(modelgbp::observer::DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
+    mutator_pe2.commit();
+
+    WAIT_FOR(isDropLogEnabled(framework, dropLogCfg->getURI()), 500);
+
+    intFlowManager.packetDropLogConfigUpdated(dropLogCfg->getURI());
+    stop();
+}
+
+BOOST_FIXTURE_TEST_CASE(testencapfault, BaseIntFlowManagerFixture) {
+    start();
+    intFlowManager.setEncapType(IntFlowManager::ENCAP_VLAN);
+    intFlowManager.start();
+
+    Mutator mutator(agent.getFramework(), "init");
+    auto root = modelgbp::dmtree::Root::createRootElement(agent.getFramework());
+    auto pu = root->addPolicyUniverse();
+    mutator.commit();
+
+    Mutator mutator_pe(framework, "policyreg");
+    auto polUni =
+        modelgbp::policy::Universe::resolve(framework).get();
+    auto platformCfg = polUni->addPlatformConfig("dummy");
+    platformCfg->setEncapType(EncapTypeEnumT::CONST_VXLAN_GPE);
+    mutator_pe.commit();
+
+    WAIT_FOR(modelgbp::platform::Config::resolve(framework, platformCfg->getURI()), 500);
+
+    intFlowManager.configUpdated(platformCfg->getURI());
+    stop();
+}
+
 BOOST_AUTO_TEST_SUITE_END()

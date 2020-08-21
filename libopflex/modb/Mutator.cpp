@@ -19,8 +19,6 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include <boost/foreach.hpp>
-
 #include "opflex/ofcore/OFFramework.h"
 #include "opflex/modb/Mutator.h"
 #include "opflex/modb/mo-internal/StoreClient.h"
@@ -86,7 +84,7 @@ std::shared_ptr<ObjectInstance>& Mutator::addChild(class_id_t parent_class,
 std::shared_ptr<ObjectInstance>& Mutator::modify(class_id_t class_id,
                                                const URI& uri) {
     // check for copy in mutator
-    obj_map_t::iterator it = pimpl->obj_map.find(uri);
+    auto it = pimpl->obj_map.find(uri);
     if (it != pimpl->obj_map.end()) return it->second;
     std::shared_ptr<ObjectInstance> copy;
     std::shared_ptr<const ObjectInstance> oi;
@@ -109,16 +107,16 @@ void Mutator::remove(class_id_t class_id, const URI& uri) {
 void Mutator::commit() {
     StoreClient::notif_t raw_notifs;
     StoreClient::notif_t notifs;
-    BOOST_FOREACH(obj_map_t::value_type& objt, pimpl->obj_map) {
+    for (obj_map_t::value_type& objt : pimpl->obj_map) {
         if (pimpl->client.putIfModified(objt.second->getClassId(),
                                         objt.first,
                                         objt.second))
             raw_notifs[objt.first] = objt.second->getClassId();
 
     }
-    BOOST_FOREACH(uri_prop_uri_map_t::value_type& upt, pimpl->added_children) {
-        BOOST_FOREACH(prop_uri_map_t::value_type& pt, upt.second) {
-            BOOST_FOREACH(const reference_t& ut, pt.second) {
+    for (uri_prop_uri_map_t::value_type& upt : pimpl->added_children) {
+        for (prop_uri_map_t::value_type& pt : upt.second) {
+            for (const reference_t& ut : pt.second) {
                 if (pimpl->client.addChild(ut.first, ut.second, pt.first,
                                            upt.first.first, upt.first.second))
                     raw_notifs[upt.first.second] = upt.first.first;
@@ -127,11 +125,11 @@ void Mutator::commit() {
         }
     }
 
-    BOOST_FOREACH(StoreClient::notif_t::value_type nt, raw_notifs) {
+    for (const StoreClient::notif_t::value_type& nt : raw_notifs) {
         pimpl->client.queueNotification(nt.second, nt.first, notifs);
     }
 
-    BOOST_FOREACH(const reference_t& rt, pimpl->removed_objects) {
+    for (const reference_t& rt : pimpl->removed_objects) {
         if (pimpl->client.remove(rt.first, rt.second, false))
             pimpl->client.queueNotification(rt.first, rt.second, notifs);
     }

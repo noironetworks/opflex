@@ -15,6 +15,7 @@
 #include <mutex>
 #include <uv.h>
 #include <unordered_set>
+#include <time.h>
 
 #include "opflex/modb/ObjectListener.h"
 
@@ -46,7 +47,10 @@ public:
         while (_c < count) {                               \
             if (condition) break;                          \
             _c += 1;                                       \
-            usleep(1000);                                  \
+            struct timespec ts;                            \
+            ts.tv_sec = 0;                                 \
+            ts.tv_nsec = 1000000L;                         \
+            nanosleep(&ts, NULL);                          \
             stmt;                                          \
         }                                                  \
         BOOST_CHECK((condition));                          \

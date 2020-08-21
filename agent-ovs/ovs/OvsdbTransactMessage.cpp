@@ -33,6 +33,22 @@ void writeValue(yajr::rpc::SendHandler& writer, const OvsdbValue& value) {
         }
     } else if (value.getType() == Dtype::BOOL) {
         writer.Bool(value.getBoolValue());
+    } else if (value.getType() == Dtype::MAP){
+        std::map<std::string, std::string> valueMap = value.getCollectionValue();
+        writer.StartArray();
+        const string& qId = value.getKey();
+        std::istringstream ss(qId);
+        int intQId;
+        ss >> intQId;
+        writer.Int(intQId);
+
+        for(auto it : valueMap){
+            writer.StartArray();
+            writer.String(it.first.c_str());
+            writer.String(it.second.c_str());
+            writer.EndArray();
+        }
+        writer.EndArray();
     }
 }
 
@@ -47,12 +63,11 @@ bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
         if (!conditions.empty()) {
             for (auto elem : conditions) {
                 writer.StartArray();
-                string lhs = get<0>(elem);
+                const string& lhs = get<0>(elem);
                 writer.String(lhs.c_str());
                 writer.String(toString(get<1>(elem)));
-                string rhs = get<2>(elem);
-                if (lhs == "_uuid" ||
-                        lhs == "mirrors") {
+                const string& rhs = get<2>(elem);
+                if (lhs == "_uuid") {
                     writer.StartArray();
                     writer.String("uuid");
                     writer.String(rhs.c_str());
@@ -82,15 +97,13 @@ bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
         writer.String("row");
         writer.StartObject();
         for (auto& rowEntry : rowData) {
-            string col = rowEntry.first;
-            LOG(DEBUG) << "row label " << col;
+            const string& col = rowEntry.first;
             writer.String(col.c_str());
             const OvsdbValues& tdsPtr = rowEntry.second;
             if (!tdsPtr.label.empty()) {
                 writer.StartArray();
                 writer.String(tdsPtr.label.c_str());
                 writer.StartArray();
-                LOG(DEBUG) << "label " << tdsPtr.label;
                 for (auto& val : tdsPtr.values) {
                     writeValue(writer, val);
                 }
@@ -106,11 +119,10 @@ bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
         writer.String("mutations");
         writer.StartArray();
         for (auto& rowEntry : mutateRowData) {
-            string col = rowEntry.first;
-            LOG(DEBUG) << "row label " << col;
+            const string& col = rowEntry.first;
             writer.StartArray();
             writer.String(col.c_str());
-            string mutateRowOperation = toString(rowEntry.second.first);
+            const string& mutateRowOperation = toString(rowEntry.second.first);
             writer.String(mutateRowOperation.c_str());
             const OvsdbValues &tdsPtr = rowEntry.second.second;
             writeValue(writer, *(tdsPtr.values.begin()));

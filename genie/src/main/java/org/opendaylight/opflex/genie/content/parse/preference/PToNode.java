@@ -29,14 +29,11 @@ public class PToNode extends ParseNode
         PointCardinality lRelatingCardinality =
                 PointCardinality.get(aInData.getParent().getNamedValue(Strings.CARDINALITY, "many", true));
 
-        PointCardinality lRelatedCardinality = PointCardinality.get(
-                aInData.getNamedValue(Strings.CARDINALITY, "single", true));
-
         String lRelatedClassName =
                 aInData.getNamedValue(Strings.CLASS, null, true);
 
         Pair<MRelator, MRelated> lRule = MRelator.addRule(
-                lRelatorType, lRelatorName, lRelatingClassName,lRelatingCardinality, lRelatedClassName, lRelatedCardinality) ;
+                lRelatorType, lRelatorName, lRelatingClassName,lRelatingCardinality, lRelatedClassName) ;
 
         MRelated lRelated = lRule.getSecond();
         return new Pair<>(ParseDirective.CONTINUE, lRelated);

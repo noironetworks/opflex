@@ -268,7 +268,7 @@ ActionBuilder& ActionBuilder::tunMetadata(mf_field_id regId, uint32_t regValue) 
     return *this;
 }
 
-ActionBuilder& ActionBuilder::dropLog(uint32_t table_id) {
+ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason) {
     this->regMove(MFF_REG0, MFF_TUN_METADATA0, 0, 0, 32);
     this->regMove(MFF_REG1, MFF_TUN_METADATA1, 0, 0, 32);
     this->regMove(MFF_REG2, MFF_TUN_METADATA2, 0, 0, 32);
@@ -285,6 +285,7 @@ ActionBuilder& ActionBuilder::dropLog(uint32_t table_id) {
     this->regMove(MFF_CT_MARK, MFF_TUN_METADATA10, 0, 0, 32);
     this->regMove(MFF_CT_LABEL, MFF_TUN_METADATA11, 0, 0, 128);
     this->tunMetadata(MFF_TUN_METADATA12, table_id);
+    this->tunMetadata(MFF_TUN_METADATA13, reason);
     return *this;
 }
 

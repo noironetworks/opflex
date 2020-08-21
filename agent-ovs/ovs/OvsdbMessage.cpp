@@ -15,7 +15,9 @@
 namespace opflexagent {
 
 void OvsdbMessage::serializePayload(yajr::rpc::SendHandler& writer) const {
-    LOG(DEBUG) << "serializePayload send handler - reqId " << std::to_string(getReqId());
+    if (getReqId() != 0) {
+        LOG(DEBUG) << "serializePayload send handler - reqId " << std::to_string(getReqId());
+    }
     (*this)(writer);
 }
 
@@ -25,7 +27,7 @@ const char* OvsdbMessage::toString(OvsdbOperation operation) {
     return OvsdbOperationStrings[static_cast<uint32_t>(operation)];
 }
 
-static const char* OvsdbTableStrings[] = {"Port", "Interface", "Bridge", "IPFIX", "NetFlow", "Mirror"};
+static const char* OvsdbTableStrings[] = {"Port", "Interface", "Bridge", "IPFIX", "NetFlow", "Mirror", "QoS", "Queue"};
 
 const char* OvsdbMessage::toString(OvsdbTable table) {
     return OvsdbTableStrings[static_cast<uint32_t>(table)];

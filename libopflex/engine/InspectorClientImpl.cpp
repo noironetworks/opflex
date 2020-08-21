@@ -14,7 +14,6 @@
 #  include <config.h>
 #endif
 
-#include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 
 #include "opflex/modb/internal/ObjectStore.h"
@@ -69,8 +68,9 @@ public:
 };
 
 InspectorClientImpl::~InspectorClientImpl() {
-    BOOST_FOREACH(const Cmd* command, commands)
+    for (const Cmd* command : commands) {
         delete command;
+    }
 }
 
 OpflexHandler* InspectorClientImpl::newHandler(OpflexConnection* conn) {
@@ -229,8 +229,7 @@ void InspectorClientImpl::remoteObjectUpdated(modb::class_id_t class_id,
         StoreClient& client = db.getReadOnlyStoreClient();
         std::shared_ptr<const ObjectInstance> oi = client.get(class_id, uri);
         const ClassInfo& ci = db.getClassInfo(class_id);
-        BOOST_FOREACH(const ClassInfo::property_map_t::value_type& p,
-                      ci.getProperties()) {
+        for (const ClassInfo::property_map_t::value_type& p : ci.getProperties()) {
             if (p.second.getType() == PropertyInfo::REFERENCE) {
                 if (p.second.getCardinality() == PropertyInfo::SCALAR) {
                     if (oi->isSet(p.first,

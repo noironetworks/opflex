@@ -35,6 +35,9 @@
 #include <opflexagent/Renderer.h>
 #include <opflexagent/SimStats.h>
 
+#include <opflexagent/FSFaultSource.h>
+#include <opflexagent/FaultSource.h>
+
 #include <cstdlib>
 #include <mutex>
 #include <condition_variable>
@@ -65,10 +68,12 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       serviceManager(*this, framework, prometheusManager),
       extraConfigManager(framework),
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
+      faultManager(*this, framework),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
       contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
+      qosManager(*this,framework, agent_io),	
       prometheusEnabled(true),
       prometheusExposeLocalHostOnly(false),
       prometheusExposeEpSvcNan(false),
@@ -82,10 +87,12 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       serviceManager(*this, framework),
       extraConfigManager(framework),
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
+      faultManager(*this, framework),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
       contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
+      qosManager(*this,framework,agent_io),
       behaviorL34FlowsWithoutSubnet(true),
       logParams(_logParams) {
 #endif
@@ -162,6 +169,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string SERVICE_SOURCE_PATH("service-sources.filesystem");
     static const std::string SNAT_SOURCE_PATH("snat-sources.filesystem");
     static const std::string DROP_LOG_CFG_SOURCE_FSPATH("drop-log-config-sources.filesystem");
+    static const std::string FAULT_SOURCE_FSPATH("host-agent-fault-sources.filesystem");
     static const std::string PACKET_EVENT_NOTIF_SOCK("packet-event-notif.socket-name");
     static const std::string OPFLEX_PEERS("opflex.peers");
     static const std::string OPFLEX_SSL_MODE("opflex.ssl.mode");
@@ -333,7 +341,15 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         for (const ptree::value_type &v : dropLogCfgSrc.get())
         dropLogCfgSourcePath = v.second.data();
     }
+  
+    optional<const ptree&> hostAgentFaultSrc =
+        properties.get_child_optional(FAULT_SOURCE_FSPATH);
 
+    if (hostAgentFaultSrc) {
+        for (const ptree::value_type &v : hostAgentFaultSrc.get())
+            hostAgentFaultPaths.insert(v.second.data());
+    }
+    
     optional<const ptree&> packetEventNotifSock =
         properties.get_child_optional(PACKET_EVENT_NOTIF_SOCK);
 
@@ -562,25 +578,7 @@ void Agent::start() {
     Mutator mutator(framework, "init");
     std::shared_ptr<modelgbp::dmtree::Root> root =
         modelgbp::dmtree::Root::createRootElement(framework);
-    root->addPolicyUniverse();
-    root->addRelatorUniverse();
-    root->addSvcServiceUniverse();
-    root->addEprL2Universe();
-    root->addEprL3Universe();
-    root->addInvUniverse();
-    root->addEpdrL2Discovered();
-    root->addEpdrL3Discovered();
-    root->addGbpeVMUniverse();
-    root->addObserverEpStatUniverse();
-    root->addObserverSvcStatUniverse();
-    root->addObserverPolicyStatUniverse();
-    root->addObserverDropFlowConfigUniverse();
-    root->addSpanUniverse();
-    root->addEpdrExternalDiscovered();
-    root->addEpdrLocalRouteDiscovered();
-    root->addEprPeerRouteUniverse();
-    root->addFaultUniverse();
-    root->addObserverSysStatUniverse();
+    Agent::createUniverse(root);
     mutator.commit();
 
     // instantiate other components
@@ -598,6 +596,7 @@ void Agent::start() {
     if (isFeatureEnabled(FeatureList::ERSPAN))
         spanManager.start();
     netflowManager.start();
+    qosManager.start();
     for (auto& r : renderers) {
         r.second->start();
     }
@@ -650,6 +649,11 @@ void Agent::start() {
                 .build());
         dropLogCfgSource.reset(new FSPacketDropLogConfigSource(&extraConfigManager,
                         fsWatcher, dropLogCfgSourcePath, uri));
+    }
+    for (const std::string& path : hostAgentFaultPaths) {
+        FaultSource* source =
+             new FSFaultSource(&faultManager, fsWatcher, path, *this);
+        faultSources.emplace_back(source);
     }
     fsWatcher.start();
 
@@ -726,6 +730,7 @@ void Agent::stop() {
     if (isFeatureEnabled(FeatureList::ERSPAN))
         spanManager.stop();
     netflowManager.stop();
+    qosManager.stop();
 #ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.stop();
     LOG(DEBUG) << "Prometheus Manager stopped";
@@ -755,6 +760,32 @@ void Agent::stop() {
     abort_timer.join();
 
     LOG(INFO) << "Agent stopped";
+}
+
+void Agent::createUniverse (std::shared_ptr<modelgbp::dmtree::Root> root)
+{
+    if (!root)
+        return;
+
+    root->addPolicyUniverse();
+    root->addRelatorUniverse();
+    root->addSvcServiceUniverse();
+    root->addEprL2Universe();
+    root->addEprL3Universe();
+    root->addInvUniverse();
+    root->addEpdrL2Discovered();
+    root->addEpdrL3Discovered();
+    root->addGbpeVMUniverse();
+    root->addObserverEpStatUniverse();
+    root->addObserverSvcStatUniverse();
+    root->addObserverPolicyStatUniverse();
+    root->addObserverDropFlowConfigUniverse();
+    root->addSpanUniverse();
+    root->addEpdrExternalDiscovered();
+    root->addEpdrLocalRouteDiscovered();
+    root->addEprPeerRouteUniverse();
+    root->addFaultUniverse();
+    root->addObserverSysStatUniverse();
 }
 
 inline StatMode Agent::getStatModeFromString(const std::string& mode) {

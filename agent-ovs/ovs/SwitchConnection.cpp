@@ -255,10 +255,10 @@ SwitchConnection::Monitor() {
                             << " for " << getSwitchName() << ". Exiting..";
                         sync();
                         exit(1);
-                    } else if(counterEnoent ==
-                              (maxSocketFileMissingFailure-1)) {
+                    } else if (counterEnoent ==
+                            (maxSocketFileMissingFailure-1)){
                         LOG(ERROR) << "ENOENT connection failure count: "
-                           << (maxSocketFileMissingFailure - 1);
+                            << (maxSocketFileMissingFailure - 1);
                     }
                 } else {
                     counterEnoent = 0;

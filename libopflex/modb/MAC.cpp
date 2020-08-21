@@ -34,7 +34,7 @@ using std::stringstream;
 static uint64_t parseMac(const string& macstr) {
     uint64_t result = 0;
     uint8_t* r8 = (uint8_t*)&result;
-    int r[6];
+    unsigned r[6];
     if (std::sscanf(macstr.c_str(),
                    "%02x:%02x:%02x:%02x:%02x:%02x",
                     r, r+1, r+2, r+3, r+4, r+5) != 6) {

@@ -360,7 +360,7 @@ public:
      * of an array of 4 longs.
      */
     static void
-    in6AddrToLong(boost::asio::ip::address sAddr, uint32_t *pAddr);
+    in6AddrToLong(boost::asio::ip::address& sAddr, uint32_t *pAddr);
 
     /**
      * Get the tunnel destination to use for the given endpoint group.

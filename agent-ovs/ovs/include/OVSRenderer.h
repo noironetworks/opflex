@@ -26,6 +26,7 @@
 #include "SpanRenderer.h"
 #include "NetFlowRenderer.h"
 #include "PacketLogHandler.h"
+#include "QosRenderer.h"
 
 #pragma once
 #ifndef OPFLEXAGENT_OVSRENDERER_H
@@ -125,6 +126,7 @@ private:
     std::unique_ptr<OvsdbConnection> ovsdbConnection;
     SpanRenderer spanRenderer;
     NetFlowRenderer netflowRenderer;
+    QosRenderer qosRenderer;
 
     bool started;
     std::string dropLogIntIface, dropLogAccessIface, dropLogRemoteIp;
