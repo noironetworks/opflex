@@ -22,8 +22,10 @@ namespace opflexagent {
 class Fault {
 public:
 
-    Fault() { faultcode=0ULL; }
-
+    Fault() {
+        faultcode=0ULL;
+        severity = (uint8_t)modelgbp::fault::SeverityEnumT::CONST_CLEARED;
+    }
 
     ~Fault() { } 
 
