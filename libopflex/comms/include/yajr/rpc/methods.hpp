@@ -60,7 +60,8 @@ namespace yajr {
                          * throw, but at most crash with SIG11 (yet, this should
                          * never happen)
                          */
-                        dynamic_cast< yajr::comms::internal::CommunicationPeer* >(peer)->nextId(),
+                        !(dynamic_cast< yajr::comms::internal::CommunicationPeer* >(peer))?\
+                          ~0ULL:dynamic_cast< yajr::comms::internal::CommunicationPeer* >(peer)->nextId(),
                         peer)
                 {}
 

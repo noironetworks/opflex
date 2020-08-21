@@ -22,7 +22,7 @@ namespace opflexagent {
 class Fault {
 public:
 
-    Fault() { } 
+    Fault() { faultcode=0ULL; }
 
 
     ~Fault() { } 
