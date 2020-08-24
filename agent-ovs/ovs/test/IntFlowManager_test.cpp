@@ -873,7 +873,6 @@ BOOST_FIXTURE_TEST_CASE(policy, VxlanIntFlowManagerFixture) {
 
 BOOST_FIXTURE_TEST_CASE(policy_portrange, VxlanIntFlowManagerFixture) {
     setConnected();
-
     createPolicyObjects();
 
     PolicyManager::uri_set_t egs;
@@ -2469,7 +2468,7 @@ void BaseIntFlowManagerFixture::initExpCon3() {
         ADDF(Bldr(SEND_FLOW_REM).table(POL).priority(prio)
              .cookie(con3_cookie).tcp()
              .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
-             .isTpDst(mk.first, mk.second).actions().drop().done());
+             .isTpDst(mk.first, mk.second).actions().dropLog(POL).go(EXP_DROPLOG).done());
     }
     for (const Mask& mks : ml_66_69) {
         for (const Mask& mkd : ml_94_95) {
@@ -2483,8 +2482,8 @@ void BaseIntFlowManagerFixture::initExpCon3() {
     ADDF(Bldr(SEND_FLOW_REM).table(POL).priority(prio-256)
         .cookie(con10_cookie).icmp().reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
         .icmp_type(10).icmp_code(5).actions().go(STAT).done());
-}
 
+}
 // Initialize flows related to IP address mapping/NAT
 void BaseIntFlowManagerFixture::initExpIpMapping(bool natEpgMap, bool nextHop) {
     uint8_t rmacArr[6];

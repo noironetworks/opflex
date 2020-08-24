@@ -125,7 +125,7 @@ static flow_func make_flow_functor(const network::subnet_t& ss,
 }
 
 void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
-                              uint8_t nextTable, uint16_t priority,
+                              uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
                               /* out */ FlowEntryList& entries) {
@@ -141,20 +141,21 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
     match_protocol(f, clsfr);
     if (act != flowutils::CA_DENY)
         f.action().go(nextTable);
-
+    else if(act == flowutils::CA_DENY)
+	f.action().dropLog(currentTable).go(nextTable);
+    
     entries.push_back(f.build());
 }
 
 void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
-                            uint8_t nextTable, uint16_t priority,
+                            uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
                             /* out */ FlowEntryList& entries) {
     using modelgbp::l2::EtherTypeEnumT;
     using modelgbp::l4::TcpFlagsEnumT;
-
     ovs_be64 ckbe = ovs_htonll(cookie);
     MaskList srcPorts;
     MaskList dstPorts;
@@ -262,7 +263,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 
                         switch (act) {
                         case flowutils::CA_DENY:
-			    if(log) LOG(INFO) << "The traffic is denied";
+			       f.action().dropLog(currentTable).go(nextTable);
                         case flowutils::CA_ALLOW:
                         case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_FWD:
@@ -306,7 +307,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             f.action().go(nextTable);
                             break;
                         case flowutils::CA_DENY:
-			    if (log) LOG (INFO) << "The traffic is denied";
                         default:
                             // nothing
                             break;

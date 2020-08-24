@@ -113,7 +113,7 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                             ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
-                            uint8_t nextTable, uint16_t priority,
+                            uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
                             /* out */ FlowEntryList& entries);
@@ -134,7 +134,7 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
  */
 void add_l2classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                               ClassAction act, bool log,
-                              uint8_t nextTable, uint16_t priority,
+                              uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
                               /* out */ FlowEntryList& entries);
