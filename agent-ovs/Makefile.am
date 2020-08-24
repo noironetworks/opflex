@@ -595,6 +595,7 @@ endif
 
 opflex_server_SOURCES = \
 	server/opflex_server.cpp \
+	server/include/StatsIO.h \
 	server/StatsIO.cpp
 if ENABLE_PROMETHEUS
 opflex_server_SOURCES += server/ServerPrometheusManager.cpp
