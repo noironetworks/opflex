@@ -7,7 +7,7 @@ if [ ! -d ../.git ] ; then
   printf 'unknown commit'
 elif git diff --quiet HEAD -- configure.ac ; then
   # configure.ac is not modified
-  printf 'commit %s' `git rev-list --max-count=1 HEAD -- configure.ac`
+  printf 'commit %s' `git rev-list --max-count=1 HEAD --`
 else # configure.ac is modified
   printf 'commit %s -dirty' `git rev-parse HEAD`
 fi
