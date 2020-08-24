@@ -520,8 +520,10 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
             break;
         }
 
-        LOG(DEBUG) << "Purging state for " << it->uri.toString()
-                   << " in state " << ItemStateMap[it->details->state];
+        if (ci.getType() != ClassInfo::OBSERVABLE) {
+            LOG(DEBUG) << "Purging state for " << it->uri.toString()
+                       << " in state " << ItemStateMap[it->details->state];
+        }
         exp_index.erase(it);
     } else {
         it->details->state = newState;
