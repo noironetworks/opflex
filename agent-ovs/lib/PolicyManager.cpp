@@ -1160,7 +1160,7 @@ static bool updatePolicyRules(OFFramework& framework,
                 optional<shared_ptr<modelgbp::gbp::LogAction> > log = 
                     modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
                 if (log) {
-                   ruleLog = log.get()->getLog(100) != 0 ;
+                   ruleLog = log.get()->getLog(0) != 0 ;
                 }
             }
 
