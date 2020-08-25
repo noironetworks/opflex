@@ -88,7 +88,6 @@ public:
         {
             const lock_guard<mutex> lock(dup_mutex);
             if (metrics.count(metric)) {
-                LOG(ERROR) << "Duplicate metric detected: " << metric;
                 return true;
             }
             return false;
@@ -266,12 +265,15 @@ public:
      *
      * @param ep_name       Name of the endpoint. Usually the
      * access interface name
+     * @param annotate_ep_name   flag to indicate if ep name
+     * needs to be annotated to avoid duplicate metric issues
      * @param attr_map      The map of endpoint attributes
      * @param allowed_set   The set of allowed ep attributes from
      * agent configuration file
      * @return            the hash value of endpoint attributes
      */
     static size_t calcHashEpAttributes(const string& ep_name,
+                                       bool annotate_ep_name,
             const unordered_map<string, string>&    attr_map,
             const unordered_set<string>&        allowed_set);
     /**
@@ -280,12 +282,17 @@ public:
      *
      * @param uuid        uuid of ep
      * @param ep_name     the name of the ep
+     * @param annotate_ep_name flag to indicate if ep name needs
+     *                         to be annotated to avoid metric
+     *                         duplication issues in case of multiple
+     *                         interfaces for the same VM
      * @param attr_hash   hash of prometheus compatible ep attr
      * @param attr_map    map of all ep attributes
      * @param counters    struct holding all the counters of an EP
      */
     void addNUpdateEpCounter(const string& uuid,
                              const string& ep_name,
+                             bool annotate_ep_name,
                              const size_t& attr_hash,
         const unordered_map<string, string>& attr_map,
                              const EpCounters& counters);
@@ -556,7 +563,8 @@ private:
     mutex ep_counter_mutex;
 
     enum EP_METRICS {
-        EP_RX_BYTES, EP_RX_PKTS, EP_RX_DROPS,
+        EP_METRICS_MIN,
+        EP_RX_BYTES = EP_METRICS_MIN, EP_RX_PKTS, EP_RX_DROPS,
         EP_RX_UCAST, EP_RX_MCAST, EP_RX_BCAST,
         EP_TX_BYTES, EP_TX_PKTS, EP_TX_DROPS,
         EP_TX_UCAST, EP_TX_MCAST, EP_TX_BCAST,
@@ -609,6 +617,7 @@ private:
     bool createDynamicGaugeEp(EP_METRICS metric,
                               const string& uuid,
                               const string& ep_name,
+                              bool annotate_ep_name,
                               const size_t& attr_hash,
         const unordered_map<string, string>&    attr_map);
     // func to get gauge for EpCounter given metric type, uuid
@@ -631,6 +640,7 @@ private:
     // Create a label map that can be used for annotation, given the ep attr map
     // and agent config's allowed ep-attribute-set
     static map<string,string> createLabelMapFromEpAttr(const string& ep_name_,
+                                                       bool annotate_ep_name,
                            const unordered_map<string, string>&      attr_map,
                            const unordered_set<string>&          allowed_set);
     // Maximum number of labels that can be used for annotating a metric

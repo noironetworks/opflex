@@ -41,6 +41,7 @@ public:
                  external(false), aapModeAA(false), disableAdv(false),
                  accessAllowUntagged(false), extEncap(0) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
+        annotateEpName = false;
         attr_hash = 0;
 #endif
     }
@@ -57,6 +58,7 @@ public:
           external(false), aapModeAA(false), disableAdv(false),
           accessAllowUntagged(false), extEncap(0) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
+        annotateEpName = false;
         attr_hash = 0;
 #endif
     }
@@ -530,6 +532,26 @@ public:
     typedef std::unordered_map<std::string, std::string> attr_map_t;
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
+    /**
+      * Add EP name as annotation to avoid dup metric
+      * issues in Openshift on openstack use case
+      *
+      * @param annotateEpName the value of EP name
+      */
+    void setAnnotateEpName (bool annotateEpName) {
+        this->annotateEpName = annotateEpName;
+    }
+
+    /**
+      * Get the current value of annotateEpName flag
+      * for this endpoint
+      *
+      * @return true if annotateEpName is set
+      */
+    bool isAnnotateEpName() const {
+        return annotateEpName;
+    }
+
     // Set hash of all EP attributes that are prometheus compatible
     void setAttributeHash (const size_t& hash) {
         attr_hash = hash;
@@ -1311,6 +1333,7 @@ private:
     bool accessAllowUntagged;
     attr_map_t attributes;
 #ifdef HAVE_PROMETHEUS_SUPPORT
+    bool annotateEpName;
     /**
      * Hash of all the ep attributes. Will be used to detect any
      * attribute changes in the map when processed by prometheus

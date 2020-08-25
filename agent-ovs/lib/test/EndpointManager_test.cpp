@@ -587,6 +587,7 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
        << "\"ip\":[\"10.0.0.1\",\"10.0.0.2\",\"10.0.0.3\"],"
        << "\"interface-name\":\"veth0\","
        << "\"access-interface\":\"veth0-acc\","
+       << "\"neutron-network\":\"12345-abcde\","
        << "\"endpoint-group\":\"/PolicyUniverse/PolicySpace/test/GbpEpGroup/epg/\","
        << "\"security-group\":["
        << "{\"policy-space\":\"sg1-space1\",\"name\":\"sg1\"},"
@@ -728,13 +729,13 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_endpoint_removed_total 0.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_rx_bytes{name=\"veth0-acc\"} 6400.000000");
+    pos = output1.find("opflex_endpoint_rx_bytes{if=\"veth0-acc\",name=\"veth0-acc\"} 6400.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_rx_packets{name=\"veth0-acc\"} 100.000000");
+    pos = output1.find("opflex_endpoint_rx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_tx_bytes{name=\"veth0-acc\"} 6400.000000");
+    pos = output1.find("opflex_endpoint_tx_bytes{if=\"veth0-acc\",name=\"veth0-acc\"} 6400.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_tx_packets{name=\"veth0-acc\"} 100.000000");
+    pos = output1.find("opflex_endpoint_tx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
 #endif
 

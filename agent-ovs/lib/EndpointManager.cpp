@@ -1450,6 +1450,7 @@ void EndpointManager::updateEndpointCounters(const std::string& uuid,
         auto& ep_name = es.endpoint->getAccessInterface();
         if (ep_name)
             prometheusManager.addNUpdateEpCounter(uuid, ep_name.get(),
+                                                  es.endpoint->isAnnotateEpName(),
                                                   es.endpoint->getAttributeHash(),
                                                   es.endpoint->getAttributes(),
                                                   newVals);
