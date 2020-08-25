@@ -1506,7 +1506,6 @@ bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
         // Suppressing below log for all the other metrics of this EP
         if (metric == EP_METRICS_MIN) {
             LOG(ERROR) << "duplicate ep dyn gauge family: " << ep_name
-                       << " metric: " << metric
                        << " uuid: " << uuid
                        << " label hash: " << hash
                        << " gaugeptr: " << &gauge;
