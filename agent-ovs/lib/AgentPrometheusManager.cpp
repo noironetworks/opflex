@@ -10,6 +10,7 @@
  */
 
 #include <opflexagent/Agent.h>
+#include <opflexagent/Endpoint.h>
 #include <opflex/ofcore/OFAgentStats.h>
 #include <opflexagent/PrometheusManager.h>
 #include <modelgbp/gbpe/L24Classifier.hpp>
@@ -553,7 +554,7 @@ void AgentPrometheusManager::createStaticGaugeFamiliesEp (void)
                          .Register(*registry_ptr);
     gauge_ep_total_family_ptr = &gauge_ep_total_family;
 
-    for (EP_METRICS metric=EP_RX_BYTES;
+    for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
         auto& gauge_ep_family = BuildGauge()
@@ -839,7 +840,7 @@ void AgentPrometheusManager::init ()
         counter_ep_create_family_ptr = nullptr;
         counter_ep_remove_family_ptr = nullptr;
         gauge_ep_total_family_ptr = nullptr;
-        for (EP_METRICS metric=EP_RX_BYTES;
+        for (EP_METRICS metric=EP_METRICS_MIN;
                 metric < EP_METRICS_MAX;
                     metric = EP_METRICS(metric+1)) {
             gauge_ep_family_ptr[metric] = nullptr;
@@ -1458,6 +1459,7 @@ void AgentPrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
 bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
                                                   const string& uuid,
                                                   const string& ep_name,
+                                                  bool annotate_ep_name,
                                                   const size_t& attr_hash,
                         const unordered_map<string, string>&    attr_map)
 {
@@ -1495,16 +1497,21 @@ bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
     }
 
     auto label_map = createLabelMapFromEpAttr(ep_name,
+                                              annotate_ep_name,
                                               attr_map,
                                               agent.getPrometheusEpAttributes());
     auto hash = hash_labels(label_map);
     auto& gauge = gauge_ep_family_ptr[metric]->Add(label_map);
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate ep dyn gauge family: " << ep_name
-                   << " metric: " << metric
-                   << " uuid: " << uuid
-                   << " label hash: " << hash
-                   << " gaugeptr: " << &gauge;
+        // Suppressing below log for all the other metrics of this EP
+        if (metric == EP_METRICS_MIN) {
+            LOG(ERROR) << "duplicate ep dyn gauge family: " << ep_name
+                       << " metric: " << metric
+                       << " uuid: " << uuid
+                       << " label hash: " << hash
+                       << " gaugeptr: " << &gauge;
+        }
+
         // Note: return true so that: if metrics are created before and later
         // result in duplication due to change in attributes, the pre-duplicated
         // metrics can get freed.
@@ -1647,10 +1654,13 @@ const map<string,string> AgentPrometheusManager::createLabelMapFromPodSvcAttr (
 // Create a label map that can be used for annotation, given the ep attr map
 map<string,string> AgentPrometheusManager::createLabelMapFromEpAttr (
                                                            const string& ep_name,
+                                                           bool annotate_ep_name,
                                  const unordered_map<string, string>&   attr_map,
                                  const unordered_set<string>&        allowed_set)
 {
     map<string,string>   label_map;
+    if (annotate_ep_name)
+        label_map["if"] = ep_name;
 
     auto pod_itr = attr_map.find("vm-name");
     if (pod_itr != attr_map.end())
@@ -1834,7 +1844,7 @@ hgauge_pair_t AgentPrometheusManager::getDynamicGaugeEp (EP_METRICS metric,
     hgauge_pair_t hgauge = boost::none;
     auto itr = ep_gauge_map[metric].find(uuid);
     if (itr == ep_gauge_map[metric].end()) {
-        LOG(DEBUG) << "Dyn Gauge EpCounter not found " << uuid;
+        LOG(TRACE) << "Dyn Gauge EpCounter not found " << uuid;
     } else {
         hgauge = itr->second;
     }
@@ -2223,7 +2233,7 @@ void AgentPrometheusManager::removeDynamicGaugeEp (EP_METRICS metric)
 // Remove dynamic EpCounter gauges for all metrics
 void AgentPrometheusManager::removeDynamicGaugeEp ()
 {
-    for (EP_METRICS metric=EP_RX_BYTES;
+    for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
         removeDynamicGaugeEp(metric);
@@ -2338,7 +2348,7 @@ void AgentPrometheusManager::removeStaticGaugeFamiliesPodSvc()
 void AgentPrometheusManager::removeStaticGaugeFamiliesEp()
 {
     gauge_ep_total_family_ptr = nullptr;
-    for (EP_METRICS metric=EP_RX_BYTES;
+    for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
         gauge_ep_family_ptr[metric] = nullptr;
@@ -2439,10 +2449,12 @@ void AgentPrometheusManager::removeStaticGaugeFamilies()
 
 // Return a rolling hash of attribute map for the ep
 size_t AgentPrometheusManager::calcHashEpAttributes (const string& ep_name,
-                          const unordered_map<string, string>&   attr_map,
+                                                     bool annotate_ep_name,
+                          const unordered_map<string, string>& attr_map,
                           const unordered_set<string>&        allowed_set)
 {
     auto label_map = createLabelMapFromEpAttr(ep_name,
+                                              annotate_ep_name,
                                               attr_map,
                                               allowed_set);
     auto hash = hash_labels(label_map);
@@ -2941,8 +2953,9 @@ void AgentPrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
 /* Function called from EP Manager to update EpCounter */
 void AgentPrometheusManager::addNUpdateEpCounter (const string& uuid,
                                                   const string& ep_name,
+                                                  bool annotate_ep_name,
                                                   const size_t& attr_hash,
-                      const unordered_map<string, string>&    attr_map,
+                                                  const unordered_map<string, string>& attr_map,
                                                   const EpCounters& counters)
 {
     RETURN_IF_DISABLED
@@ -2950,12 +2963,13 @@ void AgentPrometheusManager::addNUpdateEpCounter (const string& uuid,
     const lock_guard<mutex> lock(ep_counter_mutex);
 
     // Create the gauge counters if they arent present already
-    for (EP_METRICS metric=EP_RX_BYTES;
+    for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
         if (!createDynamicGaugeEp(metric,
                                   uuid,
                                   ep_name,
+                                  annotate_ep_name,
                                   attr_hash,
                                   attr_map)) {
             break;
@@ -2968,7 +2982,7 @@ void AgentPrometheusManager::addNUpdateEpCounter (const string& uuid,
     }
 
     // Update the metrics
-    for (EP_METRICS metric=EP_RX_BYTES;
+    for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
         hgauge_pair_t hgauge = getDynamicGaugeEp(metric, uuid);
@@ -3099,7 +3113,7 @@ void AgentPrometheusManager::removeEpCounter (const string& uuid,
     const lock_guard<mutex> lock(ep_counter_mutex);
     LOG(DEBUG) << "remove ep counter " << ep_name;
 
-    for (EP_METRICS metric=EP_RX_BYTES;
+    for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
         if (!removeDynamicGaugeEp(metric, uuid))
