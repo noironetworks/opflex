@@ -253,7 +253,7 @@ private:
     std::atomic<bool> syncComplete;
     std::atomic<int> syncMsgsRemaining;
     bool ovsdbUseLocalTcpPort;
-    uint64_t id = 0;
+    std::atomic<uint64_t> id;
     std::string remote_peer;
     OvsdbState ovsdbState;
 
