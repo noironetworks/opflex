@@ -1157,10 +1157,10 @@ static bool updatePolicyRules(OFFramework& framework,
                     RedirectDestGroup::resolve(framework, destGrpUri.get());
                     newRedirGrps.insert(destGrpUri.get());
                 }
-                optional<shared_ptr<modelgbp::gbp::LogAction> > log = 
+                optional<shared_ptr<modelgbp::gbp::LogAction> > resloveLog = 
                     modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
-                if (log) {
-                   ruleLog = log.get()->getLog(0) != 0 ;
+                if (resloveLog) {
+                   ruleLog = resloveLog.get()->getLog(0) != 0 ;
                 }
             }
 
