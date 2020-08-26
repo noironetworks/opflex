@@ -10,6 +10,7 @@
 
 #include "ActionBuilder.h"
 #include "FlowBuilder.h"
+#include "FlowConstants.h"
 #include "ovs-shim.h"
 #include "ovs-ofputil.h"
 
@@ -286,6 +287,11 @@ ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason) {
     this->regMove(MFF_CT_LABEL, MFF_TUN_METADATA11, 0, 0, 128);
     this->tunMetadata(MFF_TUN_METADATA12, table_id);
     this->tunMetadata(MFF_TUN_METADATA13, reason);
+    //Force packet logging for deny/permit logging
+    if( reason != CaptureReason::NO_MATCH){
+       this->metadata(flow::meta::DROP_LOG,
+       flow::meta::DROP_LOG);
+    }
     return *this;
 }
 

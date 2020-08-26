@@ -15,6 +15,7 @@
 #include "CtZoneManager.h"
 #include "FlowConstants.h"
 #include "FlowUtils.h"
+#include "ActionBuilder.h"
 
 #include <opflex/modb/Mutator.h>
 #include <modelgbp/gbp/SecGroup.hpp>
@@ -184,6 +185,13 @@ BOOST_FIXTURE_TEST_CASE(learningBridge, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("create", 500);
 }
 
+#define ADDF(flow) addExpFlowEntry(expTables, flow)
+enum TABLE {
+    DROP_LOG=0, GRP = 1, IN_POL = 2, OUT_POL = 3, OUT = 4, EXP_DROP=5
+};
+
+
+
 BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     createObjects();
     createPolicyObjects();
@@ -199,8 +207,11 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
             ->setAddress("0::")
             .setPrefixLen(0);
 
-        shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4, r5;
+        shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4, r5 ;
         secGrp1 = space->addGbpSecGroup("secgrp1");
+
+        action1 = space->addGbpAllowDenyAction("action1");
+        action1->setAllow(0).setOrder(5);
 
         r1 = secGrp1->addGbpSecGroupSubject("1_subject1")
                 ->addGbpSecGroupRule("1_1_rule1");
@@ -230,6 +241,8 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
         r5->setDirection(DirectionEnumT::CONST_IN).setOrder(400)
             .addGbpRuleToClassifierRSrc(classifier7->getURI().toString());
         r5->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+
+
         mutator.commit();
     }
 
@@ -302,17 +315,22 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
         secGrp1->addGbpSecGroupSubject("1_subject1")
             ->addGbpSecGroupRule("1_1_rule2")
             ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+
         secGrp1->addGbpSecGroupSubject("1_subject1")
             ->addGbpSecGroupRule("1_1_rule3")
             ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+
+        secGrp1->addGbpSecGroupSubject("1_subject1")
+               ->addGbpSecGroupRule("1_1_rule3")
+	       ->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString());
 
         mutator.commit();
     }
     clearExpFlowTables();
     initExpStatic();
     initExpSecGrpSet12(true, 1);
-    WAIT_FOR_TABLES("remote-secgrp", 500);
-
+    WAIT_FOR_TABLES("remote-secgrp", 500);        
+     
     {
         Mutator mutator(framework, "policyreg");
 
@@ -331,11 +349,6 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     initExpSecGrpSet12(true, 2);
     WAIT_FOR_TABLES("remote-addsubnets", 500);
 }
-
-#define ADDF(flow) addExpFlowEntry(expTables, flow)
-enum TABLE {
-    DROP_LOG=0, GRP = 1, IN_POL = 2, OUT_POL = 3, OUT = 4, EXP_DROP=5
-};
 
 void AccessFlowManagerFixture::initExpStatic() {
     ADDF(Bldr().table(OUT).priority(1).isMdAct(0)
@@ -518,12 +531,11 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
                          classifier2->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-             .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions()
-             .go(OUT).done());
+             .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions().dropLog(OUT_POL,ActionBuilder::CaptureReason::POLICY_DENY).go(EXP_DROP).done());
         if (remoteAddress > 1)
             ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-                 .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions()
-                 .go(OUT).done());
+                 .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions().dropLog(OUT_POL,ActionBuilder::CaptureReason::POLICY_DENY).go(EXP_DROP)
+                 .done());
     } else {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
              .arp().reg(SEPG, setId).actions().go(OUT).done());

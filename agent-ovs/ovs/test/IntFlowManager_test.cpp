@@ -2468,7 +2468,7 @@ void BaseIntFlowManagerFixture::initExpCon3() {
         ADDF(Bldr(SEND_FLOW_REM).table(POL).priority(prio)
              .cookie(con3_cookie).tcp()
              .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
-             .isTpDst(mk.first, mk.second).actions().dropLog(POL).go(EXP_DROPLOG).done());
+             .isTpDst(mk.first, mk.second).actions().dropLog(POL,ActionBuilder::CaptureReason::POLICY_DENY).go(EXP_DROPLOG).done());
     }
     for (const Mask& mks : ml_66_69) {
         for (const Mask& mkd : ml_94_95) {

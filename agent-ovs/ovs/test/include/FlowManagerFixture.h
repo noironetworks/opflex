@@ -17,7 +17,7 @@
 #include "CtZoneManager.h"
 #include "PacketInHandler.h"
 #include <opflexagent/logging.h>
-
+#include "ActionBuilder.h"
 #include "IntFlowManager.h"
 #include "AccessFlowManager.h"
 #include <vector>
@@ -280,8 +280,7 @@ public:
     Bldr& resubmit(uint8_t t) {
         a() << "resubmit(," << str(t) << ")"; return *this;
     }
-    Bldr& dropLog(uint32_t table_id);
-
+    Bldr& dropLog(uint32_t table_id,ActionBuilder::CaptureReason reason = ActionBuilder::CaptureReason::NO_MATCH);
 private:
     std::stringstream& m();
     std::stringstream& a();
