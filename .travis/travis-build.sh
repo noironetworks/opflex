@@ -29,8 +29,8 @@ sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
 sudo dpkg -i prometheus-cpp_0.9.0_amd64.deb
 
 pushd agent-ovs
-./autogen.sh
-./configure --enable-coverage
+./autogen.sh &> /dev/null
+./configure --enable-coverage &> /dev/null
 make -j2
 sudo make install
 make check
