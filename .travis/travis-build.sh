@@ -22,18 +22,11 @@ sudo make install &> /dev/null
 popd
 popd
 
-git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth 1
-pushd ovs
-./boot.sh &> /dev/null
-./configure  --enable-shared &> /dev/null
-make -j2 &> /dev/null
-sudo make install &> /dev/null
-sudo mkdir -p /usr/local/include/openvswitch/openvswitch
-sudo mv /usr/local/include/openvswitch/*.h /usr/local/include/openvswitch/openvswitch
-sudo mv /usr/local/include/openflow /usr/local/include/openvswitch
-sudo cp -t "/usr/local/include/openvswitch/" include/*.h
-sudo find lib -name "*.h" -exec cp --parents -t "/usr/local/include/openvswitch/" {} \;
-popd
+wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
+tar -xvzf artifacts.tgz
+sudo dpkg -i libnoiro-openvswitch_2.12.0-1_amd64.deb
+sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
+sudo dpkg -i prometheus-cpp_0.9.0_amd64.deb
 
 pushd agent-ovs
 ./autogen.sh
