@@ -36,8 +36,8 @@ sudo find lib -name "*.h" -exec cp --parents -t "/usr/local/include/openvswitch/
 popd
 
 pushd agent-ovs
-./autogen.sh &> /dev/null
-./configure --enable-coverage &> /dev/null
+./autogen.sh
+./configure --enable-coverage
 make -j2
 sudo make install
 make check
