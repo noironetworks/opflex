@@ -117,6 +117,8 @@ void FSEndpointSource::updated(const fs::path& filePath) {
     static const std::string EP_DISABLE_ADV("disable-adv");
     static const std::string EP_ACCESS_ALLOW_UNTAGGED("access-allow-untagged");
 
+    static const std::string NEUTRON_NW("neutron-network");
+
     try {
         using boost::property_tree::ptree;
         Endpoint newep;
@@ -251,11 +253,16 @@ void FSEndpointSource::updated(const fs::path& filePath) {
         }
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
+        optional<string> isOpenStack = properties.get_optional<string>(NEUTRON_NW);
+        if (isOpenStack) {
+            newep.setAnnotateEpName(true);
+        }
         auto acc_intf = newep.getAccessInterface();
         if (acc_intf) {
             newep.setAttributeHash(
                 PrometheusManager::calcHashEpAttributes(
                                             acc_intf.get(),
+                                            newep.isAnnotateEpName(),
                                             newep.getAttributes(),
                                             manager->getAgent().getPrometheusEpAttributes()));
         }
