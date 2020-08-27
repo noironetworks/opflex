@@ -27,6 +27,7 @@
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>
 
+class OFServerStats;
 namespace opflexagent {
 
 #define RETURN_IF_DISABLED  if (disabled) {return;}
@@ -120,15 +121,15 @@ public:
     };
 
     // Init state
-    virtual void init(void) {};
+    virtual void init(void) = 0;
     // Create any gauge metrics during start
     virtual void createStaticGauges(void) {};
     // remove any gauge metrics during stop
     virtual void removeStaticGauges(void) {};
     // create any gauge metric families during start
-    virtual void createStaticGaugeFamilies(void) {};
+    virtual void createStaticGaugeFamilies(void) = 0;
     // remove any gauge metric families during stop
-    virtual void removeStaticGaugeFamilies(void) {};
+    virtual void removeStaticGaugeFamilies(void) = 0;
     // create any counters at start
     virtual void createStaticCounters(void) {};
     // remove any counters at stop
@@ -141,7 +142,7 @@ public:
     virtual void removeDynamicCounterFamilies(void) {};
     virtual void removeDynamicGaugeFamilies(void) {};
     virtual void removeDynamicCounters(void) {};
-    virtual void removeDynamicGauges(void) {};
+    virtual void removeDynamicGauges(void) = 0;
 
     //Utility apis
     /**
@@ -233,6 +234,84 @@ public:
      * Stop the prometheus manager
      */
     void stop();
+
+    /* OFAgentStats related APIs */
+    /**
+     * Create OFAgentStats metric family if its not present.
+     * Update OFAgentStats metric family if its already present
+     * @param agent   the opflex peer; typically the peerIp:port
+     * @param stats   opflex stats corresponding to the peer
+     */
+    void addNUpdateOFAgentStats(const std::string& agent,
+                                const std::shared_ptr<OFServerStats> stats);
+
+private:
+    // Init state
+    virtual void init(void) override;
+    // create any gauge metric families during start
+    virtual void createStaticGaugeFamilies(void) override;
+    // remove any gauge metric families during stop
+    virtual void removeStaticGaugeFamilies(void) override;
+    // Remove apis for dynamic metrics
+    virtual void removeDynamicGauges(void) override;
+
+    /* Start of OFAgentStats related apis and state */
+    // Lock to safe guard OFAgentStats related state
+    mutex ofagent_stats_mutex;
+
+    enum OFAGENT_METRICS {
+        OFAGENT_METRICS_MIN,
+        OFAGENT_IDENT_REQS = OFAGENT_METRICS_MIN,
+        OFAGENT_POL_UPDATES,
+        OFAGENT_POL_UNAVAILABLE_RESOLVES,
+        OFAGENT_POL_RESOLVES,
+        OFAGENT_POL_RESOLVE_ERRS,
+        OFAGENT_POL_UNRESOLVES,
+        OFAGENT_POL_UNRESOLVE_ERRS,
+        OFAGENT_EP_DECLARES,
+        OFAGENT_EP_DECLARE_ERRS,
+        OFAGENT_EP_UNDECLARES,
+        OFAGENT_EP_UNDECLARE_ERRS,
+        OFAGENT_EP_RESOLVES,
+        OFAGENT_EP_RESOLVE_ERRS,
+        OFAGENT_EP_UNRESOLVES,
+        OFAGENT_EP_UNRESOLVE_ERRS,
+        OFAGENT_STATE_REPORTS,
+        OFAGENT_STATE_REPORT_ERRS,
+        OFAGENT_METRICS_MAX = OFAGENT_STATE_REPORT_ERRS
+    };
+
+    // Static Metric families and metrics
+    // metric families to track all OFAgentStats metrics
+    Family<Gauge>      *gauge_ofagent_family_ptr[OFAGENT_METRICS_MAX+1];
+
+    // create any ofagent stats gauge metric families during start
+    void createStaticGaugeFamiliesOFAgent(void);
+    // remove any ofagent stats gauge metric families during stop
+    void removeStaticGaugeFamiliesOFAgent(void);
+
+    // Dynamic Metric families and metrics
+    // CRUD for every OFAgent counter metric
+    // func to create gauge for OFAgentStats given metric type,
+    // agent: the unique agent (IP,port) tuple
+    void createDynamicGaugeOFAgent(OFAGENT_METRICS metric,
+                                  const string& agent);
+
+    // func to get label map and Gauge for OFAgentStats given metric type, agent
+    Gauge * getDynamicGaugeOFAgent(OFAGENT_METRICS metric, const string& agent);
+
+    // func to remove gauge for OFAgentStats given metric type, agent
+    bool removeDynamicGaugeOFAgent(OFAGENT_METRICS metric, const string& agent);
+    // func to remove all gauge of every OFAgentStats for a metric type
+    void removeDynamicGaugeOFAgent(OFAGENT_METRICS metric);
+    // func to remove all gauges of every OFAgentStats
+    void removeDynamicGaugeOFAgent(void);
+
+    /**
+     * cache Gauge ptr for every agent metric
+     */
+    unordered_map<string, Gauge*> ofagent_gauge_map[OFAGENT_METRICS_MAX+1];
+    /* End of OFAgentStats related apis and state */
 };
 
 class AgentPrometheusManager : private PrometheusManager {
@@ -537,26 +616,26 @@ private:
     // Init state
     virtual void init(void) override;
     // Create any gauge metrics during start
-    virtual void createStaticGauges(void);
+    virtual void createStaticGauges(void) override;
     // remove any gauge metrics during stop
-    virtual void removeStaticGauges(void);
+    virtual void removeStaticGauges(void) override;
     // create any gauge metric families during start
-    virtual void createStaticGaugeFamilies(void);
+    virtual void createStaticGaugeFamilies(void) override;
     // remove any gauge metric families during stop
-    virtual void removeStaticGaugeFamilies(void);
+    virtual void removeStaticGaugeFamilies(void) override;
     // create any counters at start
-    virtual void createStaticCounters(void);
+    virtual void createStaticCounters(void) override;
     // remove any counters at stop
-    virtual void removeStaticCounters(void);
+    virtual void removeStaticCounters(void) override;
     // create any counter families at start
-    virtual void createStaticCounterFamilies(void);
+    virtual void createStaticCounterFamilies(void) override;
     // remove any counter families at stop
-    virtual void removeStaticCounterFamilies(void);
+    virtual void removeStaticCounterFamilies(void) override;
     // Remove apis for dynamic families and metrics
-    virtual void removeDynamicCounterFamilies(void);
-    virtual void removeDynamicGaugeFamilies(void);
-    virtual void removeDynamicCounters(void);
-    virtual void removeDynamicGauges(void);
+    virtual void removeDynamicCounterFamilies(void) override;
+    virtual void removeDynamicGaugeFamilies(void) override;
+    virtual void removeDynamicCounters(void) override;
+    virtual void removeDynamicGauges(void) override;
 
     /* Start of EpCounter related apis and state */
     // Lock to safe guard EpCounter related state
