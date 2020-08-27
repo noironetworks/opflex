@@ -89,7 +89,7 @@ void PacketDecoderLayerField::transformLog(uint32_t value, stringstream &ostr, P
                p.nextLayerTypeId, p.nextKey, layerName)) {
             ostr << layerName;
         } else {
-            ostr << value << "(unrecognized)";
+            ostr << value << "_unrecognized";
         }
         return;
     }
@@ -131,13 +131,13 @@ int PacketDecoderLayerField::decode(const unsigned char *buf, std::size_t length
             }
             unsigned char maskLow = ((1<<(8-(bitOffset%8)))-1);
             ptr[3-valBytes] = *data_ptr & maskLow;
-            for( uint32_t i=1; i < valBytes; i++) {
+            for( uint32_t i=1; i <= valBytes; i++) {
                 data_ptr++;
                 ptr[3-valBytes+i] = *data_ptr;
             }
             ptr[3] &= ~((1<<(remBits%8)) -1);
             value = ntohl(value);
-            if(remBits) {
+            if(remBits%8 != 0) {
                 value = value >> remBits;
             }
             transformLog(value, ostr, p);
@@ -399,7 +399,6 @@ int PacketDecoder::decode(const unsigned char *buf, std::size_t length, ParseInf
         }
         if(p.pendingOptionLength) {
             if(!getLayerByTypeKey(p.optionLayerTypeId, 0, pktDecoderLayer)){
-               failed = true;
                break;
             }
         } else {
