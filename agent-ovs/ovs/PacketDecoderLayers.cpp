@@ -30,7 +30,7 @@ int QtagLayer::configure() {
     addField("pcp", 3, 0, PDF::FLDTYPE_BITFIELD, 0, 0, -1, 0, 0);
     addField("dei", 1, 3, PDF::FLDTYPE_BITFIELD, 0, 0, -1, 0, 0);
     addField("vid", 12, 4, PDF::FLDTYPE_BITFIELD, 0, 0, -1, 1, 0);
-    addField("eType", 16, 16, PDF::FLDTYPE_BYTES, 1, 0, -1, 0, 4);
+    addField("eType", 16, 16, PDF::FLDTYPE_BYTES, 1, 0, -1, 3, 4);
     return 0;
 }
 
