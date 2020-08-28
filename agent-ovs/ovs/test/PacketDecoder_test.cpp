@@ -188,7 +188,7 @@ BOOST_FIXTURE_TEST_CASE(ip_options_unrecognized_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Int-PORT_SECURITY_TABLE", "fa:16:3e:d3:f3:0b", "01:00:5e:00:00:16", "IPv4", "192.168.210.8", "224.0.0.22" ,"2_unrecognized", "", "");
-    std::string expected(" MAC=01:00:5e:00:00:16:fa:16:3e:d3:f3:0b:Qtag QTAG=4094 SRC=192.168.210.8 DST=224.0.0.22 LEN=40 DSCP=48 TTL=1 ID=0 FLAGS=2 FRAG=0 PROTO=2_unrecognized");
+    std::string expected(" MAC=01:00:5e:00:00:16:fa:16:3e:d3:f3:0b:Qtag QTAG=4094 IPv4 SRC=192.168.210.8 DST=224.0.0.22 LEN=40 DSCP=48 TTL=1 ID=0 FLAGS=2 FRAG=0 PROTO=2_unrecognized");
     int ret = pktDecoder.decode(igmp_buf, 178, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;

@@ -29,7 +29,8 @@ public:
  */
 class QtagLayer: public PacketDecoderLayer {
 public:
-    QtagLayer():PacketDecoderLayer("EProto", 33024, "Qtag", 4, "EProto", "none", 2, 2, 2, 0, 0, 1){};
+    QtagLayer():PacketDecoderLayer("EProto", 33024, "Qtag", 4, "EProto", "none", 2, 2, 2, 0, 0, 2){};
+    virtual ~QtagLayer() {};
     virtual int configure();
     virtual void getFormatString(boost::format &fmtStr);
 };
