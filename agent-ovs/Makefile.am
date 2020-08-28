@@ -439,6 +439,7 @@ endif
 agent_test_CFLAGS =
 agent_test_CXXFLAGS = \
 	-I$(top_srcdir)/lib/include \
+	-I$(top_srcdir)/server/include \
 	-I$(top_srcdir)/cmd/test/include \
 	$(libopflex_CFLAGS) $(libmodelgbp_CFLAGS) \
 	-DBOOST_TEST_DYN_LINK
@@ -482,6 +483,8 @@ agent_test_SOURCES = \
 	lib/test/SnatManager_test.cpp \
 	lib/test/QosManager_test.cpp \
 	lib/test/FaultManager_test.cpp \
+	server/test/AgentStats_test.cpp \
+	server/ServerPrometheusManager.cpp \
 	cmd/test/agent_test.cpp
 
 agent_test_LDADD = \
@@ -491,6 +494,10 @@ agent_test_LDADD = \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LIB) \
 	libopflex_agent.la
+if ENABLE_PROMETHEUS
+agent_test_LDADD += $(PROMETHEUS_CORE_LIBS)
+agent_test_LDADD += $(PROMETHEUS_PULL_LIBS)
+endif
 
 if RENDERER_OVS
   agent_test_CFLAGS += \

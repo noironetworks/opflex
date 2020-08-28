@@ -104,8 +104,13 @@ void StatsIO::on_timer_stats (const boost::system::error_code& ec) {
                     .setEpUndeclareErrs(peerStat.second->getEpUndeclareErrs())
                     .setEpResolves(peerStat.second->getEpResolves())
                     .setEpResolveErrs(peerStat.second->getEpResolveErrs())
+                    .setEpUnresolves(peerStat.second->getEpUnresolves())
+                    .setEpUnresolveErrs(peerStat.second->getEpUnresolveErrs())
                     .setStateReports(peerStat.second->getStateReports())
                     .setStateReportErrs(peerStat.second->getStateReportErrs());
+#ifdef HAVE_PROMETHEUS_SUPPORT
+            prometheusManager.addNUpdateOFAgentStats(peerStat.first, peerStat.second);
+#endif
         }
     }
     mutator.commit();
