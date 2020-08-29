@@ -25,6 +25,8 @@
 #ifndef OPFLEXAGENT_PACKETLOGHANDLER_H_
 #define OPFLEXAGENT_PACKETLOGHANDLER_H_
 
+#define PACKET_EVENT_BUFFER_SIZE 8192
+#define PACKET_CAPTURE_BUFFER_SIZE 12288
 namespace opflexagent {
 
 class PacketLogHandler;
@@ -73,7 +75,7 @@ public:
      */
     void startReceive() {
         serverSocket.async_receive_from(
-            boost::asio::buffer(recv_buffer, 4096), remoteEndpoint,
+            boost::asio::buffer(recv_buffer, PACKET_CAPTURE_BUFFER_SIZE), remoteEndpoint,
             boost::bind(&UdpServer::handleReceive, this,
               boost::asio::placeholders::error,
               boost::asio::placeholders::bytes_transferred));
@@ -98,7 +100,7 @@ private:
     boost::asio::ip::udp::socket serverSocket;
     boost::asio::ip::udp::endpoint localEndpoint;
     boost::asio::ip::udp::endpoint remoteEndpoint;
-    boost::array<unsigned char, 4096> recv_buffer;
+    boost::array<unsigned char, PACKET_CAPTURE_BUFFER_SIZE> recv_buffer;
     std::atomic<bool> stopped;
 };
 
@@ -137,7 +139,7 @@ private:
     PacketLogHandler &pktLogger;
     boost::asio::local::stream_protocol::socket clientSocket;
     boost::asio::local::stream_protocol::endpoint remoteEndpoint;
-    boost::array<unsigned char, 4096> send_buffer;
+    boost::array<unsigned char, PACKET_EVENT_BUFFER_SIZE> send_buffer;
     std::atomic<bool> stopped;
     bool connected;
     unsigned pendingDataLen;
