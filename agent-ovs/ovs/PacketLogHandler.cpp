@@ -65,7 +65,7 @@ void LocalClient::run() {
                     event_count++;
                 }
                 writer.EndArray();
-                pendingDataLen = (buffer.GetSize()>4096? 4096: buffer.GetSize());
+                pendingDataLen = (buffer.GetSize()>PACKET_EVENT_BUFFER_SIZE)? PACKET_EVENT_BUFFER_SIZE: buffer.GetSize();
                 memcpy(send_buffer.data(), buffer.GetString(),
                         pendingDataLen);
             }
@@ -144,7 +144,8 @@ void UdpServer::handleReceive(const boost::system::error_code& error,
 
     if (!error || error == boost::asio::error::message_size)
     {
-        uint32_t length = (bytes_transferred > 4096) ? 4096: bytes_transferred;
+        uint32_t length = (bytes_transferred > PACKET_CAPTURE_BUFFER_SIZE) ?
+            PACKET_CAPTURE_BUFFER_SIZE: bytes_transferred;
         this->pktLogger.parseLog(recv_buffer.data(), length);
     }
     if(!stopped) {
@@ -165,17 +166,26 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
 }
 
 void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
+/* Skip printing Geneve Header and Options*/
+#define PACKET_DUMP_OFFSET 132
+/*Typical length of Packet is TCP ACK 40 Bytes*/
+#define PACKET_DUMP_LEN   50
+#define PACKET_DUMP_REQUIRED_LEN 232
     ParseInfo p(&pktDecoder);
     int ret = pktDecoder.decode(buf, length, p);
     if(ret) {
         LOG(ERROR) << "Error parsing packet " << ret;
         std::stringstream str;
-        int maxPrintLen = (length < 100)? length: 100;
+        int maxPrintLen = (length <= PACKET_DUMP_REQUIRED_LEN)? length: PACKET_DUMP_LEN;
         for(int i =0; i < maxPrintLen; i++) {
             if(i%32 == 0){
                 str << std::endl;
             }
-            str << std::hex << (uint32_t)buf[i] << " ";
+            if(length <= PACKET_DUMP_REQUIRED_LEN) {
+                str << std::hex << (uint32_t)buf[i] << " ";
+            } else {
+                str << std::hex << (uint32_t)buf[PACKET_DUMP_OFFSET+i] << " ";
+            }
         }
         LOG(ERROR) << str.str();
     } else {
