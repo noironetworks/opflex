@@ -9,6 +9,10 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <time.h>
 #include <opflex/ofcore/OFFramework.h>
 #include <opflex/ofcore/OFConstants.h>
@@ -88,6 +92,23 @@ typedef opflex::ofcore::OFConstants::OpflexElementMode opflex_elem_t;
         }
         return output;
     }
+
+#ifdef HAVE_PROMETHEUS_SUPPORT
+    /**
+     * Function to check if given position of metric is expected or not
+     * in the prometheus curl output
+     *
+     * @param isAdd    flag to indicate if metric is added/deleted
+     * @param pos      expected position of metric in curl output
+     */
+    static inline void expPosition (bool isAdd, const size_t& pos)
+    {
+        if (isAdd)
+            BOOST_CHECK_NE(pos, std::string::npos);
+        else
+            BOOST_CHECK_EQUAL(pos, std::string::npos);
+    }
+#endif
 
     /**
      * A framework object

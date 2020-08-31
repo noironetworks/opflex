@@ -1712,7 +1712,7 @@ Gauge * AgentPrometheusManager::getDynamicGaugeOFPeer (OFPEER_METRICS metric,
     Gauge *pgauge = nullptr;
     auto itr = ofpeer_gauge_map[metric].find(peer);
     if (itr == ofpeer_gauge_map[metric].end()) {
-        LOG(DEBUG) << "Dyn Gauge OFPeer stats not found"
+        LOG(TRACE) << "Dyn Gauge OFPeer stats not found"
                    << " metric: " << metric
                    << " peer: " << peer;
     } else {
@@ -2016,10 +2016,6 @@ void AgentPrometheusManager::removeDynamicGaugeRDDrop ()
 }
 
 // Remove dynamic OFPeerStats gauge given a metic type and peer (IP,port) tuple
-// Note: The below api doesnt get called today. But keeping it in case we have
-// a requirement to delete a gauge metric per peer, in case a leaf goes down
-// or replaced. This can be used after changes to remove the corresponging
-// observer mo.
 bool AgentPrometheusManager::removeDynamicGaugeOFPeer (OFPEER_METRICS metric,
                                                        const string& peer)
 {
@@ -3122,6 +3118,20 @@ void AgentPrometheusManager::removeEpCounter (const string& uuid,
             incStaticCounterEpRemove();
             updateStaticGaugeEpTotal(false);
         }
+    }
+}
+
+// Function called from PolicyStatsManager to remove OFPeerStats
+void AgentPrometheusManager::removeOFPeerStats (const string& peer)
+{
+    RETURN_IF_DISABLED
+    LOG(DEBUG) << "Deleting OFPeerStats for peer: " << peer;
+    const lock_guard<mutex> lock(ofpeer_stats_mutex);
+    for (OFPEER_METRICS metric=OFPEER_METRICS_MIN;
+            metric <= OFPEER_METRICS_MAX;
+                metric = OFPEER_METRICS(metric+1)) {
+        if (!removeDynamicGaugeOFPeer(metric, peer))
+            break;
     }
 }
 

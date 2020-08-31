@@ -93,7 +93,7 @@ public:
                             bool isTx=false) override;
     void verifyRdDropPromMetrics(uint32_t pkts, uint32_t bytes);
     void updateOFPeerStats(std::shared_ptr<OFAgentStats> opflexStats);
-    void verifyOFPeerMetrics(const std::string& peer, uint32_t count);
+    void verifyOFPeerMetrics(const std::string& peer, uint32_t count, bool del);
 #endif
     IntFlowManager  intFlowManager;
     MockContractStatsManager contractStatsManager;
@@ -123,7 +123,7 @@ updateOFPeerStats (std::shared_ptr<OFAgentStats> opflexStats)
 }
 
 void ContractStatsManagerFixture::
-verifyOFPeerMetrics (const std::string& peer, uint32_t count)
+verifyOFPeerMetrics (const std::string& peer, uint32_t count, bool del)
 {
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -133,90 +133,90 @@ verifyOFPeerMetrics (const std::string& peer, uint32_t count)
     const std::string& ident_req = "opflex_peer_identity_req_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(ident_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string ident_resp = "opflex_peer_identity_resp_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(ident_resp);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string ident_err = "opflex_peer_identity_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(ident_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& res_req = "opflex_peer_policy_resolve_req_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(res_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& res_resp = "opflex_peer_policy_resolve_resp_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(res_resp);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& res_err = "opflex_peer_policy_resolve_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(res_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& unres_req = "opflex_peer_policy_unresolve_req_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(unres_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& unres_resp = "opflex_peer_policy_unresolve_resp_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(unres_resp);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& unres_err = "opflex_peer_policy_unresolve_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(unres_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& pol_upd = "opflex_peer_policy_update_receive_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(pol_upd);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& epd_req = "opflex_peer_ep_declare_req_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(epd_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epd_resp = "opflex_peer_ep_declare_resp_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(epd_resp);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epd_err = "opflex_peer_ep_declare_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(epd_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& epud_req = "opflex_peer_ep_undeclare_req_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(epud_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epud_resp = "opflex_peer_ep_undeclare_resp_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(epud_resp);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epud_err = "opflex_peer_ep_undeclare_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(epud_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& rep_req = "opflex_peer_state_report_req_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(rep_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& rep_resp = "opflex_peer_state_report_resp_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(rep_resp);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& rep_err = "opflex_peer_state_report_err_count{peer=\""
                                    + peer + "\"} " + val2;
     pos = output.find(rep_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
  
     const std::string& unres_count = "opflex_peer_unresolved_policy_count{peer=\""
                                    + peer + "\"} " + val1;
     pos = output.find(unres_count);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 }
 
 void ContractStatsManagerFixture::
@@ -624,14 +624,17 @@ BOOST_FIXTURE_TEST_CASE(testOFPeer, ContractStatsManagerFixture) {
     const std::string peer = "127.0.0.1:8009";
 
     updateOFPeerStats(opflexStats);
-    agent.getPrometheusManager().addNUpdateOFPeerStats("127.0.0.1:8009",
+    agent.getPrometheusManager().addNUpdateOFPeerStats(peer,
                                                        opflexStats);
-    verifyOFPeerMetrics(peer, 1);
+    verifyOFPeerMetrics(peer, 1, false);
 
     updateOFPeerStats(opflexStats);
-    agent.getPrometheusManager().addNUpdateOFPeerStats("127.0.0.1:8009",
+    agent.getPrometheusManager().addNUpdateOFPeerStats(peer,
                                                        opflexStats);
-    verifyOFPeerMetrics(peer, 2);
+    verifyOFPeerMetrics(peer, 2, false);
+
+    agent.getPrometheusManager().removeOFPeerStats(peer);
+    verifyOFPeerMetrics(peer, 0, true);
     LOG(DEBUG) << "### OFPeer end";
 }
 #endif

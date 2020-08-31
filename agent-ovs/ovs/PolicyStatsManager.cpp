@@ -312,6 +312,21 @@ on_timer_base(const error_code& ec,
             prometheusManager.addNUpdateOFPeerStats(peerStat.first, peerStat.second);
 #endif
         }
+        // Remove mos for deleted connections
+        std::vector<std::shared_ptr<modelgbp::observer::OpflexAgentCounter> > out;
+        ssu.get()->resolveObserverOpflexAgentCounter(out);
+        for (auto &peerCounter: out) {
+            boost::optional<const std::string&> peer =
+                                                peerCounter->getPeer();
+            if (peer) {
+                if (stats.find(peer.get()) == stats.end()) {
+                    peerCounter->remove();
+#ifdef HAVE_PROMETHEUS_SUPPORT
+                    prometheusManager.removeOFPeerStats(peer.get());
+#endif
+                }
+            }
+        }
     }
 
     mutator.commit();
