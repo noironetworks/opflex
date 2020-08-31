@@ -197,6 +197,54 @@ public:
     void clearEpgEntry(const URI & epg);
 
     /**
+     * Return map of interface to qos policy.
+     */
+    const unordered_map<string, URI>& getInterfaceToReq()
+    {
+        return interfaceToReq;
+    }
+
+    /**
+     * Return map of qos policy to interfaces
+     */
+    const unordered_map<URI, unordered_set<string> >& getReqToInterface()
+    {
+        return reqToInterface;
+    }
+
+    /**
+     * Return map of egress policy to interfaces
+     */
+    const unordered_map<URI, unordered_set<string>>& getEgressPolInterface()
+    {
+        return egressPolInterface;
+    }
+
+    /**
+     * Return map of epg to qos policy.
+     */
+    const unordered_map<URI, URI>& getEpgToReq()
+    {
+        return epgToReq;
+    }
+
+    /**
+     * Return map of qos policy to epg.
+     */
+    const unordered_map<URI, unordered_set<URI> >& getReqToEpg()
+    {
+        return reqToEpg;
+    }
+
+    /**
+     * Return map of egress policy to epg.
+     */
+    const unordered_map<URI, unordered_set<URI>>& getEgressPolEpg()
+    {
+         return egressPolEpg;
+    }
+
+    /**
      * Listen to endpointManager for new endpoints.
      * @param[in] uuid Uuid of a new endpoint.
      */
@@ -280,9 +328,17 @@ public:
          * process modb notifications
          * @param[in] updatedUri uri of the updated object
          * @param[in] dir direction of qos  config update
-         * @param[in] policyMap map to get interface to be updated
+         * @param[in] policyMap map to get epg to be updated
          */
          void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<URI>>& policyMap);
+
+         /**
+          * process modb notifications
+          * @param[in] updatedUri uri of the updated object
+          * @param[in] dir direction of qos  config update
+          * @param[in] policyMap map to get interface to be updated
+          */
+         void updateInterfaces(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap);
 
 	 /**
 	  * process bandwidth update
@@ -300,6 +356,12 @@ public:
      */
     QosUniverseListener qosUniverseListener;
 
+    /**
+     * Mutex used to prevent simultaneous read/write in qos config cache data structures.
+     */
+    static recursive_mutex qos_mutex;
+
+
 private:
 
     Agent& agent;
@@ -308,11 +370,6 @@ private:
     list<QosListener*> qosListeners;
     mutex listener_mutex;
     TaskQueue taskQueue;
-
-    /**
-     * Mutex used to prevent simultaneous read/write in qos config cache data structures.
-     */
-    static recursive_mutex qos_mutex;
 
     std::atomic<bool> stopping;
 
