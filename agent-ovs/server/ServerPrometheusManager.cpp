@@ -192,7 +192,7 @@ void ServerPrometheusManager::createDynamicGaugeOFAgent (OFAGENT_METRICS metric,
 
     auto& gauge = gauge_ofagent_family_ptr[metric]->Add({{"agent", agent}});
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate ofagent dyn gauge family"
+        LOG(WARNING) << "duplicate ofagent dyn gauge family"
                    << " metric: " << metric
                    << " agent: " << agent;
         return;
@@ -347,12 +347,12 @@ void ServerPrometheusManager::addNUpdateOFAgentStats (const std::string& agent,
             metric_opt = stats->getStateReportErrs();
             break;
         default:
-            LOG(ERROR) << "Unhandled ofagent metric: " << metric;
+            LOG(WARNING) << "Unhandled ofagent metric: " << metric;
         }
         if (metric_opt && pgauge)
             pgauge->Set(static_cast<double>(metric_opt.get()));
         if (!pgauge) {
-            LOG(ERROR) << "Invalid ofagent update agent: " << agent;
+            LOG(WARNING) << "Invalid ofagent update agent: " << agent;
             break;
         }
     }

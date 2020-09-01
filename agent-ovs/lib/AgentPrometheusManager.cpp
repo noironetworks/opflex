@@ -1019,7 +1019,7 @@ void AgentPrometheusManager::createDynamicGaugeOFPeer (OFPEER_METRICS metric,
 
     auto& gauge = gauge_ofpeer_family_ptr[metric]->Add({{"peer", peer}});
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate ofpeer dyn gauge family"
+        LOG(WARNING) << "duplicate ofpeer dyn gauge family"
                    << " metric: " << metric
                    << " peer: " << peer;
         return;
@@ -1054,7 +1054,7 @@ bool AgentPrometheusManager::createDynamicGaugeContractClassifier (CONTRACT_METR
                                                                 false)}
                     });
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate contract dyn gauge family"
+        LOG(WARNING) << "duplicate contract dyn gauge family"
                    << " metric: " << metric
                    << " srcEpg: " << srcEpg
                    << " dstEpg: " << dstEpg
@@ -1278,6 +1278,7 @@ void AgentPrometheusManager::createDynamicGaugeRDDrop (RDDROP_METRICS metric,
 
 // Create SvcTargetCounter gauge given metric type, svc-tgt uuid & ep attr_map
 void AgentPrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS metric,
+                                                         const string& key,
                                                          const string& uuid,
                                                          const string& nhip,
                         const unordered_map<string, string>&    svc_attr_map,
@@ -1287,7 +1288,7 @@ void AgentPrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS met
                                                          bool isNodePort)
 {
     // Retrieve the Gauge if its already created
-    auto const &mgauge = getDynamicGaugeSvcTarget(metric, uuid);
+    auto const &mgauge = getDynamicGaugeSvcTarget(metric, key);
 
     // Creation and deletion of this metric is controlled by ServiceManager based on
     // config events. Allow IntFlowManager to update pod specific attributes only
@@ -1299,7 +1300,7 @@ void AgentPrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS met
     if (!updateLabels)
         return;
 
-    auto const &label_map = createLabelMapFromSvcTargetAttr(nhip, svc_attr_map,
+    auto const &label_map = createLabelMapFromSvcTargetAttr(uuid, nhip, svc_attr_map,
                                                             ep_attr_map, isNodePort);
     auto hash_new = hash_labels(label_map);
 
@@ -1311,37 +1312,39 @@ void AgentPrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS met
         if (hash_new == hash_labels(mgauge.get().first))
             return;
         else {
-            LOG(DEBUG) << "addNupdate svctargetcounter uuid " << uuid
+            LOG(DEBUG) << "addNupdate svctargetcounter key " << key
                        << "existing svc target metric, but deleting: hash modified;"
                        << " metric: " << svc_target_family_names[metric]
                        << " gaugeptr: " << mgauge.get().second;
-            removeDynamicGaugeSvcTarget(metric, uuid);
+            removeDynamicGaugeSvcTarget(metric, key);
         }
     }
 
     // We shouldnt add a gauge for SvcTarget which doesnt have svc-target name.
     // i.e. no vm-name for EPs
     if (!hash_new) {
-        LOG(ERROR) << "label map is empty for svc-target dyn gauge family"
+        LOG(WARNING) << "label map is empty for svc-target dyn gauge family"
                << " metric: " << metric
-               << " uuid: " << uuid;
+               << " key: " << key;
         return;
     }
 
     auto& gauge = gauge_svc_target_family_ptr[metric]->Add(label_map);
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate svc-target dyn gauge family"
-                   << " metric: " << metric
-                   << " uuid: " << uuid
-                   << " label hash: " << hash_new;
+        // Suppressing below log for all the other metrics of this family
+        if (metric == SVC_TARGET_METRICS_MIN) {
+            LOG(WARNING) << "duplicate svc-target dyn gauge family"
+                       << " key: " << key
+                       << " label hash: " << hash_new;
+        }
         return;
     }
     LOG(DEBUG) << "created svc-target dyn gauge family"
                << " metric: " << metric
-               << " uuid: " << uuid
+               << " key: " << key
                << " label hash: " << hash_new;
     gauge_check.add(&gauge);
-    svc_target_gauge_map[metric][uuid] = make_pair(std::move(label_map), &gauge);
+    svc_target_gauge_map[metric][key] = make_pair(std::move(label_map), &gauge);
 }
 
 // Create SvcCounter gauge given metric type, svc uuid & attr_map
@@ -1354,7 +1357,7 @@ void AgentPrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
     if (svc_attr_map.size() == 0)
         return;
 
-    auto const &label_map = createLabelMapFromSvcAttr(svc_attr_map, isNodePort);
+    auto const &label_map = createLabelMapFromSvcAttr(uuid, svc_attr_map, isNodePort);
     auto hash_new = hash_labels(label_map);
 
     // Retrieve the Gauge if its already created
@@ -1377,7 +1380,7 @@ void AgentPrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
 
     // We shouldnt add a gauge for Svc which doesnt have svc name.
     if (!hash_new) {
-        LOG(ERROR) << "label map is empty for svc dyn gauge family"
+        LOG(WARNING) << "label map is empty for svc dyn gauge family"
                << " metric: " << metric
                << " uuid: " << uuid;
         return;
@@ -1385,10 +1388,11 @@ void AgentPrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
 
     auto& gauge = gauge_svc_family_ptr[metric]->Add(label_map);
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate svc dyn gauge family"
-                   << " metric: " << metric
-                   << " uuid: " << uuid
-                   << " label hash: " << hash_new;
+        if (metric == SVC_METRICS_MIN) {
+            LOG(WARNING) << "duplicate svc dyn gauge family"
+                       << " uuid: " << uuid
+                       << " label hash: " << hash_new;
+        }
         return;
     }
     LOG(DEBUG) << "created svc dyn gauge family"
@@ -1433,7 +1437,7 @@ void AgentPrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
     // We shouldnt add a gauge for PodSvc which doesnt have
     // ep name and svc name.
     if (!hash_new) {
-        LOG(ERROR) << "label map is empty for podsvc dyn gauge family"
+        LOG(WARNING) << "label map is empty for podsvc dyn gauge family"
                << " metric: " << metric
                << " uuid: " << uuid;
         return;
@@ -1441,7 +1445,7 @@ void AgentPrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
 
     auto& gauge = gauge_podsvc_family_ptr[metric]->Add(label_map);
     if (gauge_check.is_dup(&gauge)) {
-        LOG(ERROR) << "duplicate podsvc dyn gauge family"
+        LOG(WARNING) << "duplicate podsvc dyn gauge family"
                    << " metric: " << metric
                    << " uuid: " << uuid
                    << " label hash: " << hash_new;
@@ -1505,7 +1509,7 @@ bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
     if (gauge_check.is_dup(&gauge)) {
         // Suppressing below log for all the other metrics of this EP
         if (metric == EP_METRICS_MIN) {
-            LOG(ERROR) << "duplicate ep dyn gauge family: " << ep_name
+            LOG(WARNING) << "duplicate ep dyn gauge family: " << ep_name
                        << " uuid: " << uuid
                        << " label hash: " << hash
                        << " gaugeptr: " << &gauge;
@@ -1536,12 +1540,14 @@ bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
 
 // Create a label map that can be used for annotation, given the ep attr map
 const map<string,string> AgentPrometheusManager::createLabelMapFromSvcTargetAttr (
+                                                               const string& svc_uuid,
                                                                const string& nhip,
                                 const unordered_map<string, string>&  svc_attr_map,
                                 const unordered_map<string, string>&  ep_attr_map,
                                 bool isNodePort)
 {
     map<string,string>   label_map;
+    label_map["svc_uuid"] = svc_uuid;
 
     // If there are multiple IPs per EP and if these 2 IPs are nexthops of service,
     // then gauge dup checker will crib for updates from these 2 IP flows.
@@ -1582,10 +1588,12 @@ const map<string,string> AgentPrometheusManager::createLabelMapFromSvcTargetAttr
 
 // Create a label map that can be used for annotation, given the svc attr_map
 const map<string,string> AgentPrometheusManager::createLabelMapFromSvcAttr (
+                              const string& uuid,
                               const unordered_map<string, string>&  svc_attr_map,
                               bool isNodePort)
 {
     map<string,string>   label_map;
+    label_map["uuid"] = uuid;
 
     auto svc_name_itr = svc_attr_map.find("name");
     // Ensuring svc's name is present in attributes
@@ -2497,12 +2505,12 @@ void AgentPrometheusManager::addNUpdatePodSvcCounter (bool isEpToSvc,
                 metric_opt = pkts;
                 break;
             default:
-                LOG(ERROR) << "Unhandled eptosvc metric: " << metric;
+                LOG(WARNING) << "Unhandled eptosvc metric: " << metric;
             }
             if (metric_opt && mgauge)
                 mgauge.get().second->Set(static_cast<double>(metric_opt.get()));
             if (!mgauge) {
-                LOG(ERROR) << "ep2svc stats invalid update for uuid: " << uuid;
+                LOG(WARNING) << "ep2svc stats invalid update for uuid: " << uuid;
                 break;
             }
         }
@@ -2531,12 +2539,12 @@ void AgentPrometheusManager::addNUpdatePodSvcCounter (bool isEpToSvc,
                 metric_opt = pkts;
                 break;
             default:
-                LOG(ERROR) << "Unhandled svctoep metric: " << metric;
+                LOG(WARNING) << "Unhandled svctoep metric: " << metric;
             }
             if (metric_opt && mgauge)
                 mgauge.get().second->Set(static_cast<double>(metric_opt.get()));
             if (!mgauge) {
-                LOG(ERROR) << "svc2ep stats invalid update for uuid: " << uuid;
+                LOG(WARNING) << "svc2ep stats invalid update for uuid: " << uuid;
                 break;
             }
         }
@@ -2575,6 +2583,7 @@ void AgentPrometheusManager::addNUpdateSvcTargetCounter (const string& uuid,
                 metric = SVC_TARGET_METRICS(metric+1)) {
         createDynamicGaugeSvcTarget(metric,
                                     key,
+                                    uuid,
                                     nhip,
                                     svc_attr_map,
                                     ep_attr_map,
@@ -2603,12 +2612,12 @@ void AgentPrometheusManager::addNUpdateSvcTargetCounter (const string& uuid,
             metric_val = tx_pkts;
             break;
         default:
-            LOG(ERROR) << "Unhandled svc-target metric: " << metric;
+            LOG(WARNING) << "Unhandled svc-target metric: " << metric;
         }
         if (mgauge)
             mgauge.get().second->Set(static_cast<double>(metric_val));
         if (!mgauge && createIfNotPresent) {
-            LOG(ERROR) << "svc-target stats invalid update for uuid: " << key;
+            LOG(WARNING) << "svc-target stats invalid update for uuid: " << key;
             break;
         }
     }
@@ -2656,12 +2665,12 @@ void AgentPrometheusManager::addNUpdateSvcCounter (const string& uuid,
             metric_val = tx_pkts;
             break;
         default:
-            LOG(ERROR) << "Unhandled svc metric: " << metric;
+            LOG(WARNING) << "Unhandled svc metric: " << metric;
         }
         if (mgauge)
             mgauge.get().second->Set(static_cast<double>(metric_val));
         if (!mgauge && !svc_attr_map.empty()) {
-            LOG(ERROR) << "svc stats invalid update for uuid: " << uuid;
+            LOG(WARNING) << "svc stats invalid update for uuid: " << uuid;
             break;
         }
     }
@@ -2704,13 +2713,13 @@ void AgentPrometheusManager::addNUpdateContractClassifierCounter (const string& 
             metric_opt = pkts;
             break;
         default:
-            LOG(ERROR) << "Unhandled contract metric: " << metric;
+            LOG(WARNING) << "Unhandled contract metric: " << metric;
         }
         if (metric_opt && pgauge)
             pgauge->Set(pgauge->Value() \
                         + static_cast<double>(metric_opt.get()));
         if (!pgauge) {
-            LOG(ERROR) << "Invalid sgclassifier update"
+            LOG(WARNING) << "Invalid sgclassifier update"
                        << " srcEpg: " << srcEpg
                        << " dstEpg: " << dstEpg
                        << " classifier: " << classifier;
@@ -2757,13 +2766,13 @@ void AgentPrometheusManager::addNUpdateSGClassifierCounter (const string& classi
             metric_opt = tx_pkts;
             break;
         default:
-            LOG(ERROR) << "Unhandled sgclassifier metric: " << metric;
+            LOG(WARNING) << "Unhandled sgclassifier metric: " << metric;
         }
         if (metric_opt && pgauge)
             pgauge->Set(pgauge->Value() \
                         + static_cast<double>(metric_opt.get()));
         if (!pgauge) {
-            LOG(ERROR) << "Invalid sgclassifier update classifier: " << classifier;
+            LOG(WARNING) << "Invalid sgclassifier update classifier: " << classifier;
             break;
         }
     }
@@ -2838,13 +2847,13 @@ void AgentPrometheusManager::addNUpdateRDDropCounter (const string& rdURI,
             metric_opt = pkts;
             break;
         default:
-            LOG(ERROR) << "Unhandled rddrop metric: " << metric;
+            LOG(WARNING) << "Unhandled rddrop metric: " << metric;
         }
         if (metric_opt && pgauge)
             pgauge->Set(pgauge->Value() \
                         + static_cast<double>(metric_opt.get()));
         if (!pgauge && isAdd) {
-            LOG(ERROR) << "Invalid rddrop update rdURI: " << rdURI;
+            LOG(WARNING) << "Invalid rddrop update rdURI: " << rdURI;
             break;
         }
     }
@@ -2934,12 +2943,12 @@ void AgentPrometheusManager::addNUpdateOFPeerStats (const std::string& peer,
             metric_opt = stats->getPolUnresolvedCount();
             break;
         default:
-            LOG(ERROR) << "Unhandled ofpeer metric: " << metric;
+            LOG(WARNING) << "Unhandled ofpeer metric: " << metric;
         }
         if (metric_opt && pgauge)
             pgauge->Set(static_cast<double>(metric_opt.get()));
         if (!pgauge) {
-            LOG(ERROR) << "Invalid ofpeer update peer: " << peer;
+            LOG(WARNING) << "Invalid ofpeer update peer: " << peer;
             break;
         }
     }
@@ -3020,12 +3029,12 @@ void AgentPrometheusManager::addNUpdateEpCounter (const string& uuid,
             metric_opt = counters.txBroadcast;
             break;
         default:
-            LOG(ERROR) << "Unhandled metric: " << metric;
+            LOG(WARNING) << "Unhandled metric: " << metric;
         }
         if (metric_opt && hgauge)
             hgauge.get().second->Set(static_cast<double>(metric_opt.get()));
         if (!hgauge) {
-            LOG(ERROR) << "ep stats invalid update for uuid: " << uuid;
+            LOG(WARNING) << "ep stats invalid update for uuid: " << uuid;
             break;
         }
     }
@@ -3227,7 +3236,7 @@ void AgentPrometheusManager::createStaticGaugeTableDrop (const string& bridge_na
                         metric = TABLE_DROP_METRICS(metric+1)) {
                 auto& gauge = gauge_table_drop_family_ptr[metric]->Add(label_map);
                 if (gauge_check.is_dup(&gauge)) {
-                    LOG(ERROR) << "duplicate table drop static gauge"
+                    LOG(WARNING) << "duplicate table drop static gauge"
                                << " bridge_name: " << bridge_name
                                << " table name: " << table_name;
                     return;
@@ -3282,7 +3291,7 @@ void AgentPrometheusManager::updateTableDropGauge (const string& bridge_name,
     if (mgauge_bytes) {
         mgauge_bytes.get().second->Set(static_cast<double>(bytes));
     } else {
-        LOG(ERROR) << "Invalid bytes update for table drop"
+        LOG(WARNING) << "Invalid bytes update for table drop"
                    << " bridge_name: " << bridge_name
                    << " table_name: " << table_name;
         return;
@@ -3294,7 +3303,7 @@ void AgentPrometheusManager::updateTableDropGauge (const string& bridge_name,
     if (mgauge_packets) {
         mgauge_packets.get().second->Set(static_cast<double>(packets));
     } else {
-        LOG(ERROR) << "Invalid pkts update for table drop"
+        LOG(WARNING) << "Invalid pkts update for table drop"
                    << " bridge_name: " << bridge_name
                    << " table_name: " << table_name;
         return;
