@@ -874,17 +874,18 @@ void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     const string& scope = isNodePort?"nodePort":"cluster";
+    const string& uuid = isNodePort?"nodeport-"+as.getUUID():as.getUUID();
     const string& s_rx_bytes = "opflex_svc_rx_bytes{name=\"coredns\"" \
-                               ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
+                               ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
                             + std::to_string(bytes) + ".000000";
     const string& s_rx_pkts = "opflex_svc_rx_packets{name=\"coredns\"" \
-                              ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
+                              ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
                             + std::to_string(pkts) + ".000000";
     const string& s_tx_bytes = "opflex_svc_tx_bytes{name=\"coredns\"" \
-                               ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
+                               ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
                             + std::to_string(bytes) + ".000000";
     const string& s_tx_pkts = "opflex_svc_tx_packets{name=\"coredns\"" \
-                              ",namespace=\"kube-system\",scope=\"" + scope + "\"} "
+                              ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
                             + std::to_string(pkts) + ".000000";
     pos = output.find(s_rx_bytes);
     BOOST_CHECK_NE(pos, std::string::npos);
@@ -897,7 +898,7 @@ void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
 
     const string& ep_attr = "ep_name=\"coredns\",ep_namespace=\"default\",";
     const string& s_ann = "\",svc_name=\"coredns\",svc_namespace=\"kube-system\"" \
-                          ",svc_scope=\"" + scope + "\"} ";
+                          ",svc_scope=\"" + scope + "\",svc_uuid=\"" + uuid + "\"} ";
     string rx_bytes, rx_pkts, tx_bytes, tx_pkts;
     if (ip == "10.20.44.2" || ip == "2001:db8::2") {
         rx_bytes = "opflex_svc_target_rx_bytes{" + ep_attr + "ip=\"";

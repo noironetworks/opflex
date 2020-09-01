@@ -763,6 +763,7 @@ private:
     // func to create gauge for SvcTargetCounter given metric type,
     // uuid of svc-target & attr map of ep
     void createDynamicGaugeSvcTarget(SVC_TARGET_METRICS metric,
+                                     const string& key,
                                      const string& uuid,
                                      const string& nhip,
         const unordered_map<string, string>& svc_attr_map,
@@ -789,6 +790,7 @@ private:
     //Utility apis
     // Create a label map that can be used for annotation, given the ep attr map
     static const map<string,string> createLabelMapFromSvcTargetAttr(
+                                                          const string& svc_uuid,
                                                           const string& nhip,
                            const unordered_map<string, string>&  svc_attr_map,
                            const unordered_map<string, string>&  ep_attr_map,
@@ -877,6 +879,7 @@ private:
     //Utility apis
     // Create a label map that can be used for annotation, given the svc attr map
     static const map<string,string> createLabelMapFromSvcAttr(
+                           const string& uuid,
                            const unordered_map<string, string>&  svc_attr_map,
                            bool isNodePort);
     /* End of SvcCounter related apis and state */
