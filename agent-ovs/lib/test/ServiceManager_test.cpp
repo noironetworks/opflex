@@ -303,14 +303,6 @@ void ServiceManagerFixture::checkServiceState (bool isCreate)
 }
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
-static inline void expPosition (bool isAdd, const size_t& pos)
-{
-    if (isAdd)
-        BOOST_CHECK_NE(pos, std::string::npos);
-    else
-        BOOST_CHECK_EQUAL(pos, std::string::npos);
-}
-
 // Check prom dyn gauge service metrics
 void ServiceManagerFixture::checkServicePromMetrics (bool isAdd, bool isExternal, bool isUpdate)
 {
@@ -333,32 +325,32 @@ void ServiceManagerFixture::checkServicePromMetrics (bool isAdd, bool isExternal
     }
 
     pos = output.find("opflex_svc_rx_bytes{" + str + "} 0.000000");
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
     pos = output.find("opflex_svc_rx_packets{" + str + "} 0.000000");
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
     pos = output.find("opflex_svc_tx_bytes{" + str + "} 0.000000");
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
     pos = output.find("opflex_svc_tx_packets{" + str + "} 0.000000");
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
 
     if (isExternal || !as.isNodePort()) {
         pos = output.find("opflex_svc_rx_bytes{" + str2 + "} 0.000000");
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
         pos = output.find("opflex_svc_rx_packets{" + str2 + "} 0.000000");
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
         pos = output.find("opflex_svc_tx_bytes{" + str2 + "} 0.000000");
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
         pos = output.find("opflex_svc_tx_packets{" + str2 + "} 0.000000");
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
     } else {
         pos = output.find("opflex_svc_rx_bytes{" + str2 + "} 0.000000");
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
         pos = output.find("opflex_svc_rx_packets{" + str2 + "} 0.000000");
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
         pos = output.find("opflex_svc_tx_bytes{" + str2 + "} 0.000000");
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
         pos = output.find("opflex_svc_tx_packets{" + str2 + "} 0.000000");
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
     }
 }
 // Check prom dyn gauge service target metrics
@@ -386,32 +378,32 @@ void ServiceManagerFixture::checkServiceTargetPromMetrics (bool isAdd,
     }
 
     pos = output.find("opflex_svc_target_rx_bytes{ip=\""+ip+str);
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
     pos = output.find("opflex_svc_target_rx_packets{ip=\""+ip+str);
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
     pos = output.find("opflex_svc_target_tx_bytes{ip=\""+ip+str);
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
     pos = output.find("opflex_svc_target_tx_packets{ip=\""+ip+str);
-    expPosition(isAdd, pos);
+    BaseFixture::expPosition(isAdd, pos);
 
     if (isExternal || !as.isNodePort()) {
         pos = output.find("opflex_svc_target_rx_bytes{ip=\""+ip+str2);
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
         pos = output.find("opflex_svc_target_rx_packets{ip=\""+ip+str2);
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
         pos = output.find("opflex_svc_target_tx_bytes{ip=\""+ip+str2);
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
         pos = output.find("opflex_svc_target_tx_packets{ip=\""+ip+str2);
-        expPosition(false, pos);
+        BaseFixture::expPosition(false, pos);
     } else {
         pos = output.find("opflex_svc_target_rx_bytes{ip=\""+ip+str2);
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
         pos = output.find("opflex_svc_target_rx_packets{ip=\""+ip+str2);
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
         pos = output.find("opflex_svc_target_tx_bytes{ip=\""+ip+str2);
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
         pos = output.find("opflex_svc_target_tx_packets{ip=\""+ip+str2);
-        expPosition(isAdd, pos);
+        BaseFixture::expPosition(isAdd, pos);
     }
 }
 #endif

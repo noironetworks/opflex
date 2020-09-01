@@ -239,11 +239,16 @@ public:
     /**
      * Create OFAgentStats metric family if its not present.
      * Update OFAgentStats metric family if its already present
-     * @param agent   the opflex peer; typically the peerIp:port
-     * @param stats   opflex stats corresponding to the peer
+     * @param agent   the opflex agent; typically the agentIp:port
+     * @param stats   opflex stats corresponding to the agent
      */
     void addNUpdateOFAgentStats(const std::string& agent,
                                 const std::shared_ptr<OFServerStats> stats);
+    /**
+     * Remove OFAgentStats metric family given the agent IP+port.
+     * @param agent    the opflex agent; typically the agentIp:port
+     */
+    void removeOFAgentStats(const std::string& agent);
 
 private:
     // Init state
@@ -481,6 +486,11 @@ public:
      */
     void addNUpdateOFPeerStats(const std::string& peer,
                                const std::shared_ptr<OFAgentStats> stats);
+    /**
+     * Remove OFPeerStats metric family given the peer IP+port.
+     * @param peer    the opflex peer; typically the peerIp:port
+     */
+    void removeOFPeerStats(const std::string& peer);
 
 
     /* SvcCounter related APIs */

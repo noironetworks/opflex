@@ -52,7 +52,7 @@ public:
 
     void updateOFAgentStats(std::shared_ptr<OFServerStats> opflexStats);
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    void verifyOFAgentMetrics(const std::string& agent, uint32_t count);
+    void verifyOFAgentMetrics(const std::string& agent, uint32_t count, bool del);
     const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9632/metrics 2>&1;";
     ServerPrometheusManager prometheusManager;
 #endif
@@ -82,7 +82,7 @@ updateOFAgentStats (std::shared_ptr<OFServerStats> opflexStats)
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
 void AgentStatsFixture::
-verifyOFAgentMetrics (const std::string& agent, uint32_t count)
+verifyOFAgentMetrics (const std::string& agent, uint32_t count, bool del)
 {
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -91,80 +91,80 @@ verifyOFAgentMetrics (const std::string& agent, uint32_t count)
     const std::string& ident_req = "opflex_agent_identity_req_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(ident_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& pol_upd = "opflex_agent_policy_update_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(pol_upd);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& res_un = "opflex_agent_policy_unavailable_resolve_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(res_un);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& res_req = "opflex_agent_policy_resolve_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(res_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& res_err = "opflex_agent_policy_resolve_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(res_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& unres_req = "opflex_agent_policy_unresolve_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(unres_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& unres_err = "opflex_agent_policy_unresolve_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(unres_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& epd_req = "opflex_agent_ep_declare_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epd_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epd_err = "opflex_agent_ep_declare_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epd_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& epud_req = "opflex_agent_ep_undeclare_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epud_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epud_err = "opflex_agent_ep_undeclare_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epud_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& epr_req = "opflex_agent_ep_resolve_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epr_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epr_err = "opflex_agent_ep_resolve_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epr_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& epur_req = "opflex_agent_ep_unresolve_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epur_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& epur_err = "opflex_agent_ep_unresolve_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(epur_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 
     const std::string& rep_req = "opflex_agent_state_report_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(rep_req);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
     const std::string& rep_err = "opflex_agent_state_report_err_count{agent=\""
                                    + agent + "\"} " + val;
     pos = output.find(rep_err);
-    BOOST_CHECK_NE(pos, std::string::npos);
+    BaseFixture::expPosition(!del, pos);
 }
 #endif
 
@@ -174,20 +174,23 @@ BOOST_FIXTURE_TEST_CASE(testOFAgent, AgentStatsFixture) {
 
     LOG(DEBUG) << "### OfAgent start";
     std::shared_ptr<OFServerStats> opflexStats = std::make_shared<OFServerStats>();
-    const std::string agent = "127.0.0.1:9999";
+    const std::string& agent = "127.0.0.1:9999";
 
     updateOFAgentStats(opflexStats);
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    prometheusManager.addNUpdateOFAgentStats("127.0.0.1:9999",
+    prometheusManager.addNUpdateOFAgentStats(agent,
                                              opflexStats);
-    verifyOFAgentMetrics(agent, 1);
+    verifyOFAgentMetrics(agent, 1, false);
 #endif
 
     updateOFAgentStats(opflexStats);
 #ifdef HAVE_PROMETHEUS_SUPPORT
-    prometheusManager.addNUpdateOFAgentStats("127.0.0.1:9999",
+    prometheusManager.addNUpdateOFAgentStats(agent,
                                              opflexStats);
-    verifyOFAgentMetrics(agent, 2);
+    verifyOFAgentMetrics(agent, 2, false);
+
+    prometheusManager.removeOFAgentStats(agent);
+    verifyOFAgentMetrics(agent, 0, true);
 #endif
     LOG(DEBUG) << "### OFAgent end";
 }

@@ -211,7 +211,7 @@ Gauge * ServerPrometheusManager::getDynamicGaugeOFAgent (OFAGENT_METRICS metric,
     Gauge *pgauge = nullptr;
     auto itr = ofagent_gauge_map[metric].find(agent);
     if (itr == ofagent_gauge_map[metric].end()) {
-        LOG(DEBUG) << "Dyn Gauge OFAgent stats not found"
+        LOG(TRACE) << "Dyn Gauge OFAgent stats not found"
                    << " metric: " << metric
                    << " agent: " << agent;
     } else {
@@ -222,10 +222,6 @@ Gauge * ServerPrometheusManager::getDynamicGaugeOFAgent (OFAGENT_METRICS metric,
 }
 
 // Remove dynamic OFAgentStats gauge given a metic type and agent (IP,port) tuple
-// Note: The below api doesnt get called today. But keeping it in case we have
-// a requirement to delete a gauge metric per agent, in case an agent goes down
-// or restarts. This can be used after changes to remove the corresponding
-// observer mo.
 bool ServerPrometheusManager::removeDynamicGaugeOFAgent (OFAGENT_METRICS metric,
                                                        const string& agent)
 {
@@ -359,6 +355,20 @@ void ServerPrometheusManager::addNUpdateOFAgentStats (const std::string& agent,
             LOG(ERROR) << "Invalid ofagent update agent: " << agent;
             break;
         }
+    }
+}
+
+// Function called from StatsIO to remove OFAgentStats
+void ServerPrometheusManager::removeOFAgentStats (const string& agent)
+{
+    RETURN_IF_DISABLED
+    LOG(DEBUG) << "Deleting OFAgentStats for agent: " << agent;
+    const lock_guard<mutex> lock(ofagent_stats_mutex);
+    for (OFAGENT_METRICS metric=OFAGENT_METRICS_MIN;
+            metric <= OFAGENT_METRICS_MAX;
+                metric = OFAGENT_METRICS(metric+1)) {
+        if (!removeDynamicGaugeOFAgent(metric, agent))
+            break;
     }
 }
 
