@@ -16,6 +16,7 @@
 #include <modelgbp/l2/EtherTypeEnumT.hpp>
 #include <modelgbp/l4/TcpFlagsEnumT.hpp>
 #include <modelgbp/arp/OpcodeEnumT.hpp>
+#include <opflexagent/logging.h>
 
 #include <boost/asio/ip/address.hpp>
 
@@ -123,8 +124,8 @@ static flow_func make_flow_functor(const network::subnet_t& ss,
     return std::bind(applyRemoteSub, _1, func, addr, ss.second, _2);
 }
 
-void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act,
-                              uint8_t nextTable, uint16_t priority,
+void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
+                              uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
                               /* out */ FlowEntryList& entries) {
@@ -140,20 +141,24 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act,
     match_protocol(f, clsfr);
     if (act != flowutils::CA_DENY)
         f.action().go(nextTable);
-
+    if (act == flowutils::CA_DENY) {
+       if (log != 0)    
+          f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY).go(nextTable);
+       else 
+          f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable);
+    }
     entries.push_back(f.build());
 }
 
-void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
+void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
-                            uint8_t nextTable, uint16_t priority,
+                            uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
                             /* out */ FlowEntryList& entries) {
     using modelgbp::l2::EtherTypeEnumT;
     using modelgbp::l4::TcpFlagsEnumT;
-
     ovs_be64 ckbe = ovs_htonll(cookie);
     MaskList srcPorts;
     MaskList dstPorts;
@@ -261,6 +266,10 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act,
 
                         switch (act) {
                         case flowutils::CA_DENY:
+                             if (log != 0)
+			         f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY).go(nextTable);
+			     else
+				 f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable); 
                         case flowutils::CA_ALLOW:
                         case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_FWD:

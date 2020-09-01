@@ -605,8 +605,10 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                 LOG(DEBUG) << "skipL34 flows: " << skipL34
                            << " for rule: " << ruleURI;
             }
-
+           
+            bool log = false;
             flowutils::ClassAction act = flowutils::CA_DENY;
+ 
             if (pc->getAllow()) {
                 if (cls->getConnectionTracking(ConnTrackEnumT::CONST_NORMAL) ==
                     ConnTrackEnumT::CONST_REFLEXIVE) {
@@ -616,6 +618,9 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                 }
             }
 
+            if (pc->getLog()) {
+	       log = pc->getLog();
+            }
             /*
              * Do not program higher level protocols
              * when remote subnet is missing
@@ -624,80 +629,111 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
             if (skipL34) {
                 if (dir == DirectionEnumT::CONST_BIDIRECTIONAL ||
                     dir == DirectionEnumT::CONST_IN) {
-                    flowutils::add_l2classifier_entries(*cls, act,
-                                                        OUT_TABLE_ID,
-                                                        pc->getPriority(),
-                                                        OFPUTIL_FF_SEND_FLOW_REM,
-                                                        secGrpCookie,
-                                                        secGrpSetId, 0,
-                                                        secGrpIn);
+                    if (act == flowutils::CA_DENY) {
+			flowutils::add_l2classifier_entries(*cls, act, log,
+                                                            EXP_DROP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                            pc->getPriority(),
+                                                            OFPUTIL_FF_SEND_FLOW_REM,
+                                                            secGrpCookie,
+                                                            secGrpSetId, 0,
+                                                            secGrpIn); 
+		     } else { 
+                         flowutils::add_l2classifier_entries(*cls, act, log,
+                                                             OUT_TABLE_ID, 0,
+                                                             pc->getPriority(),
+                                                             OFPUTIL_FF_SEND_FLOW_REM,
+                                                             secGrpCookie,
+                                                             secGrpSetId, 0,
+                                                             secGrpIn);
+		      }
                 }
                 if (dir == DirectionEnumT::CONST_BIDIRECTIONAL ||
                     dir == DirectionEnumT::CONST_OUT) {
-                    flowutils::add_l2classifier_entries(*cls, act,
-                                                        OUT_TABLE_ID,
+	            if (act == flowutils::CA_DENY) {
+			flowutils::add_l2classifier_entries(*cls, act, log,
+                                                            EXP_DROP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                            pc->getPriority(),
+                                                            OFPUTIL_FF_SEND_FLOW_REM,
+                                                            secGrpCookie,
+                                                            secGrpSetId, 0,
+                                                            secGrpOut);
+		    }  else {
+		 	   flowutils::add_l2classifier_entries(*cls, act, log,
+                                                        OUT_TABLE_ID, 0,
                                                         pc->getPriority(),
                                                         OFPUTIL_FF_SEND_FLOW_REM,
                                                         secGrpCookie,
-                                                        secGrpSetId, 0,
-                                                        secGrpOut);
+                                                        secGrpSetId, 0, secGrpOut);
+                      }                     
                 }
                 continue;
             }
 
             if (dir == DirectionEnumT::CONST_BIDIRECTIONAL ||
                 dir == DirectionEnumT::CONST_IN) {
-                flowutils::add_classifier_entries(*cls, act,
-                                                  remoteSubs,
-                                                  boost::none,
-                                                  OUT_TABLE_ID,
-                                                  pc->getPriority(),
-                                                  OFPUTIL_FF_SEND_FLOW_REM,
-                                                  secGrpCookie,
-                                                  secGrpSetId, 0,
-                                                  secGrpIn);
+                if (act == flowutils::CA_DENY) {
+		   flowutils::add_classifier_entries(*cls, act, log,
+                                                     remoteSubs,
+                                                     boost::none,
+                                                     EXP_DROP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                     pc->getPriority(),
+                                                     OFPUTIL_FF_SEND_FLOW_REM,
+                                                     secGrpCookie,
+                                                     secGrpSetId, 0,
+                                                     secGrpIn);
+	        }  else {
+		      flowutils::add_classifier_entries(*cls, act, log,
+                                                        remoteSubs,
+                                                        boost::none,
+                                                        OUT_TABLE_ID, 0,
+                                                        pc->getPriority(),
+                                                        OFPUTIL_FF_SEND_FLOW_REM,
+                                                        secGrpCookie,
+                                                        secGrpSetId, 0,
+                                                        secGrpIn);
+	          }
                 if (act == CA_REFLEX_FWD) {
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      GROUP_MAP_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
                                                       secGrpIn);
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      OUT_TABLE_ID,
+                                                      OUT_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
                                                       secGrpIn);
                     // add reverse entries for reflexive classifier
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      GROUP_MAP_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       0,
                                                       secGrpSetId, 0,
                                                       secGrpOut);
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      OUT_TABLE_ID,
+                                                      OUT_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
                                                       secGrpOut);
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      OUT_TABLE_ID,
+                                                      OUT_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
@@ -707,57 +743,69 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
             }
             if (dir == DirectionEnumT::CONST_BIDIRECTIONAL ||
                 dir == DirectionEnumT::CONST_OUT) {
-                flowutils::add_classifier_entries(*cls, act,
+	        if (act == flowutils::CA_DENY) {
+		   flowutils::add_classifier_entries(*cls, act, log,
                                                   boost::none,
                                                   remoteSubs,
-                                                  OUT_TABLE_ID,
+                                                  EXP_DROP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
                                                   pc->getPriority(),
                                                   OFPUTIL_FF_SEND_FLOW_REM,
                                                   secGrpCookie,
                                                   secGrpSetId, 0,
                                                   secGrpOut);
+                }  else {
+                      flowutils::add_classifier_entries(*cls, act, log,
+                                                        boost::none,
+                                                        remoteSubs,
+                                                        OUT_TABLE_ID, 0,
+                                                        pc->getPriority(),
+                                                        OFPUTIL_FF_SEND_FLOW_REM,
+                                                        secGrpCookie,
+                                                        secGrpSetId, 0,
+                                                        secGrpOut);
+		  }
                 if (act == CA_REFLEX_FWD) {
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      GROUP_MAP_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
                                                       secGrpOut);
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      OUT_TABLE_ID,
+                                                      OUT_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
                                                       secGrpOut);
                     // add reverse entries for reflexive classifier
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      GROUP_MAP_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       0,
                                                       secGrpSetId, 0,
                                                       secGrpIn);
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      OUT_TABLE_ID,
+                                                      OUT_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
                                                       secGrpIn);
-                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED,
+                    flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      OUT_TABLE_ID,
+                                                      OUT_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,

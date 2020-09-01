@@ -17,7 +17,6 @@
 #include "CtZoneManager.h"
 #include "PacketInHandler.h"
 #include <opflexagent/logging.h>
-
 #include "IntFlowManager.h"
 #include "AccessFlowManager.h"
 #include <vector>
@@ -108,6 +107,12 @@ enum FLAG {
     SEND_FLOW_REM=1, NO_PKT_COUNTS, NO_BYT_COUNTS, CHECK_OVERLAP,
     RESET_COUNTS
 };
+
+enum CaptureReason {
+        NO_MATCH=0,
+        POLICY_DENY=1,
+        POLICY_PERMIT=2
+    };
 
 /**
  * Helper class to build string representation of a flow entry.
@@ -280,7 +285,7 @@ public:
     Bldr& resubmit(uint8_t t) {
         a() << "resubmit(," << str(t) << ")"; return *this;
     }
-    Bldr& dropLog(uint32_t table_id);
+    Bldr& dropLog(uint32_t table_id , uint32_t reason = NO_MATCH);
 
 private:
     std::stringstream& m();
