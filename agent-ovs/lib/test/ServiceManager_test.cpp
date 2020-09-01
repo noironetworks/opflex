@@ -319,11 +319,11 @@ void ServiceManagerFixture::checkServicePromMetrics (bool isAdd, bool isExternal
 
     string str, str2;
     if (isUpdate) {
-        str = "name=\"nginx\",scope=\"" + scope + "\"";
-        str2 = "name=\"nginx\",scope=\"nodePort\"";
+        str = "name=\"nginx\",scope=\"" + scope + "\",uuid=\"" + as.getUUID() + "\"";
+        str2 = "name=\"nginx\",scope=\"nodePort\",uuid=\"nodeport-" + as.getUUID() + "\"";
     } else {
-        str = "name=\"coredns\",namespace=\"kube-system\",scope=\"" + scope + "\"";
-        str2 = "name=\"coredns\",namespace=\"kube-system\",scope=\"nodePort\"";
+        str = "name=\"coredns\",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + as.getUUID() + "\"";
+        str2 = "name=\"coredns\",namespace=\"kube-system\",scope=\"nodePort\",uuid=\"nodeport-" + as.getUUID() + "\"";
     }
 
     pos = output.find("opflex_svc_rx_bytes{" + str + "} 0.000000");
@@ -372,11 +372,11 @@ void ServiceManagerFixture::checkServiceTargetPromMetrics (bool isAdd,
 
     string str, str2;
     if (isUpdate) {
-        str = "\",svc_name=\"nginx\",svc_scope=\"" + scope + "\"} 0.000000";
-        str2 = "\",svc_name=\"nginx\",svc_scope=\"nodePort\"} 0.000000";
+        str = "\",svc_name=\"nginx\",svc_scope=\"" + scope + "\",svc_uuid=\"" + as.getUUID() + "\"} 0.000000";
+        str2 = "\",svc_name=\"nginx\",svc_scope=\"nodePort\",svc_uuid=\"nodeport-" + as.getUUID() + "\"} 0.000000";
     } else {
-        str = "\",svc_name=\"coredns\",svc_namespace=\"kube-system\",svc_scope=\"" + scope + "\"} 0.000000";
-        str2 = "\",svc_name=\"coredns\",svc_namespace=\"kube-system\",svc_scope=\"nodePort\"} 0.000000";
+        str = "\",svc_name=\"coredns\",svc_namespace=\"kube-system\",svc_scope=\"" + scope + "\",svc_uuid=\"" + as.getUUID() + "\"} 0.000000";
+        str2 = "\",svc_name=\"coredns\",svc_namespace=\"kube-system\",svc_scope=\"nodePort\",svc_uuid=\"nodeport-" + as.getUUID() + "\"} 0.000000";
     }
 
     pos = output.find("opflex_svc_target_rx_bytes{ip=\""+ip+str);
