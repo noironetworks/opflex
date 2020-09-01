@@ -229,7 +229,7 @@ string Bldr::strpad(int i) {
     return buf;
 }
 
-Bldr& Bldr::dropLog(uint32_t table_id, ActionBuilder::CaptureReason reason) {
+Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason) {
     a("move", "NXM_NX_REG0[]->NXM_NX_TUN_METADATA0[0..31]");
     a("move", "NXM_NX_REG1[]->NXM_NX_TUN_METADATA1[0..31]");
     a("move", "NXM_NX_REG2[]->NXM_NX_TUN_METADATA2[0..31]");
@@ -246,14 +246,14 @@ Bldr& Bldr::dropLog(uint32_t table_id, ActionBuilder::CaptureReason reason) {
     std::snprintf(buf, 64,"0x%x->NXM_NX_TUN_METADATA12[960..991]",table_id);
     string s(buf);
     a("load", s );
-    if (reason != ActionBuilder::CaptureReason::NO_MATCH) {
+    if (reason != NO_MATCH) {
         std::snprintf(buf, 64,"0x%x->NXM_NX_TUN_METADATA13[960..991]", reason);
     }
     else {
        std::snprintf(buf, 64,"0->NXM_NX_TUN_METADATA13[960..991]");
     }
     a("load", buf );
-    if (reason != ActionBuilder::CaptureReason::NO_MATCH) {
+    if (reason != NO_MATCH) {
        a("write_metadata","0x800/0x800");
     }
     return *this;

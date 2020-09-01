@@ -15,7 +15,6 @@
 #include "CtZoneManager.h"
 #include "FlowConstants.h"
 #include "FlowUtils.h"
-#include "ActionBuilder.h"
 
 #include <opflex/modb/Mutator.h>
 #include <modelgbp/gbp/SecGroup.hpp>
@@ -190,6 +189,11 @@ enum TABLE {
     DROP_LOG=0, GRP = 1, IN_POL = 2, OUT_POL = 3, OUT = 4, EXP_DROP=5
 };
 
+enum CaptureReason {
+        NO_MATCH=0,
+        POLICY_DENY=1,
+        POLICY_PERMIT=2
+    };
 
 
 BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
@@ -212,6 +216,8 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
 
         action1 = space->addGbpAllowDenyAction("action1");
         action1->setAllow(0).setOrder(5);
+	log1 = space->addGbpLogAction("log1");
+	log1->setLog(1);
 
         r1 = secGrp1->addGbpSecGroupSubject("1_subject1")
                 ->addGbpSecGroupRule("1_1_rule1");
@@ -312,6 +318,7 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
         secGrp1->addGbpSecGroupSubject("1_subject1")
             ->addGbpSecGroupRule("1_1_rule1")
             ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+
         secGrp1->addGbpSecGroupSubject("1_subject1")
             ->addGbpSecGroupRule("1_1_rule2")
             ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
@@ -323,7 +330,9 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
         secGrp1->addGbpSecGroupSubject("1_subject1")
                ->addGbpSecGroupRule("1_1_rule3")
 	       ->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString());
-
+        secGrp1->addGbpSecGroupSubject("1_subject1")
+               ->addGbpSecGroupRule("1_1_rule3")
+	       ->addGbpRuleToActionRSrcLogAction(log1->getURI().toString());
         mutator.commit();
     }
     clearExpFlowTables();
@@ -531,11 +540,10 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
                          classifier2->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-             .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions().dropLog(OUT_POL,ActionBuilder::CaptureReason::POLICY_DENY).go(EXP_DROP).done());
+             .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
         if (remoteAddress > 1)
             ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-                 .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions().dropLog(OUT_POL,ActionBuilder::CaptureReason::POLICY_DENY).go(EXP_DROP)
-                 .done());
+                 .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
     } else {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
              .arp().reg(SEPG, setId).actions().go(OUT).done());
