@@ -145,7 +145,7 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
        if (log != 0)    
           f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY).go(nextTable);
        else 
-          f.action().dropLog(currentTable).go(nextTable);
+          f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable);
     }
     entries.push_back(f.build());
 }
@@ -269,7 +269,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                              if (log != 0)
 			         f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY).go(nextTable);
 			     else
-				 f.action().dropLog(currentTable).go(nextTable); 
+				 f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable); 
                         case flowutils::CA_ALLOW:
                         case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_FWD:
