@@ -13,23 +13,18 @@
 
 
 #include <opflex/yajr/internal/comms.hpp>
-
 #include <opflex/logging/internal/logging.hpp>
 
-#include <uv.h>
 
 namespace {
-
     void prepareAgainCB(uv_timer_t *) { }
-
 }
 
 namespace yajr {
-    namespace comms {
-        namespace internal {
+namespace comms {
+namespace internal {
 
 std::ostream& operator << (std::ostream& os, Peer::LoopData const * lD);
-
 
 void internal::Peer::LoopData::onPrepareLoop() {
 
@@ -56,19 +51,14 @@ void internal::Peer::LoopData::onPrepareLoop() {
     uint64_t now = uv_now(prepare_.loop);
 
     const std::lock_guard<std::recursive_mutex> lock(peerMutex);
-    peers[TO_LISTEN]
-        .clear_and_dispose(RetryPeer());
-
-    peers[TO_RESOLVE]
-        .clear_and_dispose(RetryPeer());
+    peers[TO_LISTEN].clear_and_dispose(RetryPeer());
+    peers[TO_RESOLVE].clear_and_dispose(RetryPeer());
 
     if (now - lastRun_ < 750) {
         goto prepared;
     }
 
-    if (peers[RETRY_TO_CONNECT].begin() !=
-        peers[RETRY_TO_CONNECT].end()) {
-
+    if (peers[RETRY_TO_CONNECT].begin() != peers[RETRY_TO_CONNECT].end()) {
         LOG(INFO) << "retrying first RETRY_TO_CONNECT peer";
 
         /* retry just the first active peer in the queue */
@@ -80,7 +70,6 @@ void internal::Peer::LoopData::onPrepareLoop() {
     }
 
     if ((now - lastRun_ > 15000) && !peers[RETRY_TO_LISTEN].empty()) {
-
         LOG(INFO) << "retrying all " << peers[RETRY_TO_LISTEN].size() << "RETRY_TO_LISTEN peers";
 
         /* retry all listeners */
@@ -138,9 +127,7 @@ void internal::Peer::LoopData::walkAndCloseHandlesCb(
         uv_handle_t* h,
         void* opaqueCloseHandle) {
 
-    CloseHandle const * closeHandle = static_cast<  CloseHandle const *  >(
-            opaqueCloseHandle
-        );
+    CloseHandle const* closeHandle = static_cast< CloseHandle const* >(opaqueCloseHandle);
 
     if (uv_is_closing(h) ||
             reinterpret_cast<uv_handle_t const *>(&closeHandle->loopData->prepare_)
@@ -164,32 +151,18 @@ void internal::Peer::LoopData::walkAndCountHandlesCb(
         uv_handle_t* h,
         void* opaqueCountHandle) {
 
-    CountHandle * countHandle = static_cast<  CountHandle *  >(
-            opaqueCountHandle
-        );
+    CountHandle* countHandle = static_cast< CountHandle* >(opaqueCountHandle);
 
-    if (
-            reinterpret_cast<uv_handle_t const *>(&countHandle->loopData->prepare_)
-            ==
-            const_cast<uv_handle_t const *>(h)) {
+    if (reinterpret_cast<uv_handle_t const *>(&countHandle->loopData->prepare_) ==
+        const_cast<uv_handle_t const *>(h)) {
         return;
     }
 
     ++countHandle->counter;
 
-    LOG(INFO)
-        << countHandle->loopData
-        << " still waiting on pending handle of type "
-        << getUvHandleType(h)
-        << " @"
-        << reinterpret_cast<void const *>(h)
-        << " which is "
-        << (uv_is_closing(h) ? "" : "not ")
-        << "closing"
-        ;
-
-    /** we assert() here, but everything will be cleaned up in production code */
-    assert(uv_is_closing(h));
+    LOG(INFO) << countHandle->loopData << " still waiting on pending handle of type "
+        << getUvHandleType(h) << " @" << reinterpret_cast<void const *>(h)
+        << " which is " << (uv_is_closing(h) ? "" : "not ") << "closing";
 }
 
 void Peer::LoopData::RetryPeer::operator () (Peer *peer) {
@@ -234,10 +207,7 @@ void Peer::LoopData::PeerDisposer::operator () (Peer *peer) {
     peer->destroy(now_);
 }
 
-Peer::LoopData::PeerDisposer::PeerDisposer(bool now)
-    :
-        now_(now)
-    {}
+Peer::LoopData::PeerDisposer::PeerDisposer(bool now) : now_(now) {}
 
 } /* yajr::comms::internal namespace */
 } /* yajr::comms namespace */
