@@ -72,6 +72,7 @@ void TunnelEpManager::start() {
     mutator.commit();
 
 #ifdef HAVE_IFADDRS_H
+    const std::lock_guard<std::mutex> guard(timer_mutex);
     timer.reset(new deadline_timer(agent_io, milliseconds(0)));
     timer->async_wait(bind(&TunnelEpManager::on_timer, this, error));
 #else
@@ -84,6 +85,7 @@ void TunnelEpManager::stop() {
     LOG(DEBUG) << "Stopping tunnel endpoint manager";
 
     stopping = true;
+    const std::lock_guard<std::mutex> guard(timer_mutex);
     if (timer) {
         timer->cancel();
     }
@@ -169,6 +171,7 @@ static string getInterfaceAddressV4(const string& iface) {
 void TunnelEpManager::on_timer(const error_code& ec) {
     if (ec) {
         // shut down the timer when we get a cancellation
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         timer.reset();
         return;
     }
@@ -305,6 +308,7 @@ void TunnelEpManager::on_timer(const error_code& ec) {
     }
 
     if (!stopping) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         timer->expires_at(timer->expires_at() + milliseconds(timer_interval));
         timer->async_wait(bind(&TunnelEpManager::on_timer, this, error));
     }
