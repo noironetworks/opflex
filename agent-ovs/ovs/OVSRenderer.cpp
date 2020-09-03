@@ -13,7 +13,6 @@
 #include <opflexagent/logging.h>
 
 #include <boost/asio/placeholders.hpp>
-#include <boost/algorithm/string/split.hpp>
 #include <openvswitch/vlog.h>
 #include <fstream>
 #include <ctime>
@@ -241,7 +240,7 @@ void OVSRenderer::start() {
     ovsdbConnection->connect();
 
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
-        spanRenderer.start(intBridgeName, ovsdbConnection.get());
+        spanRenderer.start(accessBridgeName, ovsdbConnection.get());
     netflowRenderer.start(intBridgeName, ovsdbConnection.get());
     qosRenderer.start(intBridgeName, ovsdbConnection.get());
 }
