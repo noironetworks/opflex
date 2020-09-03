@@ -192,7 +192,7 @@ void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
     ParseInfo p(&pktDecoder);
     int ret = pktDecoder.decode(buf, length, p);
     if(ret) {
-        LOG(ERROR) << "Error parsing packet " << ret;
+        LOG(DEBUG) << "Error parsing packet " << ret;
         std::stringstream str;
         int maxPrintLen = (length <= PACKET_DUMP_REQUIRED_LEN)? length: PACKET_DUMP_LEN;
         for(int i =0; i < maxPrintLen; i++) {
@@ -205,7 +205,7 @@ void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
                 str << std::hex << (uint32_t)buf[PACKET_DUMP_OFFSET+i] << " ";
             }
         }
-        LOG(ERROR) << str.str();
+        LOG(DEBUG) << str.str();
     } else {
         /* *
          * TBD: Need to have a filter to prune with
@@ -228,12 +228,12 @@ void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
                 std::lock_guard<std::mutex> lk(qMutex);
                 if(packetTupleQ.size() < maxOutstandingEvents) {
                     if(throttleActive) {
-                        LOG(ERROR) << "Queueing packet events";
+                        LOG(DEBUG) << "Queueing packet events";
                         throttleActive = false;
                     }
                     packetTupleQ.push(p.packetTuple);
                     if(packetTupleQ.size()  == maxOutstandingEvents) {
-                        LOG(ERROR) << "Max Event queue size ("
+                        LOG(DEBUG) << "Max Event queue size ("
                                    << maxOutstandingEvents
                                    << ") throttling packet events";
                         throttleActive = true;
