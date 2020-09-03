@@ -2,10 +2,12 @@
 
 [Prometheus] is an open-source systems monitoring and alerting toolkit which can act as data source for [grafana], a frontend visualization for the exported metrics. Unlike many other stats collectors, prometheus prefers collecting metrics via a pull model from each of the exporters.
 
-Opflex-agent has been integrated with [prometheus-cpp] client exporter library and enabled by default to export metrics on port [9612].
+Opflex-agent and opflex-server have been integrated with [prometheus-cpp] client exporter library. By default opflex-agent exports metrics on port [9612] and opflex-server exports metrics on port [9632].
 
 # Configuration
-Following are some of the opflex-agent configuration options to control what gets exported to Prometheus:
+Following are some of the opflex-agent and opflex-server configuration options to control what gets exported to Prometheus:
+
+### opflex-agent:
   - prometheus.enabled: Default is true. This can be used to stop exporting statistics, there by reducing load in prometheus server.
   - prometheus.localhost-only: Default is to expose any IP on node:9612. This can be used if the export needs to be specific to 127.0.0.1.
   - prometheus.expose-epsvc-nan: This can be used to avoid exporting Nan metrics between endpoints and services to reduce load on prometheus server. By default this optimization is kept on.
@@ -13,8 +15,11 @@ Following are some of the opflex-agent configuration options to control what get
   - opflex.statistics.service.flow-disabled: By default all service metric reporting is enabled. This can be used to stop exporting metrics to decrease prometheus server load and also to not create openvswitch flows for this metric collection.
   - To decrease load on prometheus server, statistics for some of the exported metrics can be turned off. Check opflex.statistics in the [agent configuration file][agent.conf].
 
+### opflex-server:
+  - --disable-prometheus: Disable exporting metrics to prometheus.
+  - --enable-prometheus-localhost: If enabled, export prometheus port only on localhost.
 
-# Metrics
+# Metrics exported from opflex-agent
 
 ### Endpoint
 
@@ -137,7 +142,7 @@ Remote EP count is exported to mainly help identify issues where the remote EPs 
 | ------ | ------ |
 | opflex_remote_ep_count | Count of total remote eps provisioned |
 
-### Opflex Peer
+### Peer
 
 Opflex-agent declares and resolves policies with peer agent. These metrics are annotated with peer IP address and port.
 | Family | Description |
@@ -163,6 +168,31 @@ Opflex-agent declares and resolves policies with peer agent. These metrics are a
  | opflex_peer_state_report_err_count | number of state reports error repsonses from opflex peer |
  | opflex_peer_unresolved_policy_count | number of policies requested by agent which aren't yet resolved by opflex peer |
 
+# Metrics exported from opflex-server
+
+### Agent
+
+Opflex-server connects with gbp server to accept policies. Opflex-agent connects with opflex-server to download policies. These metrics are accumulated per connected agent and annotated with agent's IP address and port.
+| Family | Description |
+| ------ | ------ |
+ | opflex_agent_identity_req_count | number of identity requests received from an opflex agent |
+ | opflex_agent_policy_update_count | number of policy updates received from grpc server that are sent to an opflex agent |
+ | opflex_agent_policy_unavailable_resolve_count | number of unavailable policies on resolves received from an opflex agent |
+ | opflex_agent_policy_resolve_count | number of policy resolves received from an opflex agent |
+ | opflex_agent_policy_resolve_err_count | number of errors on policy resolves received from an opflex agent |
+ | opflex_agent_policy_unresolve_count | number of policy unresolves received from an opflex agent |
+ | opflex_agent_policy_unresolve_err_count | number of errors on policy unresolves received from an opflex agent |
+ | opflex_agent_ep_declare_count | number of endpoint declares received from an opflex agent |
+ | opflex_agent_ep_declare_err_count | number of errors on endpoint declares received from an opflex agent |
+ | opflex_agent_ep_undeclare_count | number of endpoint undeclares received from an opflex agent |
+ | opflex_agent_ep_undeclare_err_count | number of errors on endpoint undeclares received from an opflex agent |
+ | opflex_agent_ep_resolve_count | number of endpoint resolves received from an opflex agent |
+ | opflex_agent_ep_resolve_err_count | number of errors on endpoint resolves received from an opflex agent |
+ | opflex_agent_ep_unresolve_count | number of endpoint unresolves received from an opflex agent |
+ | opflex_agent_ep_unresolve_err_count | number of errors on endpoint unresolves received from an opflex agent |
+ | opflex_agent_state_report_count | number of state reports received from an opflex agent |
+ | opflex_agent_state_report_err_count | number of errors on state reports received from an opflex agent |
+
 # Grafana
 Following are a few graphs created in grafana using the exported opflex metrics.
 ### Endpoint
@@ -186,10 +216,13 @@ Following are a few graphs created in grafana using the exported opflex metrics.
 ![][grafana-contracts]
 ### Security-Groups
 ![][grafana-sg]
-### Opflex Peer
+### Opflex Peer metrics from Agent
 ![][grafana-ofpeer-1]
 ![][grafana-ofpeer-2]
 ![][grafana-ofpeer-3]
+### Opflex Agent metrics from Server
+![][grafana-server-1]
+![][grafana-server-2]
 
 Sample [grafana-json-templates] for opflex-agent metrics can be imported in grafana.
 
@@ -200,6 +233,7 @@ Opflex-agent exports a number of metrics based on the current implementation cho
    [grafana]: <https://grafana.com/>
    [prometheus-cpp]: <https://github.com/jupp0r/prometheus-cpp>
    [9612]: <https://github.com/prometheus/prometheus/wiki/Default-port-allocations>
+   [9632]: <https://github.com/prometheus/prometheus/wiki/Default-port-allocations>
    [agent.conf]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/opflex-agent-ovs.conf.in>
    [grafana-json-templates]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana>
    [drop-logs]: <https://github.com/noironetworks/opflex/blob/master/docs/drop_logs.md>
@@ -217,3 +251,5 @@ Opflex-agent exports a number of metrics based on the current implementation cho
    [grafana-ofpeer-1]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-1.png?raw=true>
    [grafana-ofpeer-2]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-2.png?raw=true>
    [grafana-ofpeer-3]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/OFPeer-3.png?raw=true>
+   [grafana-server-1]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Server1.png?raw=true>
+   [grafana-server-2]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Server2.png?raw=true>
