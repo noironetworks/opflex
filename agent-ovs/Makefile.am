@@ -109,6 +109,8 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/ExtraConfigManager.h \
 	lib/include/opflexagent/FSRDConfigSource.h \
 	lib/include/opflexagent/RDConfig.h \
+        lib/include/opflexagent/FSIpamConfigSource.h \
+        lib/include/opflexagent/IpamConfig.h \
 	lib/include/opflexagent/Renderer.h \
 	lib/include/opflexagent/TunnelEpManager.h \ 
 	lib/include/opflexagent/FaultManager.h \
@@ -211,6 +213,8 @@ libopflex_agent_la_SOURCES = \
 	lib/ExtraConfigManager.cpp \
 	lib/RDConfig.cpp \
 	lib/FSRDConfigSource.cpp \
+        lib/IpamConfig.cpp \
+        lib/FSIpamConfigSource.cpp \
 	lib/Renderer.cpp \
 	lib/TunnelEpManager.cpp \
 	lib/cmd.cpp \

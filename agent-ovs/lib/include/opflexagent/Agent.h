@@ -60,6 +60,7 @@ class EndpointSource;
 class FaultSource;
 class ServiceSource;
 class FSRDConfigSource;
+class FSIpamConfigSource;
 class LearningBridgeSource;
 class SnatSource;
 class SimStats;
@@ -392,6 +393,7 @@ private:
     std::set<std::string> endpointSourceModelLocalNames;
     std::vector<std::unique_ptr<EndpointSource>> endpointSources;
     std::vector<std::unique_ptr<FSRDConfigSource>> rdConfigSources;
+    std::vector<std::unique_ptr<FSIpamConfigSource>> ipamConfigSources;
     std::vector<std::unique_ptr<LearningBridgeSource>> learningBridgeSources;
     std::string dropLogCfgSourcePath;
     std::set<std::string> hostAgentFaultPaths;

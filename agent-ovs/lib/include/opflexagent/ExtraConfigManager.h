@@ -15,6 +15,7 @@
 
 #include <opflexagent/ExtraConfigListener.h>
 #include <opflexagent/RDConfig.h>
+#include <opflexagent/IpamConfig.h>
 #include <opflexagent/PacketDropLogConfig.h>
 #include <opflex/ofcore/OFFramework.h>
 
@@ -65,6 +66,15 @@ public:
     std::shared_ptr<const RDConfig>
         getRDConfig(const opflex::modb::URI& domain);
 
+    /**
+     * Get the detailed information for an Ipam config
+     *
+     * @param UUID for the ipam config
+     * @return the object containing the detailed information, or a
+     * NULL pointer if there is no such Ipam config
+     */
+    std::shared_ptr<const IpamConfig>
+        getIpamConfig(const std::string& uuid);
 private:
     opflex::ofcore::OFFramework& framework;
 
@@ -89,12 +99,44 @@ private:
 
     typedef std::unordered_map<opflex::modb::URI, RDConfigState> rdc_map_t;
 
+    /**
+     * Add or update a ipam config object
+     *
+     * @param ipamConfig the ipam config object to update
+     */
+    void updateIpamConfig(const IpamConfig& ipamConfig);
+
+    /**
+     * Remove the ipam config with the specified uuid
+     *
+     * @param uuid the uuid of the ipam config
+     */
+    void removeIpamConfig(const std::string& uuid);
+
+    /**
+     * notify ipam listeners
+     * @param uuid the uuid of the ipam config that was updated or deleted
+     */
+    void notifyIpamListeners(const std::string& uuid);
+
+    class IpamConfigState {
+    public:
+        std::shared_ptr<const IpamConfig> ipamConfig;
+    };
+
+    typedef std::unordered_map<std::string, IpamConfigState> ipamconfig_map_t;
+
     std::mutex ec_mutex;
 
     /**
      * Map domain URIs to routing domain config
      */
     rdc_map_t rdc_map;
+
+    /**
+     * Map UUID to ipam config
+     */
+    ipamconfig_map_t ipamconfig_map;
 
     /**
      * Notify listeners for packet drop log config
@@ -133,6 +175,7 @@ private:
     void notifyListeners(const opflex::modb::URI& uuid);
 
     friend class FSRDConfigSource;
+    friend class FSIpamConfigSource;
     friend class FSPacketDropLogConfigSource;
 };
 

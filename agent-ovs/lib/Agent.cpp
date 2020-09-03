@@ -26,6 +26,7 @@
 #include <opflexagent/ModelEndpointSource.h>
 #include <opflexagent/FSServiceSource.h>
 #include <opflexagent/FSRDConfigSource.h>
+#include <opflexagent/FSIpamConfigSource.h>
 #include <opflexagent/FSLearningBridgeSource.h>
 #include <opflexagent/FSExternalEndpointSource.h>
 #include <opflexagent/FSSnatSource.h>
@@ -614,6 +615,11 @@ void Agent::start() {
             FSRDConfigSource* source =
                 new FSRDConfigSource(&extraConfigManager, fsWatcher, path);
             rdConfigSources.emplace_back(source);
+        }
+        {
+            FSIpamConfigSource* source =
+                new FSIpamConfigSource(&extraConfigManager, fsWatcher, path);
+            ipamConfigSources.emplace_back(source);
         }
         {
             LearningBridgeSource* source =

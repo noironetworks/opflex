@@ -41,6 +41,13 @@ public:
     virtual void rdConfigUpdated(const opflex::modb::URI& domainURI) = 0;
 
     /**
+     * Called when a ipam config object is updated
+     *
+     * @param uuid the uuid of the ipam config object
+     */
+    virtual void ipamConfigUpdated(const std::string& uuid) = 0;
+
+    /**
      * Called when a packet drop log config object is updated
      *
      * @param dropLogCfgURI the URI for the associated packet drop log

@@ -452,6 +452,9 @@ module[inv]
         # proxy mac address to reach the end-point(s)
         member[proxyMac; type=address/MAC]
 
+        # true if this node participates in csr bounce
+        member[addBounce; type=scalar/UInt8]
+
         # Next hop remote tunnel endpoint
         member[nextHopTunnel; type=address/IP]
 

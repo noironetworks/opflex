@@ -373,6 +373,10 @@ void IntFlowManager::rdConfigUpdated(const opflex::modb::URI& rdURI) {
     domainUpdated(RoutingDomain::CLASS_ID, rdURI);
 }
 
+void IntFlowManager::ipamConfigUpdated(const std::string& uuid) {
+    if (stopping) return;
+}
+
 void IntFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI) {
     using modelgbp::observer::DropLogConfig;
     using modelgbp::observer::DropLogModeEnumT;
@@ -1438,9 +1442,11 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
         modelgbp::inv::RemoteInventoryEp::resolve(agent.getFramework(), uuid);
 
     if (!ep || (encapType == ENCAP_VLAN || encapType == ENCAP_NONE)) {
+        switchManager.clearFlows(uuid, SEC_TABLE_ID);
+        switchManager.clearFlows(uuid, SRC_TABLE_ID);
         switchManager.clearFlows(uuid, BRIDGE_TABLE_ID);
         switchManager.clearFlows(uuid, ROUTE_TABLE_ID);
-        switchManager.clearFlows(uuid, SRC_TABLE_ID);
+        switchManager.clearFlows(uuid, POL_TABLE_ID);
         switchManager.clearFlows(uuid, OUT_TABLE_ID);
         return;
     }
@@ -1458,6 +1464,9 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
         ep.get()->getProxyMac().get().toUIntArray(proxyMacAddr);
 
     boost::system::error_code ec;
+
+    // Does this node participate in CSR bounce
+    bool csrBounce = ep.get()->getAddBounce(false);
 
     // Get remote tunnel destination
     bool hasTunDest = false;
@@ -1509,7 +1518,9 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
 
     FlowEntryList elBridgeDst;
     FlowEntryList elRouteDst;
+    FlowEntryList elSec;
     FlowEntryList elSrc;
+    FlowEntryList elPol;
     FlowEntryList outFlows;
     std::vector<std::shared_ptr<modelgbp::inv::RemoteIp>> invIps;
 
@@ -1591,16 +1602,72 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                              .ipSrc(addr, prefix)
                              .build(elSrc);
                          FlowBuilder().priority(15)
-                             .metadata(flow::meta::out::REMOTE_TUNNEL_PROXY,
-                                       flow::meta::out::MASK)
+                             .metadata(meta, flow::meta::out::MASK)
                              .reg(7, link)
                              .action()
                              .regMove(MFF_REG3, MFF_TUN_ID)
                              .reg(MFF_TUN_DST, it.to_v4().to_ulong())
                              .output(tunPort)
                              .parent().build(outFlows);
+                         if (csrBounce) {
+                             FlowBuilder().priority(15)
+                                 .inPort(tunPort)
+                                 .metadata(flow::meta::out::
+                                               REMOTE_TUNNEL_BOUNCE_TO_CSR,
+                                           flow::meta::out::MASK)
+                                 .reg(7, link)
+                                 .action()
+                                 .regMove(MFF_REG3, MFF_TUN_ID)
+                                 .reg(MFF_TUN_DST, it.to_v4().to_ulong())
+                                 .output(OFPP_IN_PORT)
+                                 .parent().build(outFlows);
+                        }
 
                          link++;
+                    }
+
+                    /*
+                     * If this node is capable of bounce
+                     * then redirect any packet that comes
+                     * on tunnel port destined to the CSR
+                     * or different node
+                     */
+                    if (csrBounce) {
+                        FlowBuilder().priority(199)
+                            .inPort(tunPort)
+                            .ethSrc(getRouterMacAddr()).ethDst(proxyMacAddr)
+                            .ipDst(addr, prefix)
+                            .action()
+                            .reg(MFF_REG3, proxyTunId)
+                            .multipath(NX_HASH_FIELDS_SYMMETRIC_L3L4_UDP,
+                                       1024,
+                                       ActionBuilder::NX_MP_ALG_ITER_HASH,
+                                       static_cast<uint16_t>(tunDsts.size()-1),
+                                       32, MFF_REG7)
+                            .metadata(flow::meta::out::REMOTE_TUNNEL_BOUNCE_TO_CSR,
+                                      flow::meta::out::MASK)
+                            .go(OUT_TABLE_ID)
+                            .parent().build(elSec);
+                        FlowBuilder().priority(16384)
+                            .ethSrc(proxyMacAddr).ethDst(getRouterMacAddr())
+                            .ipSrc(addr, prefix)
+                            .action()
+                            .reg(MFF_REG3, proxyTunId)
+                            .metadata(flow::meta::out::
+                                          REMOTE_TUNNEL_BOUNCE_TO_NODE,
+                                      flow::meta::out::MASK)
+                            .go(OUT_TABLE_ID)
+                            .parent().build(elPol);
+                        FlowBuilder().priority(15)
+                            .inPort(tunPort)
+                            .metadata(flow::meta::out::
+                                          REMOTE_TUNNEL_BOUNCE_TO_NODE,
+                                       flow::meta::out::MASK)
+                            .action()
+                            .regMove(MFF_REG3, MFF_TUN_ID)
+                            .regMove(MFF_REG7, MFF_TUN_DST)
+                            .output(OFPP_IN_PORT)
+                            .parent().build(outFlows);
                     }
 
                     routeFlow
@@ -1675,9 +1742,11 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
         }
     }
 
+    switchManager.writeFlow(uuid, SEC_TABLE_ID, elSec);
     switchManager.writeFlow(uuid, SRC_TABLE_ID, elSrc);
     switchManager.writeFlow(uuid, BRIDGE_TABLE_ID, elBridgeDst);
     switchManager.writeFlow(uuid, ROUTE_TABLE_ID, elRouteDst);
+    switchManager.writeFlow(uuid, POL_TABLE_ID, elPol);
     switchManager.writeFlow(uuid, OUT_TABLE_ID, outFlows);
 }
 

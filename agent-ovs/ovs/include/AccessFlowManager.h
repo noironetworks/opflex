@@ -83,6 +83,7 @@ public:
     ///@{
     /** Interface: ExtraConfigListener */
     virtual void rdConfigUpdated(const opflex::modb::URI& rdURI);
+    virtual void ipamConfigUpdated(const std::string& uuid);
     virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI);
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI);
     ///@}

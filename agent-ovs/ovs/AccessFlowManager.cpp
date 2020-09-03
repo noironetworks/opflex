@@ -796,6 +796,10 @@ void AccessFlowManager::rdConfigUpdated(const opflex::modb::URI& rdURI) {
 //Interface not used
 }
 
+void AccessFlowManager::ipamConfigUpdated(const std::string& uuid) {
+//Interface not used
+}
+
 void AccessFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI) {
     using modelgbp::observer::DropLogConfig;
     using modelgbp::observer::DropLogModeEnumT;

@@ -80,6 +80,43 @@ void ExtraConfigManager::removeRDConfig(const opflex::modb::URI& uri) {
     notifyListeners(uri);
 }
 
+shared_ptr<const IpamConfig>
+ExtraConfigManager::getIpamConfig(const std::string& uuid) {
+    unique_lock<mutex> guard(ec_mutex);
+    ipamconfig_map_t::const_iterator it = ipamconfig_map.find(uuid);
+    if (it != ipamconfig_map.end())
+        return it->second.ipamConfig;
+    return shared_ptr<const IpamConfig>();
+}
+
+void ExtraConfigManager::notifyIpamListeners(const std::string& uuid) {
+    unique_lock<mutex> guard(listener_mutex);
+    for (ExtraConfigListener* listener : extraConfigListeners) {
+         listener->ipamConfigUpdated(uuid);
+    }
+}
+
+void ExtraConfigManager::updateIpamConfig(const IpamConfig& ipamConfig) {
+    unique_lock<mutex> guard(ec_mutex);
+    IpamConfigState& as = ipamconfig_map[ipamConfig.getUUID()];
+
+    as.ipamConfig = make_shared<const IpamConfig>(ipamConfig);
+
+    guard.unlock();
+    notifyIpamListeners(ipamConfig.getUUID());
+}
+
+void ExtraConfigManager::removeIpamConfig(const std::string& uuid) {
+    unique_lock<mutex> guard(ec_mutex);
+    auto it = ipamconfig_map.find(uuid);
+    if (it != ipamconfig_map.end()) {
+        ipamconfig_map.erase(it);
+    }
+
+    guard.unlock();
+    notifyIpamListeners(uuid);
+}
+
 void ExtraConfigManager::notifyPacketDropLogConfigListeners(const opflex::modb::URI &dropLogCfgURI) {
     unique_lock<mutex> guard(listener_mutex);
     for (ExtraConfigListener* listener : extraConfigListeners) {
