@@ -144,6 +144,7 @@ private:
     boost::asio::io_service& agent_io;
     long timer_interval;
     std::unique_ptr<boost::asio::deadline_timer> timer;
+    std::mutex timer_mutex;
 
     void on_timer(const boost::system::error_code& ec);
 
