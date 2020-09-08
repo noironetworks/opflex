@@ -1590,18 +1590,24 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                     uint16_t link = 0;
                     uint32_t tunPort = getTunnelPort();
 
+                    /*
+                     * packets from CSR can come via bounce from
+                     * other nodes or directly from CSR. Match
+                     * on proxyTunId will match any such packet
+                     */
+                    actionSource(matchEpg(FlowBuilder()
+                                          .priority(149)
+                                          .inPort(tunPort),
+                                  encapType, proxyTunId),
+                                  epgVnid, bdId, fgrpId, rdId,
+                                  IntFlowManager::SERVICE_REV_TABLE_ID,
+                                  encapType)
+                        .ipSrc(addr, prefix)
+                        .build(elSrc);
+
                     for (auto &it : tunDsts) {
-                         actionSource(matchEpg(FlowBuilder()
-                                               .priority(149)
-                                               .inPort(tunPort),
-                                       encapType, proxyTunId),
-                                       epgVnid, bdId, fgrpId, rdId,
-                                       IntFlowManager::SERVICE_REV_TABLE_ID,
-                                       encapType)
-                             .outerIpSrc(it, 32)
-                             .ipSrc(addr, prefix)
-                             .build(elSrc);
                          FlowBuilder().priority(15)
+                             .ipDst(addr, prefix)
                              .metadata(meta, flow::meta::out::MASK)
                              .reg(7, link)
                              .action()
@@ -1612,6 +1618,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                          if (csrBounce) {
                              FlowBuilder().priority(15)
                                  .inPort(tunPort)
+                                 .ipDst(addr, prefix)
                                  .metadata(flow::meta::out::
                                                REMOTE_TUNNEL_BOUNCE_TO_CSR,
                                            flow::meta::out::MASK)
@@ -1660,6 +1667,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                             .parent().build(elPol);
                         FlowBuilder().priority(15)
                             .inPort(tunPort)
+                            .ipSrc(addr, prefix)
                             .metadata(flow::meta::out::
                                           REMOTE_TUNNEL_BOUNCE_TO_NODE,
                                        flow::meta::out::MASK)
