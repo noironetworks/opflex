@@ -64,7 +64,7 @@ extraction:
       - "mkdir -p $LGTM_WORKSPACE/cmake-tmp"
       - "sh cmake-linux.sh -- --skip-license --prefix=$LGTM_WORKSPACE/cmake-tmp"
       - "rm cmake-linux.sh"
-      - "mkdir -p ../grpc"
+      - "mkdir -p $LGTM_WORKSPACE/grpc"
       - "git clone --recurse-submodules -b v1.31.0 https://github.com/grpc/grpc"
       - "pushd grpc"
       - "mkdir -p cmake/build"
