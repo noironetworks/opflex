@@ -65,7 +65,7 @@ extraction:
       - "sh cmake-linux.sh -- --skip-license --prefix=$LGTM_WORKSPACE/cmake-tmp"
       - "rm cmake-linux.sh"
       - "mkdir -p $LGTM_WORKSPACE/grpc"
-      - "git clone --recurse-submodules -b v1.31.0 https://github.com/grpc/grpc"
+      - "git clone --recurse-submodules -b v1.31.0 --config submodule.third_party/re2.url=https://github.com/google/re2.git --config submodule.third_party/re2.active=true https://github.com/grpc/grpc"
       - "pushd grpc"
       - "mkdir -p cmake/build"
       - "pushd cmake/build"
