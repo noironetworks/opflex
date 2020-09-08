@@ -2662,14 +2662,14 @@ void BaseIntFlowManagerFixture::initExpRemoteEp() {
              .go(POL).done());
         ADDF(Bldr().table(RT).priority(500).ip().reg(RD, 1)
              .isEthDst(rmac).isIpDst("1.3.5.7")
-             .actions().load(DEPG, vnid)
-             .load(OUTPORT, tunDst.to_v4().to_ulong())
+             .actions().load(OUTPORT, tunDst.to_v4().to_ulong())
+             .load(DEPG, vnid)
              .mdAct(opflexagent::flow::meta::out::REMOTE_TUNNEL)
              .go(POL).done());
         ADDF(Bldr().table(RT).priority(500).ip().reg(RD, 1)
              .isEthDst(rmac).isIpDst("2.4.6.8")
-             .actions().load(DEPG, vnid)
-             .load(OUTPORT, tunDst.to_v4().to_ulong())
+             .actions().load(OUTPORT, tunDst.to_v4().to_ulong())
+             .load(DEPG, vnid)
              .mdAct(opflexagent::flow::meta::out::REMOTE_TUNNEL)
              .go(POL).done());
         ADDF(Bldr().table(BR).priority(40).arp()
