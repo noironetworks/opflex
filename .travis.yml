@@ -2,7 +2,7 @@ language: c++
 compiler:
   - gcc
 os: linux
-dist: bionic
+dist: focal
 
 #default cache timeout is 3 minutes, if need be we can increase timeout
 cache:
