@@ -14,7 +14,7 @@
 #include <opflexagent/NetFlowManager.h>
 #include <opflexagent/logging.h>
 #include <modelgbp/platform/Config.hpp>
-#include <boost/optional/optional_io.hpp>
+#include <boost/optional.hpp>
 
 
 namespace opflexagent {
@@ -113,7 +113,7 @@ namespace opflexagent {
         LOG(DEBUG) << "notifying netflow update listener";
         lock_guard<mutex> guard(listener_mutex);
         for (NetFlowListener *listener : netflowListeners) {
-             LOG(DEBUG) << "calling netflow listener updated method";
+            LOG(DEBUG) << "calling netflow listener updated method";
             listener->exporterUpdated(exporterURI);
         }
     }
@@ -165,8 +165,7 @@ namespace opflexagent {
             exportState->setVersion(ver.get());
         }
         boost::optional<const uint8_t> dscp = exporterconfig->getDscp();
-        if (dscp)
-        {
+        if (dscp) {
             exportState->setDscp(dscp.get());
         }
         boost::optional<uint16_t > dstPort = exporterconfig->getDstPort();
