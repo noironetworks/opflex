@@ -84,10 +84,11 @@ public:
 
     /**
      * Create ipfix
-     * @param targets netflow target
+     * @param targets ipfix target
      * @param sample sample
+     * @param activeTimeout active flow timeout
      */
-    void createIpfix(const string& targets, int sample);
+    void createIpfix(const string& targets, int sample, int activeTimeout);
 
 private:
     void updateConnectCb(const boost::system::error_code& ec, const opflex::modb::URI& uri);

@@ -64,7 +64,7 @@ bool verifyCreateDestroy(Agent& agent, const shared_ptr<NetFlowRenderer>& nfr) {
     shared_ptr<ExporterConfigState> statePtr = make_shared<ExporterConfigState>(state);
     nfr->exporterDeleted(statePtr);
 
-    nfr->createIpfix("5.5.5.5", 500);
+    nfr->createIpfix("5.5.5.5", 500, 180);
     statePtr->setVersion(2); // modelgbp::netflow::CollectorVersionEnumT::CONST_V9
 
     exporterConfig->setDscp(99);

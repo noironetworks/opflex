@@ -10,10 +10,7 @@
 
 #include "NetFlowRenderer.h"
 #include <opflexagent/logging.h>
-#include <opflexagent/NetFlowManager.h>
 #include <modelgbp/netflow/CollectorVersionEnumT.hpp>
-
-#include <boost/optional.hpp>
 
 
 namespace opflexagent {
@@ -91,7 +88,8 @@ namespace opflexagent {
             createNetFlow(target, timeout);
         } else if (expSt.get()->getVersion() == CollectorVersionEnumT::CONST_V9) {
             uint32_t sampling = expSt.get()->getSamplingRate();
-            createIpfix(target, sampling);
+            uint32_t activeTimeout = expSt.get()->getActiveFlowTimeOut();
+            createIpfix(target, sampling, activeTimeout);
         }
     }
 
@@ -166,10 +164,11 @@ namespace opflexagent {
         sendAsyncTransactRequests(requests);
     }
 
-    void NetFlowRenderer::createIpfix(const string& targets, int sampling) {
+    void NetFlowRenderer::createIpfix(const string& targets, int sampling, int activeTimeout) {
         string brUuid;
         conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
-        LOG(DEBUG) << "bridge uuid " << brUuid << " sampling rate is " << sampling;
+        LOG(DEBUG) << "bridge uuid " << brUuid << " sampling rate is " << sampling
+            << "active flow timeout " << activeTimeout;
         vector<OvsdbValue> values;
         values.emplace_back(targets);
         OvsdbValues tdSet(values);
@@ -180,6 +179,26 @@ namespace opflexagent {
             values.emplace_back(sampling);
             OvsdbValues tdSet2(values);
             msg1.rowData.emplace("sampling", tdSet2);
+        }
+
+        // hash the agent UUID to build a domain ID
+        const uint64_t domainId = 0xffffffff & std::hash<string>{}(agent.getUuid());
+        values.clear();
+        values.emplace_back(domainId);
+        OvsdbValues domainSet(values);
+        msg1.rowData.emplace("obs_domain_id", domainSet);
+
+        values.clear();
+        const uint64_t pointId = 1ull;
+        values.emplace_back(pointId);
+        OvsdbValues pointSet(values);
+        msg1.rowData.emplace("obs_point_id", pointSet);
+
+        if (activeTimeout) {
+            values.clear();
+            values.emplace_back(activeTimeout);
+            OvsdbValues timeoutSet(values);
+            msg1.rowData.emplace("cache_active_timeout", timeoutSet);
         }
 
         values.clear();
