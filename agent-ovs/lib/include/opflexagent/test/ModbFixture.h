@@ -91,7 +91,7 @@ public:
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier10;
 
     std::shared_ptr<modelgbp::gbp::AllowDenyAction> action1;
-    std::shared_ptr<modelgbp::gbp::LogAction> log1; 
+    std::shared_ptr<modelgbp::gbp::LogAction> action2;
 
     std::shared_ptr<modelgbp::gbp::Contract> con1;
     std::shared_ptr<modelgbp::gbp::Contract> con2;

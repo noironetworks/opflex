@@ -142,10 +142,12 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
     if (act != flowutils::CA_DENY)
         f.action().go(nextTable);
     if (act == flowutils::CA_DENY) {
-       if (log != 0)    
+       if (log != 0) {    
           f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY).go(nextTable);
-       else 
+       }
+       else { 
           f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable);
+       }
     }
     entries.push_back(f.build());
 }
@@ -266,10 +268,12 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 
                         switch (act) {
                         case flowutils::CA_DENY:
-                             if (log != 0)
+                             if (log != 0) {
 			         f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY).go(nextTable);
-			     else
+			     }
+			     else {
 				 f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable); 
+			     }
                         case flowutils::CA_ALLOW:
                         case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_FWD:
