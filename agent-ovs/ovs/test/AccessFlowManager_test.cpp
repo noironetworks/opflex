@@ -62,12 +62,13 @@ public:
     uint16_t initExpSecGrp2(uint32_t setId);
     void initExpSecGrpSet1();
     void initExpSecGrpSet12(bool second = true, int remoteAddress = 0);
+    uint16_t initExpSecGrp3(int remoteAddress);
 
     AccessFlowManager accessFlowManager;
 
     shared_ptr<SecGroup> secGrp1;
     shared_ptr<SecGroup> secGrp2;
-
+    shared_ptr<SecGroup> secGrp3;
     /* Initialize dhcp flow entries */
     void initExpDhcpEp(shared_ptr<Endpoint>& ep);
 
@@ -195,6 +196,99 @@ enum CaptureReason {
         POLICY_PERMIT=2
     };
 
+uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
+
+    uint32_t setId = 2;
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::rule_list_t rules;
+    agent.getPolicyManager().getSecGroupRules(secGrp3->getURI(), rules);
+    uint32_t ruleId;
+     /* classifer 2  */
+     ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());
+     if (remoteAddress) {
+         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
+             .arp().reg(SEPG, setId).isTpa("192.169.0.0/16").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
+     }
+    /* classifer 1  */
+     ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());
+    if (remoteAddress) {
+	ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
+              .tcp().reg(SEPG, setId).isIpSrc("192.169.0.0/16").isTpDst(80).actions().dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());
+    }
+    
+  return 512;
+}
+
+BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
+    createObjects();
+    createPolicyObjects();
+    shared_ptr<modelgbp::gbp::Subnets> rs1;
+    {
+ 	Mutator mutator(framework, "policyreg");
+	rs1 = space->addGbpSubnets("subnets_rule_1");
+	rs1->addGbpSubnet("subnets_rule1_1")
+           ->setAddress("192.169.0.0")
+           .setPrefixLen(16);
+
+	shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4;
+        //secgrp 3
+	secGrp3 = space->addGbpSecGroup("secgrp3");	
+        //action 1
+	action1 = space->addGbpAllowDenyAction("action1");
+	action1->setAllow(0).setOrder(5);
+        action2 =  space->addGbpLogAction("action2");
+        action2->setLog(1);
+	//security group rule
+	r1 = secGrp3->addGbpSecGroupSubject("1_subject1")
+                ->addGbpSecGroupRule("1_1_rule1");
+ 	r1->setDirection(DirectionEnumT::CONST_OUT).setOrder(100)
+          .addGbpRuleToClassifierRSrc(classifier2->getURI().toString());
+        r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
+        r1->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
+	  ->setTargetAllowDenyAction(action1->getURI());
+         r1->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
+	    ->setTargetLogAction(action2->getURI());
+
+
+        r2 = secGrp3->addGbpSecGroupSubject("1_subject1")
+             ->addGbpSecGroupRule("1_1_rule2");
+        r2->setDirection(DirectionEnumT::CONST_IN).setOrder(150)
+           .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());
+        r2->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
+        r2->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
+          ->setTargetAllowDenyAction(action1->getURI());
+        r2->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
+           ->setTargetLogAction(action2->getURI());
+
+	r3 = secGrp3->addGbpSecGroupSubject("1_subject1")
+                ->addGbpSecGroupRule("1_1_rule3");
+        r3->setDirection(DirectionEnumT::CONST_BIDIRECTIONAL).setOrder(200)
+          .addGbpRuleToClassifierRSrc(classifier5->getURI().toString());
+        r3->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
+        r3->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
+          ->setTargetAllowDenyAction(action1->getURI());
+        r3->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
+            ->setTargetLogAction(action2->getURI());
+       
+	mutator.commit();
+     }
+
+    ep0.reset(new Endpoint("0-0-0-0"));
+    epSrc.updateEndpoint(*ep0);
+
+    initExpStatic();
+    WAIT_FOR_TABLES("empty-secgrp", 500);
+   
+    ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
+                                            "/tenant0/GbpSecGroup/secgrp3/"));
+    epSrc.updateEndpoint(*ep0);
+
+    clearExpFlowTables();
+    initExpStatic();
+	 
+    initExpSecGrp3(1);
+    WAIT_FOR_TABLES("deny-rule", 500);   
+}
 
 BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     createObjects();
@@ -213,11 +307,6 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
 
         shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4, r5 ;
         secGrp1 = space->addGbpSecGroup("secgrp1");
-
-        action1 = space->addGbpAllowDenyAction("action1");
-        action1->setAllow(0).setOrder(5);
-	log1 = space->addGbpLogAction("log1");
-	log1->setLog(1);
 
         r1 = secGrp1->addGbpSecGroupSubject("1_subject1")
                 ->addGbpSecGroupRule("1_1_rule1");
@@ -325,14 +414,8 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
 
         secGrp1->addGbpSecGroupSubject("1_subject1")
             ->addGbpSecGroupRule("1_1_rule3")
-            ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+	    ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        secGrp1->addGbpSecGroupSubject("1_subject1")
-               ->addGbpSecGroupRule("1_1_rule3")
-	       ->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString());
-        secGrp1->addGbpSecGroupSubject("1_subject1")
-               ->addGbpSecGroupRule("1_1_rule3")
-	       ->addGbpRuleToActionRSrcLogAction(log1->getURI().toString());
         mutator.commit();
     }
     clearExpFlowTables();
@@ -539,11 +622,12 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
     ruleId = idGen.getId("l24classifierRule",
                          classifier2->getURI().toString());
     if (remoteAddress) {
-        ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-             .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
-        if (remoteAddress > 1)
-            ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-                 .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
+	  ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
+	       .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions().go(OUT).done());
+	  if (remoteAddress > 1)
+	      ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
+		   .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions()
+		   .go(OUT).done());
     } else {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
              .arp().reg(SEPG, setId).actions().go(OUT).done());

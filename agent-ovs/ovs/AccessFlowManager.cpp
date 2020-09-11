@@ -582,7 +582,6 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
     }
 
     uint32_t secGrpSetId = idGen.getId(ID_NMSPC_SECGROUP_SET, secGrpsIdStr);
-
     FlowEntryList secGrpIn;
     FlowEntryList secGrpOut;
 
