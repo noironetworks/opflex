@@ -156,6 +156,7 @@ void SimStats::start() {
     LOG(INFO) << "Starting stats simulator";
 
     if (agent.getContractInterval() != 0) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         contract_timer.reset(new deadline_timer(io, milliseconds(agent.getContractInterval())));
         contract_timer->async_wait([this](const boost::system::error_code& ec) {
                                           on_timer_contract(ec);
@@ -163,6 +164,7 @@ void SimStats::start() {
     }
 
     if (agent.getSecurityGroupInterval() != 0) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         security_group_timer.reset(new deadline_timer(io, milliseconds(agent.getSecurityGroupInterval())));
         security_group_timer->async_wait([this](const boost::system::error_code& ec) {
                                                 on_timer_security_group(ec);
@@ -170,6 +172,7 @@ void SimStats::start() {
     }
 
     if (agent.getInterfaceInterval() != 0) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         interface_timer.reset(new deadline_timer(io, milliseconds(agent.getInterfaceInterval())));
         interface_timer->async_wait([this](const boost::system::error_code& ec) {
                                            on_timer_interface(ec);
@@ -183,6 +186,7 @@ void SimStats::stop() {
     stopping = true;
 
     try {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         if (contract_timer) {
             contract_timer->cancel();
         }
@@ -215,6 +219,7 @@ inline bool SimStats::on_timer_check(std::shared_ptr<boost::asio::deadline_timer
                            const boost::system::error_code& ec) {
     if (ec) {
         // shut down the timer when we get a cancellation
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         timer.reset();
         return false;
     }
@@ -224,6 +229,7 @@ inline void SimStats::timer_restart(uint32_t interval,
                       std::function<void(const boost::system::error_code& ec)> on_timer,
                       std::shared_ptr<boost::asio::deadline_timer> timer) {
     if (!this->stopping) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         timer->expires_at(timer->expires_at() +
                           milliseconds(interval));
         timer->async_wait(on_timer);

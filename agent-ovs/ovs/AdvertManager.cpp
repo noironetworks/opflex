@@ -66,6 +66,7 @@ AdvertManager::AdvertManager(Agent& agent_,
       started(false), stopping(false) {
     //TunnelEpTimer has no dependencies and needs to be
     //initialized early
+    lock_guard<recursive_mutex> guard(timer_mutex);
     tunnelEpAdvTimer.reset(new deadline_timer(*ioService));
 
 }
@@ -779,6 +780,7 @@ void AdvertManager::onTunnelEpAdvTimer(const boost::system::error_code& ec) {
 }
 
 void AdvertManager::doScheduleTunnelEpAdv(uint64_t time) {
+    lock_guard<recursive_mutex> guard(timer_mutex);
     tunnelEpAdvTimer->expires_from_now(seconds(time));
     tunnelEpAdvTimer->
             async_wait(bind(&AdvertManager::onTunnelEpAdvTimer,
