@@ -100,6 +100,7 @@ private:
     boost::asio::io_service io;
     std::atomic_bool stopping;
     std::shared_ptr<std::thread> io_service_thread;
+    std::mutex timer_mutex;
     std::shared_ptr<boost::asio::deadline_timer> contract_timer;
     std::shared_ptr<boost::asio::deadline_timer> security_group_timer;
     std::shared_ptr<boost::asio::deadline_timer> interface_timer;

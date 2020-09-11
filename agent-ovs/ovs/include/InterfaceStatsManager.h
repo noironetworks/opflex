@@ -107,6 +107,7 @@ private:
     SwitchConnection* accessConnection;
     boost::asio::io_service& agent_io;
     long timer_interval;
+    std::mutex timer_mutex;
     std::unique_ptr<boost::asio::deadline_timer> timer;
 
     /**

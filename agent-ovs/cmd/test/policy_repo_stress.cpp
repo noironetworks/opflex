@@ -178,10 +178,13 @@ public:
 
         LOG(INFO) << "Starting stats simulator";
 
-        timer.reset(new deadline_timer(io, milliseconds(timer_interval)));
-        timer->async_wait([this](const boost::system::error_code& ec) {
-                on_timer(ec);
-            });
+        {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
+            timer.reset(new deadline_timer(io, milliseconds(timer_interval)));
+            timer->async_wait([this](const boost::system::error_code& ec) {
+                    on_timer(ec);
+                });
+        }
 
         io_service_thread.reset(new std::thread([this]() { io.run(); }));
     }
@@ -189,8 +192,11 @@ public:
     void stop() {
         stopping = true;
 
-        if (timer) {
-            timer->cancel();
+        {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
+            if (timer) {
+                timer->cancel();
+            }
         }
         if (io_service_thread) {
             io_service_thread->join();
@@ -201,6 +207,7 @@ public:
     void on_timer(const boost::system::error_code& ec) {
         if (ec) {
             // shut down the timer when we get a cancellation
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             timer.reset();
             return;
         }
@@ -214,6 +221,7 @@ public:
         }
 
         if (!stopping) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             timer->expires_at(timer->expires_at() +
                               milliseconds(timer_interval));
             timer->async_wait([this](const boost::system::error_code& ec) {
@@ -238,6 +246,7 @@ public:
     boost::asio::io_service io;
     std::atomic_bool stopping;
     std::unique_ptr<std::thread> io_service_thread;
+    std::mutex timer_mutex;
     std::unique_ptr<boost::asio::deadline_timer> timer;
 
     uint32_t timer_interval;

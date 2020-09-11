@@ -70,6 +70,7 @@ void InterfaceStatsManager::start() {
         agent->getEndpointManager().registerListener(this);
     }
 
+    const std::lock_guard<std::mutex> guard(timer_mutex);
     timer.reset(new deadline_timer(agent_io, milliseconds(timer_interval)));
     timer->async_wait(bind(&InterfaceStatsManager::on_timer, this, error));
 }
@@ -87,6 +88,7 @@ void InterfaceStatsManager::stop() {
         agent->getEndpointManager().unregisterListener(this);
     }
 
+    const std::lock_guard<std::mutex> guard(timer_mutex);
     if (timer) {
         timer->cancel();
     }
@@ -102,6 +104,7 @@ void InterfaceStatsManager::endpointUpdated(const std::string& uuid) {
 void InterfaceStatsManager::on_timer(const error_code& ec) {
     if (ec) {
         // shut down the timer when we get a cancellation
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         timer.reset();
         return;
     }
@@ -129,6 +132,7 @@ void InterfaceStatsManager::on_timer(const error_code& ec) {
     }
 
     if (!stopping) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         timer->expires_at(timer->expires_at() + milliseconds(timer_interval));
         timer->async_wait(bind(&InterfaceStatsManager::on_timer, this, error));
     }
