@@ -355,53 +355,51 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
     createPolicyObjects();	
     shared_ptr<modelgbp::gbp::Subnets> rs1;	
     {	
- 	Mutator mutator(framework, "policyreg");	
-	rs1 = space->addGbpSubnets("subnets_rule_1");	
-	rs1->addGbpSubnet("subnets_rule1_1")	
-           ->setAddress("192.169.0.0")	
-           .setPrefixLen(16);	
+       Mutator mutator(framework, "policyreg");	
+       rs1 = space->addGbpSubnets("subnets_rule_1");	
+       rs1->addGbpSubnet("subnets_rule1_1")	
+          ->setAddress("192.169.0.0")	
+          .setPrefixLen(16);	
 
-	shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4;	
-        //secgrp 3	
-	secGrp3 = space->addGbpSecGroup("secgrp3");		
+       shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4;	
+        //secgrp 3	 
+       secGrp3 = space->addGbpSecGroup("secgrp3");		
         //action 1	
-	action1 = space->addGbpAllowDenyAction("action1");	
-	action1->setAllow(0).setOrder(5);	
-        action2 =  space->addGbpLogAction("action2");	
-        action2->setLog(1);	
-	//security group rule	
-	r1 = secGrp3->addGbpSecGroupSubject("1_subject1")	
-                ->addGbpSecGroupRule("1_1_rule1");	
- 	r1->setDirection(DirectionEnumT::CONST_OUT).setOrder(100)	
+       action1 = space->addGbpAllowDenyAction("action1");	
+       action1->setAllow(0).setOrder(5);	
+       //action 2
+       action2 =  space->addGbpLogAction("action2");	
+       action2->setLog(1);	
+       //security group rule
+       r1 = secGrp3->addGbpSecGroupSubject("1_subject1")	
+                   ->addGbpSecGroupRule("1_1_rule1");	
+       r1->setDirection(DirectionEnumT::CONST_OUT).setOrder(100)	
           .addGbpRuleToClassifierRSrc(classifier2->getURI().toString());	
-        r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());	
-        r1->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())	
-	  ->setTargetAllowDenyAction(action1->getURI());	
-         r1->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())	
-	    ->setTargetLogAction(action2->getURI());	
+       r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());	
+       r1->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())	 
+         ->setTargetAllowDenyAction(action1->getURI());	
+       r1->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())	
+         ->setTargetLogAction(action2->getURI());	
+       r2 = secGrp3->addGbpSecGroupSubject("1_subject1")	
+         ->addGbpSecGroupRule("1_1_rule2");	
+       r2->setDirection(DirectionEnumT::CONST_IN).setOrder(150)	
+         .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());	
+       r2->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());	
+       r2->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())	
+         ->setTargetAllowDenyAction(action1->getURI());	
+       r2->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())	
+         ->setTargetLogAction(action2->getURI());	
+       r3 = secGrp3->addGbpSecGroupSubject("1_subject1")	
+          ->addGbpSecGroupRule("1_1_rule3");	
+       r3->setDirection(DirectionEnumT::CONST_BIDIRECTIONAL).setOrder(200)	
+           .addGbpRuleToClassifierRSrc(classifier5->getURI().toString());	
+       r3->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());	
+       r3->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())	
+         ->setTargetAllowDenyAction(action1->getURI());	
+       r3->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())	
+         ->setTargetLogAction(action2->getURI());	
 
-
-        r2 = secGrp3->addGbpSecGroupSubject("1_subject1")	
-             ->addGbpSecGroupRule("1_1_rule2");	
-        r2->setDirection(DirectionEnumT::CONST_IN).setOrder(150)	
-           .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());	
-        r2->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());	
-        r2->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())	
-          ->setTargetAllowDenyAction(action1->getURI());	
-        r2->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())	
-           ->setTargetLogAction(action2->getURI());	
-
-	r3 = secGrp3->addGbpSecGroupSubject("1_subject1")	
-                ->addGbpSecGroupRule("1_1_rule3");	
-        r3->setDirection(DirectionEnumT::CONST_BIDIRECTIONAL).setOrder(200)	
-          .addGbpRuleToClassifierRSrc(classifier5->getURI().toString());	
-        r3->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());	
-        r3->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())	
-          ->setTargetAllowDenyAction(action1->getURI());	
-        r3->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())	
-            ->setTargetLogAction(action2->getURI());	
-
-	mutator.commit();	
+       mutator.commit();	
      }	
 
     ep0.reset(new Endpoint("0-0-0-0"));	
@@ -681,18 +679,19 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     agent.getPolicyManager().getSecGroupRules(secGrp3->getURI(), rules);	
     uint32_t ruleId;	
      /* classifer 2  */	
-     ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());	
-     if (remoteAddress) {	
+    ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());	
+    if (remoteAddress) {	
          ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)	
              .arp().reg(SEPG, setId).isTpa("192.169.0.0/16").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());	
-     }	
-    /* classifer 1  */	
-     ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());	
-    if (remoteAddress) {	
-	ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)	
-              .tcp().reg(SEPG, setId).isIpSrc("192.169.0.0/16").isTpDst(80).actions().dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());	
     }	
 
-  return 512;	
+    /* classifer 1  */	
+    ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());	
+    if (remoteAddress) {	
+	       ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)	
+             .tcp().reg(SEPG, setId).isIpSrc("192.169.0.0/16").isTpDst(80).actions().dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());	
+    }	
+
+    return 512;	
 }
 BOOST_AUTO_TEST_SUITE_END()

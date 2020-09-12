@@ -1158,13 +1158,13 @@ static bool updatePolicyRules(OFFramework& framework,
                     RedirectDestGroup::resolve(framework, destGrpUri.get());
                     newRedirGrps.insert(destGrpUri.get());
                 }
-	        else if(r->getTargetClass().get() == LogAction::CLASS_ID) {
-		    optional<shared_ptr<modelgbp::gbp::LogAction> > resloveLog = 
-                    modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
+	             else if(r->getTargetClass().get() == LogAction::CLASS_ID) {
+                       optional<shared_ptr<modelgbp::gbp::LogAction> > resloveLog = 
+                                       modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
                     if (resloveLog) {
                         ruleLog = resloveLog.get()->getLog(0) != 0 ;
-              	    }
-		}
+                    }
+              }
             }
 
             uint16_t clsPrio = 0;
