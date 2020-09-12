@@ -1269,6 +1269,48 @@ BOOST_FIXTURE_TEST_CASE( fsextsource, FSEndpointFixture ) {
     WAIT_FOR(!hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep1), 500);
     WAIT_FOR(hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep3), 500);
 
+    // test parsing of other params that could be in an extep file
+    fs::path path4(temp / "83f18f0b-80f7-46e2-b06c-4d9487b0c794.extep");
+    fs::ofstream os4(path4);
+    os4 << "{"
+        << "\"uuid\":\"83f18f0b-80f7-46e2-b06c-4d9487b0c794\","
+        << "\"mac\":\"10:ff:00:a3:02:04\","
+        << "\"ip\":[\"10.0.0.42\"],"
+        << "\"interface-name\":\"veth4\","
+        << "\"policy-space-name\":\"test\","
+        << "\"path-attachment\":\"ext_int1\","
+        << "\"node-attachment\":\"ext_node1\","
+        << "\"security-group\":[{\"policy-space\":\"test\",\"name\":\"sg\"}],"
+        << "\"access-interface\":\"veth4\","
+        << "\"access-interface-vlan\":123,"
+        << "\"access-uplink-interface\":\"eth0\","
+        << "\"promiscuous-mode\":true,"
+        << "\"discovery-proxy-mode\":false,"
+        << "\"attributes\":[{\"key1\":\"value1\"}],"
+        << "\"access-allow-untagged\":false,"
+        << "\"dhcp4\":{"
+        << "\"ip\":\"11.1.1.2\","
+        << "\"server-ip\":\"33.1.1.1\","
+        << "\"server-mac\":\"10:ff:00:a9:11:01\","
+        << "\"prefix-len\":24,"
+        << "\"routers\":[\"44.1.1.1\"],"
+        << "\"dns-servers\":[\"33.1.1.2\"],"
+        << "\"domain\":\"test.local\","
+        << "\"interface-mtu\":1500,"
+        << "\"lease-time\":9200,"
+        << "\"static-routes\":[{\"dest\":\"99.1.1.0\",\"dest-prefix\":24,\"next-hop\":\"11.1.1.30\"}]"
+        << "},"
+        << "\"dhcp6\":{"
+        << "\"search-list\":[\"test.local\"],"
+        << "\"dns-servers\":[\"33.1.1.2\"],"
+        << "\"t1\":1500,"
+        << "\"t2\":9200,"
+        << "\"preferred-lifetime\":12345,"
+        << "\"valid-lifetime\":45678"
+        << "}"
+        << "}" << std::endl;
+    os4.close();
+
     // check for removing an endpoint
     fs::remove(path1);
     WAIT_FOR(!hasPolicyEntry<ExternalL3Ep>(framework, extL3Ep3), 500);
