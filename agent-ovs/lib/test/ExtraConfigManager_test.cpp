@@ -14,7 +14,6 @@
 
 #include <opflexagent/FSRDConfigSource.h>
 #include <opflexagent/FSPacketDropLogConfigSource.h>
-#include <opflexagent/logging.h>
 
 #include <opflexagent/test/BaseFixture.h>
 
@@ -96,5 +95,34 @@ BOOST_FIXTURE_TEST_CASE( droplogconfigsource, FSConfigFixture ) {
     WAIT_FOR(!(DropLogConfig::resolve(agent.getFramework(), uri)), 500);
     watcher.stop();
 }
+
+BOOST_FIXTURE_TEST_CASE( dropflowconfigsource, FSConfigFixture ) {
+    using modelgbp::observer::DropFlowConfig;
+    fs::path path(temp / "a.dropflowcfg");
+    fs::ofstream os(path);
+    os << "{"
+       << "\"uuid\":\"83f18f0b-80f7-46e2-b06c-4d9487b0c793\""
+       << "}" << std::endl;
+    os.close();
+    FSWatcher watcher;
+    opflex::modb::URI uri =
+        opflex::modb::URIBuilder().addElement("PolicyUniverse")
+            .addElement("ObserverDropLogConfig").build();
+    FSPacketDropLogConfigSource source(&agent.getExtraConfigManager(), watcher,
+                                       temp.string(), uri);
+    watcher.start();
+
+    opflex::modb::URI flowUri = opflex::modb::URIBuilder()
+        .addElement("ObserverDropFlowConfigUniverse")
+        .addElement("ObserverDropFlowConfig")
+        .addElement("83f18f0b-80f7-46e2-b06c-4d9487b0c793").build();
+
+    WAIT_FOR(DropFlowConfig::resolve(agent.getFramework(), flowUri), 500);
+
+    fs::remove(path);
+    WAIT_FOR(!(DropFlowConfig::resolve(agent.getFramework(), flowUri)), 500);
+    watcher.stop();
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }

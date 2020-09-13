@@ -22,11 +22,7 @@
 #include <sys/eventfd.h>
 #endif
 #include <poll.h>
-#include <cerrno>
 #include <unistd.h>
-#include <arpa/inet.h>
-
-#include <boost/algorithm/string/predicate.hpp>
 
 #include <opflex/modb/URIBuilder.h>
 

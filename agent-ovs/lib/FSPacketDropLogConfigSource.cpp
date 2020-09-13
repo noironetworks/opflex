@@ -46,19 +46,19 @@ FSPacketDropLogConfigSource::FSPacketDropLogConfigSource(ExtraConfigManager* man
     listener.addWatch(serviceDir, *this);
 }
 
-static bool isPacketDropLogConfig(fs::path filePath) {
+static bool isPacketDropLogConfig(const fs::path& filePath) {
     string fstr = filePath.filename().string();
     return (boost::algorithm::ends_with(fstr, ".droplogcfg") &&
             !boost::algorithm::starts_with(fstr, "."));
 }
 
-static bool isPacketDropFlowConfig(fs::path filePath) {
+static bool isPacketDropFlowConfig(const fs::path& filePath) {
     string fstr = filePath.filename().string();
     return (boost::algorithm::ends_with(fstr, ".dropflowcfg") &&
             !boost::algorithm::starts_with(fstr, "."));
 }
 
-static inline bool validateIpAddress(const boost::optional<string> ipAddress,
+static inline bool validateIpAddress(const boost::optional<string>& ipAddress,
         optional<boost::asio::ip::address> &_targetAddress,bool require_v4, const string &inputField) {
     address targetAddress;
     boost::system::error_code ec;
@@ -79,7 +79,7 @@ static inline bool validateIpAddress(const boost::optional<string> ipAddress,
     return true;
 }
 
-static inline bool validateMacAddress(const boost::optional<string> macAddress,
+static inline bool validateMacAddress(const boost::optional<string>& macAddress,
         optional<opflex::modb::MAC> &_targetMacAddress, const string &inputField) {
     opflex::modb::MAC targetMacAddress;
     if(!macAddress) {
@@ -111,7 +111,7 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
                     (filePath.string() != dropCfg.filePath)) {
                 return;
             }
-            string pathStr = filePath.string();
+            const string& pathStr = filePath.string();
             std::string dropLogMode;
             read_json(pathStr, properties);
             static const std::string DROP_LOG_ENABLE("drop-log-enable");
@@ -221,7 +221,7 @@ void FSPacketDropLogConfigSource::deleted(const fs::path& filePath) {
                       << " at " << filePath;
         } else if(isPacketDropFlowConfig(filePath)) {
 
-            DropFlowMap::iterator it = dropFlowMap.find(pathStr);
+            auto it = dropFlowMap.find(pathStr);
             if(it != dropFlowMap.end()) {
                 opflex::modb::URI uri = opflex::modb::URIBuilder()
                         .addElement("ObserverDropFlowConfigUniverse")
