@@ -182,7 +182,8 @@ namespace opflexagent {
         }
 
         // hash the agent UUID to build a domain ID
-        const uint64_t domainId = 0xffffffff & std::hash<string>{}(agent.getUuid());
+        uint64_t domainId = std::hash<string>{}(agent.getUuid());
+        domainId &= 0x0ffffffful;
         values.clear();
         values.emplace_back(domainId);
         OvsdbValues domainSet(values);

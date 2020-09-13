@@ -21,7 +21,7 @@ namespace opflexagent {
 
 void writeValue(yajr::rpc::SendHandler& writer, const OvsdbValue& value) {
     if (value.getType() == Dtype::INTEGER) {
-        writer.Int(value.getIntValue());
+        writer.Uint64(value.getIntValue());
     } else if (value.getType() == Dtype::STRING) {
         if (!value.getKey().empty()) {
             writer.StartArray();
