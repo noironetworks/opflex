@@ -32,12 +32,12 @@ namespace opflexagent {
     }
 
     void QosRenderer::ingressQosUpdated(const string& interface) {
-        LOG(DEBUG) << "ingressUpdate" << interface;
+        LOG(DEBUG) << "interface: " << interface;
         handleIngressQosUpdate(interface);
     }
 
     void QosRenderer::egressQosUpdated(const string& interface) {
-        LOG(DEBUG) << "egressUpdate" << interface;
+        LOG(DEBUG) << "interface: " << interface;
         handleEgressQosUpdate(interface);
     }
 
@@ -73,7 +73,7 @@ namespace opflexagent {
 
     void QosRenderer::handleEgressQosUpdate(const string& interface) {
         LOG(DEBUG) << "thread " << std::this_thread::get_id();
-        LOG(DEBUG) << "interface: "<< interface;
+        LOG(DEBUG) << "interface: " << interface;
         QosManager &qosMgr = agent.getQosManager();
 
         if (!connect()) {
@@ -129,6 +129,8 @@ namespace opflexagent {
         uint64_t rate = qosConfigState.get()->getRate();
         uint64_t burst = qosConfigState.get()->getBurst();
 
+        rate = rate * 1024;
+        burst = burst * 1024;
         updateIngressQosParams(interface, rate, burst);
     }
 

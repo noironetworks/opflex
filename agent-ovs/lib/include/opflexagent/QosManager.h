@@ -38,7 +38,7 @@ using namespace opflex::modb;
 
 
 namespace opflexagent {
-	
+
 namespace qos = modelgbp::qos;
 using namespace qos;
 
@@ -117,10 +117,18 @@ public:
     /**
      * update interfaces for a requirement to its ingress and egress policies.
      * @param[in] reqUri requirement uri.
-     * @param[in] dirUri egress or ingress uri. 
+     * @param[in] dirUri egress or ingress uri.
      * @param[in] policyMap egress or ingress policy map mapping bandwidthLimit to interfaces.
      */
     void updateEntry(const URI& reqUri, const URI& dirUri, unordered_map<URI, unordered_set<string>>& policyMap);
+
+    /**
+     * update interfaces for a requirement to its ingress and egress policies.
+     * @param[in] reqUri requirement uri.
+     * @param[in] dirUri egress or ingress uri.
+     * @param[in] policyMap egress or ingress policy map mapping bandwidthLimit to epgs.
+     */
+    void updateEntry(const URI& reqUri, const URI& dirUri, unordered_map<URI, unordered_set<URI>>& policyMap);
 
     /**
      * remove interfaces of requirement from its ingress and egress policies.
@@ -137,12 +145,30 @@ public:
     void clearEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap);
 
     /**
+     * update egress or ingress policy map by removing entry for input interface.
+     * @param[in] interface name of the interface.
+     * @param[in] uri Uri of ingress or egress policy.
+     * @param[in] policyMap egress or ingress epg policy map.
+     */
+
+    void clearEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
+
+    /**
      * update egress or ingress policy map by adding entry for input interface.
      * @param[in] interface name of the interface.
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress policy map.
      */
     void addEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap);
+
+    /**
+     * update egress or ingress policy map by adding entry for input interface.
+     * @param[in] interface name of the interface.
+     * @param[in] uri Uri of ingress or egress policy.
+     * @param[in] policyMap egress or ingress epg policy map.
+     */
+
+    void addEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
 
     /**
      * update all entries for interface in all maps to reflect its association to new requirement object.
@@ -152,10 +178,71 @@ public:
     void updateInterfacePolicyMap(const string& interface, const URI& newReq);
 
     /**
+     * update all entries for interface in all maps to reflect its association to new requirement object.
+     * @param[in] uri uri of the epg.
+     * @param[in] newReq Uri of requirement policy.
+     */
+    void updateEpgPolicyMap(const URI& uri, const URI& newReq);
+
+    /**
      * Remove all entries for interface in all maps.
      * @param[in] interface name of the interface.
      */
     void clearInterfaceEntry(const string & interface);
+
+    /**
+     * Remove all entries for epg in all maps.
+     * @param[in] uri uri of the epg.
+     */
+    void clearEpgEntry(const URI & epg);
+
+    /**
+     * Return map of interface to qos policy.
+     */
+    const unordered_map<string, URI>& getInterfaceToReq()
+    {
+        return interfaceToReq;
+    }
+
+    /**
+     * Return map of qos policy to interfaces
+     */
+    const unordered_map<URI, unordered_set<string> >& getReqToInterface()
+    {
+        return reqToInterface;
+    }
+
+    /**
+     * Return map of egress policy to interfaces
+     */
+    const unordered_map<URI, unordered_set<string>>& getEgressPolInterface()
+    {
+        return egressPolInterface;
+    }
+
+    /**
+     * Return map of epg to qos policy.
+     */
+    const unordered_map<URI, URI>& getEpgToReq()
+    {
+        return epgToReq;
+    }
+
+    /**
+     * Return map of qos policy to epg.
+     */
+    const unordered_map<URI, unordered_set<URI> >& getReqToEpg()
+    {
+        return reqToEpg;
+    }
+
+    /**
+     * Return map of egress policy to epg.
+     */
+    const unordered_map<URI, unordered_set<URI>>& getEgressPolEpg()
+    {
+         return egressPolEpg;
+    }
 
     /**
      * Listen to endpointManager for new endpoints.
@@ -198,7 +285,7 @@ public:
     void notifyListeners(const string& interface, const string& direction);
 
     /**
-     * Notify qos listeners about clearing qos parameters 
+     * Notify qos listeners about clearing qos parameters
      * @param interfaces set of interfaces on which qos is to be removed
      */
     void notifyListeners(const unordered_set<string>& interfaces);
@@ -229,6 +316,30 @@ public:
          */
          void processQosConfig(const shared_ptr<modelgbp::qos::Requirement>& requirementConfig);
 
+        /**
+         * process modb notifications
+         * @param[in] updatedUri uri of the updated object
+         * @param[in] dir direction of qos  config update
+         * @param[in] policyMap map to get interface to be updated
+         */
+         void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap);
+
+        /**
+         * process modb notifications
+         * @param[in] updatedUri uri of the updated object
+         * @param[in] dir direction of qos  config update
+         * @param[in] policyMap map to get epg to be updated
+         */
+         void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<URI>>& policyMap);
+
+         /**
+          * process modb notifications
+          * @param[in] updatedUri uri of the updated object
+          * @param[in] dir direction of qos  config update
+          * @param[in] policyMap map to get interface to be updated
+          */
+         void updateInterfaces(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap);
+
 	 /**
 	  * process bandwidth update
 	  * @param[in] requirementConfig shared pointer to a BandwidthLimit object
@@ -245,30 +356,38 @@ public:
      */
     QosUniverseListener qosUniverseListener;
 
+    /**
+     * Mutex used to prevent simultaneous read/write in qos config cache data structures.
+     */
+    static recursive_mutex qos_mutex;
+
+
 private:
-    
+
     Agent& agent;
     opflex::ofcore::OFFramework& framework;
-    
+
     list<QosListener*> qosListeners;
     mutex listener_mutex;
     TaskQueue taskQueue;
 
-    /**
-     * Mutex used to prevent simultaneous read/write in qos config cache data structures.
-     */
-    static recursive_mutex qos_mutex; 
-  
     std::atomic<bool> stopping;
-   
+
     unordered_map<string, URI> interfaceToReq;
     unordered_map<URI, unordered_set<string>> reqToInterface;
-
-    unordered_map<URI, pair<boost::optional<URI>, boost::optional<URI> > > reqToPol;
     unordered_map<URI, unordered_set<string>> egressPolInterface;
     unordered_map<URI, unordered_set<string>> ingressPolInterface;
-    
+
+    unordered_map<string, URI> interfaceToEpg;
+    unordered_map<URI, unordered_set<string>> epgToInterface;
+
+    unordered_map<URI, URI> epgToReq;
+    unordered_map<URI, unordered_set<URI>> reqToEpg;
+    unordered_map<URI, unordered_set<URI>> egressPolEpg;
+    unordered_map<URI, unordered_set<URI>> ingressPolEpg;
+
     unordered_map<URI, shared_ptr<QosConfigState>> bwToConfig;
+    unordered_map<URI, pair<boost::optional<URI>, boost::optional<URI> > > reqToPol;
 
     unordered_set<URI> notifyUpdate;
     unordered_set<URI> notifyDelete;
