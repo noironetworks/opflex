@@ -354,7 +354,7 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
     createObjects();	
     createPolicyObjects();	
     shared_ptr<modelgbp::gbp::Subnets> rs1;	
-    {	
+    {
        Mutator mutator(framework, "policyreg");	
        rs1 = space->addGbpSubnets("subnets_rule_1");	
        rs1->addGbpSubnet("subnets_rule1_1")	
@@ -400,7 +400,7 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
          ->setTargetLogAction(action2->getURI());	
 
        mutator.commit();	
-     }	
+     }
 
     ep0.reset(new Endpoint("0-0-0-0"));	
     epSrc.updateEndpoint(*ep0);	
@@ -594,16 +594,19 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
                  .isTpDst(80).actions().go(OUT).done());
     }
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
-        .tcp6().reg(SEPG, setId).isTpDst(80).actions().go(OUT).done());
+        .tcp6().reg(SEPG, setId).isTpDst(80)
+        .actions().go(OUT).done());
     /* classifier 2  */
     ruleId = idGen.getId("l24classifierRule",
                          classifier2->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-	     .arp().reg(SEPG, setId).isTpa("192.168.0.0/16").actions().go(OUT).done());
+              .arp().reg(SEPG, setId).isTpa("192.168.0.0/16")
+              .actions().go(OUT).done());
         if (remoteAddress > 1)
-	    ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-	         .arp().reg(SEPG, setId).isTpa("10.0.0.0/8").actions().go(OUT).done());
+           ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
+                 .arp().reg(SEPG, setId).isTpa("10.0.0.0/8")
+                 .actions().go(OUT).done());
     } else {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
              .arp().reg(SEPG, setId).actions().go(OUT).done());
@@ -673,25 +676,40 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
 
 uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {	
 
-    uint32_t setId = 2;	
-    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;	
+    uint32_t setId = 2;
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     PolicyManager::rule_list_t rules;	
     agent.getPolicyManager().getSecGroupRules(secGrp3->getURI(), rules);	
-    uint32_t ruleId;	
-     /* classifer 2  */	
+    uint32_t ruleId;
+
+     /* classifer 2  */
     ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());	
-    if (remoteAddress) {	
+    if (remoteAddress) {
          ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)	
-             .arp().reg(SEPG, setId).isTpa("192.169.0.0/16").actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());	
-    }	
+             .arp().reg(SEPG, setId).actions()
+             .dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
+    }
 
-    /* classifer 1  */	
+    /* classifer 1  */
     ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());	
-    if (remoteAddress) {	
-	       ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)	
-             .tcp().reg(SEPG, setId).isIpSrc("192.169.0.0/16").isTpDst(80).actions().dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());	
-    }	
+    if (remoteAddress) {
+        ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
+        .tcp().reg(SEPG, setId).actions()
+        .dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());   
 
+    }
+   
+    /* classifer 5  */	
+    ruleId = idGen.getId("l24classifierRule", classifier5->getURI().toString());
+    if (remoteAddress) {
+        ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-256).cookie(ruleId)
+             .reg(SEPG, setId).isEth(0x8906).actions()
+             .dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());
+        ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
+             .reg(SEPG, setId).isEth(0x8906).actions()
+             .dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done()); 
+
+    }
     return 512;	
 }
 BOOST_AUTO_TEST_SUITE_END()

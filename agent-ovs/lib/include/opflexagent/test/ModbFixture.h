@@ -93,9 +93,13 @@ public:
     std::shared_ptr<modelgbp::gbp::AllowDenyAction> action1;
     std::shared_ptr<modelgbp::gbp::LogAction> action2;
 
+    std::shared_ptr<modelgbp::gbp::AllowDenyAction> action3;
+    std::shared_ptr<modelgbp::gbp::LogAction> action4;
+
     std::shared_ptr<modelgbp::gbp::Contract> con1;
     std::shared_ptr<modelgbp::gbp::Contract> con2;
     std::shared_ptr<modelgbp::gbp::Contract> con3;
+    std::shared_ptr<modelgbp::gbp::Contract> con4;
     std::string policyOwner;
 protected:
 
@@ -380,6 +384,40 @@ protected:
             ->setTargetL24Classifier(classifier10->getURI());
         epg0->addGbpEpGroupToProvContractRSrc(con3->getURI().toString());
         epg1->addGbpEpGroupToConsContractRSrc(con3->getURI().toString());
+
+           //action 1      
+        action3 = space->addGbpAllowDenyAction("action3");
+        action3->setAllow(0);
+          //action 2
+        action4 =  space->addGbpLogAction("action4");
+        action4->setLog(1);
+
+        con4 = space->addGbpContract("contract4");
+        con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule1")
+            ->setOrder(100)
+            .setDirection(DirectionEnumT::CONST_IN)
+            .addGbpRuleToClassifierRSrc(classifier1->getURI().toString())
+            ->setTargetL24Classifier(classifier1->getURI());
+        con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule2")
+            ->setOrder(200)
+            .setDirection(DirectionEnumT::CONST_OUT)
+            .addGbpRuleToClassifierRSrc(classifier2->getURI().toString())
+            ->setTargetL24Classifier(classifier2->getURI());
+        con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule1")
+            ->addGbpRuleToActionRSrcAllowDenyAction(action3->getURI().toString())
+            ->setTargetAllowDenyAction(action3->getURI());
+        con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule1")
+            ->addGbpRuleToActionRSrcLogAction(action4->getURI().toString())
+            ->setTargetLogAction(action4->getURI());
+        con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule2")
+            ->addGbpRuleToActionRSrcAllowDenyAction(action3->getURI().toString())
+            ->setTargetAllowDenyAction(action3->getURI());
+        con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule2")
+            ->addGbpRuleToActionRSrcLogAction(action4->getURI().toString())
+            ->setTargetLogAction(action4->getURI());
+
+        epg0->addGbpEpGroupToProvContractRSrc(con4->getURI().toString());
+        epg1->addGbpEpGroupToConsContractRSrc(con4->getURI().toString()); 
 
         mutator.commit();
     }
