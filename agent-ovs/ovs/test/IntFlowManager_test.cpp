@@ -902,11 +902,9 @@ BOOST_FIXTURE_TEST_CASE(conn_deny, VxlanIntFlowManagerFixture) {
     PolicyManager::uri_set_t egs;
     WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
     policyMgr.getContractProviders(con4->getURI(), egs));
-    LOG(INFO) << "epg size " << egs.size();
     egs.clear();
     WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
     policyMgr.getContractConsumers(con4->getURI(), egs));
-    LOG(INFO) << "epg size 2" << egs.size();
     PolicyManager::rule_list_t rules;
     WAIT_FOR_DO(rules.size() == 2, 500, rules.clear();
     policyMgr.getContractRules(con4->getURI(), rules));

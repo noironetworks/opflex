@@ -5697,24 +5697,24 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
             dir == DirectionEnumT::CONST_BIDIRECTIONAL) {
              if (act == flowutils::CA_DENY) {
                   flowutils::add_classifier_entries(*cls, act, log,
-                                                   boost::none,
-                                                   boost::none,
-                                                   IntFlowManager::EXP_DROP_TABLE_ID, IntFlowManager::POL_TABLE_ID,
-                                                   pc->getPriority(),
-                                                   OFPUTIL_FF_SEND_FLOW_REM,
-                                                   cookie,
-                                                   pvnid, cvnid,
-                                                   entryList);
+                                                    boost::none,
+                                                    boost::none,
+                                                    IntFlowManager::EXP_DROP_TABLE_ID, IntFlowManager::POL_TABLE_ID,
+                                                    pc->getPriority(),
+                                                    OFPUTIL_FF_SEND_FLOW_REM,
+                                                    cookie,
+                                                    pvnid, cvnid,
+                                                    entryList);
               } else {
                   flowutils::add_classifier_entries(*cls, act, log,
-                                                   boost::none,
-                                                   boost::none,
-                                                   IntFlowManager::STATS_TABLE_ID, 0,
-                                                   pc->getPriority(),
-                                                   OFPUTIL_FF_SEND_FLOW_REM,
-                                                   cookie,
-                                                   pvnid, cvnid,
-                                                   entryList);
+                                                    boost::none,
+                                                    boost::none,
+                                                    IntFlowManager::STATS_TABLE_ID, 0,
+                                                    pc->getPriority(),
+                                                    OFPUTIL_FF_SEND_FLOW_REM,
+                                                    cookie,
+                                                    pvnid, cvnid,
+                                                    entryList);
              }
         }
     }

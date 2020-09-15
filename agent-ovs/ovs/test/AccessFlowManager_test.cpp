@@ -686,7 +686,8 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());	
     if (remoteAddress) {
          ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)	
-             .arp().reg(SEPG, setId).actions().dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
+             .arp().reg(SEPG, setId).actions()
+             .dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
     }
 
     /* classifer 1  */
