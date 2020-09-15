@@ -68,6 +68,7 @@ void SwitchManager::stop() {
     }
 
     try {
+        const lock_guard<recursive_mutex> lock(timer_mutex);
         if (connectTimer) {
             connectTimer->cancel();
         }
@@ -105,6 +106,7 @@ void SwitchManager::enableSync() {
         // connected to the switch before that, then we'll wait till
         // the deadline expires before attempting to sync.
         if (connectDelayMs > 0) {
+            const lock_guard<recursive_mutex> lock(timer_mutex);
             connectTimer
                 .reset(new deadline_timer(agent.getAgentIOService(),
                                           milliseconds(connectDelayMs)));
@@ -147,6 +149,7 @@ void SwitchManager::handleConnection(SwitchConnection *sw) {
         return;
     }
 
+    const lock_guard<recursive_mutex> lock(timer_mutex);
     if (connectTimer) {
         LOG(DEBUG) << "[" << connection->getSwitchName() << "] "
                    << "Sync state with switch will begin in "
@@ -159,7 +162,10 @@ void SwitchManager::handleConnection(SwitchConnection *sw) {
 }
 
 void SwitchManager::onConnectTimer(const boost::system::error_code& ec) {
-    connectTimer.reset();
+    {
+        const lock_guard<recursive_mutex> lock(timer_mutex);
+        connectTimer.reset();
+    }
     if (stopping) return;
     if (!ec)
         initiateSync();

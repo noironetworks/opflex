@@ -39,6 +39,7 @@ namespace opflexagent {
 
     void SpanRenderer::spanDeleted(const shared_ptr<SessionState>& seSt) {
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -55,6 +56,7 @@ namespace opflexagent {
             const opflex::modb::URI& spanURI) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
@@ -64,6 +66,7 @@ namespace opflexagent {
 
     void SpanRenderer::delConnectPtrCb(const boost::system::error_code& ec, const shared_ptr<SessionState>& pSt) {
         if (ec) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
@@ -111,6 +114,7 @@ namespace opflexagent {
 
     void SpanRenderer::handleSpanUpdate(const opflex::modb::URI& spanURI) {
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),

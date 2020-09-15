@@ -38,6 +38,7 @@ namespace opflexagent {
 
     void NetFlowRenderer::exporterDeleted(const shared_ptr<ExporterConfigState>& expSt) {
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -60,6 +61,7 @@ namespace opflexagent {
 
     void NetFlowRenderer::handleNetFlowUpdate(const opflex::modb::URI& netFlowURI) {
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "OVSDB connection not ready, retry in " << CONNECTION_RETRY << " seconds";
             // connection failed, start a timer to try again
 
@@ -234,6 +236,7 @@ namespace opflexagent {
     void NetFlowRenderer::updateConnectCb(const boost::system::error_code& ec, const opflex::modb::URI& spanURI) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
@@ -244,6 +247,7 @@ namespace opflexagent {
     void NetFlowRenderer::delConnectCb(const boost::system::error_code& ec,
                                        shared_ptr<ExporterConfigState>& expSt) {
         if (ec) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
