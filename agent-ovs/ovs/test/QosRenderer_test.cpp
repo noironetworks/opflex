@@ -57,7 +57,7 @@ bool verifyCreateDestroy(Agent& agent, const shared_ptr<QosRenderer>& qosRendere
     qosRenderer->updateEgressQosParams("intf1", 3000, 300);
     qosRenderer->deleteEgressQos("intf1");
 
-    qosRenderer->updateIngressQosParams("intf1", 4000, 400);
+    qosRenderer->updateIngressQosParams("intf1", 4000, 400, 4);
     qosRenderer->deleteIngressQos("intf1");
 
     return true;

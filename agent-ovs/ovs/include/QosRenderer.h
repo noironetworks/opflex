@@ -81,8 +81,9 @@ public:
      * @param interface Name of the interface.
      * @param rate ingress rate for interface.
      * @param burst ingress burst for interface.
+     * @param dscpMarking dscp to be marked on header
      */
-    void updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst);
+    void updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst, const int& dscpMarking);
 
     /**
      * called to update egress qos parameters  for an interface.

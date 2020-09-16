@@ -123,18 +123,27 @@ namespace opflexagent {
         }
 
         deleteIngressQos(interface);
+
+        uint64_t rate = 0;
+        uint64_t burst = 0;
+        int dscpMarking = -1;
+
         optional<shared_ptr<QosConfigState>> qosConfigState =
             qosMgr.getIngressQosConfigState(interface);
-        if (!qosConfigState) {
-            return;
+        if (qosConfigState) {
+            rate = qosConfigState.get()->getRate();
+            burst = qosConfigState.get()->getBurst();
         }
-
-        uint64_t rate = qosConfigState.get()->getRate();
-        uint64_t burst = qosConfigState.get()->getBurst();
 
         rate = rate * 1024;
         burst = burst * 1024;
-        updateIngressQosParams(interface, rate, burst);
+        dscpMarking = qosMgr.getDscpMarking(interface);
+
+        LOG(INFO) << "rate-burst-dscp: "<<rate<<", "<<burst<<", "<<dscpMarking;
+        if (burst == 0 && rate == 0 && dscpMarking == -1) {
+            return;  //nothing to configure
+        }
+        updateIngressQosParams(interface, rate, burst, dscpMarking);
     }
 
     void QosRenderer::updateConnectCb(const boost::system::error_code& ec,
@@ -186,22 +195,33 @@ namespace opflexagent {
         updateEgressQosParams(interface, 0, 0);
     }
 
-    void QosRenderer::updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst){
+    void QosRenderer::updateIngressQosParams(const string& interface, const uint64_t& rate, const uint64_t& burst, const int& dscpMarking){
         vector<OvsdbValue> values;
         OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::QUEUE);
 
-        std::ostringstream burstString;
-        burstString << burst;
-        const string burstS  = burstString.str();
-        values.emplace_back("burst", burstS);
+        if (burst != 0) {
+            std::ostringstream burstString;
+            burstString << burst;
+            const string burstS  = burstString.str();
+            values.emplace_back("burst", burstS);
+        }
 
-        std::ostringstream rateString;
-        rateString << rate;
-        const string rateS = rateString.str();
-        values.emplace_back("max-rate", rateS);
+        if (rate != 0) {
+            std::ostringstream rateString;
+            rateString << rate;
+            const string rateS = rateString.str();
+            values.emplace_back("max-rate", rateS);
+        }
 
         OvsdbValues tdSet1("map", values);
         msg1.rowData.emplace("other_config", tdSet1);
+
+        if (dscpMarking != -1) {
+            values.clear();
+            values.emplace_back(dscpMarking);
+            OvsdbValues tdSet11(values);
+            msg1.rowData.emplace("dscp", tdSet11);
+        }
 
         const string queue_uuid = "queue1";
         msg1.externalKey = make_pair("uuid-name", queue_uuid);
