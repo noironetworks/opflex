@@ -230,10 +230,13 @@ void OVSRenderer::start() {
         accessSwitchManager.connect();
     }
 
-    cleanupTimer.reset(new deadline_timer(getAgent().getAgentIOService()));
-    cleanupTimer->expires_from_now(CLEANUP_INTERVAL);
-    cleanupTimer->async_wait(bind(&OVSRenderer::onCleanupTimer,
-                                  this, error));
+    {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
+        cleanupTimer.reset(new deadline_timer(getAgent().getAgentIOService()));
+        cleanupTimer->expires_from_now(CLEANUP_INTERVAL);
+        cleanupTimer->async_wait(bind(&OVSRenderer::onCleanupTimer,
+                                      this, error));
+    }
 
     ovsdbConnection.reset(new OvsdbConnection(ovsdbUseLocalTcpPort));
     ovsdbConnection->start();
@@ -251,8 +254,11 @@ void OVSRenderer::stop() {
 
     LOG(DEBUG) << "Stopping stitched-mode renderer";
 
-    if (cleanupTimer) {
-        cleanupTimer->cancel();
+    {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
+        if (cleanupTimer) {
+            cleanupTimer->cancel();
+        }
     }
 
     if (ifaceStatsEnabled)
@@ -534,6 +540,7 @@ void OVSRenderer::onCleanupTimer(const boost::system::error_code& ec) {
     idGen.collectGarbage(ID_NMSPC_CONNTRACK, gcb);
 
     if (started) {
+        const std::lock_guard<std::mutex> guard(timer_mutex);
         cleanupTimer->expires_from_now(CLEANUP_INTERVAL);
         cleanupTimer->async_wait(bind(&OVSRenderer::onCleanupTimer,
                                       this, error));

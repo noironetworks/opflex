@@ -45,6 +45,7 @@ namespace opflexagent {
     void QosRenderer::qosDeleted(const string& interface) {
         LOG(DEBUG) << "Process QosDeleted for interface " << interface;
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
                         boost::posix_time::seconds(CONNECTION_RETRY)));
@@ -77,6 +78,7 @@ namespace opflexagent {
         QosManager &qosMgr = agent.getQosManager();
 
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
 
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -108,6 +110,7 @@ namespace opflexagent {
         QosManager &qosMgr = agent.getQosManager();
 
         if (!connect()) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
 
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -138,6 +141,7 @@ namespace opflexagent {
             const string& interface) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
@@ -150,6 +154,7 @@ namespace opflexagent {
     void QosRenderer::delConnectCb(const boost::system::error_code& ec,
             const string& interface) {
         if (ec) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             connection_timer.reset();
             return;
         }

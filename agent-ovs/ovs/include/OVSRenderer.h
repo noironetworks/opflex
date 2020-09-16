@@ -28,6 +28,8 @@
 #include "PacketLogHandler.h"
 #include "QosRenderer.h"
 
+#include <mutex>
+
 #pragma once
 #ifndef OPFLEXAGENT_OVSRENDERER_H
 #define OPFLEXAGENT_OVSRENDERER_H
@@ -142,6 +144,7 @@ private:
      */
     void onCleanupTimer(const boost::system::error_code& ec);
     std::unique_ptr<boost::asio::deadline_timer> cleanupTimer;
+    std::mutex timer_mutex;
 
     /**
      * Start packet logger

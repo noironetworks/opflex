@@ -25,6 +25,7 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
 
 namespace opflexagent {
 
@@ -285,6 +286,7 @@ private:
     void handleConnection(SwitchConnection *sw);
     void onConnectTimer(const boost::system::error_code& ec);
     std::unique_ptr<boost::asio::deadline_timer> connectTimer;
+    std::recursive_mutex timer_mutex;
     long connectDelayMs;
 
     // sync state

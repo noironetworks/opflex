@@ -14,6 +14,7 @@
 #define OPFLEX_JSONRPCRENDERER_H
 
 #include <atomic>
+#include <mutex>
 #include <boost/asio.hpp>
 #include <opflexagent/Agent.h>
 #include "OvsdbConnection.h"
@@ -71,6 +72,10 @@ protected:
      * timer for connection timeouts
      */
     std::shared_ptr<boost::asio::deadline_timer> connection_timer;
+    /**
+     * mutex to protect connection_timer
+     */
+    std::mutex timer_mutex;
     /**
      * retry interval in seconds
      */

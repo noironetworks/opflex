@@ -23,6 +23,7 @@ namespace opflexagent {
 
     void JsonRpcRenderer::stop() {
         if (timerStarted) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             timerStarted = false;
             connection_timer->cancel();
         }
@@ -37,6 +38,7 @@ namespace opflexagent {
         // If connection fails, a timer is started to retry and
         // back off at periodic intervals.
         if (timerStarted) {
+            const std::lock_guard<std::mutex> guard(timer_mutex);
             LOG(DEBUG) << "Canceling timer";
             connection_timer->cancel();
             timerStarted = false;
