@@ -165,11 +165,6 @@ module[inv]
         member[ip; type=address/IP]
         # Prefix length for if IP address is a subnet
         member[prefixLen; type=scalar/UInt8]
-        # In case of subnet the next-hop IP address
-        member[nextHopIP; type=address/IP]
-        # In case of subnet the next-hop MAC
-        member[nextHopMac; type=address/MAC]
-
     }
 
     class[IpMapping;
@@ -449,6 +444,12 @@ module[inv]
         # mac address of the end-point
         member[mac; type=address/MAC]
 
+        # proxy mac address to reach the end-point(s)
+        member[proxyMac; type=address/MAC]
+
+        # true if this node participates in csr bounce
+        member[addBounce; type=scalar/UInt8]
+
         # Next hop remote tunnel endpoint
         member[nextHopTunnel; type=address/IP]
 
@@ -459,6 +460,25 @@ module[inv]
             to[class=gbp/EpGroup;
                 cardinality=many;
                 ]
+        }
+    }
+
+    # Remote ep with multiple next hops
+    class[NextHopLink;
+          super=gbp/BaseNextHop;
+          concrete;
+          ]
+    {
+        contained
+        {
+            parent[class=inv/RemoteInventoryEp]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=ip]
+            }
         }
     }
 }

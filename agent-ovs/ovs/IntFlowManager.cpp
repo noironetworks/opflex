@@ -30,6 +30,7 @@
 #include <modelgbp/gbpe/EpToSvcCounter.hpp>
 #include <modelgbp/observer/SvcStatUniverse.hpp>
 #include <modelgbp/fault/SeverityEnumT.hpp>
+#include <modelgbp/inv/NextHopLink.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
@@ -1411,6 +1412,25 @@ bool getHostAccess(EndpointManager& epMgr,
     return false;
 }
 
+uint32_t getProxyTunnelId(opflex::ofcore::OFFramework& framework,
+                          optional<URI> rdURI) {
+    uint32_t proxyTunId = 0;
+    optional<shared_ptr<RoutingDomain>> rd;
+    optional<shared_ptr<modelgbp::gbpe::InstContext>> rdInst;
+
+    if (rdURI) {
+        rd = RoutingDomain::resolve(framework, rdURI.get());
+        if (rd) {
+            rdInst = rd.get()->resolveGbpeInstContext();
+            if (rdInst && rdInst.get()->getEncapId())
+                proxyTunId = rdInst.get()->getEncapId().get();
+        }
+    }
+    if (proxyTunId == 0)
+        LOG(ERROR) << "Failed to get encapId for " << rdURI;
+    return proxyTunId;
+}
+
 void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
     LOG(DEBUG) << "Updating remote endpoint " << uuid;
 
@@ -1418,9 +1438,12 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
         modelgbp::inv::RemoteInventoryEp::resolve(agent.getFramework(), uuid);
 
     if (!ep || (encapType == ENCAP_VLAN || encapType == ENCAP_NONE)) {
+        switchManager.clearFlows(uuid, SEC_TABLE_ID);
+        switchManager.clearFlows(uuid, SRC_TABLE_ID);
         switchManager.clearFlows(uuid, BRIDGE_TABLE_ID);
         switchManager.clearFlows(uuid, ROUTE_TABLE_ID);
-        switchManager.clearFlows(uuid, SRC_TABLE_ID);
+        switchManager.clearFlows(uuid, POL_TABLE_ID);
+        switchManager.clearFlows(uuid, OUT_TABLE_ID);
         return;
     }
 
@@ -1430,11 +1453,21 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
     if (hasMac)
         ep.get()->getMac().get().toUIntArray(macAddr);
 
+    // Get proxy MAC
+    uint8_t proxyMacAddr[6];
+    bool hasProxyMac = ep.get()->isProxyMacSet();
+    if (hasProxyMac)
+        ep.get()->getProxyMac().get().toUIntArray(proxyMacAddr);
+
     boost::system::error_code ec;
 
+    // Does this node participate in CSR bounce
+    bool csrBounce = ep.get()->getAddBounce(false);
+
     // Get remote tunnel destination
-    optional<address> tunDst;
     bool hasTunDest = false;
+    optional<address> tunDst;
+    std::vector<address> tunDsts;
     if (ep.get()->isNextHopTunnelSet()) {
         string ipStr = ep.get()->getNextHopTunnel().get();
         tunDst = address::from_string(ipStr, ec);
@@ -1442,8 +1475,28 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
             LOG(WARNING) << "Invalid remote tunnel destination IP: "
                          << ipStr << ": " << ec.message();
         } else {
+            tunDsts.push_back(tunDst.get());
             hasTunDest = true;
         }
+    }
+
+    // Check if the ep has multiple tunnel destinations
+    if (!hasTunDest) {
+        vector<shared_ptr<modelgbp::inv::NextHopLink>> tnls;
+        ep.get()->resolveInvNextHopLink(tnls);
+        for (shared_ptr<modelgbp::inv::NextHopLink>& tnl : tnls) {
+            if (tnl->isIpSet()) {
+                string ipStr = tnl->getIp().get();
+                tunDst = address::from_string(ipStr, ec);
+                if (ec || !tunDst->is_v4()) {
+                    LOG(WARNING) << "Invalid remote tunnel destination IP: "
+                                 << ipStr << ": " << ec.message();
+                } else {
+                   tunDsts.push_back(tunDst.get());
+                }
+            }
+        }
+        hasTunDest = !tunDsts.empty();
     }
 
     uint32_t epgVnid = 0, rdId = 0, bdId = 0, fgrpId = 0;
@@ -1461,38 +1514,49 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
 
     FlowEntryList elBridgeDst;
     FlowEntryList elRouteDst;
+    FlowEntryList elSec;
     FlowEntryList elSrc;
+    FlowEntryList elPol;
+    FlowEntryList outFlows;
     std::vector<std::shared_ptr<modelgbp::inv::RemoteIp>> invIps;
 
     if (hasForwardingInfo) {
         FlowBuilder bridgeFlow;
-        uint32_t outReg = 0;
         uint64_t meta;
         uint32_t hostPort = OFPP_NONE;
+        uint32_t proxyTunId = 0;
         bool hasHostMac = false;
         uint8_t hostMac[6];
 
         if (hasTunDest) {
-            outReg = tunDst->to_v4().to_ulong();
-            meta = flow::meta::out::REMOTE_TUNNEL;
+            if (hasProxyMac) {
+                if ((proxyTunId =
+                     getProxyTunnelId(agent.getFramework(), rdURI)) == 0)
+                     return;
+                meta = flow::meta::out::REMOTE_TUNNEL_PROXY;
+            } else {
+                meta = flow::meta::out::REMOTE_TUNNEL;
+            }
         } else {
             meta = flow::meta::out::HOST_ACCESS;
             hasHostMac = getHostAccess(agent.getEndpointManager(),
                                        switchManager, hostPort, hostMac);
         }
 
-        if (hasMac) {
-            matchDestDom(bridgeFlow, bdId, 0)
-                .priority(10)
-                .ethDst(macAddr)
-                .action()
-                .reg(MFF_REG2, epgVnid)
-                .reg(MFF_REG7, outReg)
-                .metadata(meta, flow::meta::out::MASK)
-                .go(POL_TABLE_ID)
-                .parent().build(elBridgeDst);
+        if (hasMac && hasTunDest) {
+            // There will only be one such entry
+            for (auto &it : tunDsts) {
+                matchDestDom(bridgeFlow, bdId, 0)
+                    .priority(10)
+                    .ethDst(macAddr)
+                    .action()
+                    .reg(MFF_REG2, epgVnid)
+                    .reg(MFF_REG7, it.to_v4().to_ulong())
+                    .metadata(meta, flow::meta::out::MASK)
+                    .go(POL_TABLE_ID)
+                    .parent().build(elBridgeDst);
+            }
         }
-
 
         // Get remote endpoint IP addresses
         ep.get()->resolveInvRemoteIp(invIps);
@@ -1516,19 +1580,124 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                     prefix = 128;
             }
 
-            FlowBuilder routeFlow;
-            FlowBuilder proxyArp;
             if (hasTunDest) {
+                FlowBuilder routeFlow;
+                if (hasProxyMac) {
+                    uint16_t link = 0;
+                    uint32_t tunPort = getTunnelPort();
+
+                    /*
+                     * packets from CSR can come via bounce from
+                     * other nodes or directly from CSR. Match
+                     * on proxyTunId will match any such packet
+                     */
+                    actionSource(matchEpg(FlowBuilder()
+                                          .priority(149)
+                                          .inPort(tunPort),
+                                  encapType, proxyTunId),
+                                  epgVnid, bdId, fgrpId, rdId,
+                                  IntFlowManager::SERVICE_REV_TABLE_ID,
+                                  encapType)
+                        .ipSrc(addr, prefix)
+                        .build(elSrc);
+
+                    for (auto &it : tunDsts) {
+                         FlowBuilder().priority(15)
+                             .ipDst(addr, prefix)
+                             .metadata(meta, flow::meta::out::MASK)
+                             .reg(7, link)
+                             .action()
+                             .regMove(MFF_REG3, MFF_TUN_ID)
+                             .reg(MFF_TUN_DST, it.to_v4().to_ulong())
+                             .output(tunPort)
+                             .parent().build(outFlows);
+                         if (csrBounce) {
+                             FlowBuilder().priority(15)
+                                 .inPort(tunPort)
+                                 .ipDst(addr, prefix)
+                                 .metadata(flow::meta::out::
+                                               REMOTE_TUNNEL_BOUNCE_TO_CSR,
+                                           flow::meta::out::MASK)
+                                 .reg(7, link)
+                                 .action()
+                                 .regMove(MFF_REG3, MFF_TUN_ID)
+                                 .reg(MFF_TUN_DST, it.to_v4().to_ulong())
+                                 .output(OFPP_IN_PORT)
+                                 .parent().build(outFlows);
+                        }
+
+                         link++;
+                    }
+
+                    /*
+                     * If this node is capable of bounce
+                     * then redirect any packet that comes
+                     * on tunnel port destined to the CSR
+                     * or different node
+                     */
+                    if (csrBounce) {
+                        FlowBuilder().priority(199)
+                            .inPort(tunPort)
+                            .ethSrc(getRouterMacAddr()).ethDst(proxyMacAddr)
+                            .ipDst(addr, prefix)
+                            .action()
+                            .reg(MFF_REG3, proxyTunId)
+                            .multipath(NX_HASH_FIELDS_SYMMETRIC_L3L4_UDP,
+                                       1024,
+                                       ActionBuilder::NX_MP_ALG_ITER_HASH,
+                                       static_cast<uint16_t>(tunDsts.size()-1),
+                                       32, MFF_REG7)
+                            .metadata(flow::meta::out::REMOTE_TUNNEL_BOUNCE_TO_CSR,
+                                      flow::meta::out::MASK)
+                            .go(OUT_TABLE_ID)
+                            .parent().build(elSec);
+                        FlowBuilder().priority(16384)
+                            .ethSrc(proxyMacAddr).ethDst(getRouterMacAddr())
+                            .ipSrc(addr, prefix)
+                            .action()
+                            .reg(MFF_REG3, proxyTunId)
+                            .metadata(flow::meta::out::
+                                          REMOTE_TUNNEL_BOUNCE_TO_NODE,
+                                      flow::meta::out::MASK)
+                            .go(OUT_TABLE_ID)
+                            .parent().build(elPol);
+                        FlowBuilder().priority(15)
+                            .inPort(tunPort)
+                            .ipSrc(addr, prefix)
+                            .metadata(flow::meta::out::
+                                          REMOTE_TUNNEL_BOUNCE_TO_NODE,
+                                       flow::meta::out::MASK)
+                            .action()
+                            .regMove(MFF_REG3, MFF_TUN_ID)
+                            .regMove(MFF_REG7, MFF_TUN_DST)
+                            .output(OFPP_IN_PORT)
+                            .parent().build(outFlows);
+                    }
+
+                    routeFlow
+                        .action()
+                        .reg(MFF_REG3, proxyTunId)
+                        .ethSrc(getRouterMacAddr()).ethDst(proxyMacAddr)
+                        .multipath(NX_HASH_FIELDS_SYMMETRIC_L3L4_UDP,
+                                   1024,
+                                   ActionBuilder::NX_MP_ALG_ITER_HASH,
+                                   static_cast<uint16_t>(tunDsts.size()-1),
+                                   32, MFF_REG7);
+                } else {
+                    routeFlow
+                        .action()
+                        .reg(MFF_REG7, tunDsts.front().to_v4().to_ulong());
+                }
                 matchDestDom(routeFlow, 0, rdId)
                     .priority(500)
                     .ethDst(getRouterMacAddr())
                     .ipDst(addr, prefix)
                     .action()
                     .reg(MFF_REG2, epgVnid)
-                    .reg(MFF_REG7, outReg)
                     .metadata(meta, flow::meta::out::MASK)
                     .go(POL_TABLE_ID)
                     .parent().build(elRouteDst);
+
             } else {
                 /*
                  * ingress (=> pod) uses veth_host mac and inPort
@@ -1549,6 +1718,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                          .build(elSrc);
                 }
                 // egress (<= pod)
+                FlowBuilder routeFlow;
                 routeFlow
                     .priority(10 + prefix)
                     .ethType(eth::type::IP)
@@ -1562,32 +1732,26 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                     .parent().build(elRouteDst);
             }
 
+            FlowBuilder proxyArp;
             if (addr.is_v4()) {
-                if (hasMac && prefix == 32) {
+                if (hasMac) {
                     // Resolve inter-node arp without going to leaf
-                    matchDestArp(proxyArp.priority(40), addr, bdId, rdId);
-                    actionArpReply(proxyArp, macAddr, addr)
-                        .build(elBridgeDst);
-                }
-                if (invIp->isNextHopIPSet() && invIp->isNextHopMacSet()) {
-                    uint8_t nextHopMac[6];
-                    address nextHopIP =
-                        address::from_string(invIp->getNextHopIP().get(), ec);
-                    if (ec) continue;
-                    invIp->getNextHopMac().get().toUIntArray(nextHopMac);
-                    // Resolve arp to CSR Gateway
+                    // For hybrid cloud this is mac address of CSR
                     matchDestArp(proxyArp.priority(40), addr, bdId, rdId,
                                  prefix);
-                    actionArpReply(proxyArp, nextHopMac, nextHopIP)
+                    actionArpReply(proxyArp, macAddr, addr)
                         .build(elBridgeDst);
                 }
             }
         }
     }
 
+    switchManager.writeFlow(uuid, SEC_TABLE_ID, elSec);
     switchManager.writeFlow(uuid, SRC_TABLE_ID, elSrc);
     switchManager.writeFlow(uuid, BRIDGE_TABLE_ID, elBridgeDst);
     switchManager.writeFlow(uuid, ROUTE_TABLE_ID, elRouteDst);
+    switchManager.writeFlow(uuid, POL_TABLE_ID, elPol);
+    switchManager.writeFlow(uuid, OUT_TABLE_ID, outFlows);
 }
 
 static void flowsEndpointPortRangeSNAT(const Snat& as,
@@ -5278,7 +5442,6 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         agent.getPolicyManager().deleteRoutingDomain(rdURI);
         return;
     }
-    LOG(DEBUG) << "Updating routing domain " << rdURI;
 #ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.addNUpdateRDDropCounter(rdURI.toString(),
                                               true, 0, 0);
@@ -5289,6 +5452,8 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
     boost::system::error_code ec;
     uint32_t tunPort = getTunnelPort();
     uint32_t rdId = getId(RoutingDomain::CLASS_ID, rdURI);
+    LOG(DEBUG) << "Updating routing domain " << rdURI
+               << " ID " << rdId;
 
     /* VRF unenforced mode:
      * In this mode, inter epg communication is allowed without any
