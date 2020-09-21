@@ -154,6 +154,20 @@ extern const uint64_t REMOTE_TUNNEL;
  */
 extern const uint64_t HOST_ACCESS;
 
+/**
+ * Remote tunnel to a proxy
+ */
+extern const uint64_t REMOTE_TUNNEL_PROXY;
+
+/**
+ * Bounce to a remote tunnel on same port as input to CSR
+ */
+extern const uint64_t REMOTE_TUNNEL_BOUNCE_TO_CSR;
+
+/**
+ * Bounce to a remote tunnel on same port as input to node
+ */
+extern const uint64_t REMOTE_TUNNEL_BOUNCE_TO_NODE;
 } // namespace out
 
 
