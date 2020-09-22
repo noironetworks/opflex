@@ -798,7 +798,8 @@ clean-doc:
 clean-local: clean-doc
 	rm -f *.rpm *.deb
 if ENABLE_GRPC
-	-rm -rf server/gbp.grpc.pb.* server/gbp.pb.*
+	-rm -rf server/gbp.grpc.pb.* server/gbp.pb.* \
+		cmd/test/gbp.grpc.pb.* cmd/test/gbp.pb.*
 endif
 
 EXTRA_DIST = \
