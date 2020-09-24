@@ -23,7 +23,6 @@
 #include "opflex/modb/Mutator.h"
 #include "opflex/modb/mo-internal/StoreClient.h"
 #include "opflex/modb/internal/ObjectStore.h"
-#include "opflex/modb/internal/Region.h"
 
 namespace opflex {
 namespace modb {
