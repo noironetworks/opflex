@@ -1600,6 +1600,23 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                                   encapType)
                         .ipSrc(addr, prefix)
                         .build(elSrc);
+                    /*
+                     * For bounce flow we need to let the packet through
+                     * service-rev table and do the bounce later in route
+                     * table since the service addresses need to be
+                     * untranslated for service response traffic
+                     */
+                    if (csrBounce) {
+                        actionSource(matchEpg(FlowBuilder()
+                                              .priority(149)
+                                              .inPort(tunPort),
+                                     encapType, proxyTunId),
+                                     epgVnid, bdId, fgrpId, rdId,
+                                     IntFlowManager::SERVICE_REV_TABLE_ID,
+                                     encapType)
+                        .ipDst(addr, prefix)
+                        .build(elSrc);
+                     }
 
                     for (auto &it : tunDsts) {
                          FlowBuilder().priority(15)
@@ -1636,7 +1653,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                      * or different node
                      */
                     if (csrBounce) {
-                        FlowBuilder().priority(199)
+                        FlowBuilder().priority(10)
                             .inPort(tunPort)
                             .ethSrc(getRouterMacAddr()).ethDst(proxyMacAddr)
                             .ipDst(addr, prefix)
@@ -1650,7 +1667,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                             .metadata(flow::meta::out::REMOTE_TUNNEL_BOUNCE_TO_CSR,
                                       flow::meta::out::MASK)
                             .go(OUT_TABLE_ID)
-                            .parent().build(elSec);
+                            .parent().build(elBridgeDst);
                         FlowBuilder().priority(16384)
                             .ethSrc(proxyMacAddr).ethDst(getRouterMacAddr())
                             .ipSrc(addr, prefix)
