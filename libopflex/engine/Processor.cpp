@@ -369,11 +369,13 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     }
 
     const ClassInfo& ci = store->getClassInfo(it->details->class_id);
-    LOG(DEBUG) << "Processing " << (local ? "local" : "nonlocal")
-               << " item " << it->uri.toString()
-               << " of class " << ci.getName()
-               << " and type " << ci.getType()
-               << " in state " << ItemStateMap[curState];
+    if (ci.getType() != ClassInfo::OBSERVABLE) {
+        LOG(DEBUG) << "Processing " << (local ? "local" : "nonlocal")
+                   << " item " << it->uri.toString()
+                   << " of class " << ci.getName()
+                   << " and type " << ci.getType()
+                   << " in state " << ItemStateMap[curState];
+    }
 
     ItemState newState;
 
