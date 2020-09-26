@@ -189,6 +189,11 @@ extern "C" {
     void act_set_vlan_vid(struct ofpbuf* buf, uint16_t vlan);
 
     /**
+     * set dscp mark
+     */
+    void act_mod_nw_tos(struct ofpbuf* buf, uint8_t dscp);
+
+    /**
      * pop vlan
      */
     void act_pop_vlan(struct ofpbuf* buf);
