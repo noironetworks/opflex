@@ -80,13 +80,6 @@ public:
     boost::optional<shared_ptr<QosConfigState>> getQosConfigState(const URI& uri) const;
 
     /**
-     * get dscp value with interface as the key.
-     * @param[in] interface interface name.
-     * @return integer value of dscp.
-     */
-    int getDscpMarking(const string& interface) const;
-
-    /**
      * get shared ptr to egress or ingress qosConfigState
      * @param[in] interface Name of the interface
      * @param[in] egress flag to determine direction
@@ -120,11 +113,6 @@ public:
      */
     void updateQosConfigState(const shared_ptr<modelgbp::qos::BandwidthLimit>& requirement);
 
-    /**
-     * update qosConfigState for a DscpMarking object.
-     * @param[in] qosconfig shared ptr to DscpMarking object.
-     */
-    void updateQosConfigState(const shared_ptr<modelgbp::qos::DscpMarking>& qosconfig);
 
     /**
      * update interfaces for a requirement to its ingress and egress policies.
@@ -352,17 +340,11 @@ public:
           */
          void updateInterfaces(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap);
 
-         /**
-          * process bandwidth update
-          * @param[in] requirementConfig shared pointer to a BandwidthLimit object
-          */
-         void processQosConfig(const shared_ptr<modelgbp::qos::BandwidthLimit>& requirementConfig);
-
-         /**
-          * process dscpMarking update
-          * @param[in] qosConfig shared pointer to a DscpMarking object
-          */
-         void processQosConfig(const shared_ptr<modelgbp::qos::DscpMarking>& qosConfig);
+	 /**
+	  * process bandwidth update
+	  * @param[in] requirementConfig shared pointer to a BandwidthLimit object
+	  */
+	 void processQosConfig(const shared_ptr<modelgbp::qos::BandwidthLimit>& requirementConfig);
 
     private:
         QosManager& qosmanager;
@@ -406,8 +388,6 @@ private:
 
     unordered_map<URI, shared_ptr<QosConfigState>> bwToConfig;
     unordered_map<URI, pair<boost::optional<URI>, boost::optional<URI> > > reqToPol;
-
-    unordered_map<URI, uint8_t> reqToDscp;
 
     unordered_set<URI> notifyUpdate;
     unordered_set<URI> notifyDelete;

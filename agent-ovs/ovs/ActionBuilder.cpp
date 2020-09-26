@@ -202,11 +202,6 @@ ActionBuilder& ActionBuilder::setVlanVid(uint16_t vlan) {
     return *this;
 }
 
-ActionBuilder& ActionBuilder::setDscp(uint8_t dscp) {
-    act_mod_nw_tos(buf, dscp);
-    return *this;
-}
-
 ActionBuilder& ActionBuilder::popVlan() {
     act_pop_vlan(buf);
     return *this;

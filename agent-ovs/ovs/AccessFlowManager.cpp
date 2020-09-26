@@ -7,7 +7,6 @@
  */
 
 #include "AccessFlowManager.h"
-#include <opflexagent/QosManager.h>
 #include "CtZoneManager.h"
 #include "FlowBuilder.h"
 #include "FlowUtils.h"
@@ -99,7 +98,6 @@ void AccessFlowManager::start() {
     agent.getLearningBridgeManager().registerListener(this);
     agent.getPolicyManager().registerListener(this);
     agent.getExtraConfigManager().registerListener(this);
-    agent.getQosManager().registerListener(this);
 
     for (size_t i = 0; i < sizeof(ID_NAMESPACES)/sizeof(char*); i++) {
         idGen.initNamespace(ID_NAMESPACES[i]);
@@ -114,17 +112,11 @@ void AccessFlowManager::stop() {
     agent.getEndpointManager().unregisterListener(this);
     agent.getLearningBridgeManager().unregisterListener(this);
     agent.getPolicyManager().unregisterListener(this);
-    agent.getQosManager().unregisterListener(this);
 }
 
 void AccessFlowManager::endpointUpdated(const string& uuid) {
     if (stopping) return;
     taskQueue.dispatch(uuid, [=](){ handleEndpointUpdate(uuid); });
-}
-
-void AccessFlowManager::dscpQosUpdated(const string& interface) {
-    if (stopping) return;
-    taskQueue.dispatch(interface, [=]() { handleDscpQosUpdate(interface); });
 }
 
 void AccessFlowManager::secGroupSetUpdated(const uri_set_t& secGrps) {
@@ -527,46 +519,6 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
         }
     }
     switchManager.writeFlow(uuid, GROUP_MAP_TABLE_ID, el);
-}
-
-void AccessFlowManager::handleDscpQosUpdate(const string& interface) {
-    string objIdV4 = interface + string("ipv4");
-    string objIdV6 = interface + string("ipv6");
-    switchManager.clearFlows(objIdV4, 0);
-    switchManager.clearFlows(objIdV6, 0);
-
-    QosManager &qosMgr = agent.getQosManager();
-    uint8_t dscp = 0;
-    dscp = qosMgr.getDscpMarking(interface);
-    if (dscp == 0) {
-        return ;
-    }
-
-    LOG(DEBUG) << "add-flow-dscp : " << interface;
-    uint32_t ofPort = switchManager.getPortMapper().FindPort(interface);
-    FlowEntryList dscpFlowV4;
-    FlowBuilder()
-        .table(0)
-        .priority(65535)
-        .ethType(eth::type::IP)
-        .inPort(ofPort)
-        .action()
-        .setDscp(dscp)
-        .resubmit(ofPort,1)
-        .parent().build(dscpFlowV4);
-    switchManager.writeFlow(objIdV4, 0, dscpFlowV4);
-
-    FlowEntryList dscpFlowV6;
-    FlowBuilder()
-        .table(0)
-        .priority(65535)
-        .ethType(eth::type::IPV6)
-        .inPort(ofPort)
-        .action()
-        .setDscp(dscp)
-        .resubmit(ofPort,1)
-        .parent().build(dscpFlowV6);
-    switchManager.writeFlow(objIdV6, 0, dscpFlowV6);
 }
 
 void AccessFlowManager::handleDropLogPortUpdate() {
