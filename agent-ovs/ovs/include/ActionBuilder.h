@@ -260,13 +260,6 @@ public:
     ActionBuilder& setVlanVid(uint16_t vlan);
 
     /**
-     * Set the ip_dscp field
-     * @param dscp the dscp mark to set
-     * @return this action builder for chaining
-     */
-    ActionBuilder& setDscp(uint8_t dscp);
-
-    /**
      * Pop a VLAN tag from the packet
      * @return this action builder for chaining
      */

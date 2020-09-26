@@ -46,7 +46,6 @@ namespace opflexagent {
         BandwidthLimit::registerListener(framework, &qosUniverseListener);
         EpGroup::registerListener(framework, &qosUniverseListener);
         EpGroupToQosRSrc::registerListener(framework, &qosUniverseListener);
-        DscpMarking::registerListener(framework, &qosUniverseListener);
     }
 
     void QosManager::stop() {
@@ -57,7 +56,6 @@ namespace opflexagent {
         BandwidthLimit::unregisterListener(framework, &qosUniverseListener);
         EpGroup::unregisterListener(framework, &qosUniverseListener);
         EpGroupToQosRSrc::unregisterListener(framework, &qosUniverseListener);
-        DscpMarking::unregisterListener(framework, &qosUniverseListener);
     }
 
 
@@ -79,8 +77,11 @@ namespace opflexagent {
                 vector <shared_ptr<modelgbp::qos::Requirement>> qosVec;
                 config_opt.get()->resolveQosRequirement(qosVec);
                 for (const shared_ptr <modelgbp::qos::Requirement>& qosReq : qosVec) {
-                    LOG(DEBUG) << "creating qos config " << qosReq->getURI();
-                    processQosConfig(qosReq);
+                    auto itr = qosmanager.reqToInterface.find(qosReq->getURI());
+                    if (itr == qosmanager.reqToInterface.end()) {
+                        LOG(DEBUG) << "creating qos config " << qosReq->getURI();
+                        processQosConfig(qosReq);
+                    }
                     qosmanager.notifyUpdate.insert(qosReq->getURI());
                 }
             }
@@ -91,12 +92,15 @@ namespace opflexagent {
                 processQosConfig(qosReqOpt.get());
                 qosmanager.notifyUpdate.insert(uri);
             }
+
         } else if (classId == modelgbp::qos::BandwidthLimit::CLASS_ID){
             optional<shared_ptr<modelgbp::qos::BandwidthLimit>> qosBandwidthOpt =
                 modelgbp::qos::BandwidthLimit::resolve(qosmanager.framework, uri);
+
             if (qosBandwidthOpt){
                 const shared_ptr<modelgbp::qos::BandwidthLimit> &qosBandwidth =
                     qosBandwidthOpt.get();
+
                 LOG(INFO) << "Bandwidth receieved burst: " << qosBandwidth->getBurst()
                     << " rate: "<< qosBandwidth->getRate();
                 processQosConfig(qosBandwidth);
@@ -114,34 +118,11 @@ namespace opflexagent {
                         LOG(INFO) << "EPG-QOS policy updated. EPG: " << uri.toString()
                             << "; Qos: " << reqUriOpt.get().toString();
                         qosmanager.updateEpgPolicyMap(uri, reqUriOpt.get());
-                        qosmanager.notifyUpdate.insert(uri);
                     }
                 }
             }
 
-        } else if (classId == modelgbp::qos::DscpMarking::CLASS_ID) {
-            optional<shared_ptr<modelgbp::qos::DscpMarking>> qosDscpMarkingOpt =
-                modelgbp::qos::DscpMarking::resolve(qosmanager.framework, uri);
-
-            string dscpMarking("QosDscpMarking/");
-            string dscpMarkingUri(uri.toString());
-            dscpMarkingUri.erase(dscpMarkingUri.length()-dscpMarking.size());
-            URI reqUri(dscpMarkingUri);
-            LOG(INFO) << "Dscp-req: " << reqUri;
-
-            qosmanager.notifyUpdate.insert(reqUri);
-            if (qosDscpMarkingOpt){
-                const shared_ptr<modelgbp::qos::DscpMarking> &qosDscpMarking =
-                     qosDscpMarkingOpt.get();
-                LOG(INFO) << "DscpMarking: " << qosDscpMarking->getMark().get();
-                if (qosDscpMarking->isMarkSet()) {
-                    processQosConfig(qosDscpMarking);
-                }
-            } else {
-                qosmanager.reqToDscp.erase(reqUri);
-            }
-        }
-        else if (classId == modelgbp::gbp::EpGroupToQosRSrc::CLASS_ID) {
+        } else if (classId == modelgbp::gbp::EpGroupToQosRSrc::CLASS_ID) {
             optional<shared_ptr<modelgbp::gbp::EpGroupToQosRSrc>> epgRs =
                 modelgbp::gbp::EpGroupToQosRSrc::resolve(qosmanager.framework, uri);
             if (!epgRs) {
@@ -213,7 +194,7 @@ namespace opflexagent {
                 const URI epg = egUri.get();
                 interfaceToEpg.insert(make_pair(interface, epg));
                 addEntry(interface, epg, epgToInterface);
-                LOG(DEBUG) << "epg found for interface: " << epg;
+                LOG(INFO) << "epg found for interface: " << epg;
             }
             notifyListeners(interface, "Both");
         }
@@ -232,12 +213,6 @@ namespace opflexagent {
 
     void QosManager::notifyListeners(const string& interface, const string& direction) {
         lock_guard<mutex> guard1(listener_mutex);
-
-        if (direction == BOTH) {
-            for (QosListener *listener : qosListeners) {
-                listener->dscpQosUpdated(interface);
-            }
-        }
 
         if (direction == EGRESS || direction == BOTH){
             for (QosListener *listener : qosListeners) {
@@ -263,20 +238,6 @@ namespace opflexagent {
             }
         }
     }
-
-    int QosManager::getDscpMarking(const string& interface) const {
-        lock_guard<recursive_mutex> guard1(qos_mutex);
-        auto itr = interfaceToReq.find(interface);
-        if (itr != interfaceToReq.end()){
-            URI reqUri = itr->second;
-            auto itr2 = reqToDscp.find(reqUri);
-            if (itr2 != reqToDscp.end()){
-                return itr2->second;
-            }
-        }
-        return 0;
-    }
-
 
     optional<shared_ptr<QosConfigState>>
         QosManager::getQosConfigState(const URI& uri) const {
@@ -342,21 +303,6 @@ namespace opflexagent {
         }
 
 
-    void QosManager::updateQosConfigState(const shared_ptr<modelgbp::qos::DscpMarking>& qosconfig) {
-        lock_guard<recursive_mutex> guard(opflexagent::QosManager::qos_mutex);
-
-        string dscpMarking("QosDscpMarking/");
-        string dscpMarkingUri(qosconfig->getURI().toString());
-        dscpMarkingUri.erase(dscpMarkingUri.length()-dscpMarking.size());
-
-        URI reqUri(dscpMarkingUri);
-        reqToDscp.erase(reqUri);
-
-        uint8_t dscp = qosconfig->getMark().get();
-        reqToDscp.insert(make_pair(reqUri, dscp));
-    }
-
-
     void QosManager::updateQosConfigState(const shared_ptr<modelgbp::qos::BandwidthLimit>& qosconfig) {
         lock_guard<recursive_mutex> guard(opflexagent::QosManager::qos_mutex);
         LOG(INFO) << "BandwidthLimitUri: " << qosconfig->getURI().toString();
@@ -382,11 +328,6 @@ namespace opflexagent {
         lock_guard<recursive_mutex> guard(opflexagent::QosManager::qos_mutex);
         LOG(INFO) << "Requirement URI: " << qosconfig->getURI().toString();
 
-        optional<shared_ptr<modelgbp::qos::DscpMarking> > dscpMarking =
-            qosconfig->resolveQosDscpMarking();
-        if (dscpMarking){
-            updateQosConfigState(dscpMarking.get());
-        }
         optional<shared_ptr<modelgbp::qos::RequirementToEgressRSrc> > rsEgress =
             qosconfig->resolveQosRequirementToEgressRSrc();
         optional<URI> egressUri;
@@ -425,10 +366,6 @@ namespace opflexagent {
     }
 
     void QosManager::QosUniverseListener::processQosConfig(const shared_ptr<modelgbp::qos::BandwidthLimit>& qosconfig) {
-        qosmanager.updateQosConfigState(qosconfig);
-    }
-
-   void QosManager::QosUniverseListener::processQosConfig(const shared_ptr<modelgbp::qos::DscpMarking>& qosconfig) {
         qosmanager.updateQosConfigState(qosconfig);
     }
 
