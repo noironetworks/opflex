@@ -36,6 +36,7 @@ class AccessFlowManager : public EndpointListener,
                           public PolicyListener,
                           public SwitchStateHandler,
                           public ExtraConfigListener,
+                          public QosListener,
                           private boost::noncopyable {
 public:
     /**
@@ -90,6 +91,9 @@ public:
     /* Interface: EndpointListener */
     virtual void endpointUpdated(const std::string& uuid);
     virtual void secGroupSetUpdated(const EndpointListener::uri_set_t& secGrps);
+
+    /*Interface: QosListener */
+    virtual void dscpQosUpdated(const string& interface);
 
     /* Interface: LearningBridgeListener */
     virtual void lbIfaceUpdated(const std::string& uuid);
@@ -160,6 +164,7 @@ private:
     void handlePortStatusUpdate(const std::string& portName, uint32_t portNo);
     void handleSecGrpSetUpdate(const EndpointListener::uri_set_t& secGrps,
                                const std::string& secGrpsId);
+    void handleDscpQosUpdate(const string& interface);
 
     Agent& agent;
     SwitchManager& switchManager;

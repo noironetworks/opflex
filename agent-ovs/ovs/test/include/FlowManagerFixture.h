@@ -261,6 +261,7 @@ public:
     Bldr& pushVlan() { a("push_vlan:0x8100"); return *this; }
     Bldr& popVlan() { a("pop_vlan"); return *this; }
     Bldr& setVlan(uint16_t v) { a("set_vlan_vid", str(v)); return *this; }
+    Bldr& setDscp(uint8_t v) { a("mod_nw_tos", str(v)); return *this; }
     Bldr& inport() { a("IN_PORT"); return *this; }
     Bldr& controller(uint16_t len) {
         a("CONTROLLER", str(len)); return *this;
@@ -284,6 +285,9 @@ public:
     Bldr& polApplied() { a("write_metadata", "0x100/0x100"); return *this; }
     Bldr& resubmit(uint8_t t) {
         a() << "resubmit(," << str(t) << ")"; return *this;
+    }
+    Bldr& resubmit(uint8_t p, uint8_t t) {
+        a() << "resubmit("<< str(p) << "," << str(t) << ")"; return *this;
     }
     Bldr& dropLog(uint32_t table_id , uint32_t reason = NO_MATCH);
 
