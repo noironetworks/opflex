@@ -54,6 +54,13 @@ class QosFixture : public BaseFixture {
             reqRs->setTargetRequirement("test","req1");
 
             mutator3.commit();
+
+            Mutator mutator4(framework, "framework");
+            dscpCfg = reqCfg->addQosDscpMarking();
+            dscpCfg->setMark(28);
+            mutator4.commit();
+
+
             fs::create_directory(temp);
         }
 
@@ -64,6 +71,7 @@ class QosFixture : public BaseFixture {
         shared_ptr<policy::Space> pSpace;
         shared_ptr<qos::BandwidthLimit> qosCfg;
         shared_ptr<qos::Requirement> reqCfg;
+        shared_ptr<qos::DscpMarking> dscpCfg;
         shared_ptr<qos::RequirementToEgressRSrc> egressRs;
         shared_ptr<gbp::EpGroup> epg;
         shared_ptr<gbp::EpGroupToQosRSrc> reqRs;
@@ -93,7 +101,14 @@ static bool checkQosBurst(boost::optional<shared_ptr<QosConfigState>> pQos,
     LOG(DEBUG) << "checkQosBurst " << pQos.get()->getBurst();
     return pQos.get()->getBurst() == pQosCfg->getBurst();
 }
+static bool checkQosDscpMarking(uint8_t dscpMarking,
+                                   shared_ptr<qos::DscpMarking>& pQosDscpMarking) {
+    if (!pQosDscpMarking)
+        return false;
 
+    LOG(DEBUG) << "checkQosDscpMarking " << dscpMarking;
+    return dscpMarking == pQosDscpMarking->getMark().get();
+}
 
 static bool checkInterfaceCache(QosManager &qosmanager) {
     std::lock_guard<std::recursive_mutex> guard1(opflexagent::QosManager::qos_mutex);
@@ -217,11 +232,23 @@ BOOST_FIXTURE_TEST_CASE( verify_artifacts, QosFixture ) {
             temp.string());
     watcher.start();
 
+    WAIT_FOR(checkQosDscpMarking(agent.getQosManager().getDscpMarking("veth0-acc"), dscpCfg), 2000);
     WAIT_FOR(checkQos(agent.getQosManager().getQosConfigState(qosCfg->getURI()),
                 qosCfg->getURI()), 500);
     WAIT_FOR(checkQosRate(agent.getQosManager().getQosConfigState(qosCfg->getURI()), qosCfg), 500);
     WAIT_FOR(checkQosBurst(agent.getQosManager().getQosConfigState(qosCfg->getURI()), qosCfg), 500);
     WAIT_FOR(checkInterfaceCache(agent.getQosManager()), 500);
+
+    Mutator mutator1(framework, "framework");
+    const URI& dscpUri = dscpCfg->getURI();
+    dscpCfg->setMark(18);
+    mutator1.commit();
+    WAIT_FOR(checkQosDscpMarking(agent.getQosManager().getDscpMarking("veth0-acc"), dscpCfg), 2500);
+
+    Mutator mutator2(framework, "framework");
+    dscpCfg->remove();
+    mutator2.commit();
+    WAIT_FOR(!qos::DscpMarking::resolve(framework, dscpUri), 500);
 
     fs::ofstream os2(path1);
     os2 << "{"

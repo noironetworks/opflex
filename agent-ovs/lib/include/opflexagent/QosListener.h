@@ -46,6 +46,12 @@ public:
       * @param interface is name of the interface.
       */
      virtual void egressQosUpdated(const string& interface) {}
+
+     /**
+      * Called when dscp qos paramaters are updated.
+      * @param interface is name of the interface.
+      */
+     virtual void dscpQosUpdated(const string& interface) {}
 };
 }
 #endif // OPFLEX_QOSLISTENER_H

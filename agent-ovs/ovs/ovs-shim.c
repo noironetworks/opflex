@@ -247,6 +247,16 @@ void act_set_vlan_vid(struct ofpbuf* buf, uint16_t vlan) {
 
 }
 
+void act_mod_nw_tos(struct ofpbuf* buf, uint8_t dscp) {
+    struct ofpact_dscp* act = ofpact_put_SET_IP_DSCP(buf);
+    /*
+     * mark needs to be bit shifted 2 left to not overwrite the
+     * lower 2 bits of type of service packet header.
+     * source: man ovs-ofctl (/mod_nw_tos)
+     */
+    act->dscp = (dscp << 2);
+}
+
 void act_pop_vlan(struct ofpbuf* buf) {
     /* ugly hack to avoid the fact that there's no way in the API to
        make a pop vlan action */
