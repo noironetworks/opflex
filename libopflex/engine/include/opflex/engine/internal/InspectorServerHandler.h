@@ -29,8 +29,6 @@ class Inspector;
 
 namespace internal {
 
-class InspectorConn;
-
 /**
  * Handler for implementing the server side of the inspector protocol
  */

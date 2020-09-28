@@ -21,7 +21,6 @@
 #include "opflex/engine/internal/OpflexConnection.h"
 #include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/engine/InspectorClientImpl.h"
-#include "opflex/logging/internal/logging.hpp"
 
 namespace opflex {
 namespace ofcore {
