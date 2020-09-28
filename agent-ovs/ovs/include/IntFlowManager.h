@@ -545,6 +545,17 @@ private:
     void handleServiceUpdate(const std::string& uuid);
 
     /**
+     * update Flow entry lists for services
+     * @param uuid UUID of the service
+     * @param serviceNextHopFlows flow list to service
+     * @param serviceRevFlows flow list from service
+     * @param loopback true if updating loopback flows
+     */
+    void updateServiceSnatDnatFlows(const string& uuid,
+                                    FlowEntryList& serviceNextHopFlows,
+                                    FlowEntryList& serviceRevFlows,
+                                    bool loopback);
+    /**
      * Compare and update snat & dnat flow tables due to changes in a
      * service.
      *

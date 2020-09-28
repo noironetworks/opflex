@@ -4063,7 +4063,10 @@ void IntFlowManager::updatePodSvcStatsFlows (const string &uuid,
         switchManager.writeFlow(p.first, STATS_TABLE_ID, p.second);
 }
 
-void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
+void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
+                                                FlowEntryList& serviceNextHopFlows,
+                                                FlowEntryList& serviceRevFlows,
+                                                bool loopback)
 {
     LOG(TRACE) << "Updating snat dnat flows for service " << uuid;
 
@@ -4074,8 +4077,6 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
         return;
     }
     const Service& as = *asWrapper;
-    FlowEntryList serviceRevFlows;
-    FlowEntryList serviceNextHopFlows;
 
     boost::system::error_code ec;
 
@@ -4125,12 +4126,19 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
             }
 
             vector<address> nextHopAddrs;
+            const ip_ep_map_t& ip_ep_map =
+                agent.getEndpointManager().getIPLocalEpMap();
             for (const string& ipstr : sm.getNextHopIPs()) {
                 auto nextHopAddr = address::from_string(ipstr, ec);
                 if (ec) {
                     LOG(WARNING) << "Invalid service next hop IP: "
                                  << ipstr << ": " << ec.message();
                 } else {
+                    if (loopback) {
+                        const auto& it = ip_ep_map.find(ipstr);
+                        if (it == ip_ep_map.end())
+                            continue;
+                    }
                     nextHopAddrs.push_back(nextHopAddr);
                 }
             }
@@ -4163,6 +4171,13 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
                             .reg(7, link);
                     }
                     ipMap.action().ipDst(nextHopAddr).decTtl();
+                    // loopback has highest priority
+                    if (loopback) {
+                        ipMap.priority(102)
+                             .ipSrc(nextHopAddr)
+                             .action()
+                             .ipSrc(serviceAddr);
+                    }
 
                     if (as.getServiceMode() == Service::LOADBALANCER) {
                         // For LB: save v4 service address to reg8
@@ -4208,7 +4223,7 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
                             uint32_t cookieIdIg = 0;
                             if ((ofPort != OFPP_NONE) && as.getIfaceVlan())
                                 cookieIdIg = idGen.getIdNoAlloc(ID_NMSPC_SVCSTATS, extStr);
-                            else
+                            else if (!loopback)
                                 cookieIdIg = idGen.getIdNoAlloc(ID_NMSPC_SVCSTATS, ingStr);
                             if (cookieIdIg != static_cast<uint32_t>(-1)) {
                                 ipMap.cookie(ovs_htonll((uint64_t)cookieIdIg))
@@ -4259,7 +4274,7 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
                             uint32_t cookieIdEg = 0;
                             if ((ofPort != OFPP_NONE) && as.getIfaceVlan())
                                 cookieIdEg = idGen.getIdNoAlloc(ID_NMSPC_SVCSTATS, extStr);
-                            else
+                            else if (!loopback)
                                 cookieIdEg = idGen.getIdNoAlloc(ID_NMSPC_SVCSTATS, egrStr);
                             if (cookieIdEg != static_cast<uint32_t>(-1)) {
                                 ipRevMap.cookie(ovs_htonll((uint64_t)cookieIdEg))
@@ -4272,6 +4287,13 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
                             .ethSrc(macAddr)
                             .ipSrc(serviceAddr)
                             .decTtl();
+                        // loopback has highest priority
+                        if (loopback) {
+                            ipRevMap.priority(102)
+                                    .ipDst(serviceAddr)
+                                    .action()
+                                    .ipDst(nextHopAddr);
+                        }
                         if (zoneId != static_cast<uint16_t>(-1)) {
                             ipRevMap
                                 .conntrackState(FlowBuilder::CT_TRACKED |
@@ -4304,9 +4326,16 @@ void IntFlowManager::programServiceSnatDnatFlows (const string& uuid)
 
                 link += 1;
             }
-
         }
     }
+}
+
+void IntFlowManager::programServiceSnatDnatFlows(const string& uuid) {
+    FlowEntryList serviceRevFlows;
+    FlowEntryList serviceNextHopFlows;
+
+    updateServiceSnatDnatFlows(uuid, serviceNextHopFlows, serviceRevFlows, false);
+    updateServiceSnatDnatFlows(uuid, serviceNextHopFlows, serviceRevFlows, true);
 
     switchManager.writeFlow(uuid, SERVICE_REV_TABLE_ID, serviceRevFlows);
     switchManager.writeFlow(uuid, SERVICE_NEXTHOP_TABLE_ID,
