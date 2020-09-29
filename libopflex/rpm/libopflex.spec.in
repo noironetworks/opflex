@@ -26,7 +26,7 @@ Requires: libuv >= 1.18.0
 Requires: openssl >= 1.0.1
 BuildRequires: libuv-devel
 BuildRequires: openssl-devel
-BuildRequires: devtoolset-7-toolchain
+BuildRequires: devtoolset-8-toolchain
 BuildRequires: boost-devel
 BuildRequires: boost-test
 BuildRequires: rapidjson-devel >= 1.1

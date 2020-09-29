@@ -75,7 +75,7 @@ public class FSpecIn
             + "BuildRequires: libopflex-devel\n"
             + "BuildRequires: boost-devel\n"
             + "BuildRequires: doxygen\n"
-            + "BuildRequires: devtoolset-7-toolchain\n"
+            + "BuildRequires: devtoolset-8-toolchain\n"
             + "\n"
             + "%bcond_without check\n"
             + "\n"

@@ -44,7 +44,7 @@ BuildRequires: doxygen
 BuildRequires: systemd-units
 BuildRequires: rapidjson-devel >= 1.1
 BuildRequires: libnetfilter_conntrack-devel >= 1.0
-BuildRequires: devtoolset-7-toolchain
+BuildRequires: devtoolset-8-toolchain
 Requires(pre): shadow-utils
 Requires(post): systemd-units
 Requires(preun): systemd-units
