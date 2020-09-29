@@ -58,8 +58,8 @@ Development libraries for libopflex
 %setup -q
 
 %build
-. /opt/rh/devtoolset-7/enable
-%define __strip /opt/rh/devtoolset-7/root/usr/bin/strip
+. /opt/rh/devtoolset-8/enable
+%define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
 %configure --disable-assert --disable-tests-make-all
 make %{?_smp_mflags}
 
@@ -68,8 +68,8 @@ make %{?_smp_mflags}
 
 %check
 %if %{with check}
-    . /opt/rh/devtoolset-7/enable
-    %define __strip /opt/rh/devtoolset-7/root/usr/bin/strip
+    . /opt/rh/devtoolset-8/enable
+    %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
     make check
 %endif
 
