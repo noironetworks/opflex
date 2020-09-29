@@ -212,6 +212,11 @@ public:
     Bldr& isPktMark(uint32_t mark) {
         m("pkt_mark", str(mark, true)); return *this;
     }
+    Bldr& isSvcCookieExposed(uint64_t c, bool exposed) {
+        if (exposed)
+            return cookie(c);
+        return *this;
+    }
     Bldr& flags(uint32_t flags) {
         if(flags & OFPUTIL_FF_SEND_FLOW_REM) {
             _flag = SEND_FLOW_REM;
