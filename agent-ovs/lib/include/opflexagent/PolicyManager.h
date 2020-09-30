@@ -1396,6 +1396,43 @@ struct OrderComparator {
     }
 };
 
+/**
+ * Add the classifier objects of same orders to the map in the sequence they came in
+ * 
+ */
+void addClsrToMap(const std::shared_ptr<modelgbp::gbpe::L24Classifier>& currClsr, std::multimap<uint32_t, std::shared_ptr<modelgbp::gbpe::L24Classifier>>& storeClsr);
+
+/**
+ * Comparator for sorting classifier objects based on the priorities 
+ * assigned to the members of classifiers
+ */
+
+template<typename T>
+struct PriorityComparator {
+
+    bool operator()(const T& lhs, const T& rhs) {
+
+        if (lhs->isTcpFlagsSet() > rhs->isTcpFlagsSet()) { return true; }
+        if (lhs->isTcpFlagsSet() < rhs->isTcpFlagsSet()) { return false; }
+
+        if ((lhs->isDFromPortSet() && lhs->isSFromPortSet()) > (rhs->isDFromPortSet() && rhs->isSFromPortSet() )) { return true; }
+        if ((lhs->isDFromPortSet() && lhs->isSFromPortSet()) < (rhs->isDFromPortSet() && rhs->isSFromPortSet())) { return false; }
+
+        if (lhs->isDFromPortSet() > rhs->isDFromPortSet()) { return true; }
+        if (lhs->isDFromPortSet() < rhs->isDFromPortSet()) { return false; }
+
+        if (lhs->isSFromPortSet() > rhs->isSFromPortSet()) { return true; }
+        if (lhs->isSFromPortSet() < rhs->isSFromPortSet()) { return false; }
+
+        if (lhs->isProtSet() > rhs->isProtSet()) { return true; }
+        if (lhs->isProtSet() < rhs->isProtSet()) { return false; }
+
+        if (lhs->isFragmentFlagsSet() < rhs->isFragmentFlagsSet()) { return true; }
+        if (lhs->isFragmentFlagsSet() > rhs->isFragmentFlagsSet()) { return false; }
+
+    return false;
+}
+};
 } /* namespace opflexagent */
 
 #endif /* OPFLEXAGENT_POLICYMANAGER_H */

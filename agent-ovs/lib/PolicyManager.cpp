@@ -16,6 +16,9 @@
 #include <modelgbp/gbp/DirectionEnumT.hpp>
 #include <modelgbp/gbp/HashingAlgorithmEnumT.hpp>
 #include <opflex/modb/URIBuilder.h>
+#include <modelgbp/gbp/ConnTrackEnumT.hpp>
+#include <modelgbp/l2/EtherTypeEnumT.hpp>
+#include <modelgbp/l4/TcpFlagsEnumT.hpp>
 
 #include <opflexagent/logging.h>
 #include <opflexagent/PolicyManager.h>
@@ -1054,6 +1057,30 @@ void resolveRemoteSubnets(OFFramework& framework,
     }
 }
 
+void addClsrToMap(const shared_ptr<modelgbp::gbpe::L24Classifier>& currClsr, std::multimap<uint32_t,shared_ptr<modelgbp::gbpe::L24Classifier>>& storeClsr){
+  using modelgbp::gbpe::L24Classifier;
+  const shared_ptr<L24Classifier>& nextClsr = *(&currClsr+1);
+  if (currClsr->getOrder(0) == nextClsr->getOrder(0)) {
+     if(storeClsr.empty()){
+         storeClsr.insert({currClsr->getOrder(0),currClsr});
+     }
+     auto retClsr = storeClsr.equal_range(currClsr->getOrder(0));
+     bool foundClsr = 0;
+     for (auto it = retClsr.first; it != retClsr.second ; ++it){
+         if (it->second == currClsr)
+            foundClsr = 1;
+     }
+
+     if (foundClsr) {
+        storeClsr.insert({nextClsr->getOrder(0),nextClsr});
+     } else {
+        storeClsr.insert({currClsr->getOrder(0),currClsr});
+        storeClsr.insert({nextClsr->getOrder(0),nextClsr});
+     }
+  }
+
+}
+
 template <typename Parent, typename Subject, typename Rule>
 static bool updatePolicyRules(OFFramework& framework,
                               const URI& parentURI, bool& notFound,
@@ -1168,17 +1195,55 @@ static bool updatePolicyRules(OFFramework& framework,
             }
 
             uint16_t clsPrio = 0;
-            for (const shared_ptr<L24Classifier>& c : classifiers) {
-                newRules.push_back(std::
-                                   make_shared<PolicyRule>(dir,
-                                                           rulePrio - clsPrio,
-                                                           c, ruleAllow,
-                                                           remoteSubnets,
-                                                           ruleRedirect, ruleLog,
-                                                           destGrpUri));
-                if (clsPrio < 127)
-                    clsPrio += 1;
+            std::multimap<uint32_t,shared_ptr<L24Classifier>> storeClsr;
+            vector<unsigned> storeOrder;
+            PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
+            auto &lastClsr = *(--classifiers.end());
+
+            for (const shared_ptr<L24Classifier>& currClsr : classifiers) {
+                if (&currClsr != &lastClsr)
+                 addClsrToMap(currClsr,storeClsr);
             }
+
+            for (const shared_ptr<L24Classifier>& currClsr : classifiers) {
+                if (storeClsr.find(currClsr->getOrder(0)) != storeClsr.end()) {
+                    if (find(storeOrder.begin(), storeOrder.end(),currClsr->getOrder(0)) == storeOrder.end()){
+                        auto ret = storeClsr.equal_range(currClsr->getOrder(0));
+                        vector<shared_ptr<L24Classifier> > sortedClsr;
+                        for (auto it=ret.first; it!=ret.second; ++it) {
+                            sortedClsr.push_back(it->second);
+                        }
+                       stable_sort(sortedClsr.begin(), sortedClsr.end(), classifierPrioComp);
+                       for (auto c : sortedClsr) {
+                           newRules.push_back(std::
+                                      make_shared<PolicyRule>(dir,
+                                                              rulePrio - clsPrio,
+                                                              c, ruleAllow,
+                                                              remoteSubnets,
+                                                              ruleRedirect, ruleLog,
+                                                              destGrpUri));
+                           if (clsPrio < 127)
+                              clsPrio += 1;
+                       }
+                       storeOrder.push_back(currClsr->getOrder(0));
+                     
+                   }
+                   else continue;
+                }
+
+                else {
+                      newRules.push_back(std::
+                                  make_shared<PolicyRule>(dir,
+                                                          rulePrio - clsPrio,
+                                                          currClsr, ruleAllow,
+                                                          remoteSubnets,
+                                                          ruleRedirect, ruleLog,
+                                                          destGrpUri));
+                      if (clsPrio < 127)
+                          clsPrio += 1;
+               }
+          
+            } 
             if (rulePrio > 128)
                 rulePrio -= 128;
         }
