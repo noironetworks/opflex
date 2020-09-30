@@ -149,10 +149,7 @@ static void send_packet_out(Agent& agent,
     string iface;
     opt_output_act_t outActions =
         tunnelOutActions(intFlowManager, egUri, out_port);
-    opt_output_act_t outActionsSkipVlan;
     SwitchConnection* conn = intConn;
-    ep_ptr ep;
-    bool send_untagged = false;
 
     try {
         if (out_port == OFPP_IN_PORT)
@@ -171,7 +168,7 @@ static void send_packet_out(Agent& agent,
             LOG(WARNING) << "Multiple possible endpoints for output packet "
                          << " on " << iface;
 
-        ep = agent.getEndpointManager().getEndpoint(*eps.begin());
+        ep_ptr ep = agent.getEndpointManager().getEndpoint(*eps.begin());
         if (ep && ep->getAccessInterface() && ep->getAccessUplinkInterface()) {
             if (!accConn || !accPortMapper) {
                 return;
@@ -186,9 +183,6 @@ static void send_packet_out(Agent& agent,
                 out_port = accPort;
 
                 if (ep->getAccessIfaceVlan()) {
-                    outActionsSkipVlan = outActions;
-                    if (ep->isAccessAllowUntagged())
-                        send_untagged = true;
                     outActions = [&ep](ActionBuilder& ab) {
                         ab.pushVlan();
                         ab.setVlanVid(ep->getAccessIfaceVlan().get());
@@ -201,11 +195,6 @@ static void send_packet_out(Agent& agent,
     }
 
     send_packet_out(conn, b, proto, in_port, out_port, outActions);
-    /*
-     * Openshift bootstrap does not support vlans, so make a copy
-     */
-    if (send_untagged)
-        send_packet_out(conn, b, proto, in_port, out_port, outActionsSkipVlan);
 }
 
 /**
