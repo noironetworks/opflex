@@ -244,6 +244,22 @@ public:
     boost::asio::ip::address& getTunnelDst() { return tunnelDst; }
 
     /**
+     * Set the flag serviceStatsFlowDisabled
+     * @param disable set this to true to stop service stats flow creation.
+     */
+    void setServiceStatsFlowDisabled(bool disable) {
+        serviceStatsFlowDisabled = disable;
+    }
+
+    /**
+     * Get the flag serviceStatsFlowDisabled
+     * @return flag to stop service stats flow creation: true or false
+     */
+    bool getServiceStatsFlowDisabled() {
+        return serviceStatsFlowDisabled;
+    }
+
+    /**
      * Get the multicast tunnel destination
      * @return the tunnel destination
      */
