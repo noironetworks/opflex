@@ -46,7 +46,6 @@ Requires: %{name} = %{epoch}:%{version}-%{release}
 Requires: pkgconfig
 Requires: openssl-devel >= 1.0.1
 Requires: libuv-devel >= 1.8.0
-Requires: libnsl
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 Provides: libopflex-static = %{version}-%{release}
