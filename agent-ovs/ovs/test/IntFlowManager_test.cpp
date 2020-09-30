@@ -240,7 +240,8 @@ public:
     void groupFloodTest();
     void connectTest();
     void portStatusTest();
-    void loadBalancedServiceTest();
+    void loadBalancedServiceTest(bool stats_enabled);
+    void LBServiceTest();
     void remoteEndpointTest();
 
     IntFlowManager intFlowManager;
@@ -1508,18 +1509,31 @@ BOOST_FIXTURE_TEST_CASE(anycastService, VxlanIntFlowManagerFixture) {
     WAIT_FOR_TABLES("delete", 500);
 }
 
-BOOST_FIXTURE_TEST_CASE(loadBalancedService_vxlan, VxlanIntFlowManagerFixture) {
-    loadBalancedServiceTest();
+BOOST_FIXTURE_TEST_CASE(loadBalancedService_en_stats_vxlan, VxlanIntFlowManagerFixture) {
+    loadBalancedServiceTest(true);
 }
 
-BOOST_FIXTURE_TEST_CASE(loadBalancedService_vlan, VlanIntFlowManagerFixture) {
-    loadBalancedServiceTest();
+BOOST_FIXTURE_TEST_CASE(loadBalancedService_en_stats_vlan, VlanIntFlowManagerFixture) {
+    loadBalancedServiceTest(true);
 }
 
-void BaseIntFlowManagerFixture::loadBalancedServiceTest() {
+BOOST_FIXTURE_TEST_CASE(loadBalancedService_dis_stats_vxlan, VxlanIntFlowManagerFixture) {
+    loadBalancedServiceTest(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(loadBalancedService_dis_stats_vlan, VlanIntFlowManagerFixture) {
+    loadBalancedServiceTest(false);
+}
+
+void BaseIntFlowManagerFixture::loadBalancedServiceTest(bool stats_enabled) {
     setConnected();
-    LOG(DEBUG) << "#### Starting LB Service Test ####";
+    LOG(DEBUG) << "#### Starting LB Service Test #### stats: " << stats_enabled;
 
+    intFlowManager.setServiceStatsFlowDisabled(!stats_enabled);
+    LBServiceTest();
+}
+
+void BaseIntFlowManagerFixture::LBServiceTest() {
     intFlowManager.egDomainUpdated(epg0->getURI());
     intFlowManager.domainUpdated(RoutingDomain::CLASS_ID, rd0->getURI());
 
@@ -3106,78 +3120,83 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
     memcpy(rmacArr, intFlowManager.getRouterMacAddr(), sizeof(rmacArr));
     string rmac = MAC(rmacArr).toString();
 
+
+    bool statsEnabled = !intFlowManager.getServiceStatsFlowDisabled();
+
     uint64_t rxCookie1 = 0;
     uint64_t txCookie1 = 0;
     uint64_t rxCookie2 = 0;
     uint64_t txCookie2 = 0;
-    if (!exposed) {
-        initExpPodServiceStats("169.254.169.254", ep0, as1, "udp", 53, 5353);
-        initExpPodServiceStats("169.254.169.254", ep2, as1, "udp", 53, 5353);
-        initExpPodServiceStats("169.254.169.254", ep3, as1, "udp", 53, 5353);
-        initExpPodServiceStats("169.254.169.254", ep4, as1, "udp", 53, 5353);
-        initExpPodServiceStats("fe80::a9:fe:a9:fe", ep0, as2, "tcp", 80, 80);
+    if (statsEnabled) {
+        if (!exposed) {
+            initExpPodServiceStats("169.254.169.254", ep0, as1, "udp", 53, 5353);
+            initExpPodServiceStats("169.254.169.254", ep2, as1, "udp", 53, 5353);
+            initExpPodServiceStats("169.254.169.254", ep3, as1, "udp", 53, 5353);
+            initExpPodServiceStats("169.254.169.254", ep4, as1, "udp", 53, 5353);
+            initExpPodServiceStats("fe80::a9:fe:a9:fe", ep0, as2, "tcp", 80, 80);
 
-        const string& anyToSvcKey1 = "antosvc:svc-tgt:"+as1.getUUID()+":10.20.44.2";
-        const string& svcToAnyKey1 = "svctoan:svc-tgt:"+as1.getUUID()+":10.20.44.2";
-        const string& anyToSvcKey2 = "antosvc:svc-tgt:"+as2.getUUID()+":2001:db8::2";
-        const string& svcToAnyKey2 = "svctoan:svc-tgt:"+as2.getUUID()+":2001:db8::2";
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", anyToSvcKey1) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << anyToSvcKey1;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToAnyKey1) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << svcToAnyKey1;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", anyToSvcKey2) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << anyToSvcKey2;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToAnyKey2) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << svcToAnyKey2;);
+            const string& anyToSvcKey1 = "antosvc:svc-tgt:"+as1.getUUID()+":10.20.44.2";
+            const string& svcToAnyKey1 = "svctoan:svc-tgt:"+as1.getUUID()+":10.20.44.2";
+            const string& anyToSvcKey2 = "antosvc:svc-tgt:"+as2.getUUID()+":2001:db8::2";
+            const string& svcToAnyKey2 = "svctoan:svc-tgt:"+as2.getUUID()+":2001:db8::2";
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", anyToSvcKey1) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << anyToSvcKey1;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToAnyKey1) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << svcToAnyKey1;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", anyToSvcKey2) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << anyToSvcKey2;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToAnyKey2) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << svcToAnyKey2;);
 
-        rxCookie1 = idGen.getIdNoAlloc("svcstats", anyToSvcKey1);
-        txCookie1 = idGen.getIdNoAlloc("svcstats", svcToAnyKey1);
-        rxCookie2 = idGen.getIdNoAlloc("svcstats", anyToSvcKey2);
-        txCookie2 = idGen.getIdNoAlloc("svcstats", svcToAnyKey2);
+            rxCookie1 = idGen.getIdNoAlloc("svcstats", anyToSvcKey1);
+            txCookie1 = idGen.getIdNoAlloc("svcstats", svcToAnyKey1);
+            rxCookie2 = idGen.getIdNoAlloc("svcstats", anyToSvcKey2);
+            txCookie2 = idGen.getIdNoAlloc("svcstats", svcToAnyKey2);
 
-        initExpAnySvcStats("10.20.44.2", 5353, as1.getUUID(), rxCookie1, txCookie1);
-        initExpAnySvcStats("2001:db8::2", 80, as2.getUUID(), rxCookie2, txCookie2);
+            initExpAnySvcStats("10.20.44.2", 5353, as1.getUUID(), rxCookie1, txCookie1);
+            initExpAnySvcStats("2001:db8::2", 80, as2.getUUID(), rxCookie2, txCookie2);
 
-        const string& nodeToSvcKey = "notosvc:svc-nod:"+as1.getUUID()+":10.20.44.2";
-        const string& svcToNodeKey = "svctono:svc-nod:"+as1.getUUID()+":10.20.44.2";
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", nodeToSvcKey) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << nodeToSvcKey;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToNodeKey) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << svcToNodeKey;);
+            const string& nodeToSvcKey = "notosvc:svc-nod:"+as1.getUUID()+":10.20.44.2";
+            const string& svcToNodeKey = "svctono:svc-nod:"+as1.getUUID()+":10.20.44.2";
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", nodeToSvcKey) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << nodeToSvcKey;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToNodeKey) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << svcToNodeKey;);
 
-        auto rxCookie = idGen.getIdNoAlloc("svcstats", nodeToSvcKey);
-        auto txCookie = idGen.getIdNoAlloc("svcstats", svcToNodeKey);
+            auto rxCookie = idGen.getIdNoAlloc("svcstats", nodeToSvcKey);
+            auto txCookie = idGen.getIdNoAlloc("svcstats", svcToNodeKey);
 
-        initExpNodeSvcStats("1.100.201.11", "10.20.44.2", 5353,
-                            as1.getUUID(), rxCookie, txCookie);
-    } else {
-        const string& extToSvcKey1 = "extosvc:svc-ext:"+as1.getUUID()+":10.20.44.2";
-        const string& svcToExtKey1 = "svctoex:svc-ext:"+as1.getUUID()+":10.20.44.2";
-        const string& extToSvcKey2 = "extosvc:svc-ext:"+as2.getUUID()+":2001:db8::2";
-        const string& svcToExtKey2 = "svctoex:svc-ext:"+as2.getUUID()+":2001:db8::2";
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", extToSvcKey1) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << extToSvcKey1;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToExtKey1) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << svcToExtKey1;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", extToSvcKey2) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << extToSvcKey2;);
-        WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToExtKey2) != (uint32_t)-1),
-                            500,,
-                            LOG(ERROR) << "cookie not yet alloc'd for: " << svcToExtKey2;);
+            initExpNodeSvcStats("1.100.201.11", "10.20.44.2", 5353,
+                                as1.getUUID(), rxCookie, txCookie);
+        } else {
+            const string& extToSvcKey1 = "extosvc:svc-ext:"+as1.getUUID()+":10.20.44.2";
+            const string& svcToExtKey1 = "svctoex:svc-ext:"+as1.getUUID()+":10.20.44.2";
+            const string& extToSvcKey2 = "extosvc:svc-ext:"+as2.getUUID()+":2001:db8::2";
+            const string& svcToExtKey2 = "svctoex:svc-ext:"+as2.getUUID()+":2001:db8::2";
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", extToSvcKey1) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << extToSvcKey1;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToExtKey1) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << svcToExtKey1;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", extToSvcKey2) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << extToSvcKey2;);
+            WAIT_FOR_DO_ONFAIL((idGen.getIdNoAlloc("svcstats", svcToExtKey2) != (uint32_t)-1),
+                                500,,
+                                LOG(ERROR) << "cookie not yet alloc'd for: " << svcToExtKey2;);
 
-        rxCookie1 = idGen.getIdNoAlloc("svcstats", extToSvcKey1);
-        txCookie1 = idGen.getIdNoAlloc("svcstats", svcToExtKey1);
-        rxCookie2 = idGen.getIdNoAlloc("svcstats", extToSvcKey2);
-        txCookie2 = idGen.getIdNoAlloc("svcstats", svcToExtKey2);
+            rxCookie1 = idGen.getIdNoAlloc("svcstats", extToSvcKey1);
+            txCookie1 = idGen.getIdNoAlloc("svcstats", svcToExtKey1);
+            rxCookie2 = idGen.getIdNoAlloc("svcstats", extToSvcKey2);
+            txCookie2 = idGen.getIdNoAlloc("svcstats", svcToExtKey2);
+        }
     }
 
     if (exposed) {
@@ -3267,8 +3286,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
         string commit2 = string("commit,zone=2,exec(load:") +
             (exposed ? "0x80000002" : "0x2") + "->NXM_NX_CT_MARK[])";
 
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .cookie(rxCookie1)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabled(rxCookie1, statsEnabled)
              .priority(99)
              .udp().reg(RD, 1).isFromServiceIface(exposed)
              .isIpDst("169.254.169.254").isTpDst(53)
@@ -3280,8 +3299,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .ct(commit1)
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .isSvcCookieExposed(rxCookie1, exposed)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabledNExposed(rxCookie1, statsEnabled, exposed)
              .priority(102)
              .udp().reg(RD, 1).isFromServiceIface(exposed)
              .isIpSrc("10.20.44.2")
@@ -3306,8 +3325,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .ct(commit1)
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .cookie(rxCookie2)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabled(rxCookie2, statsEnabled)
              .priority(99)
              .tcp6().reg(RD, 1).isFromServiceIface(exposed)
              .isIpv6Dst("fe80::a9:fe:a9:fe").isTpDst(80)
@@ -3322,8 +3341,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .ct(commit2)
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .isSvcCookieExposed(rxCookie2, exposed)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabledNExposed(rxCookie2, statsEnabled, exposed)
              .priority(102)
              .tcp6().reg(RD, 1).isFromServiceIface(exposed)
              .isIpv6Src("2001:db8::2")
@@ -3355,8 +3374,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
     } else {
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .cookie(rxCookie1)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabled(rxCookie1, statsEnabled)
              .priority(99)
              .udp().reg(RD, 1)
              .isIpDst("169.254.169.254").isTpDst(53)
@@ -3366,8 +3385,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .load(SVCADDR1, 0xa9fea9fe)
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .isSvcCookieExposed(rxCookie1, exposed)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabledNExposed(rxCookie1, statsEnabled, exposed)
              .priority(102)
              .udp().reg(RD, 1)
              .isIpSrc("10.20.44.2")
@@ -3387,8 +3406,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .load(SVCADDR1, 0xa9fea9fe)
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .cookie(rxCookie2)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabled(rxCookie2, statsEnabled)
              .priority(99)
              .tcp6().reg(RD, 1)
              .isIpv6Dst("fe80::a9:fe:a9:fe").isTpDst(80)
@@ -3401,8 +3420,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .load(SVCADDR4, 0xa900fe)
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(RT).done());
-        ADDF(Bldr(SEND_FLOW_REM).table(SVH)
-             .isSvcCookieExposed(rxCookie2, exposed)
+        ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVH)
+             .isSvcCookieEnabledNExposed(rxCookie2, statsEnabled, exposed)
              .priority(102)
              .tcp6().reg(RD, 1)
              .isIpv6Src("2001:db8::2")
@@ -3473,8 +3492,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
              .actions().ct("table=2,zone=2").done());
 
         if (exposed) {
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie1)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie1, statsEnabled)
                  .priority(100)
                  .isCtState("-new+est-inv+trk").isCtMark("0x80000001")
                  .udp().reg(RD, 1).isIpSrc("10.20.44.2").isTpSrc(5353)
@@ -3482,8 +3501,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(mac).ipSrc("169.254.169.254")
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie1, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie1, statsEnabled, exposed)
                  .priority(102)
                  .isCtState("-new+est-inv+trk").isCtMark("0x80000001")
                  .udp().reg(RD, 1).isIpSrc("10.20.44.2").isIpDst("169.254.169.254").isTpSrc(5353)
@@ -3498,8 +3517,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(mac).ipSrc("169.254.169.254")
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie2)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie2, statsEnabled)
                  .priority(100)
                  .isCtState("-new+est-inv+trk").isCtMark("0x80000002")
                  .tcp6().reg(RD, 1).isIpv6Src("2001:db8::2").isTpSrc(80)
@@ -3507,8 +3526,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .ethSrc(mac).ipv6Src("fe80::a9:fe:a9:fe")
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie2, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie2, statsEnabled, exposed)
                  .priority(102)
                  .isCtState("-new+est-inv+trk").isCtMark("0x80000002")
                  .tcp6().reg(RD, 1).isIpv6Src("2001:db8::2").isIpv6Dst("fe80::a9:fe:a9:fe").isTpSrc(80)
@@ -3524,8 +3543,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
         } else {
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie1)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie1, statsEnabled)
                  .priority(100)
                  .isCtState("-new+est-inv+trk").isCtMark("0x1")
                  .udp().reg(RD, 1).isIpSrc("10.20.44.2").isTpSrc(5353)
@@ -3533,8 +3552,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(rmac).ipSrc("169.254.169.254")
                  .decTtl().meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(BR).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie1, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie1, statsEnabled, exposed)
                  .priority(102)
                  .isCtState("-new+est-inv+trk").isCtMark("0x1")
                  .udp().reg(RD, 1).isIpSrc("10.20.44.2").isIpDst("169.254.169.254").isTpSrc(5353)
@@ -3549,8 +3568,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(rmac).ipSrc("169.254.169.254")
                  .decTtl().meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(BR).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie2)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie2, statsEnabled)
                  .priority(100)
                  .isCtState("-new+est-inv+trk").isCtMark("0x2")
                  .tcp6().reg(RD, 1).isIpv6Src("2001:db8::2").isTpSrc(80)
@@ -3558,8 +3577,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .ethSrc(rmac).ipv6Src("fe80::a9:fe:a9:fe")
                  .decTtl().meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(BR).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie2, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie2, statsEnabled, exposed)
                  .priority(102)
                  .isCtState("-new+est-inv+trk").isCtMark("0x2")
                  .tcp6().reg(RD, 1).isIpv6Src("2001:db8::2").isIpv6Dst("fe80::a9:fe:a9:fe").isTpSrc(80)
@@ -3577,8 +3596,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
         }
     } else {
         if (exposed) {
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie1)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie1, statsEnabled)
                  .priority(100)
                  .udp().reg(RD, 1)
                  .isIpSrc("10.20.44.2").isTpSrc(5353)
@@ -3586,8 +3605,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(mac).ipSrc("169.254.169.254")
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie1, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie1, statsEnabled, exposed)
                  .priority(102)
                  .udp().reg(RD, 1)
                  .isIpSrc("10.20.44.2").isIpDst("169.254.169.254").isTpSrc(5353)
@@ -3602,8 +3621,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(mac).ipSrc("169.254.169.254")
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie2)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie2, statsEnabled)
                  .priority(100)
                  .tcp6().reg(RD, 1)
                  .isIpv6Src("2001:db8::2").isTpSrc(80)
@@ -3611,8 +3630,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .ethSrc(mac).ipv6Src("fe80::a9:fe:a9:fe")
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie2, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie2, statsEnabled, exposed)
                  .priority(102)
                  .tcp6().reg(RD, 1)
                  .isIpv6Src("2001:db8::2").isIpv6Dst("fe80::a9:fe:a9:fe").isTpSrc(80)
@@ -3628,8 +3647,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .decTtl().pushVlan().setVlan(4003)
                  .ethDst(rmac).outPort(17).done());
         } else {
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie1)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie1, statsEnabled)
                  .priority(100)
                  .udp().reg(RD, 1)
                  .isIpSrc("10.20.44.2").isTpSrc(5353)
@@ -3637,8 +3656,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(rmac).ipSrc("169.254.169.254")
                  .decTtl().meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(BR).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie1, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie1, statsEnabled, exposed)
                  .priority(102)
                  .udp().reg(RD, 1)
                  .isIpSrc("10.20.44.2").isIpDst("169.254.169.254").isTpSrc(5353)
@@ -3653,8 +3672,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .tpSrc(53).ethSrc(rmac).ipSrc("169.254.169.254")
                  .decTtl().meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(BR).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .cookie(txCookie2)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabled(txCookie2, statsEnabled)
                  .priority(100)
                  .tcp6().reg(RD, 1)
                  .isIpv6Src("2001:db8::2").isTpSrc(80)
@@ -3662,8 +3681,8 @@ void BaseIntFlowManagerFixture::initExpLBService(Service &as1,
                  .ethSrc(rmac).ipv6Src("fe80::a9:fe:a9:fe")
                  .decTtl().meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(BR).done());
-            ADDF(Bldr(SEND_FLOW_REM).table(SVR)
-                 .isSvcCookieExposed(txCookie2, exposed)
+            ADDF(Bldr(statsEnabled?SEND_FLOW_REM:0).table(SVR)
+                 .isSvcCookieEnabledNExposed(txCookie2, statsEnabled, exposed)
                  .priority(102)
                  .tcp6().reg(RD, 1)
                  .isIpv6Src("2001:db8::2").isIpv6Dst("fe80::a9:fe:a9:fe").isTpSrc(80)

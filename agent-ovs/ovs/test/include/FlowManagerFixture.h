@@ -217,8 +217,13 @@ public:
     Bldr& isPktMark(uint32_t mark) {
         m("pkt_mark", str(mark, true)); return *this;
     }
-    Bldr& isSvcCookieExposed(uint64_t c, bool exposed) {
-        if (exposed)
+    Bldr& isSvcCookieEnabledNExposed(uint64_t c, bool enabled, bool exposed) {
+        if (enabled && exposed)
+            return cookie(c);
+        return *this;
+    }
+    Bldr& isSvcCookieEnabled(uint64_t c, bool enabled) {
+        if (enabled)
             return cookie(c);
         return *this;
     }
