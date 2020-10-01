@@ -32,8 +32,6 @@ BuildRequires: rapidjson-devel >= 1.1
 BuildRequires: doxygen
 BuildRequires: pkgconfig
 
-%bcond_without check
-
 %description
 The OpFlex project seeks to provide reference implementations of the
 OpFlex protocol, which is a protocol for implementing a distributed
@@ -63,10 +61,6 @@ make %{?_smp_mflags}
 %install
 %make_install
 
-%check
-%if %{with check}
-    make check
-%endif
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
