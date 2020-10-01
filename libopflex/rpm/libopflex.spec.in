@@ -24,6 +24,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Source: %{name}-%{version}.tar.gz
 Requires: libuv >= 1.18.0
 Requires: openssl >= 1.0.1
+Requires: libnsl2
 BuildRequires: libuv-devel
 BuildRequires: openssl-devel
 BuildRequires: boost-devel
@@ -31,6 +32,7 @@ BuildRequires: boost-test
 BuildRequires: rapidjson-devel >= 1.1
 BuildRequires: doxygen
 BuildRequires: pkgconfig
+BuildRequires: libnsl2-devel
 
 %description
 The OpFlex project seeks to provide reference implementations of the
