@@ -581,6 +581,10 @@ void Agent::start() {
     Agent::createUniverse(root);
     mutator.commit();
 
+    // BPF Map initialization
+    conntrack4Map_ptr = std::make_shared<Conntrack4Map>();
+    conntrack6Map_ptr = std::make_shared<Conntrack6Map>();
+
     // instantiate other components
 #ifdef HAVE_PROMETHEUS_SUPPORT
     if (prometheusEnabled) {
@@ -758,6 +762,12 @@ void Agent::stop() {
     }
     terminate.notify_all();
     abort_timer.join();
+
+    conntrack4Map_ptr.reset();
+    conntrack4Map_ptr = nullptr;
+
+    conntrack6Map_ptr.reset();
+    conntrack6Map_ptr = nullptr;
 
     LOG(INFO) << "Agent stopped";
 }

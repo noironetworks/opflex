@@ -27,6 +27,7 @@
 #include <opflexagent/SnatManager.h>
 #include <opflexagent/NetFlowManager.h>
 #include <opflexagent/QosManager.h>
+#include <opflexagent/GbpBpfMaps.h>
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
@@ -284,6 +285,12 @@ public:
      */
     FaultManager& getFaultManager() { return faultManager; }
 
+    /*
+     * BPF maps
+     */
+    std::shared_ptr<Conntrack4Map> getConntrack4Map() { return conntrack4Map_ptr; }
+    std::shared_ptr<Conntrack6Map> getConntrack6Map() { return conntrack6Map_ptr; }
+
     class StatProps {
         public:
         /**
@@ -366,6 +373,10 @@ private:
     FSWatcher fsWatcher;
     opflex_elem_t rendererFwdMode; 
     FaultManager faultManager;
+
+    // BPF maps
+    std::shared_ptr<Conntrack4Map> conntrack4Map_ptr;
+    std::shared_ptr<Conntrack6Map> conntrack6Map_ptr;
 
     boost::optional<std::string> opflexName;
     boost::optional<std::string> opflexDomain;

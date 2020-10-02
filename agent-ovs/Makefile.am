@@ -19,6 +19,7 @@ OVS_ADDL_CFLAGS = \
 AM_CPPFLAGS = $(BOOST_CPPFLAGS) \
 	-Wall -Werror \
 	-I$(top_srcdir)/ovs/include \
+        -I$(top_srcdir)/bpf/include \
 	-I$(top_srcdir)/lib/include \
 	-DLOCALSTATEDIR='"$(localstatedir)"'
 if ENABLE_TSAN
@@ -138,7 +139,9 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/SnatListener.h \
 	lib/include/opflexagent/FSPacketDropLogConfigSource.h \
 	lib/include/opflexagent/PacketDropLogConfig.h \
-	lib/include/opflexagent/Faults.h
+	lib/include/opflexagent/Faults.h \
+        lib/include/opflexagent/BpfMap.h \
+        lib/include/opflexagent/GbpBpfMaps.h
 if ENABLE_PROMETHEUS
 libopflex_agent_la_include_HEADERS += lib/include/opflexagent/PrometheusManager.h
 endif
@@ -233,7 +236,9 @@ libopflex_agent_la_SOURCES = \
 	lib/Snat.cpp \
 	lib/SnatManager.cpp \
 	lib/SnatSource.cpp \
-	lib/FSPacketDropLogConfigSource.cpp
+	lib/FSPacketDropLogConfigSource.cpp \
+        lib/BpfMap.cpp \
+        lib/GbpBpfMaps.cpp
 if ENABLE_PROMETHEUS
 libopflex_agent_la_SOURCES += lib/AgentPrometheusManager.cpp
 endif
@@ -353,7 +358,7 @@ if ENABLE_GPROF
 endif
 endif
 
-bin_PROGRAMS=opflex_agent gbp_inspect mcast_daemon opflex_server
+bin_PROGRAMS=opflex_agent gbp_inspect mcast_daemon opflex_server map_ctrl
 if ENABLE_GRPC
 bin_PROGRAMS += gbp_client_stress
 endif
@@ -400,6 +405,31 @@ gbp_inspect_SOURCES = \
 gbp_inspect_LDADD = \
 	$(libopflex_LIBS) \
 	$(libmodelgbp_LIBS) \
+	$(BOOST_IOSTREAMS_LIB) \
+	$(BOOST_PROGRAM_OPTIONS_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	libopflex_agent.la
+
+map_ctrl_CXXFLAGS = -DSYSCONFDIR='"$(sysconfdir)"'
+if ENABLE_TSAN
+  map_ctrl_CXXFLAGS += -fsanitize=thread
+endif
+if ENABLE_ASAN
+  map_ctrl_CXXFLAGS += -fsanitize=address
+endif
+if ENABLE_UBSAN
+  map_ctrl_CXXFLAGS += -fsanitize=undefined
+endif
+if ENABLE_COVERAGE
+  map_ctrl_CXXFLAGS += --coverage
+endif
+if ENABLE_GPROF
+  map_ctrl_CXXFLAGS += -pg
+endif
+
+map_ctrl_SOURCES = \
+	cmd/map_ctrl.cpp
+map_ctrl_LDADD = \
 	$(BOOST_IOSTREAMS_LIB) \
 	$(BOOST_PROGRAM_OPTIONS_LIB) \
 	$(BOOST_SYSTEM_LIB) \
