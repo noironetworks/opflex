@@ -44,7 +44,9 @@ BuildRequires: doxygen
 BuildRequires: systemd-units
 BuildRequires: rapidjson-devel >= 1.1
 BuildRequires: libnetfilter_conntrack-devel >= 1.0
+%if 0%{?rhel} == 7
 BuildRequires: devtoolset-8-toolchain
+%endif
 Requires(pre): shadow-utils
 Requires(post): systemd-units
 Requires(preun): systemd-units
@@ -112,8 +114,10 @@ Development libraries for libopflex_agent
 %setup -q
 
 %build
+%if 0%{?rhel} == 7
 . /opt/rh/devtoolset-8/enable
 %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
+%endif
 %configure --disable-assert
 make %{?_smp_mflags}
 
@@ -141,8 +145,10 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/opflex-agent-ovs/conf.d
 
 %check
 %if %{with check}
+%if 0%{?rhel} == 7
     . /opt/rh/devtoolset-8/enable
     %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
+%endif
     make check
 %endif
 

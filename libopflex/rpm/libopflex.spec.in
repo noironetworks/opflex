@@ -24,16 +24,22 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Source: %{name}-%{version}.tar.gz
 Requires: libuv >= 1.18.0
 Requires: openssl >= 1.0.1
+%if 0%{?rhel} == 8
+Requires: libnsl2
+%endif
 BuildRequires: libuv-devel
 BuildRequires: openssl-devel
+%if 0%{?rhel} == 7
 BuildRequires: devtoolset-8-toolchain
+%endif
 BuildRequires: boost-devel
 BuildRequires: boost-test
 BuildRequires: rapidjson-devel >= 1.1
 BuildRequires: doxygen
 BuildRequires: pkgconfig
-
-%bcond_without check
+%if 0%{?rhel} == 8
+BuildRequires: libnsl2-devel
+%endif
 
 %description
 The OpFlex project seeks to provide reference implementations of the
@@ -58,19 +64,23 @@ Development libraries for libopflex
 %setup -q
 
 %build
+%if 0%{?rhel} == 7
 . /opt/rh/devtoolset-8/enable
 %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
+%endif
 %configure --disable-assert --disable-tests-make-all
 make %{?_smp_mflags}
 
 %install
 %make_install
 
+%if 0%{?rhel} == 7
 %check
 %if %{with check}
     . /opt/rh/devtoolset-8/enable
     %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
     make check
+%endif
 %endif
 
 %post -p /sbin/ldconfig
