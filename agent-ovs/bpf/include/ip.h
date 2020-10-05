@@ -117,11 +117,9 @@ int parse_ip4(void *data, __u64 off, void *data_end, struct ip4_tuple *tuple,
 {
  	struct iphdr *iph = data + off;
 
-	if (iph + 1 > data_end) {
-                char fmt1[] = "failed iph + 1 check\n";
-                bpf_trace_printk(fmt1, sizeof(fmt1));
+	if (iph + 1 > data_end)
 		return -1;
-        }
+
 	tuple->sip = iph->saddr;
 	tuple->dip = iph->daddr;
 	tuple->proto = iph->protocol;
@@ -139,11 +137,8 @@ int parse_ip4(void *data, __u64 off, void *data_end, struct ip4_tuple *tuple,
 		return parse_tcp(data, off, data_end, &tuple->l4, meta);
 	else if (tuple->proto == IPPROTO_UDP)
 		return parse_udp(data, off, data_end, &tuple->l4, meta);
-	else {
-                char fmt2[] = "failed proto check %d\n";
-                bpf_trace_printk(fmt2, sizeof(fmt2), tuple->proto);
+	else
 		return -1;
-        }
 }
 
 static __always_inline

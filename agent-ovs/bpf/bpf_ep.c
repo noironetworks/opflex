@@ -61,11 +61,8 @@ int process_ip4(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
 
     rev = ip4_tuple_normalize(&ip4);
     existing_flow = bpf_map_lookup_elem(&conntrack4_map, &ip4);
-    if (existing_flow) {
-        char fmt4[] = "existing map %x %x\n";
-        bpf_trace_printk(fmt4, sizeof(fmt4), ip4.sip, ip4.dip);
+    if (existing_flow)
         return process_flow(existing_flow, rev, skb);
-    }
 
     flow.rev = rev;
     flow.allow = 1;
@@ -75,8 +72,6 @@ int process_ip4(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
     flow.bytes[rev] += skb->len;
     flow.lasttime = bpf_ktime_get_ns();
 
-    char fmt3[] = "updated map %x %x\n";
-    bpf_trace_printk(fmt3, sizeof(fmt3), ip4.sip, ip4.dip);
     bpf_map_update_elem(&conntrack4_map, &ip4, &flow, BPF_ANY);
     
     return 0;
