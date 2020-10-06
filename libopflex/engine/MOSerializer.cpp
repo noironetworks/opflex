@@ -24,7 +24,6 @@
 #include <rapidjson/prettywriter.h>
 
 #include "opflex/engine/internal/MOSerializer.h"
-#include "opflex/modb/internal/ObjectStore.h"
 #include "opflex/modb/internal/Region.h"
 
 namespace opflex {
@@ -273,9 +272,6 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
                                                          parent_uri,
                                                          *notifs);
                         }
-                    } else {
-                        LOG(DEBUG) << "No parent present for "
-                                    << uri.toString();
                     }
                 } catch (const std::out_of_range& e) {
                     // no parent class or property found

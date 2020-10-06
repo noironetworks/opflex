@@ -649,8 +649,11 @@ void Processor::objectUpdated(modb::class_id_t class_id,
 
     if (uit == uri_index.end()) {
         if (present) {
-            LOG(DEBUG) << "Tracking new " << (local ? "local" : "nonlocal")
-                       << " item " << uri << " from update";
+            const ClassInfo& ci = store->getClassInfo(class_id);
+            if (ci.getType() != ClassInfo::OBSERVABLE) {
+                LOG(DEBUG) << "Tracking new " << (local ? "local" : "nonlocal")
+                           << " item " << uri << " from update";
+            }
             uint64_t nexp = 0;
             if (local) nexp = curtime+processingDelay;
             double prrRange1 = prrTimerDuration/3;
