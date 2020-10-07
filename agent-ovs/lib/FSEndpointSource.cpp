@@ -214,20 +214,18 @@ void FSEndpointSource::updated(const fs::path& filePath) {
         optional<ptree&> qosPol =
             properties.get_child_optional(QOS_POLICY);
         if (qosPol){
-            for (const ptree::value_type &v : qosPol.get()) {
-                optional<string> qosPolicySpace =
-                    v.second.get_optional<string>(SEC_GROUP_POLICY_SPACE);
-                optional<string> qosPolicyName =
-                    v.second.get_optional<string>(SEC_GROUP_NAME);
-                if (qosPolicyName && qosPolicySpace) {
-                    newep.setQosPolicy(opflex::modb::URIBuilder()
-                            .addElement("PolicyUniverse")
-                            .addElement("PolicySpace")
-                            .addElement(qosPolicySpace.get())
-                            .addElement("QosRequirement")
-                            .addElement(qosPolicyName.get())
-                            .build());
-                }
+            optional<string> qosPolicySpace =
+                qosPol.get().get_optional<string>(SEC_GROUP_POLICY_SPACE);
+            optional<string> qosPolicyName =
+                qosPol.get().get_optional<string>(SEC_GROUP_NAME);
+            if (qosPolicyName && qosPolicySpace) {
+                newep.setQosPolicy(opflex::modb::URIBuilder()
+                        .addElement("PolicyUniverse")
+                        .addElement("PolicySpace")
+                        .addElement(qosPolicySpace.get())
+                        .addElement("QosRequirement")
+                        .addElement(qosPolicyName.get())
+                        .build());
             }
         }
 
