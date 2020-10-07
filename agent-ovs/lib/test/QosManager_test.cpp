@@ -221,9 +221,8 @@ BOOST_FIXTURE_TEST_CASE( verify_artifacts, QosFixture ) {
         << "\"attributes\":{"
         << "\"attr1\":\"value1\",\"attr2\":\"value2\""
         << "},"
-        <<"\"qos-policy\":["
+        <<"\"qos-policy\":"
         <<"{\"policy-space\":\"test\",\"name\":\"req1\"}"
-        <<"]"
         << "}" << std::endl;
     os.close();
 
