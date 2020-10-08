@@ -154,6 +154,22 @@ void GeneveOptCaptureReasonLayerVariant::reParse(ParseInfo &p) {
     p.meta[2] = p.scratchpad[3];
 }
 
+
+int GeneveOptDeniedPoliciesLayerVariant::configure() {
+    addKeyData(65535);
+    addKeyData(14);
+    return 0;
+}
+
+void GeneveOptDeniedPoliciesLayerVariant::getFormatString(boost::format &fmtStr) {
+    //Format string to print the layer goes here
+    fmtStr = boost::format("");
+}
+
+void GeneveOptDeniedPoliciesLayerVariant::reParse(ParseInfo &p) {
+    p.meta[3] = p.scratchpad[3];
+}
+
 int ARPLayer::configure() {
     addField("hwType", 16, 0, PDF::FLDTYPE_BYTES, 0, 0, -1, 0, 0);
     addField("eType", 16, 16, PDF::FLDTYPE_BYTES, 0, 0, -1, 0, 0);

@@ -9,19 +9,20 @@
  */
 #include <boost/test/unit_test.hpp>
 #include "MockPacketLogHandler.h"
+#include <opflexagent/IdGenerator.h>
 BOOST_AUTO_TEST_SUITE(PacketDecoder_test)
 
 using namespace opflexagent;
 
 /*Dummy io_service objects for constructor*/
 static boost::asio::io_service io_1,io_2;
-
 class PacketDecoderFixture {
 public:
-    PacketDecoderFixture():pktLogger(io_1,io_2) {
+    PacketDecoderFixture():pktLogger(io_1,io_2,idGen){
      pktLogger.startListener();
     };
     MockPacketLogHandler pktLogger;
+    opflexagent::IdGenerator idGen;
 };
 
 static const uint8_t arp_buf[] = {

@@ -101,6 +101,18 @@ public:
 };
 
 /**
+ * Variant implementing dropped policies
+ */
+class GeneveOptDeniedPoliciesLayerVariant: public PacketDecoderLayerVariant {
+public:
+    GeneveOptDeniedPoliciesLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "CaptureReason", 5, 3){};
+    virtual ~GeneveOptDeniedPoliciesLayerVariant() {};
+    virtual int configure();
+    virtual void getFormatString(boost::format &fmtStr);
+    virtual void reParse(ParseInfo &p);
+};
+
+/**
  * Layer implementing ARP
  */
 class ARPLayer: public PacketDecoderLayer {

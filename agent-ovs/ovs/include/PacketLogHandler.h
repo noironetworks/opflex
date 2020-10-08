@@ -16,6 +16,7 @@
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <opflexagent/logging.h>
+#include <opflexagent/IdGenerator.h>
 #include "PacketDecoderLayers.h"
 #include <mutex>
 #include <condition_variable>
@@ -157,8 +158,8 @@ public:
      * @param _clientio reference to IO service to handle client
      */
     PacketLogHandler(boost::asio::io_service &_io,
-            boost::asio::io_service &_clientio):server_io(_io),
-            client_io(_clientio), port(0), stopped(false), throttleActive(false){}
+            boost::asio::io_service &_clientio, IdGenerator& idGen_):server_io(_io),
+            client_io(_clientio), port(0), stopped(false), throttleActive(false), idGen(idGen_) {}
     /**
      * set IPv4 listening address for the socket
      * @param _addr IPv4 address
@@ -220,7 +221,8 @@ public:
      * @param length total length of packet
      */
     void parseLog(unsigned char *buf , std::size_t length);
-
+   
+  
 protected:
     ///@{
     /** Member names are self-explanatory */
@@ -241,6 +243,7 @@ protected:
     static const unsigned maxOutstandingEvents=30;
     friend UdpServer;
     friend LocalClient;
+    IdGenerator& idGen;
     ///@}
 };
 

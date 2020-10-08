@@ -16,6 +16,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/asio/socket_base.hpp>
 #include <boost/asio/ip/v6_only.hpp>
+#include <boost/optional/optional_io.hpp>
+#include "IntFlowManager.h"
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -164,6 +166,7 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
             (accTableDescMap.find(p.meta[1]) != accTableDescMap.end())) {
         dropReason = bridge + accTableDescMap[p.meta[1]].first;
     }
+
     switch(p.meta[2]) {
         case 0:
         {
@@ -181,7 +184,14 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
             break;
         }
     }
+   
+    boost::optional<std::string> ruleUri  = idGen.getStringForId((IntFlowManager::getIdNamespace(L24Classifier::CLASS_ID)), p.meta[3]);
+    
+    if(ruleUri) {
+         dropReason += " "+ruleUri.get();
+    }
 }
+
 
 void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
 /* Skip printing Geneve Header and Options*/

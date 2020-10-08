@@ -274,7 +274,7 @@ ActionBuilder& ActionBuilder::tunMetadata(mf_field_id regId, uint32_t regValue) 
     return *this;
 }
 
-ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason) {
+ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason, uint64_t cookie) {
     this->regMove(MFF_REG0, MFF_TUN_METADATA0, 0, 0, 32);
     this->regMove(MFF_REG1, MFF_TUN_METADATA1, 0, 0, 32);
     this->regMove(MFF_REG2, MFF_TUN_METADATA2, 0, 0, 32);
@@ -294,8 +294,10 @@ ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason) {
     this->tunMetadata(MFF_TUN_METADATA13, reason);
     //Force packet logging for deny/permit logging
     if( reason != CaptureReason::NO_MATCH){
+       this->tunMetadata(MFF_TUN_METADATA14, cookie);
        this->metadata(flow::meta::DROP_LOG,
        flow::meta::DROP_LOG);
+      
     }
     return *this;
 }
