@@ -105,7 +105,7 @@ public:
  */
 class GeneveOptDeniedPoliciesLayerVariant: public PacketDecoderLayerVariant {
 public:
-    GeneveOptDeniedPoliciesLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "CaptureReason", 5, 3){};
+    GeneveOptDeniedPoliciesLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "PolicyDrop", 5, 3){};
     virtual ~GeneveOptDeniedPoliciesLayerVariant() {};
     virtual int configure();
     virtual void getFormatString(boost::format &fmtStr);
