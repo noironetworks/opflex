@@ -242,7 +242,7 @@ Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie) {
     a("move", "NXM_NX_CT_ZONE[]->NXM_NX_TUN_METADATA9[0..15]");
     a("move", "NXM_NX_CT_MARK[]->NXM_NX_TUN_METADATA10[0..31]");
     a("move", "NXM_NX_CT_LABEL[]->NXM_NX_TUN_METADATA11[0..127]");
-    char buf[64], buf2[64], buf3[128];
+    char buf[64], buf2[64], buf3[64];
     std::snprintf(buf, 64,"0x%x->NXM_NX_TUN_METADATA12[960..991]",table_id);
     string s(buf);
     a("load", s );
@@ -258,7 +258,7 @@ Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie) {
     a("load", s2 );
 
     if (reason != NO_MATCH) {
-       std::snprintf(buf3, 128,"0x%lu->NXM_NX_TUN_METADATA14[960..991]", cookie);
+       std::snprintf(buf3, 64,"0x%lu->NXM_NX_TUN_METADATA14[960..991]", cookie);
        string s3(buf3);
        a("load", s3 );
        a("write_metadata","0x800/0x800");
