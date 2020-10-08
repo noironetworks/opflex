@@ -70,9 +70,11 @@ int parse_tcp(void *data, __u64 off, void *data_end, struct l4_ports *l4,
 	      struct pktmeta *meta)
 {
 	struct tcphdr *tcp = data + off;
+
 	if (tcp + 1 > data_end)
 		return -1;
 
+        meta->flags = *(__u16 *)((void *)tcp + 12);
 	l4->sport = tcp->source;
 	l4->dport = tcp->dest;
 	meta->l4_off = off;

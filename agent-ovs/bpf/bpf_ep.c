@@ -23,7 +23,9 @@
 #include <ip.h>
 
 static __always_inline
-int process_flow(struct flow_state *flow, int rev, struct __sk_buff *skb)
+int process_flow(struct pktmeta *meta,
+                 struct flow_state *flow,
+                 int rev, struct __sk_buff *skb)
 {
     /* explicity drop the packet */
     if (!flow->allow)
@@ -44,6 +46,11 @@ int process_flow(struct flow_state *flow, int rev, struct __sk_buff *skb)
     flow->bytes[rev] += skb->len;
     flow->lasttime = bpf_ktime_get_ns();
 
+    if (meta->ip_proto == IPPROTO_TCP) {
+        if (meta->flags & (TCP_FLAG_RST | TCP_FLAG_FIN))
+            flow->kill = 1;
+    }
+
     return 0;
 }
     
@@ -62,15 +69,19 @@ int process_ip4(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
     rev = ip4_tuple_normalize(&ip4);
     existing_flow = bpf_map_lookup_elem(&conntrack4_map, &ip4);
     if (existing_flow)
-        return process_flow(existing_flow, rev, skb);
+        return process_flow(&meta, existing_flow, rev, skb);
 
     flow.rev = rev;
     flow.allow = 1;
     flow.allow_reflexive = 1;
-    flow.protocol = meta.ip_proto;
     flow.packets[rev]++;
     flow.bytes[rev] += skb->len;
     flow.lasttime = bpf_ktime_get_ns();
+    flow.flags |= meta.flags;
+    if (meta.ip_proto == IPPROTO_TCP) {
+        if (meta.flags & (TCP_FLAG_RST | TCP_FLAG_FIN))
+            flow.kill = 1;
+    }
 
     bpf_map_update_elem(&conntrack4_map, &ip4, &flow, BPF_ANY);
     
@@ -92,12 +103,11 @@ int process_ip6(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
     rev = ip6_tuple_normalize(&ip6);
     existing_flow = bpf_map_lookup_elem(&conntrack6_map, &ip6);
     if (existing_flow)
-        return process_flow(existing_flow, rev, skb);
+        return process_flow(&meta, existing_flow, rev, skb);
 
     flow.rev = rev;
     flow.allow = 1;
     flow.allow_reflexive = 1;
-    flow.protocol = meta.ip_proto;
     flow.packets[rev]++;
     flow.bytes[rev] += skb->len;
     flow.lasttime = bpf_ktime_get_ns();

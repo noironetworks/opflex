@@ -25,7 +25,8 @@ struct l4_ports {
 #ifdef __cplusplus
    friend std::ostream& operator <<(std::ostream& out,
                                     const struct l4_ports& v) {
-        return out << std::hex << "{" << v.dport << ',' << v.sport << '}';
+        return out << std::hex << "{" << ntohs(v.dport)
+                               << ',' << ntohs(v.sport) << '}';
    }
 #endif
 };
@@ -38,7 +39,8 @@ struct ip4_tuple {
 #ifdef __cplusplus
         friend std::ostream& operator <<(std::ostream& out,
                                          const struct ip4_tuple& v) {
-                return out << std::hex << '{' << v.dip << ',' << v.sip << ','
+                return out << std::hex << '{' << ntohl(v.dip)
+                           << ',' << ntohl(v.sip) << ','
                            << v.l4 << ',' << (int)v.proto << '}';
         }
 #endif
@@ -76,20 +78,22 @@ struct flow_state {
           rev:1,      /* tuple was swapped on creation */
           allow:1,    /* allow both dir */
           allow_reflexive:1, /* allow reply */
+          kill:1, /* schedule this flow for faster termination */
           reserve:11;
-    __u8  protocol;
     __u64 packets[2];
     __u64 bytes[2];
     __u64 lasttime;
+    __u32 flags;
 #ifdef __cplusplus
         friend std::ostream& operator <<(std::ostream& out,
                                          const struct flow_state& v) {
                 out << '{'
                     << '{' << v.estb
-                    << v.rev << v.allow << v.allow_reflexive << '}' << ','
-                    << v.protocol << ',' << v.packets[0] << ','
-                    << v.packets[1] << ',' << v.bytes[0] << ','
-                    << v.bytes[1] << ',' << v.lasttime << '}';
+                    << v.rev << v.allow << v.allow_reflexive
+                    << v.kill << '}' << ','
+                    << v.packets[0] << ',' << v.packets[1] << ','
+                    << v.bytes[0] << ',' << v.bytes[1] << ','
+                    << v.lasttime << '}';
 
                 return out;
         }
