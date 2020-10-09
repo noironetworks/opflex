@@ -197,7 +197,7 @@ struct ParseInfo {
     /**
      * Source Bridge,TableId,CaptureReason,Policies triggered the drop,TBD
      */
-    uint32_t meta[5];
+    uint32_t meta[4];
 };
 
 /* Allowed header field types */
