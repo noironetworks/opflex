@@ -250,6 +250,12 @@ extern "C" {
             int regId, const void* regValue, const void* mask);
 
     /**
+     * Load value to tunnel metadata register for 64 bit reg
+     */
+    void act_tun_metadata_load_64(struct ofpbuf* buf,
+            int regId, const void* regValue, const void* mask);
+    
+    /**
      * malloc a dp_packet
      */
     struct dp_packet* alloc_dpp();

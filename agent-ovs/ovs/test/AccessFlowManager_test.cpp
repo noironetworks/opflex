@@ -703,7 +703,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     PolicyManager::rule_list_t rules;
     agent.getPolicyManager().getSecGroupRules(secGrp3->getURI(), rules);
-    uint32_t ruleId;
+    uint64_t ruleId;
 
      /* classifer 2  */
     ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());

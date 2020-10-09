@@ -259,7 +259,7 @@ Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie) {
 
     if (reason != NO_MATCH) {
        char buf3[64];
-       std::snprintf(buf3, 64,"0x%lu->NXM_NX_TUN_METADATA14[960..991]", cookie);
+       std::snprintf(buf3, 64,"0x%lu00000000->NXM_NX_TUN_METADATA14[928..991]", cookie);
        string s3(buf3);
        a("load", s3 );
        a("write_metadata","0x800/0x800");

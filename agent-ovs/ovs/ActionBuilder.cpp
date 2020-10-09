@@ -7,7 +7,6 @@
  */
 
 #include <algorithm>
-
 #include "ActionBuilder.h"
 #include "FlowBuilder.h"
 #include "FlowConstants.h"
@@ -274,6 +273,13 @@ ActionBuilder& ActionBuilder::tunMetadata(mf_field_id regId, uint32_t regValue) 
     return *this;
 }
 
+ActionBuilder& ActionBuilder::tunMetadata(mf_field_id regId, uint64_t regValue) {
+    uint64_t value = htonl(regValue);
+    uint64_t mask = ~((uint64_t)0);
+    act_tun_metadata_load_64(buf, regId, &value, &mask);
+    return *this;
+}
+
 ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason, uint64_t cookie) {
     this->regMove(MFF_REG0, MFF_TUN_METADATA0, 0, 0, 32);
     this->regMove(MFF_REG1, MFF_TUN_METADATA1, 0, 0, 32);
@@ -291,10 +297,10 @@ ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason, u
     this->regMove(MFF_CT_MARK, MFF_TUN_METADATA10, 0, 0, 32);
     this->regMove(MFF_CT_LABEL, MFF_TUN_METADATA11, 0, 0, 128);
     this->tunMetadata(MFF_TUN_METADATA12, table_id);
-    this->tunMetadata(MFF_TUN_METADATA13, reason);
+    this->tunMetadata(MFF_TUN_METADATA13, uint32_t(reason));
     //Force packet logging for deny/permit logging
     if( reason != CaptureReason::NO_MATCH){
-       this->tunMetadata(MFF_TUN_METADATA14, cookie);
+       this->tunMetadata(MFF_TUN_METADATA14,cookie);
        this->metadata(flow::meta::DROP_LOG,
        flow::meta::DROP_LOG);
       
