@@ -187,8 +187,8 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
    
     boost::optional<std::string> ruleUri  = idGen.getStringForId((IntFlowManager::getIdNamespace(L24Classifier::CLASS_ID)), p.meta[3]);
     
-    if(ruleUri) {
-         dropReason += " "+ruleUri.get();
+    if (ruleUri) {
+        dropReason += " "+ruleUri.get();
     }
 }
 

@@ -46,6 +46,8 @@ public:
                 "Service source policy missing/incorrect");
         TABLE_DESC(intTableDesc, 5, "BRIDGE_TABLE",
                 "MAC lookup failed");
+        TABLE_DESC(intTableDesc, 12, "POL_TABLE",
+                "Denied contract");
         TABLE_DESC(accTableDesc, 1, "GROUP_MAP_TABLE",
                 "Access port incorrect");
         TABLE_DESC(accTableDesc, 3, "SEC_GROUP_OUT_TABLE",
