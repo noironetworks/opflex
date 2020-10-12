@@ -646,9 +646,9 @@ void AdvertManager::sendTunnelEpRarp(const string& uuid) {
     string uplinkIface;
     intFlowManager.getTunnelEpManager().getUplinkIface(uplinkIface);
     sa_ll.sll_ifindex = if_nametoindex(uplinkIface.c_str());
-    if(sa_ll.sll_ifindex < 0) {
+    if(sa_ll.sll_ifindex == 0) {
         LOG(ERROR) << "Failed to get ifindex by name " << uplinkIface <<
-                ": " << sa_ll.sll_ifindex;
+                ": " << strerror(errno);
         return;
     }
     memset(sa_ll.sll_addr, 0xff, ETH_ALEN);
@@ -703,9 +703,9 @@ void AdvertManager::sendTunnelEpGarp(const string& uuid) {
     string uplinkIface;
     intFlowManager.getTunnelEpManager().getUplinkIface(uplinkIface);
     sa_ll.sll_ifindex = if_nametoindex(uplinkIface.c_str());
-    if(sa_ll.sll_ifindex < 0) {
+    if(sa_ll.sll_ifindex == 0) {
         LOG(ERROR) << "Failed to get ifindex by name " << uplinkIface <<
-                ": " << sa_ll.sll_ifindex;
+                ": " << strerror(errno);
         return;
     }
     memset(sa_ll.sll_addr, 0xff, ETH_ALEN);
