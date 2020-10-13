@@ -344,7 +344,14 @@ void IntFlowManager::endpointUpdated(const std::string& uuid) {
     if (stopping) return;
 
     if(tunnelEpManager.isTunnelEp(uuid)){
-        advertManager.scheduleTunnelEpAdv(uuid);
+        string uplinkIface;
+        tunnelEpManager.getUplinkIface(uplinkIface);
+        if(!uplinkIface.empty()) {
+            advertManager.scheduleTunnelEpAdv(uuid);
+        } else {
+            // This is true in the cloud case
+            LOG(INFO) << "Configured uplink is empty.Not starting Tunnel advertisements";
+        }
         return;
     }
     advertManager.scheduleEndpointAdv(uuid);
