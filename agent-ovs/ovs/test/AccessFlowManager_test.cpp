@@ -703,14 +703,14 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     PolicyManager::rule_list_t rules;
     agent.getPolicyManager().getSecGroupRules(secGrp3->getURI(), rules);
-    uint32_t ruleId;
+    uint64_t ruleId;
 
      /* classifer 2  */
     ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());
     if (remoteAddress) {
          ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
              .arp().reg(SEPG, setId).actions()
-             .dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
+             .dropLog(OUT_POL, POLICY_DENY, ruleId).go(EXP_DROP).done());
     }
 
     /* classifer 1  */
@@ -718,7 +718,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
         .tcp().reg(SEPG, setId).actions()
-        .dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());
+        .dropLog(IN_POL, POLICY_DENY, ruleId).go(EXP_DROP).done());
 
     }
 
@@ -727,10 +727,10 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-256).cookie(ruleId)
              .reg(SEPG, setId).isEth(0x8906).actions()
-             .dropLog(IN_POL, POLICY_DENY).go(EXP_DROP).done());
+             .dropLog(IN_POL, POLICY_DENY, ruleId).go(EXP_DROP).done());
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
              .reg(SEPG, setId).isEth(0x8906).actions()
-             .dropLog(OUT_POL, POLICY_DENY).go(EXP_DROP).done());
+             .dropLog(OUT_POL, POLICY_DENY, ruleId).go(EXP_DROP).done());
 
     }
     return 512;

@@ -2534,21 +2534,21 @@ void BaseIntFlowManagerFixture::initExpCon4() {
     PolicyManager::uri_set_t ps, cs;
 
     const opflex::modb::URI& ruleURI_1 = classifier1->getURI();
-    uint32_t clsr1_cookie = intFlowManager.getId(
+    uint64_t clsr1_cookie = intFlowManager.getId(
                          classifier1->getClassId(), ruleURI_1);
     const opflex::modb::URI& ruleURI_2 = classifier2->getURI();
-    uint32_t clsr2_cookie = intFlowManager.getId(
+    uint64_t clsr2_cookie = intFlowManager.getId(
                          classifier2->getClassId(), ruleURI_2);
     ADDF(Bldr(SEND_FLOW_REM).table(POL)
                  .priority(prio)
                  .cookie(clsr1_cookie).tcp()
                  .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
-                 .actions().dropLog(POL, POLICY_DENY).go(EXP_DROPLOG).done());
+                 .actions().dropLog(POL, POLICY_DENY, clsr1_cookie).go(EXP_DROPLOG).done());
     ADDF(Bldr(SEND_FLOW_REM).table(POL)
                  .priority(prio-128)
                  .cookie(clsr2_cookie).arp()
                  .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
-                 .actions().dropLog(POL, POLICY_DENY).go(EXP_DROPLOG).done());
+                 .actions().dropLog(POL, POLICY_DENY, clsr2_cookie).go(EXP_DROPLOG).done());
 
 }
 // Initialize flows related to IP address mapping/NAT

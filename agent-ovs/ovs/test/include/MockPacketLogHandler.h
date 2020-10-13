@@ -26,7 +26,7 @@ public:
      * Io_service arguments are not used in tests
      */
     MockPacketLogHandler(boost::asio::io_service &io_1,
-            boost::asio::io_service &io_2): PacketLogHandler(io_1, io_2) {
+            boost::asio::io_service &io_2, IdGenerator& idGen): PacketLogHandler(io_1, io_2, idGen) {
     }
     /**
      * Start packet logging.
@@ -46,6 +46,8 @@ public:
                 "Service source policy missing/incorrect");
         TABLE_DESC(intTableDesc, 5, "BRIDGE_TABLE",
                 "MAC lookup failed");
+        TABLE_DESC(intTableDesc, 12, "POL_TABLE",
+                "Denied contract");
         TABLE_DESC(accTableDesc, 1, "GROUP_MAP_TABLE",
                 "Access port incorrect");
         TABLE_DESC(accTableDesc, 3, "SEC_GROUP_OUT_TABLE",

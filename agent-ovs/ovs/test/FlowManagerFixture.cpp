@@ -229,7 +229,7 @@ string Bldr::strpad(int i) {
     return buf;
 }
 
-Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason) {
+Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie) {
     a("move", "NXM_NX_REG0[]->NXM_NX_TUN_METADATA0[0..31]");
     a("move", "NXM_NX_REG1[]->NXM_NX_TUN_METADATA1[0..31]");
     a("move", "NXM_NX_REG2[]->NXM_NX_TUN_METADATA2[0..31]");
@@ -242,18 +242,26 @@ Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason) {
     a("move", "NXM_NX_CT_ZONE[]->NXM_NX_TUN_METADATA9[0..15]");
     a("move", "NXM_NX_CT_MARK[]->NXM_NX_TUN_METADATA10[0..31]");
     a("move", "NXM_NX_CT_LABEL[]->NXM_NX_TUN_METADATA11[0..127]");
-    char buf[64];
+    char buf[64], buf2[64];
     std::snprintf(buf, 64,"0x%x->NXM_NX_TUN_METADATA12[960..991]",table_id);
     string s(buf);
     a("load", s );
+
     if (reason != NO_MATCH) {
-        std::snprintf(buf, 64,"0x%x->NXM_NX_TUN_METADATA13[960..991]", reason);
+        std::snprintf(buf2, 64,"0x%x->NXM_NX_TUN_METADATA13[960..991]",reason);
     }
+
     else {
-       std::snprintf(buf, 64,"0->NXM_NX_TUN_METADATA13[960..991]");
+       std::snprintf(buf2, 64,"0->NXM_NX_TUN_METADATA13[960..991]");
     }
-    a("load", buf );
+    string s2(buf2);
+    a("load", s2 );
+
     if (reason != NO_MATCH) {
+       char buf3[64];
+       std::snprintf(buf3, 64,"0x%lu00000000->NXM_NX_TUN_METADATA14[928..991]", cookie);
+       string s3(buf3);
+       a("load", s3 );
        a("write_metadata","0x800/0x800");
     }
     return *this;

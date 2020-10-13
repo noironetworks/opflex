@@ -80,7 +80,7 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       secGroupStatsEnabled(true), secGroupStatsInterval(0),
       tableDropStatsEnabled(true), tableDropStatsInterval(0),
       spanRenderer(agent_), netflowRenderer(agent_), qosRenderer(agent_), started(false),
-      dropLogRemotePort(6081), dropLogLocalPort(50000), pktLogger(pktLoggerIO, exporterIO) {
+      dropLogRemotePort(6081), dropLogLocalPort(50000), pktLogger(pktLoggerIO, exporterIO, idGen) {
 
 }
 

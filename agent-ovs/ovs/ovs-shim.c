@@ -442,3 +442,12 @@ void act_tun_metadata_load(struct ofpbuf* buf,
     memcpy(sf->value, regValue, 4);
     memcpy(ofpact_set_field_mask(sf),mask,4);
 }
+
+void act_tun_metadata_load_64(struct ofpbuf* buf,
+        int regId, const void* regValue, const void* mask) {
+    struct ofpact_set_field *sf =
+        ofpact_put_reg_load(buf, mf_from_id(regId), NULL, NULL);
+    memcpy(sf->value, regValue, 8);
+    memcpy(ofpact_set_field_mask(sf),mask,8);
+}
+
