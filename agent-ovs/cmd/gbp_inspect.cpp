@@ -150,6 +150,9 @@ int main(int argc, char** argv) {
     } catch (const std::bad_cast& e) {
         std::cerr << e.what() << std::endl;
         return 2;
+    } catch (...) {
+        std::cerr << "Unexpected error" << std::endl;
+        return 3;
     }
 
     if (truncate < 0) truncate = 0;
