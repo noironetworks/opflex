@@ -1056,7 +1056,6 @@ void resolveRemoteSubnets(OFFramework& framework,
 
 void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
      using modelgbp::gbpe::L24Classifier;
-     std::pair<vector<shared_ptr<L24Classifier>>::iterator, vector<shared_ptr<L24Classifier>>::iterator> range;
      vector<shared_ptr<L24Classifier>>::iterator begin = classifiers.begin();
      vector<shared_ptr<L24Classifier>>::iterator end = classifiers.begin();
      PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
@@ -1073,7 +1072,7 @@ void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& cla
                 }
                 end = it+1;
                 if (*end == *(--classifiers.end())){
-                   range = std::make_pair(begin, end);
+                   auto range = std::make_pair(begin, end);
                    stable_sort(range.first, range.second+1, classifierPrioComp);
                    end = classifiers.begin();
                    set = 0;
@@ -1081,7 +1080,7 @@ void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& cla
 
              } else  {
                    if (end != classifiers.begin()){
-                      range = std::make_pair(begin, end);
+                      auto range = std::make_pair(begin, end);
                       stable_sort(range.first, range.second+1, classifierPrioComp);
                       end = classifiers.begin();
                       set = 0;
