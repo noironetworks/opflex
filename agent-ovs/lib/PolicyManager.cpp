@@ -1054,6 +1054,42 @@ void resolveRemoteSubnets(OFFramework& framework,
     }
 }
 
+void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
+     using modelgbp::gbpe::L24Classifier;
+     PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
+     vector<shared_ptr<L24Classifier>>::iterator begin = classifiers.begin();
+     vector<shared_ptr<L24Classifier>>::iterator end = classifiers.begin();
+     std::pair<vector<shared_ptr<L24Classifier>>::iterator, vector<shared_ptr<L24Classifier>>::iterator> range;
+     int set=0;
+
+     for (auto it = classifiers.begin(); it != classifiers.end(); it ++){
+         const shared_ptr<L24Classifier>& currClsr = *it;
+         if (*it != *(--classifiers.end())){
+             const shared_ptr<L24Classifier>& nextClsr = *(it+1) ;
+             if (currClsr->getOrder(0) == nextClsr->getOrder(0)) {
+                if (set == 0){
+                   begin = it;
+                   set = 1;
+                }
+                end = it+1;
+                if (*end == *(--classifiers.end())){
+                   range = std::make_pair(begin, end);
+                   stable_sort(range.first, range.second+1, classifierPrioComp);
+                   set = 0;
+                }
+
+             } else  {
+                   if (end != classifiers.begin()){
+                      range = std::make_pair(begin, end);
+                      stable_sort(range.first, range.second+1, classifierPrioComp);
+                      set = 0;
+                   }
+               }
+         }
+
+      }
+}
+
 template <typename Parent, typename Subject, typename Rule>
 static bool updatePolicyRules(OFFramework& framework,
                               const URI& parentURI, bool& notFound,
@@ -1167,6 +1203,7 @@ static bool updatePolicyRules(OFFramework& framework,
                 }
             }
 
+            sortOrder(classifiers);
             uint16_t clsPrio = 0;
             for (const shared_ptr<L24Classifier>& c : classifiers) {
                 newRules.push_back(std::

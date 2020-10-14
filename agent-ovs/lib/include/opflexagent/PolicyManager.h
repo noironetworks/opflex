@@ -1396,6 +1396,42 @@ struct OrderComparator {
     }
 };
 
+/**
+ * Comparator for sorting classifier objects based on the priorities 
+ * assigned to the members of classifiers
+ */
+
+template<typename T>
+struct PriorityComparator {
+
+    bool operator()(const T& lhs, const T& rhs) {
+        if (lhs->isTcpFlagsSet() > rhs->isTcpFlagsSet()) { return true; }
+        if (lhs->isTcpFlagsSet() < rhs->isTcpFlagsSet()) { return false; }
+
+        if ((lhs->isDFromPortSet() && lhs->isSFromPortSet()) > (rhs->isDFromPortSet() && rhs->isSFromPortSet() )) { return true; }
+        if ((lhs->isDFromPortSet() && lhs->isSFromPortSet()) < (rhs->isDFromPortSet() && rhs->isSFromPortSet())) { return false; }
+
+        if (lhs->isDFromPortSet() > rhs->isDFromPortSet()) { return true; }
+        if (lhs->isDFromPortSet() < rhs->isDFromPortSet()) { return false; }
+
+        if (lhs->isSFromPortSet() > rhs->isSFromPortSet()) { return true; }
+        if (lhs->isSFromPortSet() < rhs->isSFromPortSet()) { return false; }
+
+        if (lhs->isProtSet() > rhs->isProtSet()) { return true; }
+        if (lhs->isProtSet() < rhs->isProtSet()) { return false; }
+
+        if (lhs->isFragmentFlagsSet() < rhs->isFragmentFlagsSet()) { return true; }
+        if (lhs->isFragmentFlagsSet() > rhs->isFragmentFlagsSet()) { return false; }
+
+        int x = lhs->getURI().toString().compare(rhs->getURI().toString());
+
+        if (x > 0 ) { return true; }
+        if (x < 0 ) { return false; }
+
+    return false;
+}
+};
+
 } /* namespace opflexagent */
 
 #endif /* OPFLEXAGENT_POLICYMANAGER_H */

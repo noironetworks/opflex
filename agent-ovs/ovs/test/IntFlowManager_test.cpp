@@ -173,6 +173,17 @@ public:
     /** Initialize contract 4 flows */
     void initExpCon4();
 
+    void initExpCon5();
+
+    void initExpCon6();
+
+    void initExpCon7();
+   
+    void initExpCon8();
+   
+    void initExpCon9();
+  
+    void initExpCon10();
     /** Initialize subnet-scoped flow entries */
     void initSubnets(PolicyManager::subnet_vector_t& sns,
                      uint32_t bdId = 1, uint32_t rdId = 1);
@@ -917,7 +928,135 @@ BOOST_FIXTURE_TEST_CASE(conn_deny, VxlanIntFlowManagerFixture) {
     WAIT_FOR_TABLES("con4", 500);
 }
 
+BOOST_FIXTURE_TEST_CASE(clsrorder_1, VxlanIntFlowManagerFixture) {
+    setConnected();
+    createPolicyObjects();
 
+    PolicyManager::uri_set_t egs;
+    WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
+    policyMgr.getContractProviders(con5->getURI(), egs));
+    egs.clear();
+    WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
+    policyMgr.getContractConsumers(con5->getURI(), egs));
+    PolicyManager::rule_list_t rules;
+    WAIT_FOR_DO(rules.size() == 4, 500, rules.clear();
+    policyMgr.getContractRules(con5->getURI(), rules));
+
+    /* add con5 */
+    intFlowManager.contractUpdated(con5->getURI());
+    initExpStatic();
+    initExpCon5();
+    WAIT_FOR_TABLES("con5", 500);
+
+}
+
+BOOST_FIXTURE_TEST_CASE(clsrorder_2, VxlanIntFlowManagerFixture) {
+    setConnected();
+    createPolicyObjects();
+
+    PolicyManager::uri_set_t egs;
+    WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
+    policyMgr.getContractProviders(con6->getURI(), egs));
+    egs.clear();
+    WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
+    policyMgr.getContractConsumers(con6->getURI(), egs));
+    PolicyManager::rule_list_t rules;
+    WAIT_FOR_DO(rules.size() == 6, 500, rules.clear();
+    policyMgr.getContractRules(con6->getURI(), rules));
+
+    /* add con6 */
+    intFlowManager.contractUpdated(con6->getURI());
+    initExpStatic();
+    initExpCon6();
+    WAIT_FOR_TABLES("con6", 500);
+}
+
+BOOST_FIXTURE_TEST_CASE(clsrorder_3, VxlanIntFlowManagerFixture) {
+    setConnected();
+   createPolicyObjects();
+
+    PolicyManager::uri_set_t egs;
+    WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
+    policyMgr.getContractProviders(con7->getURI(), egs));
+    egs.clear();
+    WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
+    policyMgr.getContractConsumers(con7->getURI(), egs));
+    PolicyManager::rule_list_t rules;
+    WAIT_FOR_DO(rules.size() == 3, 500, rules.clear();
+    policyMgr.getContractRules(con7->getURI(), rules));
+
+    /* add con7 */
+    intFlowManager.contractUpdated(con7->getURI());
+    initExpStatic();
+    initExpCon7();
+    WAIT_FOR_TABLES("con7", 500);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(clsrorder_4, VxlanIntFlowManagerFixture) {
+    setConnected();
+    createPolicyObjects();
+
+    PolicyManager::uri_set_t egs;
+    WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
+    policyMgr.getContractProviders(con8->getURI(), egs));
+    egs.clear();
+    WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
+    policyMgr.getContractConsumers(con8->getURI(), egs));
+    PolicyManager::rule_list_t rules;
+    WAIT_FOR_DO(rules.size() == 4, 500, rules.clear();
+    policyMgr.getContractRules(con8->getURI(), rules));
+
+     /* add con8 */
+    intFlowManager.contractUpdated(con8->getURI());
+    initExpStatic();
+    initExpCon8();
+    WAIT_FOR_TABLES("con8", 500);
+}
+
+BOOST_FIXTURE_TEST_CASE(clsrorder_5, VxlanIntFlowManagerFixture) {
+    setConnected();
+    createPolicyObjects();
+
+    PolicyManager::uri_set_t egs;
+    WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
+    policyMgr.getContractProviders(con9->getURI(), egs));
+    egs.clear();
+    WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
+    policyMgr.getContractConsumers(con9->getURI(), egs));
+    PolicyManager::rule_list_t rules;
+    WAIT_FOR_DO(rules.size() == 6, 500, rules.clear();
+    policyMgr.getContractRules(con9->getURI(), rules));
+
+    /* add con9 */
+    intFlowManager.contractUpdated(con9->getURI());
+    initExpStatic();
+    initExpCon9();
+    WAIT_FOR_TABLES("con9", 500);
+
+}
+
+BOOST_FIXTURE_TEST_CASE(clsrorder_6, VxlanIntFlowManagerFixture) {
+    setConnected();
+    createPolicyObjects();
+
+    PolicyManager::uri_set_t egs;
+    WAIT_FOR_DO(egs.size() == 1, 1000, egs.clear();
+    policyMgr.getContractProviders(con10->getURI(), egs));
+    egs.clear();
+    WAIT_FOR_DO(egs.size() == 1, 500, egs.clear();
+    policyMgr.getContractConsumers(con10->getURI(), egs));
+    PolicyManager::rule_list_t rules;
+    WAIT_FOR_DO(rules.size() == 3, 500, rules.clear();
+    policyMgr.getContractRules(con10->getURI(), rules));
+
+    /* add con10 */
+    intFlowManager.contractUpdated(con10->getURI());
+    initExpStatic();
+    initExpCon10();
+    WAIT_FOR_TABLES("con10", 500);
+
+}
 void BaseIntFlowManagerFixture::connectTest() {
     exec.ignoredFlowMods.insert(FlowEdit::ADD);
     exec.Expect(FlowEdit::DEL, fe_connect_1);
@@ -2549,6 +2688,267 @@ void BaseIntFlowManagerFixture::initExpCon4() {
                  .cookie(clsr2_cookie).arp()
                  .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
                  .actions().dropLog(POL, POLICY_DENY, clsr2_cookie).go(EXP_DROPLOG).done());
+
+}
+
+void BaseIntFlowManagerFixture::initExpCon5() {
+    uint32_t epg0_vnid = policyMgr.getVnidForGroup(epg0->getURI()).get();
+    uint32_t epg1_vnid = policyMgr.getVnidForGroup(epg1->getURI()).get();
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::uri_set_t ps, cs;
+
+    const opflex::modb::URI& ruleURI_11 = classifier11->getURI();
+    uint32_t clsr11_cookie = intFlowManager.getId(
+                             classifier11->getClassId(), ruleURI_11);
+    const opflex::modb::URI& ruleURI_12 = classifier12->getURI();
+    uint32_t clsr12_cookie = intFlowManager.getId(
+                             classifier12->getClassId(), ruleURI_12);
+    const opflex::modb::URI& ruleURI_13 = classifier13->getURI();
+    uint32_t clsr13_cookie = intFlowManager.getId(
+                             classifier13->getClassId(), ruleURI_13);
+    const opflex::modb::URI& ruleURI_14 = classifier14->getURI();
+    uint32_t clsr14_cookie = intFlowManager.getId(
+                             classifier14->getClassId(), ruleURI_14);
+
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio)
+                 .cookie(clsr11_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY,clsr11_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-1)
+                 .cookie(clsr12_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY,clsr12_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-2)
+                 .cookie(clsr13_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY,clsr13_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-3)
+                 .cookie(clsr14_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr14_cookie).go(EXP_DROPLOG).done());
+
+}
+
+void BaseIntFlowManagerFixture::initExpCon6() {
+    uint32_t epg0_vnid = policyMgr.getVnidForGroup(epg0->getURI()).get();
+    uint32_t epg1_vnid = policyMgr.getVnidForGroup(epg1->getURI()).get();
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::uri_set_t ps, cs;
+
+    const opflex::modb::URI& ruleURI_11 = classifier11->getURI();
+    uint32_t clsr11_cookie = intFlowManager.getId(
+                             classifier11->getClassId(), ruleURI_11);
+    const opflex::modb::URI& ruleURI_12 = classifier12->getURI();
+    uint32_t clsr12_cookie = intFlowManager.getId(
+                             classifier12->getClassId(), ruleURI_12);
+    const opflex::modb::URI& ruleURI_13 = classifier13->getURI();
+    uint32_t clsr13_cookie = intFlowManager.getId(
+                             classifier13->getClassId(), ruleURI_13);
+    const opflex::modb::URI& ruleURI_14 = classifier14->getURI();
+    uint32_t clsr14_cookie = intFlowManager.getId(
+                             classifier14->getClassId(), ruleURI_14);
+    const opflex::modb::URI& ruleURI_15 = classifier15->getURI();
+    uint32_t clsr15_cookie = intFlowManager.getId(
+                             classifier15->getClassId(), ruleURI_15);
+    const opflex::modb::URI& ruleURI_16 = classifier16->getURI();
+    uint32_t clsr16_cookie = intFlowManager.getId(
+                             classifier16->getClassId(), ruleURI_16);
+
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio)
+                 .cookie(clsr11_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr11_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-1)
+                 .cookie(clsr12_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr12_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-2)
+                 .cookie(clsr13_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr13_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-3)
+                 .cookie(clsr14_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr14_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-4)
+                 .cookie(clsr16_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr16_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-5)
+                 .cookie(clsr15_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr15_cookie).go(EXP_DROPLOG).done());
+
+}
+
+void BaseIntFlowManagerFixture::initExpCon7() {
+    uint32_t epg0_vnid = policyMgr.getVnidForGroup(epg0->getURI()).get();
+    uint32_t epg1_vnid = policyMgr.getVnidForGroup(epg1->getURI()).get();
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::uri_set_t ps, cs;
+
+    const opflex::modb::URI& ruleURI_11 = classifier11->getURI();
+    uint32_t clsr11_cookie = intFlowManager.getId(
+                             classifier11->getClassId(), ruleURI_11);
+    const opflex::modb::URI& ruleURI_15 = classifier15->getURI();
+    uint32_t clsr15_cookie = intFlowManager.getId(
+                             classifier15->getClassId(), ruleURI_15);
+    const opflex::modb::URI& ruleURI_16 = classifier16->getURI();
+    uint32_t clsr16_cookie = intFlowManager.getId(
+                             classifier16->getClassId(), ruleURI_16); 
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio)
+                 .cookie(clsr11_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr11_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-1)
+                 .cookie(clsr16_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr16_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-2)
+                 .cookie(clsr15_cookie).tcp()
+                 .reg(SEPG, epg0_vnid).reg(DEPG, epg1_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr15_cookie).go(EXP_DROPLOG).done());
+}
+
+void BaseIntFlowManagerFixture::initExpCon8() {
+    uint32_t epg0_vnid = policyMgr.getVnidForGroup(epg2->getURI()).get();
+    uint32_t epg1_vnid = policyMgr.getVnidForGroup(epg3->getURI()).get();
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::uri_set_t ps, cs;
+
+    const opflex::modb::URI& ruleURI_11 = classifier11->getURI();
+    uint32_t clsr11_cookie = intFlowManager.getId(
+                             classifier11->getClassId(), ruleURI_11);
+    const opflex::modb::URI& ruleURI_15 = classifier15->getURI();
+    uint32_t clsr15_cookie = intFlowManager.getId(
+                             classifier15->getClassId(), ruleURI_15);
+    const opflex::modb::URI& ruleURI_16 = classifier16->getURI();
+    uint32_t clsr16_cookie = intFlowManager.getId(
+                             classifier16->getClassId(), ruleURI_16);
+    const opflex::modb::URI& ruleURI_18 = classifier18->getURI();
+    uint32_t clsr18_cookie = intFlowManager.getId(
+                             classifier18->getClassId(), ruleURI_18);
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio)
+                 .cookie(clsr11_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr11_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-1)
+                 .cookie(clsr16_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr16_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-2)
+                 .cookie(clsr15_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr15_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-3)
+                 .cookie(clsr18_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr18_cookie).go(EXP_DROPLOG).done());
+}
+
+void BaseIntFlowManagerFixture::initExpCon9() {
+    uint32_t epg0_vnid = policyMgr.getVnidForGroup(epg2->getURI()).get();
+    uint32_t epg1_vnid = policyMgr.getVnidForGroup(epg3->getURI()).get();
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::uri_set_t ps, cs;
+
+    const opflex::modb::URI& ruleURI_11 = classifier11->getURI();
+    uint32_t clsr11_cookie = intFlowManager.getId(
+                             classifier11->getClassId(), ruleURI_11);
+    const opflex::modb::URI& ruleURI_15 = classifier15->getURI();
+    uint32_t clsr15_cookie = intFlowManager.getId(
+                             classifier15->getClassId(), ruleURI_15);
+    const opflex::modb::URI& ruleURI_16 = classifier16->getURI();
+    uint32_t clsr16_cookie = intFlowManager.getId(
+                             classifier16->getClassId(), ruleURI_16);
+    const opflex::modb::URI& ruleURI_18 = classifier18->getURI();
+    uint32_t clsr18_cookie = intFlowManager.getId(
+                             classifier18->getClassId(), ruleURI_18);
+    const opflex::modb::URI& ruleURI_19 = classifier19->getURI();
+    uint32_t clsr19_cookie = intFlowManager.getId(
+                             classifier19->getClassId(), ruleURI_19);
+    const opflex::modb::URI& ruleURI_20 = classifier20->getURI();
+    uint32_t clsr20_cookie = intFlowManager.getId(
+                             classifier20->getClassId(), ruleURI_20);
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio)
+                 .cookie(clsr11_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr11_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-1)
+                 .cookie(clsr16_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr16_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-2)
+                 .cookie(clsr15_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr15_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-3)
+                 .cookie(clsr18_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr18_cookie).go(EXP_DROPLOG).done());
+  ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-4)
+                 .cookie(clsr20_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr20_cookie).go(EXP_DROPLOG).done());
+   ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-5)
+                 .cookie(clsr19_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr19_cookie).go(EXP_DROPLOG).done());
+}
+
+void BaseIntFlowManagerFixture::initExpCon10() {
+    uint32_t epg0_vnid = policyMgr.getVnidForGroup(epg2->getURI()).get();
+    uint32_t epg1_vnid = policyMgr.getVnidForGroup(epg3->getURI()).get();
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    PolicyManager::uri_set_t ps, cs;
+
+    const opflex::modb::URI& ruleURI_11 = classifier11->getURI();
+    uint32_t clsr11_cookie = intFlowManager.getId(
+                             classifier11->getClassId(), ruleURI_11);
+    const opflex::modb::URI& ruleURI_15 = classifier15->getURI();
+    uint32_t clsr15_cookie = intFlowManager.getId(
+                             classifier15->getClassId(), ruleURI_15);
+    const opflex::modb::URI& ruleURI_18 = classifier18->getURI();
+    uint32_t clsr18_cookie = intFlowManager.getId(
+                             classifier18->getClassId(), ruleURI_18);
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio)
+                 .cookie(clsr11_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr11_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-1)
+                 .cookie(clsr15_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr15_cookie).go(EXP_DROPLOG).done());
+    ADDF(Bldr(SEND_FLOW_REM).table(POL)
+                 .priority(prio-2)
+                 .cookie(clsr18_cookie).tcp()
+                 .reg(SEPG, epg1_vnid).reg(DEPG, epg0_vnid)
+                 .actions().dropLog(POL, POLICY_DENY, clsr18_cookie).go(EXP_DROPLOG).done());
 
 }
 // Initialize flows related to IP address mapping/NAT
