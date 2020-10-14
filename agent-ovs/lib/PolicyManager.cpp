@@ -1054,7 +1054,7 @@ void resolveRemoteSubnets(OFFramework& framework,
     }
 }
 
-void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
+void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
      using modelgbp::gbpe::L24Classifier;
      PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
      vector<shared_ptr<L24Classifier>>::iterator begin = classifiers.begin();
@@ -1076,6 +1076,7 @@ void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
                    range = std::make_pair(begin, end);
                    stable_sort(range.first, range.second+1, classifierPrioComp);
                    set = 0;
+                   end = classifiers.begin();
                 }
 
              } else  {
@@ -1083,6 +1084,7 @@ void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
                       range = std::make_pair(begin, end);
                       stable_sort(range.first, range.second+1, classifierPrioComp);
                       set = 0;
+                      end = classifiers.begin();
                    }
                }
          }
@@ -1203,7 +1205,7 @@ static bool updatePolicyRules(OFFramework& framework,
                 }
             }
 
-            sortOrder(classifiers);
+            sortOrderOfSameRange(classifiers);
             uint16_t clsPrio = 0;
             for (const shared_ptr<L24Classifier>& c : classifiers) {
                 newRules.push_back(std::
