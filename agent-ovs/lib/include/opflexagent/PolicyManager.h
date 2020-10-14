@@ -16,8 +16,6 @@
 #include <opflexagent/PolicyListener.h>
 #include <opflexagent/Network.h>
 #include <opflexagent/TaskQueue.h>
-#include <opflexagent/logging.h>
-#include <boost/algorithm/string/config.hpp>
 
 #include <boost/noncopyable.hpp>
 #include <boost/asio/io_service.hpp>
@@ -1407,9 +1405,6 @@ template<typename T>
 struct PriorityComparator {
 
     bool operator()(const T& lhs, const T& rhs) {
-        LOG(INFO) << "inside stable sort";
-        LOG(INFO) << lhs;
-        LOG(INFO) << rhs;
         if (lhs->isTcpFlagsSet() > rhs->isTcpFlagsSet()) { return true; }
         if (lhs->isTcpFlagsSet() < rhs->isTcpFlagsSet()) { return false; }
 
