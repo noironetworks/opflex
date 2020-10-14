@@ -180,11 +180,18 @@ static FlowEntryPtr flowEmptySecGroup(uint32_t emptySecGrpSetId) {
     return noSecGrp.build();
 }
 
-static void flowBypassDhcpRequest(FlowEntryList& el, bool v4, uint32_t inport,
+static uint64_t getPushVlanMeta(std::shared_ptr<const Endpoint>& ep) {
+    return ep->isAccessAllowUntagged() ?
+        flow::meta::access_out::UNTAGGED_AND_PUSH_VLAN :
+        flow::meta::access_out::PUSH_VLAN;
+}
+
+static void flowBypassDhcpRequest(FlowEntryList& el, bool v4,
+                                  bool skip_pop_vlan, uint32_t inport,
                                   uint32_t outport,
                                   std::shared_ptr<const Endpoint>& ep ) {
     FlowBuilder fb;
-    if (ep->getAccessIfaceVlan()) {
+    if (ep->getAccessIfaceVlan() && !skip_pop_vlan) {
         fb.priority(201).inPort(inport);
     } else {
         fb.priority(200).inPort(inport);
@@ -193,11 +200,14 @@ static void flowBypassDhcpRequest(FlowEntryList& el, bool v4, uint32_t inport,
     flowutils::match_dhcp_req(fb, v4);
     fb.action().reg(MFF_REG7, outport);
 
-    if (ep->getAccessIfaceVlan()) {
+    if (ep->getAccessIfaceVlan() && !skip_pop_vlan) {
         fb.vlan(ep->getAccessIfaceVlan().get());
         fb.action().metadata(flow::meta::access_out::POP_VLAN,
                              flow::meta::out::MASK);
     }
+
+    if (skip_pop_vlan)
+        fb.tci(0, 0x1fff);
 
     fb.action().go(AccessFlowManager::OUT_TABLE_ID);
     fb.build(el);
@@ -205,10 +215,11 @@ static void flowBypassDhcpRequest(FlowEntryList& el, bool v4, uint32_t inport,
 
 static void flowBypassFloatingIP(FlowEntryList& el, uint32_t inport,
                                  uint32_t outport, bool in,
+                                 bool skip_pop_vlan,
                                  address& floatingIp,
                                  std::shared_ptr<const Endpoint>& ep ) {
     FlowBuilder fb;
-    if (ep->getAccessIfaceVlan()) {
+    if (ep->getAccessIfaceVlan() && !skip_pop_vlan) {
         fb.priority(201).inPort(inport);
     } else {
         fb.priority(200).inPort(inport);
@@ -227,12 +238,11 @@ static void flowBypassFloatingIP(FlowEntryList& el, uint32_t inport,
     }
 
     fb.action().reg(MFF_REG7, outport);
-    if (ep->getAccessIfaceVlan()) {
+    if (ep->getAccessIfaceVlan() && !skip_pop_vlan) {
         if (in) {
             fb.action()
                 .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
-                .metadata(flow::meta::access_out::PUSH_VLAN,
-                          flow::meta::out::MASK);
+                .metadata(getPushVlanMeta(ep), flow::meta::out::MASK);
         } else {
             fb.vlan(ep->getAccessIfaceVlan().get());
             fb.action()
@@ -240,6 +250,9 @@ static void flowBypassFloatingIP(FlowEntryList& el, uint32_t inport,
                           flow::meta::out::MASK);
         }
     }
+
+    if (skip_pop_vlan && !in)
+        fb.tci(0, 0x1fff);
 
     fb.action().go(AccessFlowManager::OUT_TABLE_ID);
     fb.build(el);
@@ -262,6 +275,22 @@ void AccessFlowManager::createStaticFlows() {
             .metadata(flow::meta::access_out::PUSH_VLAN,
                       flow::meta::out::MASK)
             .action()
+            .pushVlan().regMove(MFF_REG5, MFF_VLAN_VID).outputReg(MFF_REG7)
+            .parent().build(outFlows);
+        /*
+         * The packet is replicated for a specical case of
+         * Openshift bootstrap that does not use vlan 4094
+         * This is ugly but they do not have iproute2/tc
+         * installed to do this in a cleaner way
+         * This duplication only happens when endpoint
+         * file has "access-interface-vlan" attr
+         */
+        FlowBuilder()
+            .priority(1)
+            .metadata(flow::meta::access_out::UNTAGGED_AND_PUSH_VLAN,
+                      flow::meta::out::MASK)
+            .action()
+            .outputReg(MFF_REG7)
             .pushVlan().regMove(MFF_REG5, MFF_VLAN_VID).outputReg(MFF_REG7)
             .parent().build(outFlows);
         outFlows.push_back(flowutils::default_out_flow());
@@ -386,16 +415,47 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
         }
 
         /*
+         * We allow without tags to handle Openshift bootstrap
+         */
+        if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
+            FlowBuilder inSkipVlan;
+
+            inSkipVlan.priority(99).inPort(accessPort)
+                      .tci(0, 0x1fff);
+            if (zoneId != static_cast<uint16_t>(-1))
+                inSkipVlan.action()
+                    .reg(MFF_REG6, zoneId);
+
+            inSkipVlan.action()
+                .reg(MFF_REG0, secGrpSetId)
+                .reg(MFF_REG7, uplinkPort)
+                .go(SEC_GROUP_OUT_TABLE_ID);
+            inSkipVlan.build(el);
+        }
+
+        /*
          * Allow DHCP request to bypass the access bridge policy when
          * virtual DHCP is enabled.
+         * We allow both with / without tags to handle Openshift
+         * bootstrap
          */
         optional<Endpoint::DHCPv4Config> v4c = ep->getDHCPv4Config();
-        if (v4c)
-            flowBypassDhcpRequest(el, true, accessPort, uplinkPort, ep);
+        if (v4c) {
+            flowBypassDhcpRequest(el, true, false, accessPort,
+                                  uplinkPort, ep);
+            if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan())
+                flowBypassDhcpRequest(el, true, true, accessPort,
+                                      uplinkPort, ep);
+        }
 
         optional<Endpoint::DHCPv6Config> v6c = ep->getDHCPv6Config();
-        if(v6c)
-            flowBypassDhcpRequest(el, false, accessPort, uplinkPort, ep);
+        if(v6c) {
+            flowBypassDhcpRequest(el, false, false, accessPort,
+                                  uplinkPort, ep);
+            if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan())
+                flowBypassDhcpRequest(el, false, true, accessPort,
+                                      uplinkPort, ep);
+        }
 
         {
             FlowBuilder out;
@@ -410,8 +470,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             if (ep->getAccessIfaceVlan()) {
                 out.action()
                     .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
-                    .metadata(flow::meta::access_out::PUSH_VLAN,
-                              flow::meta::out::MASK);
+                    .metadata(getPushVlanMeta(ep), flow::meta::out::MASK);
             }
             out.action().go(SEC_GROUP_IN_TABLE_ID);
             out.build(el);
@@ -453,9 +512,19 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
                 if (floatingIp.is_unspecified()) continue;
             }
             flowBypassFloatingIP(el, accessPort, uplinkPort, false,
-                                 floatingIp, ep);
+                                 false, floatingIp, ep);
             flowBypassFloatingIP(el, uplinkPort, accessPort, true,
-                                 floatingIp, ep);
+                                 false, floatingIp, ep);
+            /*
+             * We allow both with / without tags to handle Openshift
+             * bootstrap
+             */
+            if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
+                flowBypassFloatingIP(el, accessPort, uplinkPort, false,
+                                     true, floatingIp, ep);
+                flowBypassFloatingIP(el, uplinkPort, accessPort, true,
+                                     true, floatingIp, ep);
+            }
         }
     }
     switchManager.writeFlow(uuid, GROUP_MAP_TABLE_ID, el);
