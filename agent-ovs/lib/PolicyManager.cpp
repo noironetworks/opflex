@@ -1054,12 +1054,12 @@ void resolveRemoteSubnets(OFFramework& framework,
     }
 }
 
-void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
+void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
      using modelgbp::gbpe::L24Classifier;
-     PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
+     std::pair<vector<shared_ptr<L24Classifier>>::iterator, vector<shared_ptr<L24Classifier>>::iterator> range;
      vector<shared_ptr<L24Classifier>>::iterator begin = classifiers.begin();
      vector<shared_ptr<L24Classifier>>::iterator end = classifiers.begin();
-     std::pair<vector<shared_ptr<L24Classifier>>::iterator, vector<shared_ptr<L24Classifier>>::iterator> range;
+     PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
      int set=0;
 
      for (auto it = classifiers.begin(); it != classifiers.end(); it ++){
@@ -1075,6 +1075,7 @@ void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
                 if (*end == *(--classifiers.end())){
                    range = std::make_pair(begin, end);
                    stable_sort(range.first, range.second+1, classifierPrioComp);
+                   end = classifiers.begin();
                    set = 0;
                 }
 
@@ -1082,6 +1083,7 @@ void sortOrder(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
                    if (end != classifiers.begin()){
                       range = std::make_pair(begin, end);
                       stable_sort(range.first, range.second+1, classifierPrioComp);
+                      end = classifiers.begin();
                       set = 0;
                    }
                }
@@ -1203,7 +1205,7 @@ static bool updatePolicyRules(OFFramework& framework,
                 }
             }
 
-            sortOrder(classifiers);
+            sortOrderOfSameRange(classifiers);
             uint16_t clsPrio = 0;
             for (const shared_ptr<L24Classifier>& c : classifiers) {
                 newRules.push_back(std::
