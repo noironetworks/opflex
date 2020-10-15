@@ -128,6 +128,11 @@ public:
          */
         DROP_LOG_TABLE_ID,
         /**
+         * bypass loopback flows from service backends to service
+         * from security group checks
+         */
+        SERVICE_BYPASS_TABLE_ID,
+        /**
          * Map packets to a security group and set their destination
          * port after applying policy
          */

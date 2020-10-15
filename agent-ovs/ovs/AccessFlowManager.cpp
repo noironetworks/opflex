@@ -16,6 +16,7 @@
 #include "eth.h"
 #include <opflexagent/logging.h>
 
+#include <boost/system/error_code.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/algorithm/string/finder.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -55,6 +56,8 @@ void AccessFlowManager::populateTableDescriptionMap(
         fwdTblDescr.insert( \
                     std::make_pair(table_id, \
                             std::make_pair(table_name, drop_reason)));
+    TABLE_DESC(SERVICE_BYPASS_TABLE_ID, "SERVICE_BYPASS_TABLE",
+               "Skip security-group checks for Service loopback traffic")
     TABLE_DESC(GROUP_MAP_TABLE_ID, "GROUP_MAP_TABLE", "Access port incorrect")
     TABLE_DESC(SEC_GROUP_IN_TABLE_ID, "SEC_GROUP_IN_TABLE",
             "Egress Security group derivation missing/incorrect")
@@ -258,6 +261,58 @@ static void flowBypassFloatingIP(FlowEntryList& el, uint32_t inport,
     fb.build(el);
 }
 
+static void flowBypassServiceIP(FlowEntryList& el,
+                                uint32_t accessPort, uint32_t uplinkPort,
+                                std::shared_ptr<const Endpoint>& ep ) {
+
+    for (const string& epipStr : ep->getIPs()) {
+        network::cidr_t cidr;
+        if (!network::cidr_from_string(epipStr, cidr, false))
+            continue;
+        for (const string& svcipStr : ep->getServiceIPs()) {
+            boost::system::error_code ec;
+            address serviceAddr =
+                address::from_string(svcipStr, ec);
+            if (ec) continue;
+
+            FlowBuilder ingress, egress;
+            ingress.priority(10)
+                   .ethType(eth::type::IP)
+                   .inPort(uplinkPort)
+                   .ipSrc(serviceAddr)
+                   .ipDst(cidr.first, cidr.second)
+                   .action()
+                   .reg(MFF_REG7, accessPort);
+            if (ep->getAccessIfaceVlan()) {
+                ingress.action()
+                       .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
+                       .metadata(flow::meta::access_out::PUSH_VLAN,
+                                 flow::meta::out::MASK);
+            }
+            ingress.action().go(AccessFlowManager::OUT_TABLE_ID);
+            ingress.build(el);
+
+            egress.priority(10)
+                  .ethType(eth::type::IP)
+                  .inPort(accessPort)
+                  .ipSrc(cidr.first, cidr.second)
+                  .ipDst(serviceAddr)
+                  .action()
+                  .reg(MFF_REG7, uplinkPort);
+            if (ep->getAccessIfaceVlan()) {
+                egress.vlan(ep->getAccessIfaceVlan().get());
+                egress.action()
+                      .metadata(flow::meta::access_out::POP_VLAN,
+                                flow::meta::out::MASK);
+            } else {
+                egress.tci(0, 0x1fff);
+            }
+            egress.action().go(AccessFlowManager::OUT_TABLE_ID);
+            egress.build(el);
+        }
+    }
+}
+
 void AccessFlowManager::createStaticFlows() {
     LOG(DEBUG) << "Writing static flows";
     {
@@ -311,13 +366,13 @@ void AccessFlowManager::createStaticFlows() {
     {
         FlowEntryList dropLogFlows;
         FlowBuilder().priority(0)
-                .action().go(GROUP_MAP_TABLE_ID)
+                .action().go(SERVICE_BYPASS_TABLE_ID)
                 .parent().build(dropLogFlows);
         switchManager.writeFlow("static", DROP_LOG_TABLE_ID, dropLogFlows);
         /* Insert a flow at the end of every table to match dropped packets
          * and go to the drop table where it will be punted to a port when configured
          */
-        for(unsigned table_id = GROUP_MAP_TABLE_ID; table_id < EXP_DROP_TABLE_ID; table_id++) {
+        for(unsigned table_id = SERVICE_BYPASS_TABLE_ID; table_id < EXP_DROP_TABLE_ID; table_id++) {
             FlowEntryList dropLogFlow;
             FlowBuilder().priority(0).cookie(flow::cookie::TABLE_DROP_FLOW)
                     .flags(OFPUTIL_FF_SEND_FLOW_REM)
@@ -327,6 +382,13 @@ void AccessFlowManager::createStaticFlows() {
             switchManager.writeFlow("DropLogFlow", table_id, dropLogFlow);
         }
         handleDropLogPortUpdate();
+    }
+    {
+        FlowEntryList skipServiceFlows;
+        FlowBuilder().priority(1)
+            .action().go(GROUP_MAP_TABLE_ID)
+            .parent().build(skipServiceFlows);
+        switchManager.writeFlow("static", SERVICE_BYPASS_TABLE_ID, skipServiceFlows);
     }
 
     // everything is allowed for endpoints with no security group set
@@ -343,6 +405,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
         agent.getEndpointManager().getEndpoint(uuid);
     if (!ep) {
         switchManager.clearFlows(uuid, GROUP_MAP_TABLE_ID);
+        switchManager.clearFlows(uuid, SERVICE_BYPASS_TABLE_ID);
         if (conntrackEnabled)
             ctZoneManager.erase(uuid);
         return;
@@ -388,6 +451,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
     }
 
     FlowEntryList el;
+    FlowEntryList skipServiceFlows;
     if (accessPort != OFPP_NONE && uplinkPort != OFPP_NONE) {
         {
             FlowBuilder in;
@@ -413,6 +477,14 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             in.build(el);
 
         }
+
+        /*
+         * When an endpoint that is backend for a service is
+         * reaching its own service IP we skip security group
+         * checks
+         */
+        flowBypassServiceIP(skipServiceFlows, accessPort,
+                            uplinkPort, ep);
 
         /*
          * We allow without tags to handle Openshift bootstrap
@@ -528,6 +600,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
         }
     }
     switchManager.writeFlow(uuid, GROUP_MAP_TABLE_ID, el);
+    switchManager.writeFlow(uuid, SERVICE_BYPASS_TABLE_ID, skipServiceFlows);
 }
 
 void AccessFlowManager::handleDscpQosUpdate(const string& interface) {
@@ -902,7 +975,7 @@ void AccessFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& drop
             DropLogConfig::resolve(agent.getFramework(), dropLogCfgURI);
     if(!dropLogCfg) {
         FlowBuilder().priority(2)
-                .action().go(GROUP_MAP_TABLE_ID)
+                .action().go(SERVICE_BYPASS_TABLE_ID)
                 .parent().build(dropLogFlows);
         switchManager.writeFlow("DropLogConfig", DROP_LOG_TABLE_ID, dropLogFlows);
         LOG(INFO) << "Defaulting to droplog disabled";
@@ -916,7 +989,7 @@ void AccessFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& drop
                     .action()
                     .metadata(flow::meta::DROP_LOG,
                               flow::meta::DROP_LOG)
-                    .go(GROUP_MAP_TABLE_ID)
+                    .go(SERVICE_BYPASS_TABLE_ID)
                     .parent().build(dropLogFlows);
             LOG(INFO) << "Droplog mode set to unfiltered";
         } else {
@@ -927,7 +1000,7 @@ void AccessFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& drop
     } else {
         FlowBuilder().priority(2)
                 .action()
-                .go(GROUP_MAP_TABLE_ID)
+                .go(SERVICE_BYPASS_TABLE_ID)
                 .parent().build(dropLogFlows);
         LOG(INFO) << "Droplog disabled";
     }
@@ -981,7 +1054,7 @@ void AccessFlowManager::packetDropFlowConfigUpdated(const opflex::modb::URI& dro
         fb.tpDst(dropFlowCfg.get()->getDstPort(0));
     }
     fb.action().metadata(flow::meta::DROP_LOG, flow::meta::DROP_LOG)
-            .go(GROUP_MAP_TABLE_ID).parent().build(dropLogFlows);
+            .go(SERVICE_BYPASS_TABLE_ID).parent().build(dropLogFlows);
     switchManager.writeFlow(dropFlowCfgURI.toString(), DROP_LOG_TABLE_ID,
             dropLogFlows);
 }
