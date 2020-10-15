@@ -93,7 +93,7 @@ public:
     virtual void secGroupSetUpdated(const EndpointListener::uri_set_t& secGrps);
 
     /*Interface: QosListener */
-    virtual void dscpQosUpdated(const string& interface);
+    virtual void dscpQosUpdated(const string& interface, uint8_t dscp);
 
     /* Interface: LearningBridgeListener */
     virtual void lbIfaceUpdated(const std::string& uuid);
@@ -164,7 +164,7 @@ private:
     void handlePortStatusUpdate(const std::string& portName, uint32_t portNo);
     void handleSecGrpSetUpdate(const EndpointListener::uri_set_t& secGrps,
                                const std::string& secGrpsId);
-    void handleDscpQosUpdate(const string& interface);
+    void handleDscpQosUpdate(const string& interface, uint8_t dscp);
 
     Agent& agent;
     SwitchManager& switchManager;

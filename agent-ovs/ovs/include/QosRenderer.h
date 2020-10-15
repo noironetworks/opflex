@@ -55,26 +55,30 @@ public:
     /**
      * called ingress qos parameters is updated for an interface.
      * @param interface Name of the interface.
+     * @param qosConfig ingress qosConfig for the interface
      */
-    virtual void ingressQosUpdated(const string& interface);
+    virtual void ingressQosUpdated(const string& interface, const boost::optional<shared_ptr<QosConfigState>>& qosConfig);
 
     /**
      * called egress qos parameters is updated for an interface.
      * @param interface Name of the interface.
+     * @param qosConfig egress qosConfig for the interface
      */
-    virtual void egressQosUpdated(const string& interface);
+    virtual void egressQosUpdated(const string& interface, const boost::optional<shared_ptr<QosConfigState>>& qosConfig);
 
     /**
      * handle ingress qos parameters update.
      * @param interface Name of the interface.
+     * @param qosConfig ingress qosConfig for the interface
      */
-    void handleIngressQosUpdate(const string& interface);
+    void handleIngressQosUpdate(const string& interface, const boost::optional<shared_ptr<QosConfigState>>& qosConfig);
 
     /**
      * handle egress qos parameters update.
      * @param interface Name of the interface.
+     * @param qosConfig egress qosConfig for the interface
      */
-    void handleEgressQosUpdate(const string& interface);
+    void handleEgressQosUpdate(const string& interface, const boost::optional<shared_ptr<QosConfigState>>& qosConfig);
 
      /**
      * called to update ingress qos parameters for an interface.
@@ -106,7 +110,8 @@ public:
 
 
 private:
-    void updateConnectCb(const boost::system::error_code& ec, const string& interface);
+    void updateConnectCb(const boost::system::error_code& ec, const string& interface,
+            const boost::optional<std::shared_ptr<opflexagent::QosConfigState>>& qosConfigState);
     void delConnectCb(const boost::system::error_code& ec, const string& interface);
 };
 }
