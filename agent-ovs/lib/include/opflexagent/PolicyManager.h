@@ -1420,8 +1420,8 @@ struct PriorityComparator {
         if (lhs->isProtSet() > rhs->isProtSet()) { return true; }
         if (lhs->isProtSet() < rhs->isProtSet()) { return false; }
 
-        if (lhs->isFragmentFlagsSet() < rhs->isFragmentFlagsSet()) { return true; }
-        if (lhs->isFragmentFlagsSet() > rhs->isFragmentFlagsSet()) { return false; }
+        if (lhs->isFragmentFlagsSet() > rhs->isFragmentFlagsSet()) { return true; }
+        if (lhs->isFragmentFlagsSet() < rhs->isFragmentFlagsSet()) { return false; }
 
         int x = lhs->getURI().toString().compare(rhs->getURI().toString());
 
