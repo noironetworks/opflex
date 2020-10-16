@@ -334,7 +334,7 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
 
 #define ADDF(flow) addExpFlowEntry(expTables, flow)
 enum TABLE {
-    DROP_LOG=0, GRP = 1, IN_POL = 2, OUT_POL = 3, OUT = 4, EXP_DROP=5
+    DROP_LOG=0, SVC_BYPASS = 1, GRP = 2, IN_POL = 3, OUT_POL = 4, OUT = 5, EXP_DROP=6
 };
 
 void AccessFlowManagerFixture::initExpStatic() {
@@ -357,8 +357,10 @@ void AccessFlowManagerFixture::initExpStatic() {
     ADDF(Bldr().table(IN_POL).priority(PolicyManager::MAX_POLICY_RULE_PRIORITY)
          .reg(SEPG, 1).actions().go(OUT).done());
     ADDF(Bldr().table(DROP_LOG).priority(0)
+            .actions().go(SVC_BYPASS).done());
+    ADDF(Bldr().table(SVC_BYPASS).priority(1)
             .actions().go(GRP).done());
-    for(int i=GRP; i<=OUT; i++) {
+    for(int i=SVC_BYPASS; i<=OUT; i++) {
         ADDF(Bldr().table(i).priority(0)
         .cookie(ovs_ntohll(flow::cookie::TABLE_DROP_FLOW))
         .flags(OFPUTIL_FF_SEND_FLOW_REM).priority(0)
@@ -572,11 +574,11 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
          .actions().go(OUT).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128)
          .isCtState("-trk").tcp().reg(SEPG, setId)
-         .actions().ct("table=1,zone=NXM_NX_REG6[0..15]").done());
+         .actions().ct("table=2,zone=NXM_NX_REG6[0..15]").done());
     ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("-trk")
          .tcp().reg(SEPG, setId).isTpDst(22)
-         .actions().ct("table=1,zone=NXM_NX_REG6[0..15]").done());
+         .actions().ct("table=2,zone=NXM_NX_REG6[0..15]").done());
     ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("+est+trk")
          .tcp().reg(SEPG, setId).isTpDst(22)

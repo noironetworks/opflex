@@ -208,6 +208,24 @@ public:
     }
 
     /**
+     * Get the list of Service IPs this endpoint is backend for
+     *
+     * @return the list of IP addresses
+     */
+    const std::unordered_set<std::string>& getServiceIPs() const {
+        return serviceIps;
+    }
+
+    /**
+     * Associate this endpoint with a Service IP
+     *
+     * @param ip the IP address to add
+     */
+    void addServiceIP(const std::string& ip) {
+        this->serviceIps.insert(ip);
+    }
+
+    /**
      * A MAC/IP address pair representing a virtual IP that can be
      * claimed by the endpoint by sending a gratuitous ARP.
      */
@@ -1332,6 +1350,7 @@ private:
     boost::optional<opflex::modb::MAC> mac;
     std::unordered_set<std::string> ips;
     std::unordered_set<std::string> anycastReturnIps;
+    std::unordered_set<std::string> serviceIps;
     virt_ip_set virtualIps;
     boost::optional<std::string> egMappingAlias;
     boost::optional<opflex::modb::URI> egURI;
