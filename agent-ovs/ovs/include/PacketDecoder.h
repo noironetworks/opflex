@@ -85,6 +85,14 @@ public:
         value = fields[index].second;
     }
     /**
+     * clear all values while retaining keys
+     * */
+    void clear() {
+        for (auto& field: fields) {
+            field.second.second.clear();
+        }
+    }
+    /**
      * serialize this packet tuple into a json stream
      * @param writer JSON encoder
      * @return whether serialization was successful
@@ -121,7 +129,7 @@ struct ParseInfo {
             nextKey(0), optionLayerTypeId(0), parsedLength(0), parsedString(),
             formattedFields(), layerFormatterString(), hasOptBytes(false),
             pendingOptionLength(0), inferredLength(0), inferredDataLength(0),
-            scratchpad{0,0,0,0}, packetTuple() {
+            scratchpad{0,0,0,0}, packetTuple(), pruneLog(false) {
         time_t rawtime = std::time(nullptr);
         char currTime[256];
         struct tm tp;
@@ -198,6 +206,10 @@ struct ParseInfo {
      * Source Bridge,TableId,CaptureReason,Policies triggered the drop
      */
     uint32_t meta[4];
+    /**
+     * Prune logs for this packet
+     */
+    bool pruneLog;
 };
 
 /* Allowed header field types */

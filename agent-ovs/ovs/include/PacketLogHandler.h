@@ -18,6 +18,7 @@
 #include <opflexagent/logging.h>
 #include <opflexagent/IdGenerator.h>
 #include "PacketDecoderLayers.h"
+#include <opflexagent/Network.h>
 #include <mutex>
 #include <condition_variable>
 #include <queue>
@@ -147,6 +148,108 @@ private:
     static const unsigned maxEventsPerBuffer=10;
 };
 
+class PacketFilterSpec: public PacketTuple {
+public:
+    PacketFilterSpec():PacketTuple() {
+        int field_count = fields.size();
+        fields.insert(std::make_pair(field_count++,
+                std::make_pair("SourceMacMask", "")));
+        fields.insert(std::make_pair(field_count++,
+                std::make_pair("DestinationMacMask", "")));
+        fields.insert(std::make_pair(field_count++,
+                std::make_pair("SourceIPPrefixLength", "")));
+        fields.insert(std::make_pair(field_count++,
+                std::make_pair("DestinationIPPrefixLength", "")));
+    }
+    /**
+     * Compare Macs with mask
+     * @param mac1: Mac address 1
+     * @param mac2: Mac address 2
+     * @param mask: mask for comparison
+     * @return whether matched(true) or not(false)
+     * */
+    static bool compareMacs(const std::string &mac1, const std::string &mac2, const std::string &mask) {
+        opflex::modb::MAC m1(mac1),m2(mac2);
+        uint8_t m1Bytes[6],m2Bytes[6];
+        m1.toUIntArray(m1Bytes);
+        m2.toUIntArray(m2Bytes);
+        uint8_t maskBytes[6] = {0xff};
+        if(!mask.empty()) {
+            opflex::modb::MAC macMask(mask);
+            macMask.toUIntArray(maskBytes);
+        }
+        for(int i=0;i<6;i++) {
+            m1Bytes[i] &= maskBytes[i];
+            m2Bytes[i] &= maskBytes[i];
+            if(m1Bytes[i] != m2Bytes[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /**
+     * Compare IP addresses with mask
+     * @param ip1: Ip address 1
+     * @param ip2: Ip address 2
+     * @param prefixLen: prefix length for comparison
+     * @return whether matched(true) or not(false)
+     * */
+    static bool compareIps(const std::string &ip1, const std::string &ip2, const std::string &prefixLen) {
+        using boost::asio::ip::address;
+        address addr1 = address::from_string(ip1);
+        address addr2 = address::from_string(ip2);
+        if(addr1.is_v4() != addr2.is_v4()) {
+            return false;
+        }
+        bool is_v4 = addr1.is_v4();
+        bool is_exact_match;
+        uint32_t pfxLen;
+        if(is_v4) {
+            pfxLen = 32;
+        } else {
+            pfxLen = 128;
+        }
+        if(!prefixLen.empty()) {
+            pfxLen = stoul(prefixLen);
+        }
+        if((pfxLen > 32) || (pfxLen == 0))
+           return false;
+        return network::prefix_match( addr1, pfxLen,
+                                 addr2, pfxLen, is_exact_match);
+
+    }
+    bool operator == (PacketTuple &p) {
+        std::vector<int> exact_match_fields {3,6,7,8};
+        for (auto &i:exact_match_fields) {
+            if(!fields[i].second.empty()) {
+                if((fields[i].second != p.fields[i].second) &&
+                   (fields[i].second+"_unrecognized" != p.fields[i].second)) {
+                    return false;
+                }
+            }
+        }
+        std::vector<int> mac_fields {1,2};
+        for (auto &i:mac_fields) {
+            if(!fields[i].second.empty()) {
+                if(!compareMacs(fields[i].second,p.fields[i].second,
+                            fields[i+9].second)) {
+                    return false;
+                }
+            }
+        }
+        std::vector<int> ip_fields {4,5};
+        for (auto &i:ip_fields) {
+            if(!fields[i].second.empty()) {
+                if(!compareIps(fields[i].second,p.fields[i].second,
+                            fields[i+8].second)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+};
+
 /**
  * Class to hold the UDP listener and the packet decoder
  */
@@ -159,7 +262,23 @@ public:
      */
     PacketLogHandler(boost::asio::io_service &_io,
             boost::asio::io_service &_clientio, IdGenerator& idGen_):server_io(_io),
-            client_io(_clientio), port(0), stopped(false), throttleActive(false), idGen(idGen_) {}
+            client_io(_clientio), port(0), stopped(false), throttleActive(false), idGen(idGen_) {
+                /*Prune unused control packets by default*/
+                #define LLDP_MAC "01:80:c2:00:00:0e"
+                #define MCAST_V6_MAC "33:33:00:00:00:00"
+                #define IP_PROTO_IGMP "2"
+                #define IP_PROTO_ICMPv6 "58"
+                #define pushPruneSpec() defaultPruneSpec.push_back(unusedCtrlPacket); unusedCtrlPacket.clear();
+                PacketFilterSpec unusedCtrlPacket;
+                unusedCtrlPacket.setField(2, LLDP_MAC);
+                pushPruneSpec()
+                unusedCtrlPacket.setField(6, IP_PROTO_IGMP);
+                pushPruneSpec()
+                unusedCtrlPacket.setField(6, IP_PROTO_ICMPv6);
+                unusedCtrlPacket.setField(2, MCAST_V6_MAC);
+                unusedCtrlPacket.setField(11, "FF:FF:00:00:00:00");
+                pushPruneSpec()
+    }
     /**
      * set IPv4 listening address for the socket
      * @param _addr IPv4 address
@@ -221,7 +340,11 @@ public:
      * @param length total length of packet
      */
     void parseLog(unsigned char *buf , std::size_t length);
-   
+    /**
+     * Prune logs based on config
+     * @param p Parsing context
+     */
+    void pruneLog(ParseInfo &p);
   
 protected:
     ///@{
@@ -244,6 +367,7 @@ protected:
     friend UdpServer;
     friend LocalClient;
     IdGenerator& idGen;
+    std::vector<PacketFilterSpec> defaultPruneSpec;
     ///@}
 };
 
