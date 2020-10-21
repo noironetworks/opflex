@@ -169,9 +169,13 @@ void populateValues(const Value& value, string& type, map<string, string>& value
                                 if (mapMemberItr->GetArray()[0].IsString() &&
                                     mapMemberItr->GetArray()[1].IsString()) {
                                     values[memberItr->GetArray()[0].GetString()] = memberItr->GetArray()[1].GetString();
-                                } else {
-                                    LOG(WARNING) << "map key type = " << mapMemberItr->GetArray()[0].GetType();
-                                    LOG(WARNING) << "map value type = " << mapMemberItr->GetArray()[0].GetType();
+                                } else if (mapMemberItr->GetArray()[0].IsNumber() &&
+                                        mapMemberItr->GetArray()[1].IsArray() &&
+                                        mapMemberItr->GetArray()[1].GetArray().Size() == 2) {
+                                    uint64_t keyInt = mapMemberItr->GetArray()[0].GetUint64();
+                                    std::string key = mapMemberItr->GetArray()[1].GetArray()[0].GetString();
+                                    std::string val = mapMemberItr->GetArray()[1].GetArray()[1].GetString();
+                                    values[std::to_string(keyInt)] = val;
                                 }
                             }
                         }
@@ -328,6 +332,21 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                 }
                 ovsdbState.fullUpdate(OvsdbTable::INTERFACE, tableState);
             }
+        } else if (payload.HasMember(OvsdbMessage::toString(OvsdbTable::QOS))) {
+            const Value& qosValue = payload[OvsdbMessage::toString(OvsdbTable::QOS)];
+            if (qosValue.IsObject()) {
+                for (Value::ConstMemberIterator itr = qosValue.MemberBegin();
+                     itr != qosValue.MemberEnd(); ++itr) {
+                    if (itr->name.IsString() && itr->value.IsObject()) {
+                        OvsdbRowDetails rowDetails;
+                        std::string uuid  = itr->name.GetString();
+                        rowDetails["uuid"] = OvsdbValue(uuid);
+                        processRowUpdate(itr->value, rowDetails);
+                        tableState[uuid] = rowDetails;
+                    }
+                }
+                ovsdbState.fullUpdate(OvsdbTable::QOS, tableState);
+            }
         } else if (!payload.ObjectEmpty()) {
             LOG(WARNING) << "Unhandled monitor";
         }
@@ -470,6 +489,25 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                             }
                         }
                     }
+                } else if (payload[1].HasMember(OvsdbMessage::toString(OvsdbTable::QOS))) {
+                    LOG(DEBUG) << "OVSDB update for qos table";
+                    const Value& value = payload[1][OvsdbMessage::toString(OvsdbTable::QOS)];
+                    if (value.IsObject()) {
+                        for (Value::ConstMemberIterator itr = value.MemberBegin();
+                             itr != value.MemberEnd(); ++itr) {
+                            string rowUuid = itr->name.GetString();
+                            OvsdbRowDetails rowDetails;
+                            rowDetails["uuid"] = OvsdbValue(rowUuid);
+                            bool addRow = processRowUpdate(itr->value, rowDetails);
+                            if (addRow) {
+                                LOG(DEBUG) << "received updated row for qos " << rowUuid;
+                                getOvsdbState().updateRow(OvsdbTable::QOS, rowUuid, rowDetails);
+                            } else {
+                                LOG(DEBUG) << "received deleted row for qos " << rowUuid;
+                                getOvsdbState().deleteRow(OvsdbTable::QOS, rowUuid);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -481,11 +519,11 @@ void OvsdbConnection::messagesReady() {
 }
 
 void OvsdbConnection::sendMonitorRequests() {
-    syncMsgsRemaining = 6;
+    syncMsgsRemaining = 7;
     list<string> bridgeColumns = {"name", "ports", "netflow", "ipfix", "mirrors"};
     auto message = new OvsdbMonitorMessage(OvsdbTable::BRIDGE, bridgeColumns, getNextId());
     sendMessage(message, false);
-    list<string> portColumns = {"name", "interfaces"};
+    list<string> portColumns = {"name", "interfaces", "qos"};
     message = new OvsdbMonitorMessage(OvsdbTable::PORT, portColumns, getNextId());
     sendMessage(message, false);
     list<string> interfaceColumns = {"name", "type", "options"};
@@ -499,6 +537,9 @@ void OvsdbConnection::sendMonitorRequests() {
     sendMessage(message, false);
     list<string> ipfixColumns = {"targets", "sampling", "other_config"};
     message = new OvsdbMonitorMessage(OvsdbTable::IPFIX, ipfixColumns, getNextId());
+    sendMessage(message, false);
+    list<string> qosColumns = {"queues"};
+    message = new OvsdbMonitorMessage(OvsdbTable::QOS, qosColumns, getNextId());
     sendMessage(message, false);
 }
 
