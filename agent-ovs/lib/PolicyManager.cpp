@@ -1196,18 +1196,18 @@ static bool updatePolicyRules(OFFramework& framework,
                     newRedirGrps.insert(destGrpUri.get());
                 }
                 else if(r->getTargetClass().get() == LogAction::CLASS_ID) {
-                        optional<shared_ptr<modelgbp::gbp::LogAction> > resloveLog = 
-                                       modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
+                        optional<shared_ptr<LogAction> > resloveLog = 
+                                                     LogAction::resolve(framework,r->getTargetURI().get());
                     if (resloveLog) {
-                        ruleLog = resloveLog.get()->getLog(0) != 0 ;
+                        ruleLog = true;
                     }
                 }
             }
 
             sortOrderOfSameRange(classifiers);
             uint16_t clsPrio = 0;
-            for (const shared_ptr<L24Classifier>& c : classifiers) {
-                newRules.push_back(std::
+	          for (const shared_ptr<L24Classifier>& c : classifiers) {
+                       newRules.push_back(std::
                                    make_shared<PolicyRule>(dir,
                                                            rulePrio - clsPrio,
                                                            c, ruleAllow,
