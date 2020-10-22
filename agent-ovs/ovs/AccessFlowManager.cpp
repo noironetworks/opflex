@@ -125,9 +125,9 @@ void AccessFlowManager::endpointUpdated(const string& uuid) {
     taskQueue.dispatch(uuid, [=](){ handleEndpointUpdate(uuid); });
 }
 
-void AccessFlowManager::dscpQosUpdated(const string& interface) {
+void AccessFlowManager::dscpQosUpdated(const string& interface, uint8_t dscp) {
     if (stopping) return;
-    taskQueue.dispatch(interface, [=]() { handleDscpQosUpdate(interface); });
+    taskQueue.dispatch(interface, [=]() { handleDscpQosUpdate(interface, dscp); });
 }
 
 void AccessFlowManager::secGroupSetUpdated(const uri_set_t& secGrps) {
@@ -603,15 +603,12 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
     switchManager.writeFlow(uuid, SERVICE_BYPASS_TABLE_ID, skipServiceFlows);
 }
 
-void AccessFlowManager::handleDscpQosUpdate(const string& interface) {
+void AccessFlowManager::handleDscpQosUpdate(const string& interface, uint8_t dscp) {
     string objIdV4 = interface + string("ipv4");
     string objIdV6 = interface + string("ipv6");
     switchManager.clearFlows(objIdV4, 0);
     switchManager.clearFlows(objIdV6, 0);
 
-    QosManager &qosMgr = agent.getQosManager();
-    uint8_t dscp = 0;
-    dscp = qosMgr.getDscpMarking(interface);
     if (dscp == 0) {
         return ;
     }

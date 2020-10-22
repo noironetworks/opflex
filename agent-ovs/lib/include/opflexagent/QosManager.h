@@ -95,11 +95,48 @@ public:
     boost::optional<shared_ptr<QosConfigState>> getQosConfig(const string& interface, bool egress) const;
 
     /**
-     * get shared ptr to ingress config for an interface.
-     * @param[in] interface name of the interface.
-     * @return shared ptr to QosConfigState or none.
+     * get shared_ptr to ingress qosConfigState
+     * @param[in] interface Name of the interface
+     * @return shared_ptr to QosConfigState
      */
     boost::optional<shared_ptr<QosConfigState>> getIngressQosConfigState(const string& interface) const;
+
+    /**
+     * resolve ingress config from modb
+     * @param[in] reqOpt URI of QosRequirement
+     * @return shared_ptr to QosConfigState
+     */
+    boost::optional<shared_ptr<QosConfigState>>
+        resolveIngressConfig(const boost::optional<URI>& reqOpt) const;
+
+    /**
+     * resolve egress config from modb
+     * @param[in] reqOpt URI of QosRequirement
+     * @return shared_ptr to QosConfigState
+     */
+    boost::optional<shared_ptr<QosConfigState>>
+        resolveEgressConfig(const boost::optional<URI>& reqOpt) const;
+
+    /**
+     * resolve dscp config from modb
+     * @param[in] req URI of QosRequirement
+     * @return dscp value
+     */
+    uint8_t resolveDscp(const boost::optional<URI>& req) const;
+
+    /**
+     * get ep level qos policy from cache
+     * @param[in] interface name of the interface.
+     * @return URI of QosRequirement
+     */
+    boost::optional<URI> getEpQosPolicy (const string& interface);
+
+    /**
+     * get epg level qos policy from cache
+     * @param[in] interface name of the interface
+     * @return URI of QosRequirement
+     */
+    boost::optional<URI> getEpgQosPolicy(const string& interface);
 
     /**
      * get shared ptr to egress config for an interface.
@@ -158,11 +195,10 @@ public:
 
     /**
      * update egress or ingress policy map by removing entry for input interface.
-     * @param[in] interface name of the interface.
+     * @param[in] epg uri of the epg.
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress epg policy map.
      */
-
     void clearEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
 
     /**
@@ -175,11 +211,10 @@ public:
 
     /**
      * update egress or ingress policy map by adding entry for input interface.
-     * @param[in] interface name of the interface.
+     * @param[in] epg uri of the epg.
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress epg policy map.
      */
-
     void addEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
 
     /**
@@ -204,7 +239,7 @@ public:
 
     /**
      * Remove all entries for epg in all maps.
-     * @param[in] uri uri of the epg.
+     * @param[in] epg uri of the epg.
      */
     void clearEpgEntry(const URI & epg);
 
@@ -293,8 +328,9 @@ public:
      * configuration.
      * @param interface the interface whose qos is to be updated
      * @param direction egress/ingress/both direction of qos to be updated
+     * @param confUri qosRequirement uri for the interface
      */
-    void notifyListeners(const string& interface, const string& direction);
+    void notifyListeners(const string& interface, const string& direction, boost::optional<URI> confUri);
 
     /**
      * Notify qos listeners about clearing qos parameters
@@ -333,24 +369,35 @@ public:
          * @param[in] updatedUri uri of the updated object
          * @param[in] dir direction of qos  config update
          * @param[in] policyMap map to get interface to be updated
+         * @param[in] conf URI of updated policy
          */
-         void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap);
+         void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap, boost::optional<URI> conf = boost::none);
 
+        /**
+         * process modb delete notification
+         * @param[in] deletedUri uri of the updated object
+         * @param[in] dir direction of qos  config update
+         * @param[in] policyMap map to get interface to be deleted
+         */
+         void processModbDelete(const URI& deletedUri, const string &dir, const unordered_map<URI, unordered_set<string>>& policyMap);
+        
         /**
          * process modb notifications
          * @param[in] updatedUri uri of the updated object
          * @param[in] dir direction of qos  config update
          * @param[in] policyMap map to get epg to be updated
+         * @param[in] conf URI of updated policy
          */
-         void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<URI>>& policyMap);
+         void processModbUpdate(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<URI>>& policyMap, boost::optional<URI> conf = boost::none);
 
          /**
           * process modb notifications
           * @param[in] updatedUri uri of the updated object
           * @param[in] dir direction of qos  config update
           * @param[in] policyMap map to get interface to be updated
+          * @param[in] conf URI of updated policy
           */
-         void updateInterfaces(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap);
+         void updateInterfaces(const URI& updatedUri, const string& dir, const unordered_map<URI, unordered_set<string>>& policyMap, boost::optional<URI> conf = boost::none);
 
          /**
           * process bandwidth update

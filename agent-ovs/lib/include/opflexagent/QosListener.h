@@ -14,6 +14,7 @@
 #define OPFLEX_QOSLISTENER_H
 
 #include <opflexagent/QosConfigState.h>
+#include <boost/optional.hpp>
 
 namespace opflexagent {
 
@@ -38,20 +39,23 @@ public:
     /**
      * Called when ingress qos paramaters are updated.
      * @param interface is name of the interface.
+     * @param qosConfig is ingress config for the interface.
      */
-     virtual void ingressQosUpdated(const string& interface) {}
+     virtual void ingressQosUpdated(const string& interface, const boost::optional<shared_ptr<QosConfigState>>& qosConfig) {}
 
      /**
       * Called when egress qos paramaters are updated.
       * @param interface is name of the interface.
+      * @param qosConfig is egress config for the interface.
       */
-     virtual void egressQosUpdated(const string& interface) {}
+     virtual void egressQosUpdated(const string& interface, const boost::optional<shared_ptr<QosConfigState>>& qosConfig) {}
 
      /**
       * Called when dscp qos paramaters are updated.
       * @param interface is name of the interface.
+      * @param dscp is dscp-config for the interface.
       */
-     virtual void dscpQosUpdated(const string& interface) {}
+     virtual void dscpQosUpdated(const string& interface, uint8_t dscp) {}
 };
 }
 #endif // OPFLEX_QOSLISTENER_H

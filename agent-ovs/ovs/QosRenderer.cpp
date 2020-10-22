@@ -31,14 +31,16 @@ namespace opflexagent {
         agent.getQosManager().unregisterListener(this);
     }
 
-    void QosRenderer::ingressQosUpdated(const string& interface) {
+    void QosRenderer::ingressQosUpdated(const string& interface,
+            const boost::optional<shared_ptr<QosConfigState>>& qosConfig) {
         LOG(DEBUG) << "interface: " << interface;
-        handleIngressQosUpdate(interface);
+        handleIngressQosUpdate(interface, qosConfig);
     }
 
-    void QosRenderer::egressQosUpdated(const string& interface) {
+    void QosRenderer::egressQosUpdated(const string& interface,
+            const boost::optional<shared_ptr<QosConfigState>>& qosConfig) {
         LOG(DEBUG) << "interface: " << interface;
-        handleEgressQosUpdate(interface);
+        handleEgressQosUpdate(interface, qosConfig);
     }
 
 
@@ -55,27 +57,16 @@ namespace opflexagent {
             return;
         }
 
-        QosManager &qosMgr = agent.getQosManager();
-        optional<shared_ptr<QosConfigState>> egressConfigState =
-            qosMgr.getEgressQosConfigState(interface);
-        if (!egressConfigState){
-            LOG(DEBUG) << "clearing egress qos for interface: " << interface ;
-            deleteEgressQos(interface);
-        }
-
-        optional<shared_ptr<QosConfigState>> ingressConfigState =
-            qosMgr.getIngressQosConfigState(interface);
-        if (!ingressConfigState){
-            LOG(DEBUG) << "clearing ingress qos for interface: " << interface ;
-            deleteIngressQos(interface);
-        }
-
+        LOG(DEBUG) << "clearing egress and ingress qos for interface: " << interface ;
+        deleteEgressQos(interface);
+        deleteIngressQos(interface);
     }
 
-    void QosRenderer::handleEgressQosUpdate(const string& interface) {
+
+    void QosRenderer::handleEgressQosUpdate(const string& interface,
+            const optional<shared_ptr<QosConfigState>>& qosConfigState) {
         LOG(DEBUG) << "thread " << std::this_thread::get_id();
         LOG(DEBUG) << "interface: " << interface;
-        QosManager &qosMgr = agent.getQosManager();
 
         if (!connect()) {
             const std::lock_guard<std::mutex> guard(timer_mutex);
@@ -84,15 +75,13 @@ namespace opflexagent {
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
                         milliseconds(CONNECTION_RETRY * 1000)));
             connection_timer->async_wait(boost::bind(&QosRenderer::updateConnectCb, this,
-                        boost::asio::placeholders::error, interface));
+                        boost::asio::placeholders::error, interface, qosConfigState));
             timerStarted = true;
             LOG(DEBUG) << "conn timer " << connection_timer << ", timerStarted: " << timerStarted;
             return;
         }
 
         deleteEgressQos(interface);
-        optional<shared_ptr<QosConfigState>> qosConfigState =
-            qosMgr.getEgressQosConfigState(interface);
         if (!qosConfigState) {
             return;
         }
@@ -104,10 +93,10 @@ namespace opflexagent {
     }
 
 
-    void QosRenderer::handleIngressQosUpdate(const string& interface) {
+    void QosRenderer::handleIngressQosUpdate(const string& interface,
+            const optional<shared_ptr<QosConfigState>>& qosConfigState) {
         LOG(DEBUG) << "thread " << std::this_thread::get_id();
         LOG(DEBUG) << "interface: "<< interface;
-        QosManager &qosMgr = agent.getQosManager();
 
         if (!connect()) {
             const std::lock_guard<std::mutex> guard(timer_mutex);
@@ -116,15 +105,13 @@ namespace opflexagent {
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
                         milliseconds(CONNECTION_RETRY * 1000)));
             connection_timer->async_wait(boost::bind(&QosRenderer::updateConnectCb, this,
-                        boost::asio::placeholders::error, interface));
+                        boost::asio::placeholders::error, interface, qosConfigState));
             timerStarted = true;
             LOG(DEBUG) << "conn timer " << connection_timer << ", timerStarted: " << timerStarted;
             return;
         }
 
         deleteIngressQos(interface);
-        optional<shared_ptr<QosConfigState>> qosConfigState =
-            qosMgr.getIngressQosConfigState(interface);
         if (!qosConfigState) {
             return;
         }
@@ -138,7 +125,7 @@ namespace opflexagent {
     }
 
     void QosRenderer::updateConnectCb(const boost::system::error_code& ec,
-            const string& interface) {
+            const string& interface, const optional<shared_ptr<QosConfigState>>& qosConfigState) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
             const std::lock_guard<std::mutex> guard(timer_mutex);
@@ -147,8 +134,8 @@ namespace opflexagent {
             return;
         }
 
-        egressQosUpdated(interface);
-        ingressQosUpdated(interface);
+        egressQosUpdated(interface, qosConfigState);
+        ingressQosUpdated(interface, qosConfigState);
     }
 
     void QosRenderer::delConnectCb(const boost::system::error_code& ec,
