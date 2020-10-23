@@ -142,7 +142,7 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
     if (act != flowutils::CA_DENY)
         f.action().go(nextTable);
     if (act == flowutils::CA_DENY) {
-       if (log != false) {
+       if (log) {
           f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY, cookie).go(nextTable);
         }
        else {
@@ -268,7 +268,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 
                         switch (act) {
                         case flowutils::CA_DENY:
-                             if (log != false) {
+                             if (log) {
                                  f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY,cookie).go(nextTable);
                              }
                              else {

@@ -1196,9 +1196,9 @@ static bool updatePolicyRules(OFFramework& framework,
                     newRedirGrps.insert(destGrpUri.get());
                 }
                 else if(r->getTargetClass().get() == LogAction::CLASS_ID) {
-                        optional<shared_ptr<LogAction> > resloveLog = 
-                                                     LogAction::resolve(framework,r->getTargetURI().get());
-                    if (resloveLog) {
+                        optional<shared_ptr<LogAction> > resolveLog = 
+                           LogAction::resolve(framework,r->getTargetURI().get());
+                    if (resolveLog) {
                         ruleLog = true;
                     }
                 }
@@ -1206,14 +1206,14 @@ static bool updatePolicyRules(OFFramework& framework,
 
             sortOrderOfSameRange(classifiers);
             uint16_t clsPrio = 0;
-	          for (const shared_ptr<L24Classifier>& c : classifiers) {
-                       newRules.push_back(std::
-                                   make_shared<PolicyRule>(dir,
-                                                           rulePrio - clsPrio,
-                                                           c, ruleAllow,
-                                                           remoteSubnets,
-                                                           ruleRedirect, ruleLog,
-                                                           destGrpUri));
+            for (const shared_ptr<L24Classifier>& c : classifiers) {
+                newRules.push_back(std::
+                            make_shared<PolicyRule>(dir,
+                                                    rulePrio - clsPrio,
+                                                    c, ruleAllow,
+                                                    remoteSubnets,
+                                                    ruleRedirect, ruleLog,
+                                                    destGrpUri));
                 if (clsPrio < 127)
                     clsPrio += 1;
             }
