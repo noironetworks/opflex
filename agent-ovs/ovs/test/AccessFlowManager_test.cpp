@@ -411,7 +411,6 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
        action1->setAllow(0).setOrder(5);
        //action 2
        action2 =  space->addGbpLogAction("action2");
-       action2->setLog(1);
        //security group rule
        r1 = secGrp3->addGbpSecGroupSubject("1_subject1")
                    ->addGbpSecGroupRule("1_1_rule1");

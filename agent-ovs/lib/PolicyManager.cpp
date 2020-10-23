@@ -1196,10 +1196,10 @@ static bool updatePolicyRules(OFFramework& framework,
                     newRedirGrps.insert(destGrpUri.get());
                 }
                 else if(r->getTargetClass().get() == LogAction::CLASS_ID) {
-                        optional<shared_ptr<modelgbp::gbp::LogAction> > resloveLog = 
-                                       modelgbp::gbp::LogAction::resolve(framework,r->getTargetURI().get());
-                    if (resloveLog) {
-                        ruleLog = resloveLog.get()->getLog(0) != 0 ;
+                        optional<shared_ptr<LogAction> > resolveLog = 
+                           LogAction::resolve(framework,r->getTargetURI().get());
+                    if (resolveLog) {
+                        ruleLog = true;
                     }
                 }
             }
@@ -1208,12 +1208,12 @@ static bool updatePolicyRules(OFFramework& framework,
             uint16_t clsPrio = 0;
             for (const shared_ptr<L24Classifier>& c : classifiers) {
                 newRules.push_back(std::
-                                   make_shared<PolicyRule>(dir,
-                                                           rulePrio - clsPrio,
-                                                           c, ruleAllow,
-                                                           remoteSubnets,
-                                                           ruleRedirect, ruleLog,
-                                                           destGrpUri));
+                            make_shared<PolicyRule>(dir,
+                                                    rulePrio - clsPrio,
+                                                    c, ruleAllow,
+                                                    remoteSubnets,
+                                                    ruleRedirect, ruleLog,
+                                                    destGrpUri));
                 if (clsPrio < 127)
                     clsPrio += 1;
             }

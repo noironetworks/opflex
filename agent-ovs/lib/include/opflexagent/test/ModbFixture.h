@@ -455,12 +455,11 @@ protected:
         epg0->addGbpEpGroupToProvContractRSrc(con3->getURI().toString());
         epg1->addGbpEpGroupToConsContractRSrc(con3->getURI().toString());
 
-           //action 1      
+           //action 3      
         action3 = space->addGbpAllowDenyAction("action3");
         action3->setAllow(0);
-          //action 2
+          //action 4
         action4 =  space->addGbpLogAction("action4");
-        action4->setLog(1);
 
         con4 = space->addGbpContract("contract4");
         con4->addGbpSubject("4_subject1")->addGbpRule("4_1_rule1")
