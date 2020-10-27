@@ -184,11 +184,12 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
             break;
         }
     }
-   
-    boost::optional<std::string> ruleUri  = idGen.getStringForId((IntFlowManager::getIdNamespace(L24Classifier::CLASS_ID)), p.meta[3]);
-    
-    if (ruleUri) {
-        dropReason += " "+ruleUri.get();
+    if((p.meta[2] == 1) || (p.meta[2]==2)) {
+        boost::optional<std::string> ruleUri  = idGen.getStringForId((IntFlowManager::getIdNamespace(L24Classifier::CLASS_ID)), p.meta[3]);
+
+        if (ruleUri) {
+            dropReason += " "+ruleUri.get();
+        }
     }
 }
 
