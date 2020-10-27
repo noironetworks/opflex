@@ -173,7 +173,6 @@ void populateValues(const Value& value, string& type, map<string, string>& value
                                         mapMemberItr->GetArray()[1].IsArray() &&
                                         mapMemberItr->GetArray()[1].GetArray().Size() == 2) {
                                     uint64_t keyInt = mapMemberItr->GetArray()[0].GetUint64();
-                                    std::string key = mapMemberItr->GetArray()[1].GetArray()[0].GetString();
                                     std::string val = mapMemberItr->GetArray()[1].GetArray()[1].GetString();
                                     values[std::to_string(keyInt)] = val;
                                 }
