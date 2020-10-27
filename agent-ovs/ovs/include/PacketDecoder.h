@@ -129,7 +129,7 @@ struct ParseInfo {
             nextKey(0), optionLayerTypeId(0), parsedLength(0), parsedString(),
             formattedFields(), layerFormatterString(), hasOptBytes(false),
             pendingOptionLength(0), inferredLength(0), inferredDataLength(0),
-            scratchpad{0,0,0,0}, packetTuple(), pruneLog(false) {
+            scratchpad{0,0,0,0}, packetTuple(), meta{0,0,0,0}, pruneLog(false) {
         time_t rawtime = std::time(nullptr);
         char currTime[256];
         struct tm tp;
