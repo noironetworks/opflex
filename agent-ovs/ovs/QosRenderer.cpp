@@ -229,6 +229,32 @@ namespace opflexagent {
     }
 
     void QosRenderer::deleteIngressQos(const string& interface) {
+        string qosUuid;
+        conn->getOvsdbState().getQosUuidForPort(interface, qosUuid);
+
+        if (!qosUuid.empty()) {
+            LOG(INFO) << "found qos-uuid: "<< qosUuid;
+            OvsdbTransactMessage msg0(OvsdbOperation::DELETE, OvsdbTable::QOS);
+            set<tuple<string, OvsdbFunction, string>> conditionSet0;
+            conditionSet0.emplace("_uuid", OvsdbFunction::EQ, qosUuid);
+            msg0.conditions = conditionSet0;
+            const list<OvsdbTransactMessage> qosDelRequest = {msg0};
+            sendAsyncTransactRequests(qosDelRequest);
+        }
+
+        string queueUuid;
+        conn->getOvsdbState().getQueueUuidForQos(qosUuid, queueUuid);
+
+        if (!queueUuid.empty()) {
+            LOG(INFO) << "found queue-uuid: " << queueUuid;
+            OvsdbTransactMessage msg2(OvsdbOperation::DELETE, OvsdbTable::QUEUE);
+            set<tuple<string, OvsdbFunction, string>> conditionSet2;
+            conditionSet2.emplace("_uuid", OvsdbFunction::EQ, queueUuid);
+            msg2.conditions = conditionSet2;
+            const list<OvsdbTransactMessage> queueDelRequest = {msg2};
+            sendAsyncTransactRequests(queueDelRequest);
+        }
+
         OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::PORT);
         vector<OvsdbValue> values;
         OvsdbValues emptySet("set", values);

@@ -135,6 +135,37 @@ public:
         }
     }
 
+    void getQosUuidForPort(const string& name, string& uuid) {
+        unique_lock<mutex> lock(stateMutex);
+        auto& portRows = ovsdbState[OvsdbTable::PORT];
+        for (auto& row : portRows) {
+            if (row.second.find("name") != row.second.end() &&
+                row.second.find("qos") != row.second.end() &&
+                row.second["name"].getStringValue() == name) {
+                const auto& col = row.second["qos"].getCollectionValue();
+                for(auto it = col.begin(); it!=col.end();it++){
+                    uuid = it->first;
+                }
+            }
+        }
+    }
+
+    void getQueueUuidForQos(const string& qos, string &uuid) {
+        unique_lock<mutex> lock(stateMutex);
+        auto& qosRows = ovsdbState[OvsdbTable::QOS];
+        for (auto& row : qosRows) {
+             if (row.second.find("uuid") != row.second.end() &&
+                 row.second["uuid"].getStringValue() == qos &&
+                 row.second.find("queues") != row.second.end())  {
+                 const auto& col = row.second["queues"].getCollectionValue();
+                 for(auto it = col.begin(); it != col.end(); it++) {
+                     LOG(DEBUG) << "queue: " << it->first << "=" << it->second;
+                     uuid = it->second;
+                 }
+             }
+        }
+    }
+
     /**
      * Get the mirror state
      * @param name mirror name
