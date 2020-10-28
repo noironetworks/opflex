@@ -14,12 +14,6 @@
 
 #include <boost/asio/placeholders.hpp>
 #include <openvswitch/vlog.h>
-#include <fstream>
-#include <ctime>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <tuple>
 
 namespace opflexagent {
 

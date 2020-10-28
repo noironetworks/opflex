@@ -10,21 +10,11 @@
 #include <unordered_set>
 
 #include <boost/functional/hash.hpp>
-#include <boost/optional.hpp>
 
 #include "TableState.h"
 #include <opflexagent/logging.h>
 #include "ovs-shim.h"
 #include "ovs-ofputil.h"
-
-#include <openvswitch/ofp-flow.h>
-#include <openvswitch/list.h>
-#include <openflow/openflow-common.h>
-
-extern "C" {
-#include <openvswitch/dynamic-string.h>
-}
-
 
 namespace opflexagent {
 
@@ -69,7 +59,6 @@ namespace opflexagent {
 using std::ostream;
 using std::vector;
 using std::make_pair;
-using boost::optional;
 
 /** FlowEntry **/
 
@@ -494,7 +483,7 @@ void TableState::apply(const std::string& objId,
         }
     }
 
-    if (diffs.edits.size() > 0) {
+    if (!diffs.edits.empty()) {
         LOG(DEBUG) << "ObjId=" << objId << ", #diffs = " << diffs.edits.size();
         for (const FlowEdit::Entry& e : diffs.edits) {
             LOG(DEBUG) << e;
@@ -690,7 +679,7 @@ void TableState::apply(const std::string& objId,
         }
     }
 
-    if (diffs.edits.size() > 0) {
+    if (!diffs.edits.empty()) {
         LOG(DEBUG) << "ObjId=" << objId << ", #diffs = " << diffs.edits.size();
         for (const TlvEdit::Entry& e : diffs.edits) {
             LOG(DEBUG) << e;

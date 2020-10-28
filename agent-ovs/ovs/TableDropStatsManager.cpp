@@ -11,9 +11,7 @@
 
 #include <opflexagent/logging.h>
 #include "FlowConstants.h"
-#include "IntFlowManager.h"
 #include "AccessFlowManager.h"
-#include <opflexagent/IdGenerator.h>
 #include <opflexagent/Agent.h>
 #include "TableState.h"
 #include "TableDropStatsManager.h"
@@ -351,7 +349,7 @@ void BaseTableDropStatsManager::handleTableDropStats(struct ofputil_flow_stats* 
 }
 
 void BaseTableDropStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
-                                         const opflex::modb::URI& uri) {
+                                         const URI& uri) {
     /* Don't need to register for any object updates. Table drops are
      * not related to specific objects
      */

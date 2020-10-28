@@ -11,8 +11,6 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/functional/hash.hpp>
 
-#include <cstring>
-#include <algorithm>
 #include <unordered_set>
 
 #include "TableState.h"

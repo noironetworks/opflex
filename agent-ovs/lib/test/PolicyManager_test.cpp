@@ -87,7 +87,6 @@ public:
         classifier4 = space->addGbpeL24Classifier("classifier4");
         classifier5 = space->addGbpeL24Classifier("classifier5");
         classifier6 = space->addGbpeL24Classifier("classifier6");
-        classifier7 = space->addGbpeL24Classifier("classifier7");
 
         action1 = space->addGbpAllowDenyAction("action1");
         action1->setAllow(0).setOrder(5);
@@ -211,18 +210,11 @@ public:
     shared_ptr<L24Classifier> classifier4;
     shared_ptr<L24Classifier> classifier5;
     shared_ptr<L24Classifier> classifier6;
-    shared_ptr<L24Classifier> classifier7;
 
-    shared_ptr<RedirectDestGroup> redirDstGrp1;
-    shared_ptr<RedirectDestGroup> redirDstGrp2;
-    shared_ptr<RedirectDest> redirDst1;
-    shared_ptr<RedirectDest> redirDst2;
-    shared_ptr<RedirectDest> redirDst3;
     shared_ptr<RedirectDest> redirDst4;
     shared_ptr<RedirectDest> redirDst5;
     shared_ptr<AllowDenyAction> action1;
     shared_ptr<AllowDenyAction> action2;
-    shared_ptr<RedirectAction> action3;
 
     shared_ptr<Contract> con1;
     shared_ptr<Contract> con2;
@@ -289,7 +281,7 @@ static bool hasUriRef(PolicyManager& policyManager,
                       const URI& subnetUri) {
     PolicyManager::subnet_vector_t sv;
     policyManager.getSubnetsForGroup(egUri, sv);
-    for (shared_ptr<Subnet> sn : sv) {
+    for (shared_ptr<Subnet>& sn : sv) {
         if (sn->getURI() == subnetUri)
             return true;
     }
