@@ -11,7 +11,6 @@
 
 #include <opflexagent/ServiceManager.h>
 #include <opflexagent/Agent.h>
-#include <opflexagent/EndpointManager.h>
 #include <opflexagent/logging.h>
 #include <opflex/modb/Mutator.h>
 #include <modelgbp/svc/ServiceUniverse.hpp>

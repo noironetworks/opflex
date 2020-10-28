@@ -9,8 +9,6 @@
 #include <opflexagent/TaskQueue.h>
 #include <opflexagent/logging.h>
 
-#include <functional>
-
 namespace opflexagent {
 
 TaskQueue::TaskQueue(boost::asio::io_service& io_service_)

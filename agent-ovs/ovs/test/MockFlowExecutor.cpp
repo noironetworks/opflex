@@ -11,16 +11,11 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <sstream>
-#include <algorithm>
-
 #include "ovs-shim.h"
 extern "C" {
 #include <openvswitch/dynamic-string.h>
 #include <openvswitch/ofp-print.h>
-#include <openvswitch/ofp-errors.h>
 #include <openvswitch/ofp-flow.h>
-#include <openflow/openflow-common.h>
 }
 
 namespace opflexagent {

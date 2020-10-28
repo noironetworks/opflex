@@ -11,17 +11,10 @@
 
 #include <list>
 #include <boost/test/unit_test.hpp>
-#include <boost/assign/list_of.hpp>
 #include <modelgbp/dmtree/Root.hpp>
-#include <opflex/modb/Mutator.h>
 
-#include <opflexagent/logging.h>
 #include <opflexagent/test/BaseFixture.h>
 #include <opflexagent/test/MockEndpointSource.h>
-#include "Policies.h"
-#include <modelgbp/span/Universe.hpp>
-#include <opflexagent/SpanSessionState.h>
-#include <opflexagent/SpanManager.h>
 
 namespace opflexagent {
 

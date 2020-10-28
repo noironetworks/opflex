@@ -936,8 +936,8 @@ void PolicyManager::updateRedirectDestGroup(const URI& uri,
 }
 
 void PolicyManager::updateRedirectDestGroups(uri_set_t &notifyGroup) {
-    for (auto itr = redirGrpMap.begin(); itr != redirGrpMap.end(); ++itr) {
-        updateRedirectDestGroup(itr->first, notifyGroup);
+    for (auto& itr : redirGrpMap) {
+        updateRedirectDestGroup(itr.first, notifyGroup);
     }
 }
 
@@ -1526,7 +1526,6 @@ void PolicyManager::updateL3Nets(const opflex::modb::URI& rdURI,
     optional<shared_ptr<LocalRoute>> localRoute;
     optional<shared_ptr<LocalRouteToRrtRSrc>> lrtToRrt;
     optional<shared_ptr<LocalRouteToPrtRSrc>> lrtToPrt;
-    vector<shared_ptr<LocalRouteToSrtRSrc>> lrtToSrt;
     RoutingDomainState& rds = rd_map[rdURI];
     optional<shared_ptr<RoutingDomain > > rd =
         RoutingDomain::resolve(framework, rdURI);
@@ -2025,10 +2024,10 @@ void PolicyManager::updateDomain(class_id_t class_id, const URI& uri) {
         if (it1 != subnets_rd_map.end()) {
             uri_set_t& rdset = it1->second;
 
-            for (auto it2 = rdset.begin(); it2 != rdset.end(); it2++) {
-                 if (notifyRds.find(*it2) != notifyRds.end())
-                     continue;
-                 notifyRds.insert(*it2);
+            for (const auto& it2 : rdset) {
+                if (notifyRds.find(it2) != notifyRds.end())
+                    continue;
+                notifyRds.insert(it2);
             }
         }
 

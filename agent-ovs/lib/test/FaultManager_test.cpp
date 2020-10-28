@@ -6,10 +6,7 @@
 #include <opflexagent/Agent.h>
 #include <modelgbp/fault/Universe.hpp>
 #include <boost/filesystem.hpp>
-#include <opflexagent/FSEndpointSource.h>
 #include <opflexagent/test/MockEndpointSource.h>
-#include <opflexagent/SpanManager.h>
-#include <mutex>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -42,18 +39,13 @@ public:
     }
 
 
-
     MockEndpointSource epSource;
     URI bduri;
     shared_ptr<policy::Space> space;
     shared_ptr<policy::Space> common;
     shared_ptr<EpGroup> eg1;
     shared_ptr<BridgeDomain> bd;
-     shared_ptr<EpGroup> eg2;
-    shared_ptr<BridgeDomain> bd1;
     shared_ptr<L2Ep> l2E1;
-    shared_ptr<L2Ep> l2E2;
-    std::mutex lock_modb_mutex;
     fs::path temp;
 
 };
