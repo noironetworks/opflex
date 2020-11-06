@@ -32,7 +32,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/optional.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/asio/io_service.hpp>
 
+#include <thread>
 #include <utility>
 #include <unordered_map>
 
@@ -530,6 +532,12 @@ public:
      */
     static void populateTableDescriptionMap(
             SwitchManager::TableDescriptionMap &fwdTblDescr);
+    /**
+     * Get ASIO io_service used for svc stats processing
+     */
+    boost::asio::io_service& getSvcStatsIOService() {
+        return svcStatsIOService;
+    }
 private:
     /**
      * Write flows that are fixed and not related to any policy or
@@ -589,6 +597,13 @@ private:
     void updateSvcStatsFlows(const std::string &uuid,
                              const bool &is_svc,
                              const bool &is_add);
+
+    /**
+     * Handle update of service stats flows for metric collection
+     *
+     * @param task_id made up of is_svc,is_add, & UUID of the changed service/ep
+     */
+    void handleUpdateSvcStatsFlows(const std::string& task_id);
 
     /**
      * Update ext<-->svc-tgt flows due to changes in a service/ep
@@ -887,7 +902,7 @@ private:
     std::string dropLogIface;
     boost::asio::ip::address dropLogDst;
     uint16_t dropLogRemotePort;
-    bool serviceStatsFlowDisabled;
+    std::atomic<bool> serviceStatsFlowDisabled;
 
     /* Map containing ingress and egress cookie: Flows generated out
      * of same pod<-->svc uuid will use these cookies */
@@ -973,6 +988,10 @@ private:
      */
     void handleDropLogPortUpdate();
 
+    std::unique_ptr<std::thread> svcStatsThread;
+    boost::asio::io_service svcStatsIOService;
+    std::unique_ptr<boost::asio::io_service::work> svcStatsIOWork;
+    TaskQueue svcStatsTaskQueue;
 };
 
 } // namespace opflexagent

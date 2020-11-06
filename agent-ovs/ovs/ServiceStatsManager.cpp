@@ -46,7 +46,7 @@ ServiceStatsManager::~ServiceStatsManager() {
 void ServiceStatsManager::start() {
     LOG(DEBUG) << "Starting service stats manager ("
                << timer_interval << " ms)";
-    PolicyStatsManager::start();
+    PolicyStatsManager::start(true, intFlowManager.getSvcStatsIOService());
     {
         std::lock_guard<std::mutex> lock(timer_mutex);
         timer->async_wait(bind(&ServiceStatsManager::on_timer, this, error));

@@ -281,6 +281,7 @@ private:
     // table state
     std::vector<TableState> flowTables;
     TableState tlvTable;
+    std::recursive_mutex sm_mutex;
 
     // connection state
     void handleConnection(SwitchConnection *sw);
@@ -290,19 +291,19 @@ private:
     long connectDelayMs;
 
     // sync state
-    bool stopping;
-    bool syncEnabled;
-    bool syncing;
-    bool syncInProgress;
-    bool syncPending;
+    std::atomic<bool> stopping;
+    std::atomic<bool> syncEnabled;
+    std::atomic<bool> syncing;
+    std::atomic<bool> syncInProgress;
+    std::atomic<bool> syncPending;
 
     std::vector<FlowEntryList> recvFlows;
     std::vector<bool> tableDone;
     TlvEntryList recvTlvs;
-    bool tlvTableDone;
+    std::atomic<bool> tlvTableDone;
 
     SwitchStateHandler::GroupMap recvGroups;
-    bool groupsDone;
+    std::atomic<bool> groupsDone;
 
     /*Drop counter table list*/
     TableDescriptionMap tableDescriptionMap;
