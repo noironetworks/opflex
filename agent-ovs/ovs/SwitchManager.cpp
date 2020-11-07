@@ -78,6 +78,7 @@ void SwitchManager::stop() {
 }
 
 void SwitchManager::setMaxFlowTables(int max) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     flowTables.resize(max);
     recvFlows.resize(max);
     tableDone.resize(max);
@@ -135,6 +136,7 @@ void SwitchManager::Connected(SwitchConnection *swConn) {
 }
 
 void SwitchManager::handleConnection(SwitchConnection *sw) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     flowReader.clear();
     syncInProgress = false;
     syncPending = false;
@@ -149,7 +151,6 @@ void SwitchManager::handleConnection(SwitchConnection *sw) {
         return;
     }
 
-    const lock_guard<recursive_mutex> lock(timer_mutex);
     if (connectTimer) {
         LOG(DEBUG) << "[" << connection->getSwitchName() << "] "
                    << "Sync state with switch will begin in "
@@ -173,6 +174,7 @@ void SwitchManager::onConnectTimer(const boost::system::error_code& ec) {
 
 bool SwitchManager::writeFlow(const std::string& objId, int tableId,
                               FlowEntryList& el) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     bool success = true;
 
     assert(tableId >= 0 &&
@@ -217,6 +219,7 @@ bool SwitchManager::clearFlows(const std::string& objId, int tableId) {
 }
 
 bool SwitchManager::writeGroupMod(const GroupEdit::Entry& e) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     // If a sync is in progress, don't write to the group table while
     // we are reading and reconciling with the current groups.
     if (syncing) {
@@ -234,6 +237,7 @@ bool SwitchManager::writeGroupMod(const GroupEdit::Entry& e) {
 }
 
 bool SwitchManager::writeTlv(const std::string& objId, TlvEntryList& el) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     bool success = true;
 
     TlvEdit diffs;
@@ -255,17 +259,20 @@ bool SwitchManager::writeTlv(const std::string& objId, TlvEntryList& el) {
 
 void SwitchManager::diffTableState(int tableId, const FlowEntryList& el,
                                    /* out */ FlowEdit& diffs) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     const TableState& tab = flowTables[tableId];
     tab.diffSnapshot(el, diffs);
 }
 
 void SwitchManager::forEachCookieMatch(int tableId,
                                        TableState::cookie_callback_t& cb) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     const TableState& tab = flowTables[tableId];
     tab.forEachCookieMatch(cb);
 }
 
 void SwitchManager::initiateSync() {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     if (syncInProgress) {
         LOG(DEBUG) << "[" << connection->getSwitchName() << "] "
                    << "Sync is already in progress, marking it as pending";
@@ -290,6 +297,7 @@ void SwitchManager::initiateSync() {
 
 void SwitchManager::gotGroups(const GroupEdit::EntryList& groups,
     bool done) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     for (const GroupEdit::Entry& e : groups) {
         recvGroups[e->mod->group_id] = e;
     }
@@ -303,6 +311,7 @@ void SwitchManager::gotGroups(const GroupEdit::EntryList& groups,
 
 void SwitchManager::gotFlows(int tableId, const FlowEntryList& flows,
                              bool done) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     assert(tableId >= 0 &&
            static_cast<size_t>(tableId) < flowTables.size());
 
@@ -319,6 +328,7 @@ void SwitchManager::gotFlows(int tableId, const FlowEntryList& flows,
 
 void SwitchManager::gotTlvEntries(const TlvEntryList& tlvs,
                              bool done) {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     TlvEntryList& rl = recvTlvs;
     rl.insert(rl.end(), tlvs.begin(), tlvs.end());
     tlvTableDone = done;
@@ -331,6 +341,7 @@ void SwitchManager::gotTlvEntries(const TlvEntryList& tlvs,
 }
 
 void SwitchManager::checkRecvDone() {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     bool allDone = groupsDone;
     for (size_t i = 0; allDone && i < flowTables.size(); ++i) {
         allDone = allDone && tableDone[i];
@@ -346,6 +357,7 @@ void SwitchManager::checkRecvDone() {
 }
 
 void SwitchManager::completeSync() {
+    const lock_guard<recursive_mutex> lock(sm_mutex);
     assert(syncInProgress == true);
     if (stateHandler) {
         GroupEdit ge = stateHandler->reconcileGroups(recvGroups);
