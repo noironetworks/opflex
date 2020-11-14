@@ -260,21 +260,16 @@ class InboundMessage : public Message {
      */
     explicit InboundMessage(
             yajr::Peer& peer,               /* < [in] where to send to */
-            rapidjson::Value const & payload
-            )
-        :
+            rapidjson::Value const & payload) :
             Message(&peer),
-            payload_(payload),
-            received_(uv_now(getUvLoop()))
+            payload_(payload)
         {
-            assert(&peer);
         }
 
   private:
     /* making the peer private so InboundMessage subclasses won't see it */
     using Message::peer_;
     rapidjson::Value const & payload_;/**< [in] params, result, error payload */
-    uint64_t received_;
 };
 
 /**
@@ -311,12 +306,9 @@ class OutboundMessage : public Message, virtual public Identifier {
      */
     explicit OutboundMessage(
         PayloadGenerator const & payloadGenerator,/**< [in] payload generator */
-        yajr::Peer* peer                    /**< [in] where to send to */
-        )
-        :
+        yajr::Peer* peer) :
           Message(peer),
-          payloadGenerator_(payloadGenerator),
-          sent_(uv_now(getUvLoop()))
+          payloadGenerator_(payloadGenerator)
         {}
 
     /**
@@ -334,7 +326,6 @@ class OutboundMessage : public Message, virtual public Identifier {
     virtual bool emitMethod(yajr::rpc::SendHandler& handler) = 0;
   private:
     PayloadGenerator const payloadGenerator_;
-    uint64_t sent_;
 };
 
 /**
