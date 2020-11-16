@@ -10,9 +10,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
-#include <sys/resource.h>
-#include <unistd.h>
-#include <sys/syscall.h>
 #include <boost/system/error_code.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -152,9 +149,8 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     floodScope(FLOOD_DOMAIN), tunnelPortStr("4789"),
     virtualRouterEnabled(false), routerAdv(false),
     virtualDHCPEnabled(false), conntrackEnabled(false), dropLogRemotePort(0),
-    serviceStatsFlowDisabled(false),
-    advertManager(agent, *this), isSyncing(false), stopping(false),
-    svcStatsTaskQueue(svcStatsIOService) {
+    serviceStatsFlowDisabled(true),
+    advertManager(agent, *this), isSyncing(false), stopping(false) {
     // set up flow tables
     switchManager.setMaxFlowTables(NUM_FLOW_TABLES);
     SwitchManager::TableDescriptionMap fwdTblDescr;
@@ -187,30 +183,6 @@ void IntFlowManager::start(bool serviceStatsFlowDisabled_) {
 
     initPlatformConfig();
     createStaticFlows();
-
-    svcStatsIOWork.reset(new boost::asio::io_service::work(svcStatsIOService));
-    svcStatsThread.reset(new std::thread([this]() {
-            LOG(DEBUG) << "svcStatsThread start IO run";
-            const pid_t tid = syscall(SYS_gettid);
-            // By default sched policy is SCHED_OTHER for all threads in linux.
-            // Default priority is 0. SCHED_FIFO/RR will make threads with
-            // min prio of 1 and max prio of 99, and these policy threads will
-            // always preempt threads with SCHED_OTHER. Instead of changing all
-            // the existing threads to SCHED_FIFO/RR and innfluence priorities,
-            // there is a way to influence NICE values of SCHED_OTHER threads.
-            // Nice values vary from -20(high) to +19(low)
-            // Refer:
-            // 1. https://man7.org/linux/man-pages/man7/sched.7.html
-            // 2. https://linux.die.net/man/2/setpriority <-- this sets the nice
-            //                                      value of SCHED_OTHER threads
-            if (setpriority(PRIO_PROCESS, tid, 19)) {
-                LOG(ERROR) << "Unable to set low priority for svcStatsThread";
-                return;
-            }
-            svcStatsIOService.run();
-            LOG(DEBUG) << "svcStatsThread no more IO";
-        }));
-    LOG(DEBUG) << "Starting svcStatsIOWork and svcStatsThread";
 }
 
 void IntFlowManager::registerModbListeners() {
@@ -227,16 +199,6 @@ void IntFlowManager::registerModbListeners() {
 void IntFlowManager::stop() {
     LOG(DEBUG) << "Stopping IntFlowManager";
     stopping = true;
-
-    if (svcStatsIOWork) {
-        LOG(DEBUG) << "Stopping svcStatsIOWork";
-        svcStatsIOWork.reset();
-    }
-    if (svcStatsThread) {
-        LOG(DEBUG) << "Stopping svcStatsThread";
-        svcStatsThread->join();
-        svcStatsThread.reset();
-    }
 
     agent.getEndpointManager().unregisterListener(this);
     agent.getServiceManager().unregisterListener(this);
@@ -3010,50 +2972,6 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
     mutator.commit();
 }
 
-void IntFlowManager::handleUpdateSvcStatsFlows (const string& task_id)
-{
-    const std::lock_guard<mutex> lock(svcStatMutex);
-
-    bool is_svc = strcmp(task_id.substr(0,1).c_str(),"1") == 0;
-    bool is_add = strcmp(task_id.substr(1,1).c_str(),"1") == 0;
-    const string& uuid = task_id.substr(2);
-
-    LOG(DEBUG) << "#####  Updating service stats flows:"
-               << " uuid: " << uuid
-               << " is_svc: " << is_svc
-               << " is_add: " << is_add << "#######";
-
-    updatePodSvcStatsFlows(uuid, is_svc, is_add);
-    updateSvcTgtStatsFlows(uuid, is_svc, is_add);
-    updateSvcNodeStatsFlows(uuid, is_svc, is_add);
-    updateSvcExtStatsFlows(uuid, is_svc, is_add);
-
-    if (is_svc && is_add) {
-        // Svc Stats flow programming happens in this low prio thread.
-        // SNAT/DNAT flows will be programmed initially from a different thread.
-        // It will get updated here if needed for stats to work.
-        ServiceManager& srvMgr = agent.getServiceManager();
-        shared_ptr<const Service> asWrapper = srvMgr.getService(uuid);
-        if (!asWrapper || !asWrapper->getDomainURI()) {
-            LOG(DEBUG) << "unable to get service from uuid";
-            return;
-        }
-        programServiceSnatDnatFlows(uuid);
-    } else {
-        unordered_set<string> svcUuids;
-        ServiceManager& svcMgr = agent.getServiceManager();
-        svcMgr.getServiceUUIDs(svcUuids);
-        for (const string& svcUuid : svcUuids) {
-            // If EP IP is added, and happens to be NH of this service, then cookie needs to be updated
-            // If EP IP is deleted, and happens to be NH of this service, then cookie needs to be removed
-            // If EP IP is modified:
-            //  - if it became NH of this service, then cookie needs to be updated
-            //  - if it moved away from being NH of this service, then cookie needs to be removed
-            programServiceSnatDnatFlows(svcUuid);
-        }
-    }
-}
-
 /**
  * Add/del stats flows:
  * Cluster/E-W:
@@ -3064,20 +2982,20 @@ void IntFlowManager::updateSvcStatsFlows (const string& uuid,
                                           const bool& is_svc,
                                           const bool& is_add)
 {
+    const std::lock_guard<mutex> lock(svcStatMutex);
+
     if (serviceStatsFlowDisabled)
         return;
 
-    std::string task_id;
-    if (is_svc)
-        task_id += "1";
-    else
-        task_id += "0";
-    if (is_add)
-        task_id += "1";
-    else
-        task_id += "0";
-    task_id += uuid;
-    svcStatsTaskQueue.dispatch(task_id, [=]() { handleUpdateSvcStatsFlows(task_id); });
+    LOG(DEBUG) << "##### Updating service stats flows:"
+               << " uuid: " << uuid
+               << " is_svc: " << is_svc
+               << " is_add: " << is_add << "#######";
+
+    updatePodSvcStatsFlows(uuid, is_svc, is_add);
+    updateSvcTgtStatsFlows(uuid, is_svc, is_add);
+    updateSvcNodeStatsFlows(uuid, is_svc, is_add);
+    updateSvcExtStatsFlows(uuid, is_svc, is_add);
 }
 
 void IntFlowManager::updateSvcExtStatsFlows (const string &uuid,
@@ -3284,6 +3202,12 @@ void IntFlowManager::updateSvcExtStatsFlows (const string &uuid,
         // If an IP is deleted, then cookie will be deleted
         for (const string& svcUuid : svcUuids) {
             updateSvcExtStatsFlows(svcUuid, true, true);
+            // If EP IP is modified:
+            //  - if it became NH of this service, then SNAT/DNAT flows should be
+            //    updated with stats cookie
+            //  - if it moved away from being NH of this service, then SNAT/DNAT
+            //    flows shouldnt match on stats cookie
+            programServiceSnatDnatFlows(svcUuid);
         }
     }
 }
@@ -3819,6 +3743,12 @@ void IntFlowManager::updateSvcTgtStatsFlows (const string &uuid,
         // If an IP is deleted, then stats flows will be deleted
         for (const string& svcUuid : svcUuids) {
             updateSvcTgtStatsFlows(svcUuid, true, true);
+            // If EP IP is added, and happens to be NH of this service, then cookie needs to be updated
+            // If EP IP is deleted, and happens to be NH of this service, then cookie needs to be removed
+            // If EP IP is modified:
+            //  - if it became NH of this service, then cookie needs to be updated
+            //  - if it moved away from being NH of this service, then cookie needs to be removed
+            programServiceSnatDnatFlows(svcUuid);
         }
     }
 
