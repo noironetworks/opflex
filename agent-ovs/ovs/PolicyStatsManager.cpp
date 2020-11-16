@@ -64,8 +64,7 @@ void PolicyStatsManager::registerConnection(SwitchConnection* connection) {
     this->connection = connection;
 }
 
-void PolicyStatsManager::start(bool register_listener,
-                               boost::optional<boost::asio::io_service&> io_service) {
+void PolicyStatsManager::start(bool register_listener) {
     stopping = false;
 
     LOG(DEBUG) << "Starting policy stats manager " << this;
@@ -74,11 +73,7 @@ void PolicyStatsManager::start(bool register_listener,
         connection->RegisterMessageHandler(OFPTYPE_FLOW_REMOVED, this);
         {
             std::lock_guard<std::mutex> lock(timer_mutex);
-            if (io_service)
-                timer.reset(new deadline_timer(io_service.get(),
-                                               milliseconds(timer_interval)));
-            else
-                timer.reset(new deadline_timer(agent->getAgentIOService(),
+            timer.reset(new deadline_timer(agent->getAgentIOService(),
                                                milliseconds(timer_interval)));
         }
     }
