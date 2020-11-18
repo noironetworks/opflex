@@ -19,7 +19,6 @@
 
 #include <opflexagent/logging.h>
 #include <opflexagent/PolicyManager.h>
-#include "FlowUtils.h"
 
 namespace opflexagent {
 
