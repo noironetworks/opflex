@@ -18,7 +18,6 @@ OVS_ADDL_CFLAGS = \
 
 AM_CPPFLAGS = $(BOOST_CPPFLAGS) \
 	-Wall -Werror \
-	-I$(top_srcdir)/ovs/include \
 	-I$(top_srcdir)/lib/include \
 	-DLOCALSTATEDIR='"$(localstatedir)"'
 if ENABLE_TSAN
@@ -60,8 +59,7 @@ lib_LTLIBRARIES = libopflex_agent.la
 libopflex_agent_la_CXXFLAGS = -pthread \
 	$(libopflex_CFLAGS) \
 	$(libmodelgbp_CFLAGS) \
-	$(rapidjson_CFLAGS) \
-	$(libnfct_CFLAGS)
+	$(rapidjson_CFLAGS)
 if ENABLE_PROMETHEUS
 libopflex_agent_la_CXXFLAGS += $(PROMETHEUS_CORE_CFLAGS)
 libopflex_agent_la_CXXFLAGS += $(PROMETHEUS_PULL_CFLAGS)
@@ -70,7 +68,6 @@ endif
 libopflex_agent_la_LIBADD = \
 	$(libopflex_LIBS) \
 	$(libmodelgbp_LIBS) \
-	$(libnfct_LIBS) \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_ASIO_LIB)
@@ -110,7 +107,7 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSRDConfigSource.h \
 	lib/include/opflexagent/RDConfig.h \
 	lib/include/opflexagent/Renderer.h \
-	lib/include/opflexagent/TunnelEpManager.h \ 
+	lib/include/opflexagent/TunnelEpManager.h \
 	lib/include/opflexagent/FaultManager.h \
 	lib/include/opflexagent/FaultSource.h \
 	lib/include/opflexagent/FSFaultSource.h \
@@ -221,7 +218,6 @@ libopflex_agent_la_SOURCES = \
 	lib/Fault.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
-	lib/CtZoneManager.cpp \
 	lib/NotifServer.cpp \
 	lib/MulticastListener.cpp \
 	lib/TaskQueue.cpp \
@@ -298,9 +294,11 @@ if RENDERER_OVS
 	ovs/OvsdbConnection.cpp \
 	ovs/OvsdbTransactMessage.cpp \
 	ovs/OvsdbMessage.cpp \
-	ovs/OvsdbMonitorMessage.cpp
+	ovs/OvsdbMonitorMessage.cpp \
+	ovs/CtZoneManager.cpp
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
+	-I$(top_srcdir)/ovs/include \
 	$(libofproto_CFLAGS)
   librenderer_openvswitch_la_CXXFLAGS = \
 	$(libopflex_CFLAGS) \
@@ -308,6 +306,7 @@ if RENDERER_OVS
 	$(OVS_ADDL_CFLAGS) \
 	$(libopenvswitch_CFLAGS) \
 	$(libofproto_CFLAGS) \
+	-I$(top_srcdir)/ovs/include \
 	-std=gnu++11
 if ENABLE_TSAN
   librenderer_openvswitch_la_CXXFLAGS += -fsanitize=thread
@@ -331,7 +330,8 @@ endif
 	$(libofproto_LIBS) \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
-	$(BOOST_ASIO_LIB)
+	$(BOOST_ASIO_LIB) \
+	$(libnfct_LIBS)
   libopflex_agent_renderer_openvswitch_la_LIBADD = \
 	librenderer_openvswitch.la
   libopflex_agent_renderer_openvswitch_la_LDFLAGS = \
@@ -431,7 +431,7 @@ mcast_daemon_LDADD = \
 	libopflex_agent.la
 
 TESTS = agent_test
-noinst_PROGRAMS = $(TESTS) integration_test policy_repo_stress framework_stress mock_server
+noinst_PROGRAMS = $(TESTS) policy_repo_stress framework_stress mock_server
 if RENDERER_OVS
   noinst_PROGRAMS += integration_test_ovs
 endif
@@ -728,49 +728,12 @@ if HAVE_DOXYGEN
 	doc/html
 endif
 
-integration_test_CXXFLAGS = \
-	$(BOOST_CPPFLAGS) -DBOOST_TEST_DYN_LINK
-if ENABLE_TSAN
-  integration_test_CXXFLAGS += -fsanitize=thread
-endif
-if ENABLE_ASAN
-  integration_test_CXXFLAGS += -fsanitize=address
-endif
-if ENABLE_COVERAGE
-  integration_test_CXXFLAGS += --coverage
-endif
-if ENABLE_GPROF
-  integration_test_CXXFLAGS += -pg
-endif
-if ENABLE_UBSAN
-  integration_test_CXXFLAGS += -fsanitize=undefined
-endif
-
-integration_test_SOURCES = \
-	lib/integration-test/ctzone_test.cpp \
-	cmd/integration-test/integration_test.cpp
-
-integration_test_LDFLAGS = $(BOOST_LDFLAGS)
-if ENABLE_TSAN
-  integration_test_LDFLAGS += -fsanitize=thread
-endif
-if ENABLE_ASAN
-  integration_test_LDFLAGS += -fsanitize=address
-endif
-if ENABLE_UBSAN
-  integration_test_LDFLAGS += -fsanitize=undefined
-endif
-
-integration_test_LDADD = \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_UNIT_TEST_FRAMEWORK_LIB) \
-	libopflex_agent.la
-
 if RENDERER_OVS
   integration_test_ovs_SOURCES = \
 	ovs/integration-test/include/ConnectionFixture.h \
 	ovs/integration-test/connection_test.cpp \
 	ovs/integration-test/flowmod_test.cpp \
+	ovs/integration-test/ctzone_test.cpp \
 	cmd/integration-test/integration_test.cpp
   integration_test_ovs_CXXFLAGS = \
 	$(BOOST_CPPFLAGS) -DBOOST_TEST_DYN_LINK \

@@ -22,11 +22,6 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/error/en.h>
 
-#include <cstdio>
-#include <sstream>
-#include <functional>
-#include <unistd.h>
-#include <sys/types.h>
 #include <grp.h>
 #include <pwd.h>
 

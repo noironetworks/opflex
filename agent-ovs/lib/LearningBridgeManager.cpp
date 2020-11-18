@@ -12,8 +12,6 @@
 #include <opflexagent/LearningBridgeManager.h>
 #include <opflexagent/logging.h>
 
-#include <algorithm>
-
 namespace opflexagent {
 
 using std::unique_lock;
@@ -66,7 +64,7 @@ void LearningBridgeManager::removeIfaces(const LearningBridgeIface& iface) {
             std::unordered_set<std::string>& ifaces = it->second;
             ifaces.erase(iface.getUUID());
 
-            if (ifaces.size() == 0) {
+            if (ifaces.empty()) {
                 iface_lbi_map.erase(it);
             }
         }
