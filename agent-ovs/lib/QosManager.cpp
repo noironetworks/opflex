@@ -119,8 +119,8 @@ namespace opflexagent {
             if (qosDscpMarkingOpt){
                 const shared_ptr<modelgbp::qos::DscpMarking> &qosDscpMarking =
                      qosDscpMarkingOpt.get();
-                LOG(INFO) << "DscpMarking: " << qosDscpMarking->getMark().get();
                 if (qosDscpMarking->isMarkSet()) {
+                    LOG(INFO) << "DscpMarking: " << qosDscpMarking->getMark().get();
                     processQosConfig(qosDscpMarking);
                 }
             } else {
