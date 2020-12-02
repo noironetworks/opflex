@@ -12,6 +12,7 @@
 #ifndef OPFLEXAGENT_GBPBPFMAPS_H
 #define OPFLEXAGENT_GBPBPFMAPS_H
 
+#include <linux/if_ether.h>
 #include <boost/asio/ip/address.hpp>
 #include <opflexagent/BpfMap.h>
 #include <gbp.h>

@@ -38,15 +38,13 @@ struct arp_eth {
 /* Check if packet is ARP request for IP */
 static __always_inline
 int arp_check(struct ethhdr *eth, struct arphdr *arp,
-	      struct arp_eth *arp_eth, __be32 ip,
-	      union macaddr *mac)
+	      struct arp_eth *arp_eth, union macaddr *mac)
 {
 	union macaddr *dmac = (union macaddr *) &eth->h_dest;
 
 	return arp->ar_op  == bpf_htons(ARPOP_REQUEST) &&
 	       arp->ar_hrd == bpf_htons(ARPHRD_ETHER) &&
-	       (eth_is_bcast(dmac) || !eth_addrcmp(dmac, mac)) &&
-	       arp_eth->ar_tip == ip;
+	       (eth_is_bcast(dmac) || !eth_addrcmp(dmac, mac));
 }
 
 static __always_inline
@@ -63,7 +61,7 @@ int arp_prepare_response(struct __sk_buff *skb, struct ethhdr *eth,
 	    bpf_skb_store_bytes(skb, 20, &arpop, sizeof(arpop), 0) < 0 ||
 	    bpf_skb_store_bytes(skb, 22, mac, 6, 0) < 0 ||
 	    bpf_skb_store_bytes(skb, 28, &ip, 4, 0) < 0 ||
-	    bpf_skb_store_bytes(skb, 32, &smac, sizeof(smac), 0) < 0 ||
+	    bpf_skb_store_bytes(skb, 32, &smac, 6, 0) < 0 ||
 	    bpf_skb_store_bytes(skb, 38, &sip, sizeof(sip), 0) < 0)
 		return TC_ACT_SHOT;
 
@@ -72,21 +70,25 @@ int arp_prepare_response(struct __sk_buff *skb, struct ethhdr *eth,
 
 static __always_inline
 int process_arp(void *data, __u64 off, void *data_end, struct __sk_buff * skb,
-		union macaddr *mac, __be32 ip)
+		union macaddr *mac)
 {
-	struct arphdr *arp = data + ETH_HLEN;
 	struct ethhdr *eth = data;
+	struct arphdr *arp = data + ETH_HLEN;
 	struct arp_eth *arp_eth = (struct arp_eth *)(arp + 1);
+	char fmt[] = "process_arp for tip %x\n";
+	char fmt2[] = "success\n";
 	int ret;
 
 	if (arp_eth + 1 > data_end)
 		return TC_ACT_OK;
 
-	if (arp_check(eth, arp, arp_eth, ip, mac)) {
-		ret = arp_prepare_response(skb, eth, arp_eth, ip, mac);
-		if (unlikely(ret != 0))
+	if (arp_check(eth, arp, arp_eth, mac)) {
+		bpf_trace_printk(fmt, sizeof(fmt), arp_eth->ar_tip);
+		ret = arp_prepare_response(skb, eth, arp_eth, arp_eth->ar_tip, mac);
+		if (ret != 0)
 			goto error;
-
+		else
+			bpf_trace_printk(fmt2, sizeof(fmt2));
 		return bpf_redirect(skb->ifindex, 0);
 	}
 

@@ -21,6 +21,7 @@
 #include <linux/bool.h>
 #include <gbp_maps.h>
 #include <ip.h>
+#include <arp.h>
 
 static __always_inline
 int process_flow(struct pktmeta *meta,
@@ -127,6 +128,7 @@ int ep_ingress(struct __sk_buff *ctx)
     __u32 nh_off;
     bool from_ep = true;
     int ret = 0;
+    union macaddr mac = GW_MAC;
 
     bpf_clear_cb(ctx);
     bpf_set_eth(ctx, data, data_end, nh_off, eth);
@@ -136,6 +138,8 @@ int ep_ingress(struct __sk_buff *ctx)
         ret = process_ip4(data, nh_off, data_end, ctx, from_ep);
     } else if (eth_proto == bpf_htons(ETH_P_IPV6)) {
         ret = process_ip6(data, nh_off, data_end, ctx, from_ep);
+    } else if (eth_proto == bpf_htons(ETH_P_ARP)) {
+        ret = process_arp(data, nh_off, data_end, ctx, &mac);
     } else {
         return 0;
     }

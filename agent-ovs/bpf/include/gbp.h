@@ -73,6 +73,36 @@ struct ip6_tuple {
 #endif
 };
 
+union macaddr {
+        struct {
+                __u32 p1;
+                __u16 p2;
+        } tuple;
+        unsigned char addr[6];
+};
+
+#define GW_MAC { .addr = { 0x0, 0x22, 0xbd, 0xf8, 0x19, 0xff } }
+
+struct next_hop_local {
+    int ifindex;
+    unsigned char mac[ETH_ALEN];
+};
+
+struct next_hop_remote {
+    int ifindex;
+    __be32 remote_vtep;
+    __be64 tunnel_id;
+};
+
+struct next_hop {
+    __u8 is_local:1,
+         reserve:7;
+    union {
+        struct next_hop_local local;
+        struct next_hop_remote remote;
+    };
+};
+
 struct flow_state {
     __u16 estb:1,
           rev:1,      /* tuple was swapped on creation */
@@ -80,6 +110,7 @@ struct flow_state {
           allow_reflexive:1, /* allow reply */
           kill:1, /* schedule this flow for faster termination */
           reserve:11;
+    struct next_hop next_hop[2];
     __u64 packets[2];
     __u64 bytes[2];
     __u64 lasttime;
