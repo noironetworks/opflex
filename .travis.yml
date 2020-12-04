@@ -36,9 +36,6 @@ before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
 
 env:
   - TEST_SUITE=travis-build.sh
-  - TEST_SUITE=tsan-build.sh
-  - TEST_SUITE=asan-build.sh
-  - TEST_SUITE=ubsan-build.sh
 
 script: bash ./.travis/$TEST_SUITE
 
