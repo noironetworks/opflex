@@ -2167,9 +2167,8 @@ void PolicyManager::updateExternalNode(const URI& uri,
     using namespace modelgbp::epr;
     using namespace modelgbp::epdr;
 
-    optional<shared_ptr<RoutingDomain>> rd
-            = boost::make_optional<shared_ptr<RoutingDomain> >(false, nullptr);
-    optional<shared_ptr<InstContext>> rdInst;
+    auto rd = boost::make_optional<shared_ptr<RoutingDomain> >(false, nullptr);
+    auto rdInst = boost::make_optional<shared_ptr<InstContext> >(false, nullptr);
     ExternalNodeState &ens = ext_node_map[uri];
     vector<shared_ptr<StaticRoute>> staticRoutes;
     optional<shared_ptr<ExternalNode>> extNode =

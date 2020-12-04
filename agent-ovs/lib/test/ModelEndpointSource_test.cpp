@@ -19,8 +19,6 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <sstream>
-#include <algorithm>
 
 using opflex::modb::MAC;
 using opflex::modb::URI;
