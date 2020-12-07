@@ -293,11 +293,15 @@ namespace opflexagent {
             modelgbp::qos::Requirement::resolve(framework, req);
         if (qosReqOpt){
             shared_ptr<modelgbp::qos::Requirement> qosReq = qosReqOpt.get();
-            optional<shared_ptr<modelgbp::qos::DscpMarking> > dscpMarking =
+            optional<shared_ptr<modelgbp::qos::DscpMarking> > dscpMarkingOpt =
                 qosReq->resolveQosDscpMarking();
-            if (dscpMarking){
-                uint8_t dscp = dscpMarking.get()->getMark().get();
-                return dscp;
+            if (dscpMarkingOpt){
+                const shared_ptr<modelgbp::qos::DscpMarking> & dscpMarking =
+                    dscpMarkingOpt.get();
+                if (dscpMarking->isMarkSet()) {
+                    uint8_t dscp = dscpMarking->getMark().get();
+                    return dscp;
+                }
             }
         }
         return 0;
@@ -497,8 +501,10 @@ namespace opflexagent {
         URI reqUri(dscpMarkingUri);
         reqToDscp.erase(reqUri);
 
-        uint8_t dscp = qosconfig->getMark().get();
-        reqToDscp.insert(make_pair(reqUri, dscp));
+        if (qosconfig->isMarkSet()) {
+            uint8_t dscp = qosconfig->getMark().get();
+            reqToDscp.insert(make_pair(reqUri, dscp));
+        }
     }
 
 
