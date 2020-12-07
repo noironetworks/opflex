@@ -62,11 +62,10 @@ class ServiceSource;
 class FSRDConfigSource;
 class LearningBridgeSource;
 class SnatSource;
-class SimStats;
 class FSPacketDropLogConfigSource;
 class FSFaultSource;
 typedef std::tuple<std::string, bool, std::string> LogParams;
-enum StatMode { REAL, SIM, OFF };
+enum StatMode { REAL, OFF };
 /**
  * feature list enum. Always keep MAX at the end.
  */
@@ -235,39 +234,7 @@ public:
      * Get a unique identifer for the agent incarnation
      */
     const std::string& getUuid() { return uuid; }
-    /**
-     * Get contract counter timer interval.
-     * returns millisesonds.
-     */
-    long getContractInterval() { return contractInterval; }
-    /**
-     * Set contract counter timer in  milliseconds.
-     * A 0 setting means timer is turned off.
-     * @param  interval - time in milliseconds
-     */
-    void setContractInterval(const long interval) { contractInterval = interval; }
-    /**
-     * Get security group counter timer interval.
-     * returns milliseconds.
-     */
-    long getSecurityGroupInterval() { return securityGroupInterval; }
-    /**
-     * Set security group counter timer in milliseconds.
-     * A 0 setting means timer is turned off.
-     * @param  interval - time in milliseconds
-     */
-    void setSecurityGroupInterval(const long interval) { securityGroupInterval = interval; }
-    /**
-     * Get interface counter timer interval.
-     * returns milliseconds.
-     */
-    long getInterfaceInterval() { return interfaceInterval; }
-    /**
-     * Set interface counter timer in milliseconds.
-     * A 0 setting means timer is turned off.
-     * @param  interval - time in milliseconds
-     */
-    void setInterfaceInterval(const long interval) { interfaceInterval = interval; }
+
     /**
      * Set valid uplink mac discovered from TunnelEpManager.
      * @param  mac - Mac address in canonical form xx:xx (17 chars)
@@ -275,26 +242,9 @@ public:
     void setUplinkMac(const std::string &mac);
 
     /**
-     * A class used as a POD (Plain Old Data) object
-     * to pass counter settings around.
-     */
-
-    /**
      * Get the fault manager object for this agent
      */
     FaultManager& getFaultManager() { return faultManager; }
-
-    class StatProps {
-        public:
-        /**
-         * setting to enable/disable counter timer.
-         */
-        bool enabled;
-        /**
-         * setting for timer interval.
-         */
-        long interval;
-    };
 
     /**
      * Get packet event notification socket file name
@@ -379,7 +329,6 @@ private:
     boost::optional<std::string> notifPerms;
     // stats simulation
     StatMode statMode = StatMode::REAL;
-    std::unique_ptr<SimStats> pSimStats;
 
     // timers
     // prr timer - policy resolve request timer
@@ -431,15 +380,6 @@ private:
     std::string uuid;
 
     static StatMode getStatModeFromString(const std::string& mode);
-
-    static void setSimStatProperties(const std::string& enabled_prop,
-                                     const std::string& interval_prop,
-                                     const boost::property_tree::ptree& properties,
-                                     Agent::StatProps& props);
-
-    long contractInterval;
-    long securityGroupInterval;
-    long interfaceInterval;
 
     SpanManager spanManager;
     NetFlowManager netflowManager;

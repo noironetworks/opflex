@@ -13,7 +13,6 @@
 #include "config.h"
 #endif
 
-#include <boost/assign/list_of.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -33,12 +32,10 @@
 #include <opflexagent/logging.h>
 
 #include <opflexagent/Renderer.h>
-#include <opflexagent/SimStats.h>
 
 #include <opflexagent/FSFaultSource.h>
 #include <opflexagent/FaultSource.h>
 
-#include <cstdlib>
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
@@ -70,7 +67,6 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
       faultManager(*this, framework),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
-      contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
       qosManager(*this,framework, agent_io),	
@@ -89,7 +85,6 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
       faultManager(*this, framework),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
-      contractInterval(0), securityGroupInterval(0), interfaceInterval(0),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
       qosManager(*this,framework,agent_io),
@@ -459,30 +454,6 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         }
     }
 
-    if (statMode == StatMode::SIM) {
-        LOG(INFO) << "Simulation of stats enabled";
-        Agent::StatProps statProps{};
-        statProps.interval = 30;
-        setSimStatProperties(OPFLEX_STATS_INTERFACE_SETTING, OPFLEX_STATS_INTERFACE_INTERVAL,
-                             properties, statProps);
-        if (statProps.enabled)
-            setInterfaceInterval(statProps.interval*1000);
-        statProps.interval = 10;
-        setSimStatProperties(OPFLEX_STATS_CONTRACT_SETTING, OPFLEX_STATS_CONTRACT_INTERVAL,
-                             properties, statProps);
-        if (statProps.enabled)
-            setContractInterval(statProps.interval*1000);
-        statProps.interval = 10;
-        setSimStatProperties(OPFLEX_STATS_SECGRP_SETTING, OPFLEX_STATS_SECGRP_INTERVAL,
-                             properties, statProps);
-        if (statProps.enabled)
-            setSecurityGroupInterval(statProps.interval*1000);
-
-        LOG(INFO) << "contract interval set to " << contractInterval << " millisecs";
-        LOG(INFO) << "security group interval set to " << securityGroupInterval << " millisecs";
-        LOG(INFO) << "interface interval set to " << interfaceInterval << " millisecs";
-    }
-   
     boost::optional<boost::uint_t<64>::fast> prr_timer_present = 
         properties.get_optional<boost::uint_t<64>::fast>(OPFLEX_PRR_INTERVAL);
     if (prr_timer_present) { 
@@ -660,13 +631,6 @@ void Agent::start() {
     for (const host_t& h : opflexPeers)
         framework.addPeer(h.first, h.second);
 
-
-    if (statMode == StatMode::SIM) {
-        pSimStats = std::unique_ptr<SimStats>(new SimStats(*this));
-        pSimStats->start();
-        policyManager.registerListener(&(*pSimStats));
-    }
-
     if (statMode == StatMode::OFF) {
         LOG(INFO) << "Disable stats reporting completely";
         framework.disableObservableReporting();
@@ -685,11 +649,6 @@ void Agent::start() {
 void Agent::stop() {
     if (!started) return;
     LOG(INFO) << "Stopping OpFlex Agent";
-
-    // if stats simulation is enbaled, stop it.
-    if (statMode == StatMode::SIM) {
-        pSimStats->stop();
-    }
 
     // Just in case the io_service gets blocked by some stray
     // events that don't get cleared, abort the process after a
@@ -789,35 +748,10 @@ void Agent::createUniverse (std::shared_ptr<modelgbp::dmtree::Root> root)
 }
 
 inline StatMode Agent::getStatModeFromString(const std::string& mode) {
-    if (mode == "simulate")
-        return StatMode::SIM;
-    else if (mode == "off")
+    if (mode == "off")
         return StatMode::OFF;
     else
         return StatMode::REAL;
-}
-
-inline void Agent::setSimStatProperties(const std::string& enabled_prop,
-                                 const std::string& interval_prop,
-                                 const ptree& properties, Agent::StatProps& props) {
-    boost::optional<bool> enabled = properties.get_optional<bool>(enabled_prop);
-    if (enabled) {
-        if (enabled.get() == true) {
-            boost::optional<long> interval =
-                   properties.get_optional<long>(interval_prop);
-            props.enabled = true;
-            if (interval) {
-                if (interval.get() < 10)
-                   props.interval = 10*1000;
-                else
-                   props.interval = interval.get();
-            }
-        } else {
-           props.enabled = false;
-        }
-    } else {
-           props.enabled = false;
-    }
 }
 
 void Agent::setUplinkMac(const std::string &mac) {

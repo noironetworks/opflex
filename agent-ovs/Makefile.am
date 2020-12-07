@@ -121,7 +121,6 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/Network.h \
 	lib/include/opflexagent/cmd.h \
 	lib/include/opflexagent/logging.h \
-	lib/include/opflexagent/SimStats.h \
 	lib/include/opflexagent/SpanSessionState.h \
 	lib/include/opflexagent/SpanListener.h \
 	lib/include/opflexagent/SpanManager.h \
@@ -222,7 +221,6 @@ libopflex_agent_la_SOURCES = \
 	lib/MulticastListener.cpp \
 	lib/TaskQueue.cpp \
 	lib/Network.cpp \
-	lib/SimStats.cpp \
 	lib/SpanManager.cpp \
 	lib/NetFlowManager.cpp \
 	lib/FSSnatSource.cpp \
@@ -478,7 +476,6 @@ agent_test_SOURCES = \
 	lib/test/SpanManager_test.cpp \
 	lib/test/NetflowManager_test.cpp \
 	lib/test/ServiceManager_test.cpp \
-	lib/test/SimStats_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
 	lib/test/SnatManager_test.cpp \
 	lib/test/QosManager_test.cpp \
