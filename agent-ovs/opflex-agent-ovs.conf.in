@@ -102,9 +102,8 @@
            // "handshake-timeout" : 45000
        },
        // Statistics. Counters for various artifacts.
-       // mode: can have three values, viz.
+       // mode: can be either
        //       "real" - counters are based on actual data traffic. default.
-       //       "simulate" - simulate counters.
        //       "off" - turn off all counters.
        // There are three sections, one each for interface, contract and
        // security-group counters. Each section has two fields, viz.,
