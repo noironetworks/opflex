@@ -3234,14 +3234,13 @@ void IntFlowManager::updateSvcExtStatsFlows (const string &uuid,
 
         for (auto const& sm : as.getServiceMappings()) {
             for (const string& nhipstr : sm.getNextHopIPs()) {
-                const ip_ep_map_t& ip_ep_map = agent.getEndpointManager().getIPLocalEpMap();
-                const auto& itr = ip_ep_map.find(nhipstr);
-                if (itr != ip_ep_map.end()) {
+                const auto& pEp = agent.getEndpointManager().getEpFromLocalMap(nhipstr);
+                if (pEp) {
                     svcTgtCkAddExpr(flow_uuid,
                                     uuid,
                                     nhipstr, sm, as,
                                     as.getAttributes(),
-                                    itr->second->getAttributes());
+                                    pEp->getAttributes());
                 }
             }
         }
@@ -3516,14 +3515,13 @@ void IntFlowManager::updateSvcNodeStatsFlows (const string &uuid,
 
         for (auto const& sm : as.getServiceMappings()) {
             for (const string& nhipstr : sm.getNextHopIPs()) {
-                const ip_ep_map_t& ip_ep_map = agent.getEndpointManager().getIPLocalEpMap();
-                const auto& itr = ip_ep_map.find(nhipstr);
-                if (itr != ip_ep_map.end()) {
+                const auto& pEp = agent.getEndpointManager().getEpFromLocalMap(nhipstr);
+                if (pEp) {
                     svcNodeFlowAddExpr(flow_uuid,
                                        uuid,
                                        nhipstr, sm,
                                        as.getAttributes(),
-                                       itr->second->getAttributes());
+                                       pEp->getAttributes());
                 }
             }
         }
@@ -3770,14 +3768,13 @@ void IntFlowManager::updateSvcTgtStatsFlows (const string &uuid,
 
         for (auto const& sm : as.getServiceMappings()) {
             for (const string& nhipstr : sm.getNextHopIPs()) {
-                const ip_ep_map_t& ip_ep_map = agent.getEndpointManager().getIPLocalEpMap();
-                const auto& itr = ip_ep_map.find(nhipstr);
-                if (itr != ip_ep_map.end()) {
+                const auto& pEp = agent.getEndpointManager().getEpFromLocalMap(nhipstr);
+                if (pEp) {
                     svcTgtFlowAddExpr(flow_uuid,
                                       uuid,
                                       nhipstr, sm,
                                       as.getAttributes(),
-                                      itr->second->getAttributes());
+                                      pEp->getAttributes());
                 }
             }
         }
@@ -4203,8 +4200,6 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
             }
 
             vector<address> nextHopAddrs;
-            const ip_ep_map_t& ip_ep_map =
-                agent.getEndpointManager().getIPLocalEpMap();
             for (const string& ipstr : sm.getNextHopIPs()) {
                 auto nextHopAddr = address::from_string(ipstr, ec);
                 if (ec) {
@@ -4212,8 +4207,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                                  << ipstr << ": " << ec.message();
                 } else {
                     if (loopback) {
-                        const auto& it = ip_ep_map.find(ipstr);
-                        if (it == ip_ep_map.end())
+                        if (!agent.getEndpointManager().getEpFromLocalMap(ipstr))
                             continue;
                     }
                     nextHopAddrs.push_back(nextHopAddr);
@@ -6314,8 +6308,7 @@ static bool svcStatsIdGarbageCb(EndpointManager& epManager,
         }
 
         // ensure the pod is still local
-        const ip_ep_map_t& ip_ep_map = epManager.getIPLocalEpMap();
-        if (ip_ep_map.find(nhipStr) != ip_ep_map.end())
+        if (epManager.getEpFromLocalMap(nhipStr))
             return true;
     }
     return false;
