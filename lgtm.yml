@@ -33,7 +33,11 @@ queries:
   - include: cpp/uncontrolled-process-operation
   - include: cpp/unterminated-variadic-call
   - include: cpp/tainted-permissions-check
-  - include: cpp/integer-used-for-enum
+  - exclude: cpp/integer-used-for-enum
+  - include: cpp/inconsistent-null-check
+  - include: cpp/weak-cryptographic-algorithm
+  - include: cpp-loop-variable-float
+  - include: cpp/unused-local-variable
 extraction:
   cpp:
     prepare:
