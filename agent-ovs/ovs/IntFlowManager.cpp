@@ -4199,21 +4199,6 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                 continue;
             }
 
-            vector<address> nextHopAddrs;
-            for (const string& ipstr : sm.getNextHopIPs()) {
-                auto nextHopAddr = address::from_string(ipstr, ec);
-                if (ec) {
-                    LOG(WARNING) << "Invalid service next hop IP: "
-                                 << ipstr << ": " << ec.message();
-                } else {
-                    if (loopback) {
-                        if (!agent.getEndpointManager().getEpFromLocalMap(ipstr))
-                            continue;
-                    }
-                    nextHopAddrs.push_back(nextHopAddr);
-                }
-            }
-
             uint8_t proto = 0;
             if (sm.getServiceProto()) {
                 const string& protoStr = sm.getServiceProto().get();
@@ -4223,9 +4208,14 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     proto = 6;
             }
 
-
             uint16_t link = 0;
-            for (const address& nextHopAddr : nextHopAddrs) {
+            for (const string& ipstr : sm.getNextHopIPs()) {
+                auto nextHopAddr = address::from_string(ipstr, ec);
+                if (ec) {
+                    LOG(WARNING) << "Invalid service next hop IP: "
+                                 << ipstr << ": " << ec.message();
+                    continue;
+                }
                 {
                     FlowBuilder ipMap;
                     matchDestDom(ipMap, 0, rdId);
@@ -4244,7 +4234,12 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     ipMap.action().ipDst(nextHopAddr).decTtl();
                     // loopback has highest priority
                     if (loopback) {
+                        if (!agent.getEndpointManager().getEpFromLocalMap(ipstr)) {
+                            link++;
+                            continue;
+                        }
                         ipMap.priority(102)
+                             .reg(7, link)
                              .ipSrc(nextHopAddr)
                              .action()
                              .ipSrc(serviceAddr);
