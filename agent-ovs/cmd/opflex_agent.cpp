@@ -12,26 +12,16 @@
 #  include <config.h>
 #endif
 #include <opflexagent/Agent.h>
-#include <opflexagent/logging.h>
 #include <opflexagent/cmd.h>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/line.hpp>
 
-#include <string>
-#include <iostream>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
-
-#include <csignal>
-#include <cstring>
 
 using std::string;
 namespace po = boost::program_options;
@@ -43,7 +33,7 @@ using namespace opflexagent;
 
 class strip_comments : public boost::iostreams::line_filter {
 private:
-    std::string do_filter(const std::string& line) {
+    std::string do_filter(const std::string& line) override {
         // for now we only support comments that begin the line
         auto trimmed = line;
         boost::trim(trimmed);
@@ -128,12 +118,12 @@ public:
                 agent.stop();
 
                 if (stopped) {
+                    configWatcher.stop();
                     return 0;
                 }
                 need_reload = false;
             }
 
-            configWatcher.stop();
         } catch (pt::json_parser_error& e) {
             return 4;
         } catch (const std::exception& e) {
@@ -143,11 +133,9 @@ public:
             LOG(ERROR) << "Unknown fatal error";
             return 3;
         }
-        // unreachable
-        return 0;
     }
 
-    virtual void updated(const boost::filesystem::path& filePath) {
+    void updated(const boost::filesystem::path& filePath) override {
         if (!isConfigPath(filePath))
             return;
 
@@ -159,7 +147,7 @@ public:
         cond.notify_all();
     }
 
-    virtual void deleted(const boost::filesystem::path& filePath) {
+    void deleted(const boost::filesystem::path& filePath) override {
         updated(filePath);
     }
 
@@ -276,12 +264,9 @@ int main(int argc, char** argv) {
         if (vm.count("syslog")) {
             logToSyslog = true;
         }
-    } catch (const po::unknown_option& e) {
+    } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 2;
-    } catch (const std::bad_cast& e) {
-        std::cerr << e.what() << std::endl;
-        return 3;
     }
 
     if (daemon)
@@ -305,7 +290,7 @@ int main(int argc, char** argv) {
     sigemptyset(&waitset);
     sigaddset(&waitset, SIGINT);
     sigaddset(&waitset, SIGTERM);
-    sigprocmask(SIG_BLOCK, &waitset, NULL);
+    sigprocmask(SIG_BLOCK, &waitset, nullptr);
     LogParams _logParams = std::make_tuple(level_str, logToSyslog, log_file);
     AgentLauncher launcher(watch, configFiles, _logParams);
     std::thread signal_thread([&launcher, &waitset]() {
