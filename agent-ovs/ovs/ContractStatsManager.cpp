@@ -92,14 +92,15 @@ void ContractStatsManager::on_timer(const error_code& ec) {
     TableState::cookie_callback_t cb_func;
     cb_func = [this](uint64_t cookie, uint16_t priority,
                      const struct match& match) {
+        const std::lock_guard<std::mutex> lock(pstatMtx);
         updateFlowEntryMap(contractState, cookie, priority, match);
     };
 
     // Request Switch Manager to provide flow entries
     {
-        std::lock_guard<std::mutex> lock(pstatMtx);
         switchManager.forEachCookieMatch(IntFlowManager::POL_TABLE_ID,
                                          cb_func);
+        const std::lock_guard<std::mutex> lock(pstatMtx);
         PolicyCounterMap_t newClassCountersMap;
         on_timer_base(ec, contractState, newClassCountersMap);
         generatePolicyStatsObjects(&newClassCountersMap);

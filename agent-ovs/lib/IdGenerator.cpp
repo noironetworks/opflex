@@ -379,6 +379,7 @@ void IdGenerator::initNamespace(const std::string& nmspc,
 
 void IdGenerator::collectGarbage(const std::string& ns,
                                  garbage_cb_t cb) {
+    lock_guard<mutex> guard(id_mutex);
     NamespaceMap::iterator nitr = namespaces.find(ns);
     if (nitr == namespaces.end()) {
         return;
