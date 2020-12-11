@@ -2440,8 +2440,6 @@ updateSvcStatsCounters (const uint64_t &cookie,
                         const uint64_t &newPktCount,
                         const uint64_t &newByteCount)
 {
-    const std::lock_guard<mutex> lock(svcStatMutex);
-
     // Additional safety for stats flows:
     // Nothing must be reported from ServiceStatsManager
     // if serviceStatsFlowDisabled=true, since the stats flows wont be created
@@ -3012,8 +3010,6 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
 
 void IntFlowManager::handleUpdateSvcStatsFlows (const string& task_id)
 {
-    const std::lock_guard<mutex> lock(svcStatMutex);
-
     bool is_svc = strcmp(task_id.substr(0,1).c_str(),"1") == 0;
     bool is_add = strcmp(task_id.substr(1,1).c_str(),"1") == 0;
     const string& uuid = task_id.substr(2);
@@ -3849,6 +3845,7 @@ void IntFlowManager::updatePodSvcStatsFlows (const string &uuid,
         clearPodSvcStatsCounters("svctoep:"+uuid);
         idGen.erase(ID_NMSPC_SVCSTATS, "eptosvc:"+uuid);
         idGen.erase(ID_NMSPC_SVCSTATS, "svctoep:"+uuid);
+        const std::lock_guard<mutex> lock(svcStatMutex);
         podSvcUuidCkMap.erase(uuid);
     };
 
@@ -3900,6 +3897,7 @@ void IntFlowManager::updatePodSvcStatsFlows (const string &uuid,
             }
         }
 
+        const std::lock_guard<mutex> lock(svcStatMutex);
         const string& ingStr = "eptosvc:"+uuid;
         const string& egrStr = "svctoep:"+uuid;
         auto itr = podSvcUuidCkMap.find(uuid);
