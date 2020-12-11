@@ -19,9 +19,9 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 #include <opflex/modb/URIBuilder.h>
-
+#include <boost/algorithm/string/predicate.hpp>
 #include <opflexagent/FSPacketDropLogConfigSource.h>
 #include <modelgbp/observer/DropLogModeEnumT.hpp>
 #include <opflexagent/ExtraConfigManager.h>
@@ -101,6 +101,66 @@ static inline bool validateMacAddress(const boost::optional<string>& macAddress,
     return true;
 }
 
+static int validateMacMask(const std::string& arg,
+        optional<opflex::modb::MAC> &_targetMacAddress,
+        optional<opflex::modb::MAC> &_targetMacMask, const string &inputField) {
+    using namespace boost;
+    std::string address_string=arg,mask_string;
+    if(arg.find("/") != std::string::npos) {
+        std::vector<std::string> splitVec;
+        split(splitVec,arg, is_any_of("/"), token_compress_on);
+        address_string = splitVec[0];
+        mask_string = splitVec[1];
+        if(mask_string.empty()) {
+            LOG(ERROR) << "Missing mac mask for " << inputField;
+            return -1;
+        }
+    }
+    if(!validateMacAddress(address_string,_targetMacAddress,inputField)) {
+        return -1;
+    }
+    if(!mask_string.empty()) {
+        return !validateMacAddress(mask_string,_targetMacMask,inputField); 
+    } else {
+        _targetMacMask = none;
+    }
+    return 0;
+}
+static int validatePrefix(int filter_idx, const std::string & arg, 
+        optional<boost::asio::ip::address> &addr, optional<uint8_t> &pfxLen) {
+    using namespace boost;
+    int ret=0;
+    if(arg.empty()) {
+        return ret;
+    }
+    std::string address_string = arg;
+    if(arg.find("/") != std::string::npos) {
+        std::vector<std::string> splitVec;
+        split(splitVec,arg, is_any_of("/"), token_compress_on);
+        address_string = splitVec[0];
+        pfxLen = strtol(splitVec[1].c_str(),NULL,10);
+    }
+    boost::system::error_code ec; 
+    addr = asio::ip::address::from_string(address_string, ec);
+    if (ec) {
+        LOG(ERROR) << "Invalid address for filter " << filter_idx;
+        return -1;
+    }
+    if(pfxLen) {
+        if(addr.get().is_v4()) {
+            ret = (pfxLen.get()>32 || pfxLen.get()==0)?-1:0;
+        } else {
+            ret = (pfxLen.get()>128 || pfxLen.get()==0)?-1:0;
+        } 
+    } else {
+        pfxLen = (addr.get().is_v4()?32:128);
+    }
+    if(ret != 0) {
+        LOG(ERROR) << "Incorrect prefix length for filter" << filter_idx;
+    }
+    return ret;
+}
+
 void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
     using boost::property_tree::ptree;
     ptree properties;
@@ -114,8 +174,18 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
             const string& pathStr = filePath.string();
             std::string dropLogMode;
             read_json(pathStr, properties);
-            static const std::string DROP_LOG_ENABLE("drop-log-enable");
-            static const std::string DROP_LOG_MODE("drop-log-mode");
+            const std::string DROP_LOG_ENABLE("drop-log-enable");
+            const std::string DROP_LOG_MODE("drop-log-mode");
+            const std::string DROP_LOG_PRUNING("drop-log-pruning");
+            const std::string SIP("sip");
+            const std::string DIP("dip");
+            const std::string SMAC("smac");
+            const std::string DMAC("dmac");
+            const std::string IP_PROTO("ip_proto");
+            const std::string SPORT("sport");
+            const std::string DPORT("dport");
+            const std::string FLT_NAME("name");
+
             dropCfg.dropLogEnable =
                 properties.get<bool>(DROP_LOG_ENABLE, false);
             dropLogMode =
@@ -130,7 +200,56 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
             }
             dropCfg.filePath = pathStr;
             manager->packetDropLogConfigUpdated(dropCfg);
-
+            std::shared_ptr<drop_prune_set_t> newPruneSet(new drop_prune_set_t);
+            /*Notify updated*/
+            if(properties.get_child_optional(DROP_LOG_PRUNING)) {
+                int idx=0;
+                for (auto& child:
+                        properties.get_child(DROP_LOG_PRUNING)) {
+                    idx++;
+                    string flt = child.second.get<string>(FLT_NAME, "");
+                    if(flt.empty()) {
+                        LOG(ERROR) << "Skipping prune filter " << idx << " without name";
+                        continue;
+                    }
+                    std::shared_ptr<PacketDropLogPruneSpec> pruneSpec(new PacketDropLogPruneSpec(flt));
+                    if((validatePrefix(idx, child.second.get<string>(SIP, ""),
+                                    pruneSpec->srcIp, pruneSpec->srcPfxLen)!= 0) 
+                        ||(validatePrefix(idx, child.second.get<string>(DIP, ""),
+                            pruneSpec->dstIp, pruneSpec->dstPfxLen)!= 0)) {
+                        continue;
+                    }
+                    if((validateMacMask(child.second.get<string>(SMAC, ""), 
+                                    pruneSpec->srcMac, pruneSpec->srcMacMask,SMAC)!= 0)
+                        || (validateMacMask(child.second.get<string>(DMAC, ""), 
+                            pruneSpec->dstMac, pruneSpec->dstMacMask,DMAC)!= 0)) {
+                        continue;
+                    }
+                    if(child.second.get_optional<uint16_t>(IP_PROTO)) {
+                        pruneSpec->ipProto = child.second.get<uint16_t>(IP_PROTO);
+                    }
+                    if(child.second.get_optional<uint16_t>(SPORT)) {
+                        pruneSpec->sport = child.second.get<uint16_t>(SPORT);
+                    }
+                    if(child.second.get_optional<uint16_t>(DPORT)) {
+                        pruneSpec->dport = child.second.get<uint16_t>(DPORT);
+                    }
+                    manager->packetDropPruneConfigUpdated(pruneSpec);
+                    newPruneSet->insert(flt);
+                    if(dropPruneCfgSet) {
+                        dropPruneCfgSet->erase(flt);
+                    }
+                }
+            }
+            /*Notify removed*/
+            if(dropPruneCfgSet) {
+                for(auto itr: *dropPruneCfgSet) {
+                    std::shared_ptr<PacketDropLogPruneSpec> pruneSpec(new PacketDropLogPruneSpec(itr));
+                    pruneSpec->removed = true;
+                    manager->packetDropPruneConfigUpdated(pruneSpec);
+                }
+            }
+            dropPruneCfgSet = newPruneSet;
             LOG(INFO) << "Updated packet drop log config "
                       << " from " << filePath;
         } else if (isPacketDropFlowConfig(filePath)) {
@@ -217,6 +336,12 @@ void FSPacketDropLogConfigSource::deleted(const fs::path& filePath) {
             dropCfg.dropLogEnable = false;
             dropCfg.dropLogMode = DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG;
             manager->packetDropLogConfigUpdated(dropCfg);
+            for(auto itr: *dropPruneCfgSet) {
+                std::shared_ptr<PacketDropLogPruneSpec> pruneSpec(new PacketDropLogPruneSpec(itr));
+                pruneSpec->removed = true;
+                manager->packetDropPruneConfigUpdated(pruneSpec);
+            }
+            dropPruneCfgSet->clear();
             LOG(INFO) << "Removed packet drop log config "
                       << " at " << filePath;
         } else if(isPacketDropFlowConfig(filePath)) {

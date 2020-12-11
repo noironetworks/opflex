@@ -65,6 +65,15 @@ public:
     std::shared_ptr<const RDConfig>
         getRDConfig(const opflex::modb::URI& domain);
 
+    /**
+     * Get packet drop prune spec for a filter name
+     *
+     * @param pruneFilter name of the specific pruneFilter
+     * @param pruneSpec Droplog Prune Spec
+     * @return whether spec was found
+     */
+    bool getPacketDropPruneSpec(const std::string &pruneFilter, std::shared_ptr<PacketDropLogPruneSpec> &pruneSpec);
+
 private:
     opflex::ofcore::OFFramework& framework;
 
@@ -111,6 +120,13 @@ private:
     void notifyPacketDropFlowConfigListeners(const opflex::modb::URI &dropFlowCfgURI);
 
     /**
+     * Notify listeners for drop prune config object
+     *
+     * @param dropPruneFilterName Drop prune filter name
+     */
+    void notifyPacketDropPruneConfigListeners(const std::string &dropPruneFilterName);
+
+    /**
      * Add or update a packet drop log config object
      *
      * @param dropCfg Drop log enable and mode
@@ -124,6 +140,14 @@ private:
      */
     void packetDropFlowConfigUpdated(PacketDropFlowConfig &dropFlow);
 
+    /**
+     * Add or update a packet drop log prune config object
+     *
+     * @param pruneCfg Drop log Prune spec
+     */
+    void packetDropPruneConfigUpdated(std::shared_ptr<PacketDropLogPruneSpec> &pruneCfg);
+    
+    drop_prune_map_t dropPruneMap;
     /**
      * The extraConfig listeners that have been registered
      */

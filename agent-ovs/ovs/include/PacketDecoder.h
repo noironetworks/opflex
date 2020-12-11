@@ -34,6 +34,24 @@ namespace opflexagent {
 
 class PacketDecoder;
 
+    /**
+     * Field indices
+     * */
+    enum {
+        TFLD_DROP_REASON,
+        TFLD_SRC_MAC,
+        TFLD_DST_MAC,
+        TFLD_ETH_TYPE,
+        TFLD_SRC_IP,
+        TFLD_DST_IP,
+        TFLD_IP_PROTO,
+        TFLD_SPORT,
+        TFLD_DPORT,
+        TFLD_SMAC_MASK,
+        TFLD_DMAC_MASK,
+        TFLD_SPFX_LEN,
+        TFLD_DPFX_LEN
+    };
 /**
  * Class used to generate Packet Events
  */

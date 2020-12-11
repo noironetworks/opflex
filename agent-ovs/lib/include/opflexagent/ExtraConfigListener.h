@@ -53,6 +53,13 @@ public:
      * @param dropFlowCfgURI Flow spec and path for the drop flow
      */
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI) = 0;
+    
+    /**
+     * Called when a packet drop log prune config filter is updated
+     *
+     * @param filterName Prune filter name 
+     */
+    virtual void packetDropPruneConfigUpdated(const std::string &filterName) = 0;
 };
 
 } /* namespace opflexagent */

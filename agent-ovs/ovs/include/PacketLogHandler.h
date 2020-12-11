@@ -345,7 +345,19 @@ public:
      * @param p Parsing context
      */
     void pruneLog(ParseInfo &p);
-  
+    /**
+     * Update user configured prune filters
+     * @param filterName Filter name
+     * @param pruneSpec Pruning spec
+     */
+    void updatePruneFilter(const std::string &filterName,
+            std::shared_ptr<PacketFilterSpec> &pruneSpec);
+    /**
+     * Delete user configured prune filters
+     * @param filterName Filter name
+     */
+    void deletePruneFilter(const std::string &filterName);
+
 protected:
     ///@{
     /** Member names are self-explanatory */
@@ -359,6 +371,7 @@ protected:
     uint16_t port;
     bool stopped;
     std::mutex qMutex;
+    std::mutex pruneMutex;
     std::condition_variable cond;
     std::queue<PacketTuple> packetTupleQ;
     bool throttleActive;
@@ -368,6 +381,7 @@ protected:
     friend LocalClient;
     IdGenerator& idGen;
     std::vector<PacketFilterSpec> defaultPruneSpec;
+    std::unordered_map<std::string, std::shared_ptr<PacketFilterSpec>> userPruneSpec;
     ///@}
 };
 
