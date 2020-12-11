@@ -10,7 +10,6 @@
 
 #include <sstream>
 #include <boost/test/unit_test.hpp>
-#include <boost/assign/list_of.hpp>
 
 #include <opflexagent/logging.h>
 #include <opflexagent/test/ModbFixture.h>
@@ -24,7 +23,6 @@
 #include "FlowConstants.h"
 #include "PolicyStatsManagerFixture.h"
 #include <opflex/modb/Mutator.h>
-#include <modelgbp/gbp/Contract.hpp>
 #include "ovs-ofputil.h"
 #include <modelgbp/gbpe/L24ClassifierCounter.hpp>
 
@@ -33,7 +31,6 @@ extern "C" {
 #include <openvswitch/ofp-print.h>
 }
 
-using namespace boost::assign;
 using boost::optional;
 using std::shared_ptr;
 using std::string;
@@ -526,7 +523,6 @@ BOOST_FIXTURE_TEST_CASE(testContractDelete, ContractStatsManagerFixture) {
                 epg2);
     Mutator mutator(agent.getFramework(), "policyreg");
     // Note: In UTs, deleting the sg doesnt trigger classifier delete
-    //modelgbp::gbp::Contract::remove(agent.getFramework(),"tenant0","contract3");
     modelgbp::gbpe::L24Classifier::remove(agent.getFramework(),"tenant0","classifier3");
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =

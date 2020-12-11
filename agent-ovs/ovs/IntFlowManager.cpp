@@ -7,7 +7,6 @@
  */
 
 #include <string>
-#include <cstdlib>
 #include <cstring>
 #include <sstream>
 #include <sys/resource.h>

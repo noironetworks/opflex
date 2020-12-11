@@ -17,7 +17,6 @@
 #include <mutex>
 #include <boost/noncopyable.hpp>
 #include <list>
-#include <uv.h>
 
 #include "opflex/modb/ModelMetadata.h"
 #include "opflex/modb/ClassInfo.h"

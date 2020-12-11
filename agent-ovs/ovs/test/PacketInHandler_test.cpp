@@ -24,8 +24,6 @@
 #include "FlowConstants.h"
 #include "udp.h"
 #include "dhcp.h"
-#include <opflexagent/logging.h>
-#include "ovs-shim.h"
 
 BOOST_AUTO_TEST_SUITE(PacketInHandler_test)
 

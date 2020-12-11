@@ -10,7 +10,6 @@
  */
 
 #include <boost/test/unit_test.hpp>
-#include <opflex/modb/Mutator.h>
 #include <opflexagent/test/ModbFixture.h>
 #include <opflexagent/test/BaseFixture.h>
 #include <opflexagent/logging.h>

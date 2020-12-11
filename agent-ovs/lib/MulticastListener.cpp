@@ -16,8 +16,6 @@
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/asio/ip/multicast.hpp>
 
-#include <sstream>
-#include <stdexcept>
 
 namespace opflexagent {
 

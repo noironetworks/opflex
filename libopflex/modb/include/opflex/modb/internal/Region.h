@@ -16,7 +16,6 @@
 
 #include <mutex>
 #include <string>
-#include <uv.h>
 
 #include "opflex/modb/mo-internal/ObjectInstance.h"
 #include "opflex/modb/mo-internal/StoreClient.h"

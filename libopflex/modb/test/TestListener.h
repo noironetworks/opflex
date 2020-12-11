@@ -13,9 +13,8 @@
 #define MODB_TEST_TESTLISTENER_H
 
 #include <mutex>
-#include <uv.h>
 #include <unordered_set>
-#include <time.h>
+#include <ctime>
 
 #include "opflex/modb/ObjectListener.h"
 

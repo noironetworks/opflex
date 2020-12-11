@@ -20,7 +20,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <opflex/modb/URIBuilder.h>
 
 #include <opflexagent/FSLearningBridgeSource.h>
 #include <opflexagent/logging.h>
