@@ -86,6 +86,8 @@ public:
     virtual void rdConfigUpdated(const opflex::modb::URI& rdURI);
     virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI);
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI);
+    virtual void packetDropPruneConfigUpdated(const std::string& filterName) {
+     /*Do nothing as of now*/ }
     ///@}
 
     /* Interface: EndpointListener */

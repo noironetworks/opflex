@@ -193,11 +193,30 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
     }
 }
 
+void PacketLogHandler::updatePruneFilter(const std::string &filterName, std::shared_ptr<PacketFilterSpec> &pruneSpec) {
+    std::lock_guard<std::mutex> lk(pruneMutex);
+    userPruneSpec[filterName] = pruneSpec;
+}
+
+void PacketLogHandler::deletePruneFilter(const std::string &filterName) {
+    std::lock_guard<std::mutex> lk(pruneMutex);
+    userPruneSpec.erase(filterName);
+}
+
 void PacketLogHandler::pruneLog(ParseInfo &p) {
     for( auto &pruneSpec : defaultPruneSpec) {
         if(pruneSpec == p.packetTuple) {
             p.pruneLog = true;
             return;
+        }
+    }
+    { 
+        std::lock_guard<std::mutex> lk(pruneMutex);
+        for( auto &pruneSpec : userPruneSpec) {
+            if(*pruneSpec.second == p.packetTuple) {
+                p.pruneLog = true;
+                return;
+            }
         }
     }
     p.pruneLog = false;

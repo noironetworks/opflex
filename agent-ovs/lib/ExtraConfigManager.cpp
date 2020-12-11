@@ -14,7 +14,9 @@
 #include <modelgbp/policy/Universe.hpp>
 #include <modelgbp/observer/DropFlowConfigUniverse.hpp>
 #include <modelgbp/observer/DropFlowConfig.hpp>
+#include <modelgbp/observer/DropPruneConfig.hpp>
 #include <opflex/modb/Mutator.h>
+#include <opflexagent/logging.h>
 
 #include <memory>
 
@@ -94,6 +96,13 @@ void ExtraConfigManager::notifyPacketDropFlowConfigListeners(const opflex::modb:
     }
 }
 
+void ExtraConfigManager::notifyPacketDropPruneConfigListeners(const std::string &filterName) {
+    unique_lock<mutex> guard(listener_mutex);
+    for (ExtraConfigListener* listener : extraConfigListeners) {
+        listener->packetDropPruneConfigUpdated(filterName);
+    }
+}
+
 void ExtraConfigManager::packetDropLogConfigUpdated(PacketDropLogConfig &dropCfg) {
     using modelgbp::observer::DropLogConfig;
 
@@ -165,6 +174,82 @@ void ExtraConfigManager::packetDropFlowConfigUpdated(PacketDropFlowConfig &dropF
     mutator.commit();
     notifyPacketDropFlowConfigListeners(dropFlow.dropFlowURI);
 
+}
+
+void ExtraConfigManager::packetDropPruneConfigUpdated(std::shared_ptr<PacketDropLogPruneSpec> &dropPrune) {
+    using modelgbp::observer::DropPruneConfig;
+    Mutator mutator(framework, "policyelement");
+    optional<shared_ptr<modelgbp::policy::Universe>> polUni =
+            modelgbp::policy::Universe::resolve(framework);
+    if(dropPrune->removed) {
+        opflex::modb::URI dropPruneURI = 
+            opflex::modb::URIBuilder(polUni.get()->getURI())
+            .addElement("ObserverDropPruneConfig").addElement(dropPrune->filterName).build();
+        DropPruneConfig::remove(framework, dropPruneURI);
+        mutator.commit();
+        dropPruneMap.erase(dropPrune->filterName);
+        notifyPacketDropPruneConfigListeners(dropPrune->filterName);
+        return;
+    }
+    shared_ptr<DropPruneConfig> dropPruneCfg =
+        polUni.get()->addObserverDropPruneConfig(dropPrune->filterName);
+    dropPruneCfg->unsetSrcAddress();
+    dropPruneCfg->unsetDstAddress();
+    dropPruneCfg->unsetSrcPrefixLen();
+    dropPruneCfg->unsetDstPrefixLen();
+    dropPruneCfg->unsetSrcMac();
+    dropPruneCfg->unsetSrcMacMask();
+    dropPruneCfg->unsetDstMac();
+    dropPruneCfg->unsetDstMacMask();
+    dropPruneCfg->unsetIpProto();
+    dropPruneCfg->unsetSrcPort();
+    dropPruneCfg->unsetDstPort();
+    if(dropPrune->srcIp) {
+        dropPruneCfg->setSrcAddress(dropPrune->srcIp.get().to_string());
+    }
+    if(dropPrune->dstIp) {
+        dropPruneCfg->setDstAddress(dropPrune->dstIp.get().to_string());
+    }
+    if(dropPrune->srcPfxLen) {
+        dropPruneCfg->setSrcPrefixLen(dropPrune->srcPfxLen.get());
+    }
+    if(dropPrune->dstPfxLen) {
+        dropPruneCfg->setDstPrefixLen(dropPrune->dstPfxLen.get());
+    }
+    if(dropPrune->srcMac) {
+        dropPruneCfg->setSrcMac(dropPrune->srcMac.get());
+    }
+    if(dropPrune->srcMacMask) {
+        dropPruneCfg->setSrcMacMask(dropPrune->srcMacMask.get());
+    }
+    if(dropPrune->dstMac) {
+        dropPruneCfg->setDstMac(dropPrune->dstMac.get());
+    }
+    if(dropPrune->dstMacMask) {
+        dropPruneCfg->setDstMacMask(dropPrune->dstMacMask.get());
+    }
+    if(dropPrune->ipProto) {
+        dropPruneCfg->setIpProto(dropPrune->ipProto.get());
+    }
+    if(dropPrune->sport) {
+        dropPruneCfg->setSrcPort(dropPrune->sport.get());
+    }
+    if(dropPrune->dport) {
+        dropPruneCfg->setDstPort(dropPrune->dport.get());
+    }
+    mutator.commit();
+    dropPruneMap[dropPrune->filterName] = dropPrune;
+    notifyPacketDropPruneConfigListeners(dropPrune->filterName);
+}
+
+bool ExtraConfigManager::getPacketDropPruneSpec(const std::string &pruneFilter, std::shared_ptr<PacketDropLogPruneSpec> &pruneSpec) {
+    bool ret = false;
+    auto it= dropPruneMap.find(pruneFilter);
+    if(it != dropPruneMap.end()) {
+        pruneSpec = it->second;
+        ret = true;
+    }
+    return ret;
 }
 
 } /* namespace opflexagent */

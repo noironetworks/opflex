@@ -284,4 +284,35 @@ BOOST_FIXTURE_TEST_CASE(prune_tests, PacketDecoderFixture) {
     pktLogger.pruneLog(p3);
     BOOST_CHECK(p3.pruneLog == true);
 }
+
+BOOST_FIXTURE_TEST_CASE(user_prune_tests, PacketDecoderFixture) {
+    auto pktDecoder = pktLogger.getDecoder();
+    ParseInfo p1(&pktDecoder);
+    std::shared_ptr<PacketFilterSpec> filt1(new PacketFilterSpec());
+    filt1->setField(TFLD_DST_MAC,"5a:08:66:ce:0b:49");
+    filt1->setField(TFLD_SRC_MAC,"9e:72:a6:94:18:af");
+    pktLogger.updatePruneFilter("filt1",filt1);
+    int ret = pktDecoder.decode(tcp_buf, 106, p1);
+    BOOST_CHECK(ret == 0);
+    pktLogger.pruneLog(p1);
+    BOOST_CHECK(p1.pruneLog == true);
+    ParseInfo p2(&pktDecoder);
+    pktLogger.deletePruneFilter("filt1");
+    ret = pktDecoder.decode(tcp_buf, 106, p2);
+    BOOST_CHECK(ret == 0);
+    pktLogger.pruneLog(p2);
+    BOOST_CHECK(p2.pruneLog == false);
+    ParseInfo p3(&pktDecoder);
+    filt1->setField(TFLD_DST_MAC,"5a:08:66:00:00:00");
+    filt1->setField(TFLD_DMAC_MASK,"ff:ff:ff:00:00:00");
+    filt1->setField(TFLD_SRC_MAC,"9e:72:a6:94:18:00");
+    filt1->setField(TFLD_SMAC_MASK,"ff:ff:ff:ff:ff:00");
+    filt1->setField(TFLD_SRC_IP,"14.0.0.2");
+    filt1->setField(TFLD_DST_IP,"100.0.0.1");
+    pktLogger.updatePruneFilter("filt2",filt1);
+    ret = pktDecoder.decode(udp_buf, 66, p3);
+    BOOST_CHECK(ret == 0);
+    pktLogger.pruneLog(p3);
+    BOOST_CHECK(p3.pruneLog == true);
+}
 BOOST_AUTO_TEST_SUITE_END()

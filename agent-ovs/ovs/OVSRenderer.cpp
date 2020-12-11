@@ -11,7 +11,7 @@
 
 #include "OVSRenderer.h"
 #include <opflexagent/logging.h>
-
+#include <sstream>
 #include <boost/asio/placeholders.hpp>
 #include <openvswitch/vlog.h>
 
@@ -236,10 +236,14 @@ void OVSRenderer::start() {
     ovsdbConnection->start();
     ovsdbConnection->connect();
 
+    //Register with extraconfig manager for drop prune handling
+    getAgent().getExtraConfigManager().registerListener(this);
+
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
         spanRenderer.start(accessBridgeName, ovsdbConnection.get());
     netflowRenderer.start(intBridgeName, ovsdbConnection.get());
     qosRenderer.start(intBridgeName, ovsdbConnection.get());
+
 }
 
 void OVSRenderer::stop() {
@@ -567,6 +571,65 @@ void OVSRenderer::startPacketLogger() {
     packetLoggerThread.reset(new std::thread([this]() {
        this->pktLoggerIO.run();
     }));
+}
+static void convertPruneFilter(std::shared_ptr<PacketDropLogPruneSpec> &sourceSpec,
+        shared_ptr<PacketFilterSpec> &filter) {
+    if(sourceSpec->srcIp) {
+        filter->setField(TFLD_SRC_IP,sourceSpec->srcIp.get().to_string());
+    }
+    if(sourceSpec->srcPfxLen) {
+        std::stringstream strSrcPfxLen;
+        strSrcPfxLen << sourceSpec->srcPfxLen.get();
+        filter->setField(TFLD_SPFX_LEN,strSrcPfxLen.str());
+    }
+    if(sourceSpec->dstIp) {
+        filter->setField(TFLD_DST_IP,sourceSpec->dstIp.get().to_string());
+    }
+    if(sourceSpec->dstPfxLen) {
+        std::stringstream strDstPfxLen;
+        strDstPfxLen << sourceSpec->dstPfxLen.get();
+        filter->setField(TFLD_DPFX_LEN,strDstPfxLen.str());
+    }
+    if(sourceSpec->srcMac) {
+        filter->setField(TFLD_SRC_MAC,sourceSpec->srcMac.get().toString());
+    }
+    if(sourceSpec->srcMacMask) {
+        filter->setField(TFLD_SMAC_MASK,sourceSpec->srcMacMask.get().toString());
+    }
+    if(sourceSpec->dstMac) {
+        filter->setField(TFLD_DST_MAC,sourceSpec->dstMac.get().toString());
+    }
+    if(sourceSpec->dstMacMask) {
+        filter->setField(TFLD_DMAC_MASK,sourceSpec->dstMacMask.get().toString());
+    }
+    if(sourceSpec->ipProto) {
+        std::stringstream strIpProto;
+        strIpProto << sourceSpec->ipProto.get();
+        filter->setField(TFLD_IP_PROTO,strIpProto.str());
+    }
+    if(sourceSpec->sport) {
+        std::stringstream strSport;
+        strSport << sourceSpec->sport.get();
+        filter->setField(TFLD_SPORT,strSport.str());
+    }
+    if(sourceSpec->dport) {
+        std::stringstream strDport;
+        strDport << sourceSpec->dport.get();
+        filter->setField(TFLD_DPORT,strDport.str());
+    }
+}
+
+void OVSRenderer::packetDropPruneConfigUpdated(const std::string& filterName) {
+    using namespace std;
+    using namespace boost;
+    std::shared_ptr<PacketDropLogPruneSpec> sourceSpec;
+    if(!getAgent().getExtraConfigManager().getPacketDropPruneSpec(filterName, sourceSpec)){
+        pktLogger.deletePruneFilter(filterName);
+        return;
+    }
+    std::shared_ptr<PacketFilterSpec> filter(new PacketFilterSpec());
+    convertPruneFilter(sourceSpec, filter);
+    pktLogger.updatePruneFilter(filterName, filter);
 }
 
 void OVSRenderer::stopPacketLogger() {

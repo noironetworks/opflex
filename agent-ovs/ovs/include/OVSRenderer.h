@@ -42,7 +42,8 @@ namespace opflexagent {
  * enforce policy between devices that are on different bridges.  This
  * renderer allows integration with a hardware fabric such as ACI.
  */
-class OVSRenderer : public Renderer {
+class OVSRenderer : public Renderer,
+                    public ExtraConfigListener {
 public:
     /**
      * Instantiate a stitched-mode renderer
@@ -145,6 +146,14 @@ private:
     void onCleanupTimer(const boost::system::error_code& ec);
     std::unique_ptr<boost::asio::deadline_timer> cleanupTimer;
     std::mutex timer_mutex;
+
+    /**
+     * Interface: ExtraConfigListener
+     */
+    virtual void rdConfigUpdated(const opflex::modb::URI& rdURI){}
+    virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI){}
+    virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI){}
+    virtual void packetDropPruneConfigUpdated(const std::string& pruneFilter);
 
     /**
      * Start packet logger

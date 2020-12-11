@@ -305,6 +305,9 @@ public:
     virtual void rdConfigUpdated(const opflex::modb::URI& rdURI);
     virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI);
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI);
+    virtual void packetDropPruneConfigUpdated(const std::string& pruneFilter){
+    /*Do nothing as of now*/
+    }
 
     /* Interface: LearningBridgeListener */
     virtual void lbIfaceUpdated(const std::string& uuid);
@@ -948,7 +951,6 @@ private:
     MulticastMap mcastMap;
     /* Set of external flood domain Ids*/
     std::unordered_set<uint32_t> localExternalFdSet;
-
     /**
      * Associate or disassociate a managed object with a multicast IP, and
      * update the multicast group subscription if necessary.

@@ -24,6 +24,17 @@
 using boost::optional;
 
 namespace opflexagent {
+    class PacketDropLogPruneSpec {
+        public:
+            PacketDropLogPruneSpec(const std::string& flt):filterName(flt), removed(false) {};
+            std::string filterName;
+            bool removed;
+            optional<boost::asio::ip::address> srcIp, dstIp;
+            optional<uint8_t> srcPfxLen,dstPfxLen;
+            optional<opflex::modb::MAC> srcMac, srcMacMask, dstMac, dstMacMask;
+            optional<uint8_t> ipProto;
+            optional<uint16_t> sport, dport;
+    };
     /**
      * Collect Packet Drop Log Configuration
      */
@@ -114,6 +125,11 @@ typedef modelgbp::observer::DropLogModeEnumT DropLogMode;
      * Map of file path and flow spec
      */
     typedef std::map<std::string, PacketDropFlowSpec> DropFlowMap;
+    
+    /**
+     * Map of filter name and prune spec
+     */
+    typedef std::map<std::string, std::shared_ptr<PacketDropLogPruneSpec>> drop_prune_map_t;
 
 } /* namespace opflexagent */
 
