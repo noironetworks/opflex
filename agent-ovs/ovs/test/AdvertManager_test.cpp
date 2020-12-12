@@ -12,7 +12,6 @@
 #include <boost/asio/ip/address.hpp>
 
 #include <netinet/icmp6.h>
-#include <netinet/ip.h>
 
 #include <modelgbp/gbp/RoutingModeEnumT.hpp>
 
@@ -26,11 +25,6 @@
 #include "eth.h"
 #include <opflexagent/logging.h>
 #include "Packets.h"
-#include "ovs-shim.h"
-
-extern "C" {
-#include <openvswitch/flow.h>
-}
 
 using std::string;
 using std::unordered_set;

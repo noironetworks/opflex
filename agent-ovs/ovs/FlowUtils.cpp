@@ -16,7 +16,6 @@
 #include <modelgbp/l2/EtherTypeEnumT.hpp>
 #include <modelgbp/l4/TcpFlagsEnumT.hpp>
 #include <modelgbp/arp/OpcodeEnumT.hpp>
-#include <opflexagent/logging.h>
 
 #include <boost/asio/ip/address.hpp>
 

@@ -17,7 +17,6 @@
 #include <string>
 
 #include <boost/noncopyable.hpp>
-#include <uv.h>
 
 #include "opflex/engine/internal/OpflexConnection.h"
 #include "opflex/engine/internal/OpflexListener.h"

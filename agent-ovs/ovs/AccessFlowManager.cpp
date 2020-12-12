@@ -20,7 +20,6 @@
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/algorithm/string/finder.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/range/sub_range.hpp>
 #include "ovs-ofputil.h"
 #include <modelgbp/gbp/DirectionEnumT.hpp>
 #include <modelgbp/gbp/ConnTrackEnumT.hpp>

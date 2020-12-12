@@ -9,11 +9,9 @@
  */
 
 #include <boost/test/unit_test.hpp>
-#include <boost/optional.hpp>
 
 #include "SwitchConnection.h"
 #include "PortMapper.h"
-#include <opflexagent/logging.h>
 #include "ovs-ofputil.h"
 
 extern "C" {

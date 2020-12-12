@@ -10,8 +10,6 @@
 
 #include <sstream>
 #include <boost/test/unit_test.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <opflexagent/test/ModbFixture.h>
 #include "ovs-ofputil.h"
@@ -24,20 +22,16 @@
 #include "FlowConstants.h"
 #include "PolicyStatsManagerFixture.h"
 
-#include "ovs-ofputil.h"
 #include <modelgbp/gbpe/SecGrpClassifierCounter.hpp>
-#include <modelgbp/gbpe/L24ClassifierCounter.hpp>
 #include <modelgbp/observer/PolicyStatUniverse.hpp>
 
 #include <opflex/modb/Mutator.h>
-#include <modelgbp/gbp/SecGroup.hpp>
 
 extern "C" {
 #include <openvswitch/ofp-parse.h>
 #include <openvswitch/ofp-print.h>
 }
 
-using namespace boost::assign;
 using boost::optional;
 using std::shared_ptr;
 using std::string;

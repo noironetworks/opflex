@@ -13,9 +13,7 @@
 #include <string>
 #include <fstream>
 
-#include <boost/scope_exit.hpp>
-
-#include <unordered_map>
+#include <unistd.h>
 
 #include "ovs-ofputil.h"
 #include <lib/util.h>
@@ -26,7 +24,6 @@
 extern "C" {
 #include <lib/dirs.h>
 #include <lib/socket-util.h>
-#include <lib/stream.h>
 #include <openvswitch/vconn.h>
 #include <openvswitch/ofp-msgs.h>
 #include <openvswitch/ofp-packet.h>
