@@ -1448,6 +1448,7 @@ void EndpointManager::updateEndpointCounters(const std::string& uuid,
 
     mutator.commit();
 #ifdef HAVE_PROMETHEUS_SUPPORT
+    lock_guard<mutex> guard(ep_mutex);
     ep_map_t::iterator it = ep_map.find(uuid);
     if (it != ep_map.end()) {
         EndpointState& es = it->second;
