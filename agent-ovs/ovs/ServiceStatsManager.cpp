@@ -46,7 +46,7 @@ ServiceStatsManager::~ServiceStatsManager() {
 void ServiceStatsManager::start() {
     LOG(DEBUG) << "Starting service stats manager ("
                << timer_interval << " ms)";
-    PolicyStatsManager::start();
+    PolicyStatsManager::start(true, intFlowManager.getSvcStatsIOService());
     {
         std::lock_guard<std::mutex> lock(timer_mutex);
         timer->async_wait(bind(&ServiceStatsManager::on_timer, this, error));
@@ -66,17 +66,18 @@ void ServiceStatsManager::update_state (const error_code& ec)
         TableState::cookie_callback_t cb_func;
         cb_func = [this](uint64_t cookie, uint16_t priority,
                          const struct match& match) {
+            const std::lock_guard<std::mutex> lock(pstatMtx);
             updateFlowEntryMap(statsState, cookie, priority, match);
         };
 
         // Pod <--> Svc and * <--> svc-tgt stats handling based
         // on flows in STATS table
-        std::lock_guard<std::mutex> lock(pstatMtx);
 
         // create flowcountermap entries for new flows
         switchManager.forEachCookieMatch(IntFlowManager::STATS_TABLE_ID,
                                          cb_func);
 
+        const std::lock_guard<std::mutex> lock(pstatMtx);
         // aggregate statsCounterMap based on FlowCounterState
         ServiceCounterMap_t statsCountersMap;
         on_timer_base(ec, statsState, statsCountersMap);
@@ -91,16 +92,17 @@ void ServiceStatsManager::update_state (const error_code& ec)
         TableState::cookie_callback_t cb_func;
         cb_func = [this](uint64_t cookie, uint16_t priority,
                          const struct match& match) {
+            const std::lock_guard<std::mutex> lock(pstatMtx);
             updateFlowEntryMap(svhState, cookie, priority, match);
         };
 
         // svc-tgt rx stats handling based on flows in SERVICE_NEXTHOP table
-        std::lock_guard<std::mutex> lock(pstatMtx);
 
         // create flowcountermap entries for new flows
         switchManager.forEachCookieMatch(IntFlowManager::SERVICE_NEXTHOP_TABLE_ID,
                                          cb_func);
 
+        const std::lock_guard<std::mutex> lock(pstatMtx);
         // aggregate statsCounterMap based on FlowCounterState
         ServiceCounterMap_t svhCountersMap;
         on_timer_base(ec, svhState, svhCountersMap);
@@ -114,16 +116,17 @@ void ServiceStatsManager::update_state (const error_code& ec)
         TableState::cookie_callback_t cb_func;
         cb_func = [this](uint64_t cookie, uint16_t priority,
                          const struct match& match) {
+            const std::lock_guard<std::mutex> lock(pstatMtx);
             updateFlowEntryMap(svrState, cookie, priority, match);
         };
 
         // svc-tgt tx stats handling based on flows in SERVICE_REV table
-        std::lock_guard<std::mutex> lock(pstatMtx);
 
         // create flowcountermap entries for new flows
         switchManager.forEachCookieMatch(IntFlowManager::SERVICE_REV_TABLE_ID,
                                          cb_func);
 
+        const std::lock_guard<std::mutex> lock(pstatMtx);
         // aggregate svrCounterMap based on FlowCounterState
         ServiceCounterMap_t svrCountersMap;
         on_timer_base(ec, svrState, svrCountersMap);

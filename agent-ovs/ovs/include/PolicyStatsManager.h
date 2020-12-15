@@ -85,7 +85,8 @@ public:
     /**
      * Start the policy stats manager
      */
-    void start(bool register_listener=true);
+    void start(bool register_listener=true,
+               boost::optional<boost::asio::io_service&> io_service=boost::none);
 
     /**
      * Get the classifier counter generation ID

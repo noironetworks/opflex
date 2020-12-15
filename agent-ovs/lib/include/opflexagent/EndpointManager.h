@@ -244,11 +244,12 @@ public:
     void getEndpointUUIDs( /* out */ std::unordered_set<std::string>& eps);
 
     /**
-     * Get IP to local EP map
+     * Get Endpoint from Local map based on IP
      *
-     * @return IP to local EP map
+     * @param ip IP address of the endpoint
+     * @return shared ptr to the endpoint if available
      */
-    const ip_ep_map_t& getIPLocalEpMap(void);
+    std::shared_ptr<const Endpoint> getEpFromLocalMap(const std::string& ip);
 
     /**
      * Get the endpoints that are on a particular access interface

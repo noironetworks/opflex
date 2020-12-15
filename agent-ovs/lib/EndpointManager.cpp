@@ -1368,9 +1368,13 @@ void EndpointManager::getEndpointsByIface(const std::string& ifaceName,
     getEps(ifaceName, iface_ep_map, eps);
 }
 
-const ip_ep_map_t& EndpointManager::getIPLocalEpMap (void) {
+std::shared_ptr<const Endpoint> EndpointManager::getEpFromLocalMap (const std::string& ip) {
     unique_lock<mutex> guard(ep_mutex);
-    return ip_local_ep_map;
+    const auto& itr = ip_local_ep_map.find(ip);
+    if (itr != ip_local_ep_map.end()) {
+        return itr->second;
+    }
+    return nullptr;
 }
 
 void EndpointManager::getEndpointUUIDs( /* out */ str_uset_t& eps) {
@@ -1444,6 +1448,7 @@ void EndpointManager::updateEndpointCounters(const std::string& uuid,
 
     mutator.commit();
 #ifdef HAVE_PROMETHEUS_SUPPORT
+    lock_guard<mutex> guard(ep_mutex);
     ep_map_t::iterator it = ep_map.find(uuid);
     if (it != ep_map.end()) {
         EndpointState& es = it->second;

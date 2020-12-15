@@ -281,6 +281,7 @@ void BaseTableDropStatsManager::on_timer(const boost::system::error_code& ec) {
         TableState::cookie_callback_t cb_func;
         cb_func = [this, tbl_it](uint64_t cookie, uint16_t priority,
                          const struct match& match) {
+            const std::lock_guard<std::mutex> lock(pstatMtx);
             updateDropFlowStatsCounters(
                     CurrentDropCounterState[tbl_it.first], cookie, priority,
                    match);
@@ -288,9 +289,9 @@ void BaseTableDropStatsManager::on_timer(const boost::system::error_code& ec) {
 
         // Request Switch Manager to provide flow entries
         {
-            std::lock_guard<std::mutex> lock(pstatMtx);
             switchManager.forEachCookieMatch(tbl_it.first,
                                              cb_func);
+            const std::lock_guard<std::mutex> lock(pstatMtx);
             on_timer_base(ec, CurrentDropCounterState[tbl_it.first],
                             TableDropCounterState[tbl_it.first]);
 
