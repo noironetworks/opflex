@@ -4132,24 +4132,6 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                 continue;
             }
 
-            vector<address> nextHopAddrs;
-            const ip_ep_map_t& ip_ep_map =
-                agent.getEndpointManager().getIPLocalEpMap();
-            for (const string& ipstr : sm.getNextHopIPs()) {
-                auto nextHopAddr = address::from_string(ipstr, ec);
-                if (ec) {
-                    LOG(WARNING) << "Invalid service next hop IP: "
-                                 << ipstr << ": " << ec.message();
-                } else {
-                    if (loopback) {
-                        const auto& it = ip_ep_map.find(ipstr);
-                        if (it == ip_ep_map.end())
-                            continue;
-                    }
-                    nextHopAddrs.push_back(nextHopAddr);
-                }
-            }
-
             uint8_t proto = 0;
             if (sm.getServiceProto()) {
                 const string& protoStr = sm.getServiceProto().get();
@@ -4159,9 +4141,16 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     proto = 6;
             }
 
-
             uint16_t link = 0;
-            for (const address& nextHopAddr : nextHopAddrs) {
+            const ip_ep_map_t& ip_ep_map =
+                agent.getEndpointManager().getIPLocalEpMap();
+            for (const string& ipstr : sm.getNextHopIPs()) {
+                auto nextHopAddr = address::from_string(ipstr, ec);
+                if (ec) {
+                    LOG(WARNING) << "Invalid service next hop IP: "
+                                 << ipstr << ": " << ec.message();
+                    continue;
+                }
                 {
                     FlowBuilder ipMap;
                     matchDestDom(ipMap, 0, rdId);
@@ -4180,7 +4169,13 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     ipMap.action().ipDst(nextHopAddr).decTtl();
                     // loopback has highest priority
                     if (loopback) {
+                        const auto& it = ip_ep_map.find(ipstr);
+                        if (it == ip_ep_map.end()) {
+                            link++;
+                            continue;
+                        }
                         ipMap.priority(102)
+                             .reg(7, link)
                              .ipSrc(nextHopAddr)
                              .action()
                              .ipSrc(serviceAddr);
