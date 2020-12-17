@@ -291,6 +291,8 @@ BOOST_FIXTURE_TEST_CASE(user_prune_tests, PacketDecoderFixture) {
     std::shared_ptr<PacketFilterSpec> filt1(new PacketFilterSpec());
     filt1->setField(TFLD_DST_MAC,"5a:08:66:ce:0b:49");
     filt1->setField(TFLD_SRC_MAC,"9e:72:a6:94:18:af");
+    filt1->setField(TFLD_ETH_TYPE,"2048");
+    filt1->setField(TFLD_IP_PROTO,"6");
     pktLogger.updatePruneFilter("filt1",filt1);
     int ret = pktDecoder.decode(tcp_buf, 106, p1);
     BOOST_CHECK(ret == 0);
@@ -309,6 +311,7 @@ BOOST_FIXTURE_TEST_CASE(user_prune_tests, PacketDecoderFixture) {
     filt1->setField(TFLD_SMAC_MASK,"ff:ff:ff:ff:ff:00");
     filt1->setField(TFLD_SRC_IP,"14.0.0.2");
     filt1->setField(TFLD_DST_IP,"100.0.0.1");
+    filt1->setField(TFLD_IP_PROTO,"17");
     pktLogger.updatePruneFilter("filt2",filt1);
     ret = pktDecoder.decode(udp_buf, 66, p3);
     BOOST_CHECK(ret == 0);

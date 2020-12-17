@@ -218,16 +218,33 @@ public:
                                  addr2, pfxLen, is_exact_match);
 
     }
-    bool operator == (PacketTuple &p) {
-        std::vector<int> exact_match_fields {3,6,7,8};
-        for (auto &i:exact_match_fields) {
+    bool compareTuple(PacketTuple &p, PacketDecoder &decoder) {
+        std::vector<int> named_match_fields {3,6,7,8};
+        std::vector<std::string> base_layer_names {"EProto", "IPProto",
+                                                "",""};
+        auto base_layer_itr = base_layer_names.begin();
+        for (auto &i:named_match_fields) {
             if(!fields[i].second.empty()) {
+                /*First try a direct match*/
                 if((fields[i].second != p.fields[i].second) &&
                    (fields[i].second+"_unrecognized" != p.fields[i].second)) {
+                    uint32_t typeId;
+                    std::string layerName;
+                    /* Try a name mapping for the protocol number.
+                     * Packet Tuple will have the mapping always if known*/
+                    if(!(*base_layer_itr).empty() &&
+                       ((typeId = decoder.getLayerTypeIdByTypeName(*base_layer_itr))!= 0) &&
+                       decoder.getLayerNameByTypeKey(typeId,strtol(fields[i].second.c_str(),NULL,10),layerName) &&
+                       (layerName == p.fields[i].second)) {
+                        base_layer_itr++;
+                        continue;
+                    }
                     return false;
                 }
             }
+            base_layer_itr++;
         }
+
         std::vector<int> mac_fields {1,2};
         for (auto &i:mac_fields) {
             if(!fields[i].second.empty()) {
@@ -266,17 +283,30 @@ public:
                 /*Prune unused control packets by default*/
                 #define LLDP_MAC "01:80:c2:00:00:0e"
                 #define MCAST_V6_MAC "33:33:00:00:00:00"
+                #define MCAST_MASK "FF:FF:00:00:00:00"
                 #define IP_PROTO_IGMP "2"
                 #define IP_PROTO_ICMPv6 "58"
+                #define IP_PROTO_UDP "17"
+                #define MDNS_PORT "5353"
+                #define V6_HOP_BY_HOP "0"
                 #define pushPruneSpec() defaultPruneSpec.push_back(unusedCtrlPacket); unusedCtrlPacket.clear();
                 PacketFilterSpec unusedCtrlPacket;
-                unusedCtrlPacket.setField(2, LLDP_MAC);
+                unusedCtrlPacket.setField(TFLD_DST_MAC, LLDP_MAC);
                 pushPruneSpec()
-                unusedCtrlPacket.setField(6, IP_PROTO_IGMP);
+                unusedCtrlPacket.setField(TFLD_IP_PROTO, IP_PROTO_IGMP);
                 pushPruneSpec()
-                unusedCtrlPacket.setField(6, IP_PROTO_ICMPv6);
-                unusedCtrlPacket.setField(2, MCAST_V6_MAC);
-                unusedCtrlPacket.setField(11, "FF:FF:00:00:00:00");
+                unusedCtrlPacket.setField(TFLD_IP_PROTO, IP_PROTO_ICMPv6);
+                unusedCtrlPacket.setField(TFLD_DST_MAC, MCAST_V6_MAC);
+                unusedCtrlPacket.setField(TFLD_DMAC_MASK, MCAST_MASK);
+                pushPruneSpec()
+                unusedCtrlPacket.setField(TFLD_DPORT, MDNS_PORT);
+                unusedCtrlPacket.setField(TFLD_IP_PROTO, IP_PROTO_UDP);
+                unusedCtrlPacket.setField(TFLD_DST_MAC, MCAST_V6_MAC);
+                unusedCtrlPacket.setField(TFLD_DMAC_MASK, MCAST_MASK);
+                pushPruneSpec()
+                unusedCtrlPacket.setField(TFLD_IP_PROTO, V6_HOP_BY_HOP);
+                unusedCtrlPacket.setField(TFLD_DST_MAC, MCAST_V6_MAC);
+                unusedCtrlPacket.setField(TFLD_DMAC_MASK, MCAST_MASK);
                 pushPruneSpec()
     }
     /**
