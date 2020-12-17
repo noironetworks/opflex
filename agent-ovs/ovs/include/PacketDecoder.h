@@ -666,6 +666,19 @@ public:
         return false;
     }
     /**
+     * Get typeId based on type name
+     * @param typeName type name
+     * @return typeId,0 if not found
+     */
+    uint32_t getLayerTypeIdByTypeName(const std::string &typeName) {
+        auto it = layerTypeMap.find(typeName);
+        if (it != layerTypeMap.end()) {
+            return it->second;
+        }
+        return 0;
+    }
+
+    /**
      * Decode the given buffer using configured layers
      * @param buf packet buffer to decode
      * @param length length of the buffer
