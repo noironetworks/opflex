@@ -173,7 +173,7 @@ public:
         uint8_t m1Bytes[6],m2Bytes[6];
         m1.toUIntArray(m1Bytes);
         m2.toUIntArray(m2Bytes);
-        uint8_t maskBytes[6] = {0xff};
+        uint8_t maskBytes[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
         if(!mask.empty()) {
             opflex::modb::MAC macMask(mask);
             macMask.toUIntArray(maskBytes);
@@ -219,7 +219,7 @@ public:
 
     }
     bool compareTuple(PacketTuple &p, PacketDecoder &decoder) {
-        std::vector<int> named_match_fields {3,6,7,8};
+        std::vector<int> named_match_fields {TFLD_ETH_TYPE, TFLD_IP_PROTO, TFLD_SPORT, TFLD_DPORT};
         std::vector<std::string> base_layer_names {"EProto", "IPProto",
                                                 "",""};
         auto base_layer_itr = base_layer_names.begin();
@@ -245,16 +245,16 @@ public:
             base_layer_itr++;
         }
 
-        std::vector<int> mac_fields {1,2};
+        std::vector<int> mac_fields {TFLD_SRC_MAC, TFLD_DST_MAC};
         for (auto &i:mac_fields) {
             if(!fields[i].second.empty()) {
                 if(!compareMacs(fields[i].second,p.fields[i].second,
-                            fields[i+9].second)) {
+                            fields[i+8].second)) {
                     return false;
                 }
             }
         }
-        std::vector<int> ip_fields {4,5};
+        std::vector<int> ip_fields {TFLD_SRC_IP, TFLD_DST_IP};
         for (auto &i:ip_fields) {
             if(!fields[i].second.empty()) {
                 if(!compareIps(fields[i].second,p.fields[i].second,
