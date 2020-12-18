@@ -205,7 +205,7 @@ void PacketLogHandler::deletePruneFilter(const std::string &filterName) {
 
 void PacketLogHandler::pruneLog(ParseInfo &p) {
     for( auto &pruneSpec : defaultPruneSpec) {
-        if(pruneSpec == p.packetTuple) {
+        if(pruneSpec.compareTuple(p.packetTuple,*p.pktDecoder)) {
             p.pruneLog = true;
             return;
         }
@@ -213,7 +213,7 @@ void PacketLogHandler::pruneLog(ParseInfo &p) {
     { 
         std::lock_guard<std::mutex> lk(pruneMutex);
         for( auto &pruneSpec : userPruneSpec) {
-            if(*pruneSpec.second == p.packetTuple) {
+            if(pruneSpec.second->compareTuple(p.packetTuple,*p.pktDecoder)) {
                 p.pruneLog = true;
                 return;
             }
