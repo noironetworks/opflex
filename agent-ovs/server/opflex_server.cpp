@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
 
         GbpOpflexServer server(server_port, SERVER_ROLES, peer_vec,
                                transport_mode_proxies,
-                               modelgbp::getMetadata(),
+                               framework.getStore(),
                                prr_interval_secs);
 #ifdef HAVE_GRPC_SUPPORT
         LOG(INFO) << "Connecting to gbp-server at address: "

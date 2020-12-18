@@ -12,12 +12,12 @@
  */
 
 #include "opflex/test/GbpOpflexServer.h"
-#include "opflex/modb/internal/ObjectStore.h"
 #include "opflex/gbp/Policy.h"
 #include "opflex/engine/internal/OpflexConnection.h"
 #include "opflex/engine/internal/OpflexListener.h"
 #include "opflex/engine/internal/OpflexHandler.h"
 #include "opflex/engine/internal/OpflexServerHandler.h"
+#include "opflex/modb/internal/ObjectStore.h"
 
 #include <mutex>
 #include <thread>
@@ -53,7 +53,7 @@ public:
     GbpOpflexServerImpl(uint16_t port, uint8_t roles,
                         const test::GbpOpflexServer::peer_vec_t& peers,
                         const std::vector<std::string>& proxies,
-                        const modb::ModelMetadata& md,
+                        modb::ObjectStore& db,
                         int prr_interval_secs);
     virtual ~GbpOpflexServerImpl();
 
@@ -205,8 +205,7 @@ private:
 
     OpflexListener listener;
 
-    util::ThreadManager threadManager;
-    modb::ObjectStore db;
+    modb::ObjectStore& db;
     MOSerializer serializer;
     modb::mointernal::StoreClient* client;
 
