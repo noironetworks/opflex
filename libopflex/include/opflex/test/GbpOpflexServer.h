@@ -15,8 +15,8 @@
 #include <vector>
 #include <utility>
 #include <rapidjson/document.h>
+#include <unordered_map>
 
-#include "opflex/modb/ModelMetadata.h"
 #include "opflex/gbp/Policy.h"
 #include <opflex/ofcore/OFServerStats.h>
 
@@ -33,6 +33,12 @@ class GbpOpflexServerImpl;
 
 } /* namespace internal */
 } /* namespace engine */
+
+namespace modb {
+
+class ObjectStore;
+
+} /* namespace modb */
 
 namespace test {
 
@@ -64,7 +70,7 @@ public:
      */
     GbpOpflexServer(uint16_t port, uint8_t roles, const peer_vec_t& peers,
                     const std::vector<std::string>& proxies,
-                    const modb::ModelMetadata& md,
+                    modb::ObjectStore& db,
                     int prr_interval_secs);
 
     /**
