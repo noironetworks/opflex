@@ -16,6 +16,7 @@
 
 #include <cstdio>
 
+#include "opflex/modb/internal/ObjectStore.h"
 #include "opflex/test/GbpOpflexServer.h"
 #include "opflex/engine/internal/OpflexMessage.h"
 #include "opflex/engine/internal/GbpOpflexServerImpl.h"
@@ -27,10 +28,10 @@ namespace test {
 GbpOpflexServer::GbpOpflexServer(uint16_t port, uint8_t roles,
                                  const peer_vec_t& peers,
                                  const std::vector<std::string>& proxies,
-                                 const modb::ModelMetadata& md,
+                                 modb::ObjectStore& db,
                                  int prr_interval_secs)
     : pimpl(new engine::internal
-            ::GbpOpflexServerImpl(port, roles, peers, proxies, md,
+            ::GbpOpflexServerImpl(port, roles, peers, proxies, db,
                                   prr_interval_secs)) { }
 
 GbpOpflexServer::~GbpOpflexServer() {
@@ -90,14 +91,14 @@ using boost::posix_time::seconds;
 GbpOpflexServerImpl::GbpOpflexServerImpl(uint16_t port_, uint8_t roles_,
                                          const GbpOpflexServer::peer_vec_t& peers_,
                                          const std::vector<std::string>& proxies_,
-                                         const modb::ModelMetadata& md,
+                                         modb::ObjectStore& db_,
                                          int prr_interval_secs_)
     : port(port_), roles(roles_), peers(peers_),
       proxies(proxies_),
       listener(*this, port_, "name", "domain"),
-      db(threadManager), serializer(&db, this),
+      db(db_),
+      serializer(&db, this),
       stopping(false), prr_interval_secs(prr_interval_secs_) {
-    db.init(md);
     client = &db.getStoreClient("_SYSTEM_");
 }
 
@@ -114,7 +115,6 @@ void GbpOpflexServerImpl::enableSSL(const std::string& caStorePath,
 }
 
 void GbpOpflexServerImpl::start() {
-    db.start();
 
     {
         const std::lock_guard<std::mutex> guard(prr_timer_mutex);
@@ -144,7 +144,6 @@ void GbpOpflexServerImpl::stop() {
         io_service_thread.reset();
     }
     listener.disconnect();
-    db.stop();
     client = NULL;
 }
 

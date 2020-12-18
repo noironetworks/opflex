@@ -50,7 +50,7 @@ StatsIO::~StatsIO() {
 void StatsIO::start() {
     if (stopping)
         return;
-    LOG(DEBUG) << "starting stats IO thread";
+    LOG(INFO) << "starting stats IO thread; interval:" << stats_interval_secs;
     const std::lock_guard<std::mutex> guard(stats_timer_mutex);
     stats_timer.reset(new deadline_timer(io, seconds(stats_interval_secs)));
     stats_timer->async_wait([this](const boost::system::error_code& ec) {
@@ -62,7 +62,7 @@ void StatsIO::start() {
 
 void StatsIO::stop() {
     stopping = true;
-    LOG(DEBUG) << "stopping stats IO thread";
+    LOG(INFO) << "stopping stats IO thread";
     {
         const std::lock_guard<std::mutex> guard(stats_timer_mutex);
         if (stats_timer) {

@@ -162,9 +162,12 @@ int main(int argc, char** argv) {
             peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":"
                                          +std::to_string(server_port)));
 
+        opflex::ofcore::OFFramework fw;
+        fw.setModel(modelgbp::getMetadata());
+        fw.start();
         GbpOpflexServer server(server_port, SERVER_ROLES, peer_vec,
                                transport_mode_proxies,
-                               modelgbp::getMetadata(), 60);
+                               fw.getStore(), 60);
         if (policy_file != "") {
             server.readPolicy(policy_file);
         }
@@ -212,6 +215,7 @@ int main(int argc, char** argv) {
                     LOG(INFO) << "Policy/Config dir modified : " << pf_dir;
                     /* should be stopped after client */
                     server.stop();
+                    fw.stop();
                     if (execv(argv[0], argv)) {
                         LOG(ERROR) << "mock_server failed to restart self"
                                    << strerror(errno);
@@ -224,6 +228,7 @@ int main(int argc, char** argv) {
         }
 cleanup:
         server.stop();
+        fw.stop();
     } catch (const std::exception& e) {
         LOG(ERROR) << "Fatal error: " << e.what();
         return 4;

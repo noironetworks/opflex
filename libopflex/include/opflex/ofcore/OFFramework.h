@@ -912,7 +912,6 @@ public:
       */
      void disableObservableReporting();
 
-private:
     /**
      * Get the object store that provides access to the managed object
      * database.
@@ -922,6 +921,7 @@ private:
      */
     modb::ObjectStore& getStore();
 
+private:
     /**
      * Register a mutator into the thread-local storage for this
      * store.
