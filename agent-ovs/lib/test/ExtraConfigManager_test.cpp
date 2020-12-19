@@ -100,7 +100,7 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     using modelgbp::observer::DropLogConfig;
     using modelgbp::observer::DropLogModeEnumT;
     using modelgbp::observer::DropPruneConfig;
-    fs::path path(temp / "a.droplogcfg");
+    fs::path path(temp / "b.droplogcfg");
     fs::ofstream os(path);
     os << "{"
        << "\"drop-log-enable\": true,\n"
@@ -126,6 +126,7 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     BOOST_CHECK(dropLogCfg.get()->getDropLogMode().get()== DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
     BOOST_CHECK(dropLogCfg.get()->getDropLogEnable().get());
     /*Test create prune filter*/
+    WAIT_FOR(DropPruneConfig::resolve(agent.getFramework(), dropPruneUri), 500);
     boost::optional<shared_ptr<DropPruneConfig>> dropPruneCfg = DropPruneConfig::resolve(agent.getFramework(), dropPruneUri);
     BOOST_CHECK(dropPruneCfg.get()->getFilterName().get() == "flt1");
     BOOST_CHECK(dropPruneCfg.get()->getSrcAddress().get() == "1.2.3.4");

@@ -181,16 +181,6 @@ void ExtraConfigManager::packetDropPruneConfigUpdated(std::shared_ptr<PacketDrop
     Mutator mutator(framework, "policyelement");
     optional<shared_ptr<modelgbp::policy::Universe>> polUni =
             modelgbp::policy::Universe::resolve(framework);
-    if(dropPrune->removed) {
-        opflex::modb::URI dropPruneURI = 
-            opflex::modb::URIBuilder(polUni.get()->getURI())
-            .addElement("ObserverDropPruneConfig").addElement(dropPrune->filterName).build();
-        DropPruneConfig::remove(framework, dropPruneURI);
-        mutator.commit();
-        dropPruneMap.erase(dropPrune->filterName);
-        notifyPacketDropPruneConfigListeners(dropPrune->filterName);
-        return;
-    }
     shared_ptr<DropPruneConfig> dropPruneCfg =
         polUni.get()->addObserverDropPruneConfig(dropPrune->filterName);
     dropPruneCfg->unsetSrcAddress();
@@ -238,17 +228,37 @@ void ExtraConfigManager::packetDropPruneConfigUpdated(std::shared_ptr<PacketDrop
         dropPruneCfg->setDstPort(dropPrune->dport.get());
     }
     mutator.commit();
+    unique_lock<mutex> guard(prune_mutex);
     dropPruneMap[dropPrune->filterName] = dropPrune;
+    guard.unlock();
     notifyPacketDropPruneConfigListeners(dropPrune->filterName);
+}
+
+void ExtraConfigManager::packetDropPruneConfigDeleted(const std::string &filterName) {
+    using modelgbp::observer::DropPruneConfig;
+    Mutator mutator(framework, "policyelement");
+    optional<shared_ptr<modelgbp::policy::Universe>> polUni =
+            modelgbp::policy::Universe::resolve(framework);
+    opflex::modb::URI dropPruneURI =
+        opflex::modb::URIBuilder(polUni.get()->getURI())
+        .addElement("ObserverDropPruneConfig").addElement(filterName).build();
+    DropPruneConfig::remove(framework, dropPruneURI);
+    mutator.commit();
+    unique_lock<mutex> guard(prune_mutex);
+    dropPruneMap.erase(filterName);
+    guard.unlock();
+    notifyPacketDropPruneConfigListeners(filterName);
 }
 
 bool ExtraConfigManager::getPacketDropPruneSpec(const std::string &pruneFilter, std::shared_ptr<PacketDropLogPruneSpec> &pruneSpec) {
     bool ret = false;
+    unique_lock<mutex> guard(prune_mutex);
     auto it= dropPruneMap.find(pruneFilter);
     if(it != dropPruneMap.end()) {
         pruneSpec = it->second;
         ret = true;
     }
+    guard.unlock();
     return ret;
 }
 
