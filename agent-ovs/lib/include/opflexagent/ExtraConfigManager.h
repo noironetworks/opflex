@@ -147,6 +147,14 @@ private:
      */
     void packetDropPruneConfigUpdated(std::shared_ptr<PacketDropLogPruneSpec> &pruneCfg);
     
+    /**
+     * Add or update a packet drop log prune config object
+     *
+     * @param filterName Drop log Prune spec filter name
+     */
+    void packetDropPruneConfigDeleted(const std::string &filterName);
+
+    std::mutex prune_mutex;
     drop_prune_map_t dropPruneMap;
     /**
      * The extraConfig listeners that have been registered

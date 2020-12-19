@@ -964,6 +964,7 @@ void AccessFlowManager::rdConfigUpdated(const opflex::modb::URI& rdURI) {
 }
 
 void AccessFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI) {
+    if (stopping) return;
     using modelgbp::observer::DropLogConfig;
     using modelgbp::observer::DropLogModeEnumT;
     FlowEntryList dropLogFlows;
@@ -1004,6 +1005,7 @@ void AccessFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& drop
 }
 
 void AccessFlowManager::packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI) {
+    if (stopping) return;
     using modelgbp::observer::DropFlowConfig;
     optional<shared_ptr<DropFlowConfig>> dropFlowCfg =
             DropFlowConfig::resolve(agent.getFramework(), dropFlowCfgURI);
