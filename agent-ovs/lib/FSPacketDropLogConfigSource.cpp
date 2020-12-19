@@ -244,9 +244,7 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
             /*Notify removed*/
             if(dropPruneCfgSet) {
                 for(auto itr: *dropPruneCfgSet) {
-                    std::shared_ptr<PacketDropLogPruneSpec> pruneSpec(new PacketDropLogPruneSpec(itr));
-                    pruneSpec->removed = true;
-                    manager->packetDropPruneConfigUpdated(pruneSpec);
+                    manager->packetDropPruneConfigDeleted(itr);
                 }
             }
             dropPruneCfgSet = newPruneSet;
@@ -337,9 +335,7 @@ void FSPacketDropLogConfigSource::deleted(const fs::path& filePath) {
             dropCfg.dropLogMode = DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG;
             manager->packetDropLogConfigUpdated(dropCfg);
             for(auto itr: *dropPruneCfgSet) {
-                std::shared_ptr<PacketDropLogPruneSpec> pruneSpec(new PacketDropLogPruneSpec(itr));
-                pruneSpec->removed = true;
-                manager->packetDropPruneConfigUpdated(pruneSpec);
+                manager->packetDropPruneConfigDeleted(itr);
             }
             dropPruneCfgSet->clear();
             LOG(INFO) << "Removed packet drop log config "
