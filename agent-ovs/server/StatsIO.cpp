@@ -13,12 +13,14 @@
 #include "StatsIO.h"
 #include <opflex/ofcore/OFFramework.h>
 #include <opflex/ofcore/OFServerStats.h>
+#include <modelgbp/dmtree/Root.hpp>
 #include <modelgbp/observer/SysStatUniverse.hpp>
 
 using boost::asio::deadline_timer;
 using boost::posix_time::seconds;
 using namespace opflex::modb;
 using namespace modelgbp::observer;
+using namespace modelgbp::dmtree;
 
 namespace opflexagent {
 
@@ -85,9 +87,16 @@ void StatsIO::on_timer_stats (const boost::system::error_code& ec) {
 
     std::unordered_map<string, std::shared_ptr<OFServerStats>> stats;
     server.getOpflexPeerStats(stats);
-    Mutator mutator(framework, "policyelement");
     optional<shared_ptr<SysStatUniverse> > ssu =
         SysStatUniverse::resolve(framework);
+    if (!ssu) {
+        Mutator mutator(framework, "init");
+        optional<shared_ptr<Root> > root = Root::resolve(framework, URI::ROOT);
+        if (root)
+            ssu = root.get()->addObserverSysStatUniverse();
+        mutator.commit();
+    }
+    Mutator mutator(framework, "policyelement");
     if (ssu) {
         for (const auto& peerStat : stats) {
             ssu.get()->addObserverOpflexServerCounter(peerStat.first)
