@@ -63,10 +63,6 @@ metadata
                     prop[size]
                     # default regex statement
                     prop[regex]
-                    # target type that allows constraints to be defined in another type (useful for strings etc.)
-                    # if range specification requires a different type than the one that the range is contained by,
-                    # this construct allows type indirection, where another type is used for definition of the range
-                    prop[use-type]
                 }
 
                 # rules applied to constants

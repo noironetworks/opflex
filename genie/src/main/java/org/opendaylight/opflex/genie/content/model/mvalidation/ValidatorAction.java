@@ -8,7 +8,6 @@ import org.opendaylight.opflex.modlan.report.Severity;
 public enum ValidatorAction
 {
     ADD(new String[]{"add", "validate", "range", "content"}),
-    CLOBBER(new String[]{"clobber", "clobber-validate", "clobber-range", "clobber-content"}),
     REMOVE(new String[]{"remove", "remove-validate", "remove-range", "remove-content"}),
     ;
 
