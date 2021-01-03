@@ -21,7 +21,6 @@
 #include "gbp.grpc.pb.h"
 #include "GbpClient.h"
 #include <opflexagent/logging.h>
-#include <opflex/gbp/Policy.h>
 
 namespace opflexagent {
 
@@ -62,7 +61,7 @@ public:
     void Stop() { stopping = true; }
 
 private:
-    void JsonDump(Document& d) {
+    static void JsonDump(Document& d) {
         StringBuffer buffer;
         buffer.Clear();
 
@@ -72,7 +71,7 @@ private:
         LOG(DEBUG) << buffer.GetString();
     }
 
-    void JsonDocAdd(Document& d, const GBPObject& gbp) {
+    static void JsonDocAdd(Document& d, const GBPObject& gbp) {
         Document::AllocatorType& allocator = d.GetAllocator();
         Value o(kObjectType);
         int i;
@@ -192,7 +191,9 @@ GbpClient::GbpClient(const std::string& address,
 }
 
 GbpClient::~GbpClient() {
-    thread_.join();
+    if (thread_.joinable()) {
+        thread_.join();
+    }
 }
 
 void GbpClient::Start(const std::string& address) {

@@ -162,7 +162,7 @@ dnl Checks for header files
 AC_STDC_HEADERS
 
 dnl Boost dependencies
-AX_BOOST_BASE([1.49.0], [], AC_MSG_ERROR([Boost is required]))
+AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))
 AX_BOOST_SYSTEM
 AX_BOOST_ASIO
 AX_BOOST_UNIT_TEST_FRAMEWORK

@@ -44,8 +44,6 @@ public:
 
 private:
     void Start(const std::string& address);
-    void JsonDump(rapidjson::Document& d);
-    void JsonDocAdd(rapidjson::Document& d, const gbpserver::GBPObject& gbp);
     std::thread thread_;
     opflex::test::GbpOpflexServer& server_;
     std::atomic<bool> stopping;
