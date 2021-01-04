@@ -187,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
                      .addElement("EprL2Ep")
                      .addElement(bd->getURI().toString())
                      .addElement(MAC("00:00:00:00:00:01")).build();
-    WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr1), 500);
+    WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr1), 1000);
 
     const std::string& uuid3 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-3";
     fs::path path3(temp / (uuid3+".fs" ));
