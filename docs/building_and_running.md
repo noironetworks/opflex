@@ -5,14 +5,7 @@
 The project is organized into four main sections.  You'll need to build each in the right order
 
 You can check out opflex repository with https as follows:
- - git clone https://git.opendaylight.org/gerrit/opflex
-
-OR
-
-You can check out opflex repository with ssh as follows:
-
- - Have a login on the ODL side and [setup ssh keys](https://docs.opendaylight.org/en/stable-boron/developer-guide/getting-started-with-git-and-gerrit.html)
- - git clone ssh://yourusername@git.opendaylight.org:29418/opflex.git
+ - git clone https://github.com/noironetworks/opflex
 
 
 ### libopflex
@@ -20,7 +13,7 @@ You can check out opflex repository with ssh as follows:
 libopflex requires
 - libuv >= 1.20
 - rapidjson 1.1
-- Boost 1.49
+- Boost >= 1.53
 
 
 Install Boost base and the Boost unit testing library, plus libuv1, doxygen, openssl and rapidjson-dev from your preferred distro.
@@ -81,7 +74,6 @@ The agent requires the Open vSwitch 2.12.0 library to connect to OVS and configu
     - sudo find lib -name "*.h" -exec cp --parents -t "$ROOT/include/openvswitch/" {} \;
     - popd
 
-If you're running Ubuntu 16.04+ or RHEL7+ you should not need to install the OVS kernel data path module.
 
 ### agent-ovs
 The OVS agent depends on OVS, libopflex and libmodelgbp. You can build agent-ovs as follows:
