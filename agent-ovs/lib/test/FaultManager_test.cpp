@@ -106,14 +106,10 @@ static bool hasFault(const string& pathstr, FSFaultSource& faultsource, string u
 template<typename T>
 bool hasEPREntry(OFFramework& framework, const URI& uri,
                  const boost::optional<std::string>& uuid = boost::none) {
-    LOG(INFO) << "inside hasEPREntry";
     boost::optional<std::shared_ptr<T> > entry =
         T::resolve(framework, uri);
-    if (!entry) { LOG(INFO) << "returnig false"; return false ;}
-    if (uuid) { LOG(INFO) << "returnig true"; return (entry.get()->getUuid("") == uuid); }
-
-    LOG(INFO) << uri.toString();
-    if (entry) { LOG(INFO) << "return true" ;}
+    if (!entry) {return false ;}
+    if (uuid) {return (entry.get()->getUuid("") == uuid);}
     return true;
 }
 
@@ -191,7 +187,6 @@ BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
                      .addElement("EprL2Ep")
                      .addElement(bd->getURI().toString())
                      .addElement(MAC("00:00:00:00:00:01")).build();
-    LOG(INFO) << "callig has EPentry";
     WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr1), 1000);
 
     const std::string& uuid3 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-3";
