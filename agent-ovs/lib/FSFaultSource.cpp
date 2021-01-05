@@ -14,14 +14,12 @@
 #include <opflexagent/logging.h>
 #include <opflex/modb/URIBuilder.h>
 #include <opflexagent/Fault.h>
-#include <cstdlib>
 
 #include <modelgbp/fault/Instance.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <modelgbp/fault/SeverityEnumT.hpp>
-#include <opflex/modb/Mutator.h>
 
 namespace opflexagent {
 
@@ -38,7 +36,7 @@ FSFaultSource::FSFaultSource(FaultManager* manager_,
     listener.addWatch(faultSourceDir, *this);
 }
 
-static bool isfault(fs::path filePath) {
+static bool isfault(const fs::path& filePath) {
     string fstr = filePath.filename().string();
     return (boost::algorithm::ends_with(fstr, ".fs") &&
             !boost::algorithm::starts_with(fstr, "."));

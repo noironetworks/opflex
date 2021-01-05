@@ -87,21 +87,6 @@ public:
     int getDscpMarking(const string& interface) const;
 
     /**
-     * get shared ptr to egress or ingress qosConfigState
-     * @param[in] interface Name of the interface
-     * @param[in] egress flag to determine direction
-     * @return shared ptr to QosConfigState.
-     */
-    boost::optional<shared_ptr<QosConfigState>> getQosConfig(const string& interface, bool egress) const;
-
-    /**
-     * get shared_ptr to ingress qosConfigState
-     * @param[in] interface Name of the interface
-     * @return shared_ptr to QosConfigState
-     */
-    boost::optional<shared_ptr<QosConfigState>> getIngressQosConfigState(const string& interface) const;
-
-    /**
      * resolve ingress config from modb
      * @param[in] reqOpt URI of QosRequirement
      * @return shared_ptr to QosConfigState
@@ -137,13 +122,6 @@ public:
      * @return URI of QosRequirement
      */
     boost::optional<URI> getEpgQosPolicy(const string& interface);
-
-    /**
-     * get shared ptr to egress config for an interface.
-     * @param[in] interface name of the interface.
-     * @return shared ptr to QosConfigState or none.
-     */
-    boost::optional<shared_ptr<QosConfigState>> getEgressQosConfigState(const string& interface) const;
 
     /**
      * update the egress and ingress policy uri in Requirement.
@@ -191,7 +169,7 @@ public:
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress policy map.
      */
-    void clearEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap);
+    static void clearEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap);
 
     /**
      * update egress or ingress policy map by removing entry for input interface.
@@ -199,7 +177,7 @@ public:
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress epg policy map.
      */
-    void clearEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
+    static void clearEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
 
     /**
      * update egress or ingress policy map by adding entry for input interface.
@@ -207,7 +185,7 @@ public:
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress policy map.
      */
-    void addEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap);
+    static void addEntry(const string& interface, const URI& uri, unordered_map<URI, unordered_set<string>>& policyMap);
 
     /**
      * update egress or ingress policy map by adding entry for input interface.
@@ -215,7 +193,7 @@ public:
      * @param[in] uri Uri of ingress or egress policy.
      * @param[in] policyMap egress or ingress epg policy map.
      */
-    void addEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
+    static void addEntry(const URI& epg, const URI& uri, unordered_map<URI, unordered_set<URI>>& policyMap);
 
     /**
      * update all entries for interface in all maps to reflect its association to new requirement object.

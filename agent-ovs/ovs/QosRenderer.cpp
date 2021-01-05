@@ -11,8 +11,6 @@
 #include "QosRenderer.h"
 #include <opflexagent/logging.h>
 #include <opflexagent/QosManager.h>
-#include <boost/optional.hpp>
-#include <boost/format.hpp>
 
 namespace opflexagent {
     using boost::optional;

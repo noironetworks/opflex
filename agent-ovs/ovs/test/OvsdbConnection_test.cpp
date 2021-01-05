@@ -44,6 +44,8 @@ public:
     const string netflowMonitorUpdate = "[\"NetFlow\"," + netflowMonitorResponse + "]";
     const string ipfixMonitorResponse {"{\"IPFIX\":{\"b85011b0-4aa6-43ce-831b-4d2e4f97af30\":{\"new\":{\"other_config\":[\"map\",[[\"enable-tunnel-sampling\",\"true\"]]],\"targets\":\"172.28.184.9:2055\",\"sampling\":[\"set\",[]]}}}}"};
     const string ipfixMonitorUpdate = "[\"IPFIX\"," + ipfixMonitorResponse + "]";
+    const string qosMonitorResponse = {"{\"QoS\":{\"8d8d8e4d-617c-40c9-9aa6-43b9a73d6c28\":{\"new\":{\"queues\":[\"map\",[]]}}}}"};
+    const string qosMonitorUpdate = "[\"QoS\"," + qosMonitorResponse + "]";
     unique_ptr<OvsdbConnection> conn;
 };
 
@@ -97,6 +99,13 @@ BOOST_FIXTURE_TEST_CASE( verify_connect, OvsdbConnectionFixture ) {
     conn->handleMonitor(6, payload);
     payload.GetAllocator().Clear();
     payload.Parse(ipfixMonitorUpdate.c_str());
+    conn->handleUpdate(payload);
+
+    payload.GetAllocator().Clear();
+    payload.Parse(qosMonitorResponse.c_str());
+    conn->handleMonitor(7, payload);
+    payload.GetAllocator().Clear();
+    payload.Parse(qosMonitorUpdate.c_str());
     conn->handleUpdate(payload);
 
     conn->stop();

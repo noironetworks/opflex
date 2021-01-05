@@ -108,8 +108,8 @@ bool hasEPREntry(OFFramework& framework, const URI& uri,
                  const boost::optional<std::string>& uuid = boost::none) {
     boost::optional<std::shared_ptr<T> > entry =
         T::resolve(framework, uri);
-    if (!entry) return false;
-    if (uuid) return (entry.get()->getUuid("") == uuid);
+    if (!entry) {return false ;}
+    if (uuid) {return (entry.get()->getUuid("") == uuid);}
     return true;
 }
 
@@ -163,7 +163,7 @@ BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
    bd = space->addGbpBridgeDomain("bd");
    eg1 = space->addGbpEpGroup("group1");
    eg1->addGbpEpGroupToNetworkRSrc()
-         ->setTargetBridgeDomain(bd->getURI());
+      ->setTargetBridgeDomain(bd->getURI());
    mutator.commit();
 
     Endpoint ep1("e82e883b-851d-4cc6-bedb-fb5e27530043");
@@ -182,12 +182,15 @@ BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
     l2E1->setInterfaceName(ep1.getInterfaceName().get());
     mutatorElem.commit();
 
+    WAIT_FOR(agent.getPolicyManager().getBDForGroup(eg1->getURI()), 500);
+    WAIT_FOR(agent.getPolicyManager().getBDForGroup(eg1->getURI())
+             .get()->getURI() == bd->getURI(), 500);
     URI l2epr1 = URIBuilder()
                      .addElement("EprL2Universe")
                      .addElement("EprL2Ep")
                      .addElement(bd->getURI().toString())
                      .addElement(MAC("00:00:00:00:00:01")).build();
-    WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr1), 500);
+    WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr1), 1000);
 
     const std::string& uuid3 = "83f18f0b-80f7-46e2-b06c-4d9487b0c754-3";
     fs::path path3(temp / (uuid3+".fs" ));

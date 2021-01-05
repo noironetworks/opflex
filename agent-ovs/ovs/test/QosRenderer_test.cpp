@@ -71,12 +71,26 @@ public:
     unique_ptr<OvsdbConnection> conn;
 };
 
-bool verifyCreateDestroy(const shared_ptr<QosRenderer>& qosRenderer, unique_ptr<OvsdbConnection>& conn) {
+bool verifyCreateDestroy(Agent& agent, const shared_ptr<QosRenderer>& qosRenderer, unique_ptr<OvsdbConnection>& conn) {
+    Mutator mutator(agent.getFramework(), "policyreg");
+    auto root = modelgbp::dmtree::Root::createRootElement(agent.getFramework());
+    auto pu = root->addPolicyUniverse();
+    auto space = pu->addPolicySpace("test");
+    auto bw = space->addQosBandwidthLimit("bw");
+    bw->setBurst(9000);
+    bw->setRate(1000);
     string interface("intf1");
-    qosRenderer->updateEgressQosParams(interface, 3000, 300);
+    shared_ptr<QosConfigState> egressQosConfig =
+        make_shared<QosConfigState>(bw->getURI(), bw->getName().get());
+    egressQosConfig->setRate(1000);
+    egressQosConfig->setBurst(9000);
+    qosRenderer->egressQosUpdated(interface, egressQosConfig);
     qosRenderer->deleteEgressQos(interface);
-
-    qosRenderer->updateIngressQosParams(interface, 4000, 400);
+    shared_ptr<QosConfigState> ingressQosConfig =
+        make_shared<QosConfigState>(bw->getURI(), bw->getName().get());
+    egressQosConfig->setRate(1001);
+    egressQosConfig->setBurst(9001);
+    qosRenderer->ingressQosUpdated(interface, ingressQosConfig);
     string qosUuid;
     conn->getOvsdbState().getQosUuidForPort(interface, qosUuid);
     if (qosUuid.empty()) {
@@ -91,12 +105,12 @@ bool verifyCreateDestroy(const shared_ptr<QosRenderer>& qosRenderer, unique_ptr<
         return false;
     }
 
-    qosRenderer->deleteIngressQos("intf1");
+    qosRenderer->qosDeleted("intf1");
     return true;
 }
 
 BOOST_FIXTURE_TEST_CASE( verify_createdestroy, QosRendererFixture ) {
-    BOOST_CHECK_EQUAL(true, verifyCreateDestroy(qosRenderer, conn));
+    BOOST_CHECK_EQUAL(true, verifyCreateDestroy(agent, qosRenderer, conn));
 }
 BOOST_AUTO_TEST_SUITE_END()
 

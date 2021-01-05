@@ -452,7 +452,6 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(DEBUG) << "port uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
@@ -460,7 +459,6 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                                 LOG(DEBUG) << "received updated row for port " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::PORT, rowUuid, rowDetails);
                             } else {
-                                LOG(DEBUG) << "received deleted row for port " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::PORT, rowUuid);
                             }
                         }
@@ -472,7 +470,6 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                         for (Value::ConstMemberIterator itr = value.MemberBegin();
                              itr != value.MemberEnd(); ++itr) {
                             string rowUuid = itr->name.GetString();
-                            LOG(DEBUG) << "interface uuid " << rowUuid;
                             OvsdbRowDetails rowDetails;
                             rowDetails["uuid"] = OvsdbValue(rowUuid);
                             bool addRow = processRowUpdate(itr->value, rowDetails);
@@ -480,7 +477,6 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
                                 LOG(DEBUG) << "received updated row for interface " << rowUuid;
                                 getOvsdbState().updateRow(OvsdbTable::INTERFACE, rowUuid, rowDetails);
                             } else {
-                                LOG(DEBUG) << "received deleted row for interface " << rowUuid;
                                 getOvsdbState().deleteRow(OvsdbTable::INTERFACE, rowUuid);
                             }
                         }
