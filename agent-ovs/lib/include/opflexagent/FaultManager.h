@@ -25,11 +25,10 @@ public:
   virtual ~FaultManager();
 
    /**
-    * Create the fault with the specified params from the fault
+    * Create the fault against platform with the specified params from the fault
     * manager
-    *
     */
-   void createPlatformFault(Agent& agent, const Fault& fs);
+   void createPlatformFault(const Fault& fs);
  
    /**
     * Remove the fault with the specified UUID from the fault
@@ -38,14 +37,18 @@ public:
     * @param uuid the UUID of the fault that no longer exists
     */
    void removeFault(const std::string& uuid);
+   
+   /**
+    * Create the fault against endpoint with the specified params from the fault  
+    * manager 
+    */
+   void createEpFault(const Fault& fs);
 
-   void createEpFault(Agent& agent, const Fault& fs);
-  
    /* Interface: EndpointListener */
    virtual void endpointUpdated(const std::string& uuid);
 
-
-   /* check if the faults which are not 
+   /*
+    * check if the faults which are not 
     * processed gets added to the map 
     */
     bool hasPendingFault(const std::string& faultUUID);
@@ -55,9 +58,10 @@ public:
 
    /* handle endpoint object */
     void handleEndpointUpdate(const std::string& uuid);
-   Agent& agent;
-   opflex::ofcore::OFFramework& framework;
-   std::map<std::string, Fault> pendingFaults;
+
+    Agent& agent;
+    opflex::ofcore::OFFramework& framework;
+    std::map<std::string, Fault> pendingFaults;
 
 private:
    std::recursive_mutex map_mutex;

@@ -88,36 +88,36 @@ void FSFaultSource::updated(const fs::path& filePath) {
    
         optional<string> ep_uuid = properties.get_optional<string>(EP_UUID); 
         if (ep_uuid){
-           newfs.setEPUUID(ep_uuid.get());
-           string eg_name = properties.get<string>(EP_GROUP_NAME);
-           string ps_name = properties.get<string>(POLICY_SPACE_NAME);
-           newfs.setMAC(MAC(properties.get<string>(EP_MAC)));
-           newfs.setEgURI(opflex::modb::URIBuilder()
-                                .addElement("PolicyUniverse")
-                                .addElement("PolicySpace")
-                                .addElement(ps_name)
-                                .addElement("GbpEpGroup")
-                                .addElement(eg_name).build());
-           faultManager->createEpFault(agent,newfs);
+            newfs.setEPUUID(ep_uuid.get());
+            string eg_name = properties.get<string>(EP_GROUP_NAME);
+            string ps_name = properties.get<string>(POLICY_SPACE_NAME);
+            newfs.setMAC(MAC(properties.get<string>(EP_MAC)));
+            newfs.setEgURI(opflex::modb::URIBuilder()
+                                 .addElement("PolicyUniverse")
+                                 .addElement("PolicySpace")
+                                 .addElement(ps_name)
+                                 .addElement("GbpEpGroup")
+                                 .addElement(eg_name).build());
+            faultManager->createEpFault(newfs);
 
-         } else {
-           faultManager->createPlatformFault(agent,newfs);
+        } else {
+             faultManager->createPlatformFault(newfs);
           }
         std::unique_lock<std::mutex> lock(lock_map_mutex);
         fault_map_t::const_iterator it =  knownFaults.find(pathstr);
         if (it != knownFaults.end()) {
-           if (newfs.getFSUUID() != it->second) {
-              deleted(filePath);
-              faultManager->clearPendingFaults(it->second); 
-           }
+            if (newfs.getFSUUID() != it->second) {
+                deleted(filePath);
+                faultManager->clearPendingFaults(it->second); 
+            }
         }
  
         knownFaults[pathstr] = newfs.getFSUUID();
         LOG(INFO) << "Updated Faults " << newfs << " from " << filePath;
     } catch (const std::exception& ex) {
-        LOG(ERROR) << "Could not load Faults from: "
-                   << filePath << ": "
-                   << ex.what();
+          LOG(ERROR) << "Could not load Faults from: "
+                     << filePath << ": "
+                     << ex.what();
       } 
 }
 
@@ -125,32 +125,32 @@ void FSFaultSource::deleted(const fs::path& filePath){
     try {
         string pathstr = filePath.string(); 
         if (!fs::exists(filePath)){ 
-           std::unique_lock<std::mutex> lock(lock_map_mutex);
-           fault_map_t::const_iterator it =  knownFaults.find(pathstr);
-           if (it != knownFaults.end()) {
-               LOG(INFO) << "Removed Fault "
-                      << it->second
-                      << " at " << filePath;
-               faultManager->removeFault(it->second);
-               knownFaults.erase(it);
+            std::unique_lock<std::mutex> lock(lock_map_mutex);
+            fault_map_t::const_iterator it =  knownFaults.find(pathstr);
+            if (it != knownFaults.end()) {
+                LOG(INFO) << "Removed Fault "
+                          << it->second
+                          << " at " << filePath;
+                faultManager->removeFault(it->second);
+                knownFaults.erase(it);
            }
         }
     } catch (const std::exception& ex) {
-        LOG(ERROR) << "Could not delete Fault for "
-                   << filePath << ": "
-                   << ex.what();
+          LOG(ERROR) << "Could not delete Fault for "
+                     << filePath << ": "
+                     << ex.what();
     } catch (...) {
-        LOG(ERROR) << "Unknown error while deleting Fault information for "
-                   << filePath;
+          LOG(ERROR) << "Unknown error while deleting Fault information for "
+                     << filePath;
     }
 }
 
 void FSFaultSource::getFaultUUID (string& uuid, const string& pathstr){
-   std::unique_lock<std::mutex> lock(lock_map_mutex);
-   fault_map_t::const_iterator it = knownFaults.find(pathstr);
-   if (it != knownFaults.end()) {
-      uuid = it->second;
-   }
+    std::unique_lock<std::mutex> lock(lock_map_mutex);
+    fault_map_t::const_iterator it = knownFaults.find(pathstr);
+    if (it != knownFaults.end()) {
+        uuid = it->second;
+    }
 }
 
 }/* namespace opflexagent */
