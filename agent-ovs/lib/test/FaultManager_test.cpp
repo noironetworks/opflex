@@ -182,6 +182,9 @@ BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
     l2E1->setInterfaceName(ep1.getInterfaceName().get());
     mutatorElem.commit();
 
+    WAIT_FOR(agent.getPolicyManager().getBDForGroup(eg1->getURI()), 500);
+    WAIT_FOR(agent.getPolicyManager().getBDForGroup(eg1->getURI())
+             .get()->getURI() == bd->getURI(), 500);
     URI l2epr1 = URIBuilder()
                      .addElement("EprL2Universe")
                      .addElement("EprL2Ep")
