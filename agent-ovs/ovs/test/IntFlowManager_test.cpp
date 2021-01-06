@@ -4565,30 +4565,28 @@ BOOST_FIXTURE_TEST_CASE(testdroplogcfg, BaseIntFlowManagerFixture) {
     URI dummyUri("/");
     intFlowManager.packetDropLogConfigUpdated(dummyUri);
 
-    Mutator mutator(agent.getFramework(), "init");
-    auto root = modelgbp::dmtree::Root::createRootElement(agent.getFramework());
-    auto pu = root->addPolicyUniverse();
-    mutator.commit();
-
     Mutator mutator_pe(framework, "policyelement");
-    auto polUni =
-        modelgbp::policy::Universe::resolve(framework).get();
-    auto dropLogCfg = polUni->addObserverDropLogConfig();
-    dropLogCfg->setDropLogEnable(0);
+    auto dropLogCfg = universe->addObserverDropLogConfig();
+    dropLogCfg->setDropLogEnable(1u);
+    dropLogCfg->setDropLogMode(modelgbp::observer::DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
     mutator_pe.commit();
     WAIT_FOR(modelgbp::observer::DropLogConfig::resolve(framework, dropLogCfg->getURI()), 500);
-
     intFlowManager.packetDropLogConfigUpdated(dropLogCfg->getURI());
 
     Mutator mutator_pe2(framework, "policyelement");
     dropLogCfg = modelgbp::observer::DropLogConfig::resolve(framework, dropLogCfg->getURI()).get();
-    dropLogCfg->setDropLogEnable(1);
-    dropLogCfg->setDropLogMode(modelgbp::observer::DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
+    dropLogCfg->setDropLogEnable(0u);
     mutator_pe2.commit();
-
-    WAIT_FOR(isDropLogEnabled(framework, dropLogCfg->getURI()), 500);
-
+    WAIT_FOR(!isDropLogEnabled(framework, dropLogCfg->getURI()), 500);
     intFlowManager.packetDropLogConfigUpdated(dropLogCfg->getURI());
+
+    Mutator mutator_pe3(framework, "policyelement");
+    dropLogCfg->setDropLogEnable(1u);
+    dropLogCfg->setDropLogMode(modelgbp::observer::DropLogModeEnumT::CONST_FLOW_BASED_DROP_LOG);
+    mutator_pe3.commit();
+    WAIT_FOR(modelgbp::observer::DropLogConfig::resolve(framework, dropLogCfg->getURI()), 500);
+    intFlowManager.packetDropLogConfigUpdated(dropLogCfg->getURI());
+
     stop();
 }
 
@@ -4612,6 +4610,41 @@ BOOST_FIXTURE_TEST_CASE(testencapfault, BaseIntFlowManagerFixture) {
     WAIT_FOR(modelgbp::platform::Config::resolve(framework, platformCfg->getURI()), 500);
 
     intFlowManager.configUpdated(platformCfg->getURI());
+    stop();
+}
+
+BOOST_FIXTURE_TEST_CASE(testdropflowconfig, BaseIntFlowManagerFixture) {
+    start();
+    intFlowManager.setEncapType(IntFlowManager::ENCAP_VXLAN);
+    intFlowManager.start();
+
+    URI dropflowConfig("/ObserverDropFlowConfigUniverse/ObserverDropFlowConfig/abc");
+    intFlowManager.packetDropFlowConfigUpdated(dropflowConfig);
+
+    Mutator mutator(agent.getFramework(), "policyelement");
+    auto dfUniverse = modelgbp::observer::DropFlowConfigUniverse::resolve(framework).get();
+    auto dfConfig = dfUniverse->addObserverDropFlowConfig("abc");
+    dfConfig->setEthType(123);
+    mutator.commit();
+
+    WAIT_FOR(modelgbp::observer::DropFlowConfig::resolve(framework, dfConfig->getURI()), 500);
+
+    Mutator mutator2(agent.getFramework(), "policyelement");
+    dfConfig->setDstPort(80u);
+    dfConfig->setInnerDstAddress("3.3.3.3");
+    dfConfig->setInnerSrcAddress("2.2.2.2");
+    dfConfig->setOuterDstAddress("13.3.3.3");
+    dfConfig->setOuterSrcAddress("12.2.2.2");
+    dfConfig->setTunnelId(1u);
+    dfConfig->setIpProto(6u);
+    dfConfig->setSrcPort(80);
+    dfConfig->setDstPort(80);
+    mutator2.commit();
+
+    WAIT_FOR(modelgbp::observer::DropFlowConfig::resolve(framework, dfConfig->getURI()).get()->getTunnelId().get() == 1u, 500);
+
+    intFlowManager.packetDropFlowConfigUpdated(dfConfig->getURI());
+
     stop();
 }
 

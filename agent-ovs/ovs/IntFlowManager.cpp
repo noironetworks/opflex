@@ -40,11 +40,9 @@
 #include <opflexagent/Endpoint.h>
 #include <opflexagent/EndpointManager.h>
 #include <opflexagent/Faults.h>
-#include <opflexagent/Network.h>
 
 #include "SwitchConnection.h"
 #include "IntFlowManager.h"
-#include "TableState.h"
 #include "PacketInHandler.h"
 #include "CtZoneManager.h"
 #include "Packets.h"
@@ -56,10 +54,6 @@
 #include "arp.h"
 #include "eth.h"
 #include "ovs-ofputil.h"
-#include "ovs-shim.h"
-
-#include <openvswitch/list.h>
-#include <arpa/inet.h>
 
 using std::string;
 using std::vector;
@@ -4862,7 +4856,7 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
      * rewrite destination macaddr and bounce it out same interface
      */
     Snat::PortRangeMap portRangeMap = as.getPortRangeMap();
-    for (auto it : portRangeMap) {
+    for (const auto& it : portRangeMap) {
         bool local = false;
         if (it.first == "local") {
             local = true;

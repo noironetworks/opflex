@@ -16,7 +16,6 @@
 #include <modelgbp/observer/DropFlowConfig.hpp>
 #include <modelgbp/observer/DropPruneConfig.hpp>
 #include <opflex/modb/Mutator.h>
-#include <opflexagent/logging.h>
 
 #include <memory>
 
