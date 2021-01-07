@@ -345,6 +345,36 @@ public:
      */
     uint32_t getExtEncapId(const opflex::modb::URI& epgURI);
 
+    /**
+     * Get the total number of local endpoints
+     *
+     * @return total local EPs
+     */
+    size_t getEpCount() {
+        std::lock_guard<std::mutex> guard(ep_mutex);
+        return ep_map.size();
+    }
+
+    /**
+     * Get the total number of External endpoints
+     *
+     * @return total external EPs
+     */
+    size_t getEpExternalCount() {
+        std::lock_guard<std::mutex> guard(ep_mutex);
+        return ext_ep_map.size();
+    }
+
+    /**
+     * Get the total number of remote endpoints
+     *
+     * @return total remote EPs
+     */
+    size_t getEpRemoteCount() {
+        std::lock_guard<std::mutex> guard(ep_mutex);
+        return remote_ep_uuid_map.size();
+    }
+
 private:
     /**
      * Add or update the endpoint state with new information about an

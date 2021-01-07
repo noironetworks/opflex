@@ -773,6 +773,57 @@ public:
      * Handle Subnets deletion
      */
     void deleteSubnets(const opflex::modb::URI& subnets);
+
+    /**
+     * Get the total number of contracts
+     *
+     * @return total contracts
+     */
+    size_t getContractCount() {
+        std::lock_guard<std::mutex> guard(state_mutex);
+        return contractMap.size();
+    }
+
+    /**
+     * Get the total number of security groups
+     *
+     * @return total security groups
+     */
+    size_t getSecGrpCount() {
+        std::lock_guard<std::mutex> guard(state_mutex);
+        return secGrpMap.size();
+    }
+
+    /**
+     * Get the total number of EPGs
+     *
+     * @return total EPGs
+     */
+    size_t getEPGCount() {
+        std::lock_guard<std::mutex> guard(state_mutex);
+        return group_map.size();
+    }
+
+    /**
+     * Get the total number of External Interfaces
+     *
+     * @return total External Interfaces
+     */
+    size_t getExtIntfCount() {
+        std::lock_guard<std::mutex> guard(state_mutex);
+        return ext_int_map.size();
+    }
+
+    /**
+     * Get the total number of Routing Domains
+     *
+     * @return total Routing Domains
+     */
+    size_t getRDCount() {
+        std::lock_guard<std::mutex> guard(state_mutex);
+        return rd_map.size();
+    }
+
 private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;

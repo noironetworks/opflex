@@ -483,8 +483,6 @@ BOOST_FIXTURE_TEST_CASE(testCreateAnycast, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_created_total 0.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0.000000");
@@ -503,8 +501,6 @@ BOOST_FIXTURE_TEST_CASE(testCreateLB, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0.000000");
@@ -523,8 +519,6 @@ BOOST_FIXTURE_TEST_CASE(testCreateLBNodePort, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0.000000");
@@ -546,8 +540,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output1.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1.000000");
@@ -563,8 +555,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     checkServiceExists(true, false, true);
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
-    pos = output2.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1.000000");
@@ -580,8 +570,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     checkServiceExists(true, false, true);
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
-    pos = output3.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 1.000000");
@@ -598,8 +586,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     checkServiceExists(true, false, true);
     const string& output4 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
-    pos = output4.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output4.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output4.find("opflex_svc_removed_total 1.000000");
@@ -619,8 +605,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLBNodePort, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output1.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1.000000");
@@ -631,8 +615,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLBNodePort, ServiceManagerFixture) {
     checkServiceExists(true);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output2.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1.000000");
@@ -643,8 +625,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLBNodePort, ServiceManagerFixture) {
     checkServiceExists(false);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output3.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 2.000000");
@@ -664,8 +644,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLB, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output1.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1.000000");
@@ -676,8 +654,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLB, ServiceManagerFixture) {
     checkServiceExists(true);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output2.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1.000000");
@@ -688,8 +664,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLB, ServiceManagerFixture) {
     checkServiceExists(false);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output3.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 2.000000");
@@ -709,8 +683,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteAnycast, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output1.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_created_total 0.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 0.000000");
@@ -731,8 +703,6 @@ BOOST_FIXTURE_TEST_CASE(testCreateExternalLB, ServiceManagerFixture) {
     checkServiceExists(true, true);
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0.000000");
@@ -758,8 +728,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdateExtLB, ServiceManagerFixture) {
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output1.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1.000000");
@@ -775,8 +743,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdateExtLB, ServiceManagerFixture) {
     checkServiceExists(true, true, true);
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
-    pos = output2.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1.000000");
@@ -802,8 +768,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteExtLB, ServiceManagerFixture) {
     checkServiceExists(false, true);
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output1.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_created_total 1.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1.000000");
@@ -816,8 +780,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteExtLB, ServiceManagerFixture) {
 #else
     checkServiceExists(true, true);
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output2.find("opflex_svc_active_total 1.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1.000000");
@@ -830,8 +792,6 @@ BOOST_FIXTURE_TEST_CASE(testDeleteExtLB, ServiceManagerFixture) {
 #else
     checkServiceExists(false, true);
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output3.find("opflex_svc_active_total 0.000000");
-    BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_created_total 2.000000");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 2.000000");

@@ -27,6 +27,8 @@
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>
 
+#include <modelgbp/observer/ModbCounts.hpp>
+
 class OFServerStats;
 namespace opflexagent {
 
@@ -46,6 +48,7 @@ using std::regex;
 using std::regex_match;
 using std::regex_replace;
 using std::lock_guard;
+using namespace modelgbp::observer;
 
 class Agent;
 struct EpCounters;
@@ -122,8 +125,6 @@ public:
 
     // Init state
     virtual void init(void) = 0;
-    // Create any gauge metrics during start
-    virtual void createStaticGauges(void) {};
     // remove any gauge metrics during stop
     virtual void removeStaticGauges(void) {};
     // create any gauge metric families during start
@@ -504,15 +505,19 @@ public:
     void decSvcCounter(void);
 
 
-    /* RemoteEp related APIs */
+    /* MoDB count related APIs */
     /**
-     * Create RemoteEp metric family if its not present.
-     * Update RemoteEp metric family if its already present
+     * Create MoDBCounts metric family if its not present.
+     * Update MoDBCounts metric family if its already present
      *
-     * @param count       total number of remote EPs under same uplink
+     * @param counts     contains total number of object counts
+     *                   in MoDB per object type
      */
-    void addNUpdateRemoteEpCount(size_t count);
-
+    void addNUpdateMoDBCounts(shared_ptr<ModbCounts> pCounts);
+    /**
+     * Remove MoDBCounts metric family
+     */
+    void removeMoDBCounts(void);
 
     /* RDDropCounter related APIs */
     /**
@@ -625,8 +630,6 @@ private:
     opflex::ofcore::OFFramework& framework;
     // Init state
     virtual void init(void) override;
-    // Create any gauge metrics during start
-    virtual void createStaticGauges(void) override;
     // remove any gauge metrics during stop
     virtual void removeStaticGauges(void) override;
     // create any gauge metric families during start
@@ -667,22 +670,14 @@ private:
     Family<Counter>    *counter_ep_create_family_ptr;
     // Counter family to track all EpCounter removes
     Family<Counter>    *counter_ep_remove_family_ptr;
-    // Gauge family to track the  total # of EpCounters
-    Family<Gauge>      *gauge_ep_total_family_ptr;
     // Counter to track ep creates
     Counter            *counter_ep_create_ptr;
     // Counter to track ep removes
     Counter            *counter_ep_remove_ptr;
-    // Gauge to track total Eps
-    Gauge              *gauge_ep_total_ptr;
-    // Actual ep total count
-    double              gauge_ep_total;
     // func to increment EpCounter create
     void incStaticCounterEpCreate(void);
     // func to decrement EpCounter remove
     void incStaticCounterEpRemove(void);
-    // func to set total EpCounter
-    void updateStaticGaugeEpTotal(bool add);
     // create any ep gauge metric families during start
     void createStaticGaugeFamiliesEp(void);
     // remove any ep gauge metric families during stop
@@ -691,10 +686,6 @@ private:
     void createStaticCounterFamiliesEp(void);
     // remove any ep counter metric families during stop
     void removeStaticCounterFamiliesEp(void);
-    // create any ep gauge metric during start
-    void createStaticGaugesEp(void);
-    // remove any ep gauge metric during stop
-    void removeStaticGaugesEp(void);
     // create any ep counter metric during start
     void createStaticCountersEp(void);
     // remove any ep counter metric during stop
@@ -806,23 +797,15 @@ private:
     Family<Counter>    *counter_svc_create_family_ptr;
     // Counter family to track all SvcCounter removes
     Family<Counter>    *counter_svc_remove_family_ptr;
-    // Gauge family to track the  total # of SvcCounters
-    Family<Gauge>      *gauge_svc_total_family_ptr;
     // Counter to track svc creates
     Counter            *counter_svc_create_ptr;
     // Counter to track svc removes
     Counter            *counter_svc_remove_ptr;
-    // Gauge to track total SVCs
-    Gauge              *gauge_svc_total_ptr;
-    // Actual svc total count
-    double              gauge_svc_total;
 
     // func to increment SvcCounter create
     void incStaticCounterSvcCreate(void);
     // func to decrement SvcCounter remove
     void incStaticCounterSvcRemove(void);
-    // func to set total SvcCounter
-    void updateStaticGaugeSvcTotal(bool add);
     // create any svc gauge metric families during start
     void createStaticGaugeFamiliesSvc(void);
     // remove any svc gauge metric families during stop
@@ -831,10 +814,6 @@ private:
     void createStaticCounterFamiliesSvc(void);
     // remove any svc counter metric families during stop
     void removeStaticCounterFamiliesSvc(void);
-    // create any svc gauge metric during start
-    void createStaticGaugesSvc(void);
-    // remove any svc gauge metric during stop
-    void removeStaticGaugesSvc(void);
     // create any svc counter metric during start
     void createStaticCountersSvc(void);
     // remove any svc counter metric during stop
@@ -1005,43 +984,51 @@ private:
     /* End of OFPeerStats related apis and state */
 
 
-    /* Start of RemoteEp related apis and state */
-    // Lock to safe guard RemoteEp related state
-    mutex remote_ep_mutex;
+    /* Start of MoDBCount related apis and state */
+    // Lock to safe guard MoDBCount related state
+    mutex modb_count_mutex;
 
-    enum REMOTE_EP_METRICS {
-        REMOTE_EP_METRICS_MIN,
-        REMOTE_EP_COUNT = REMOTE_EP_METRICS_MIN,
-        REMOTE_EP_METRICS_MAX = REMOTE_EP_COUNT
+    enum MODB_COUNT_METRICS {
+        MODB_COUNT_METRICS_MIN,
+        MODB_COUNT_EP_LOCAL = MODB_COUNT_METRICS_MIN,
+        MODB_COUNT_EP_REMOTE,
+        MODB_COUNT_EP_EXT,
+        MODB_COUNT_EPG,
+        MODB_COUNT_EXT_INTF,
+        MODB_COUNT_RD,
+        MODB_COUNT_SERVICE,
+        MODB_COUNT_CONTRACT,
+        MODB_COUNT_SG,
+        MODB_COUNT_METRICS_MAX = MODB_COUNT_SG
     };
 
     // Static Metric families and metrics
-    // metric families to track all RemoteEp metrics
-    Family<Gauge>      *gauge_remote_ep_family_ptr[REMOTE_EP_METRICS_MAX+1];
+    // metric families to track all MoDBCount metrics
+    Family<Gauge>      *gauge_modb_count_family_ptr[MODB_COUNT_METRICS_MAX+1];
 
-    // create any remote ep stats gauge metric families during start
-    void createStaticGaugeFamiliesRemoteEp(void);
-    // remove any remote ep stats gauge metric families during stop
-    void removeStaticGaugeFamiliesRemoteEp(void);
+    // create any modb count gauge metric families during start
+    void createStaticGaugeFamiliesMoDBCount(void);
+    // remove any modb count gauge metric families during stop
+    void removeStaticGaugeFamiliesMoDBCount(void);
 
     // Dynamic Metric families and metrics
-    // CRUD for every Remote ep metric
-    // func to create gauge for remote ep given metric type
-    void createDynamicGaugeRemoteEp(REMOTE_EP_METRICS metric);
+    // CRUD for every modb count metric
+    // func to create gauge for modb count given metric type
+    void createDynamicGaugeMoDBCount(MODB_COUNT_METRICS metric);
 
-    // func to get label map and Gauge for RemoteEp given metric type
-    Gauge * getDynamicGaugeRemoteEp(REMOTE_EP_METRICS metric);
+    // func to get label map and Gauge for MoDBCount given metric type
+    Gauge * getDynamicGaugeMoDBCount(MODB_COUNT_METRICS metric);
 
-    // func to remove gauge for RemoteEp given metric type
-    bool removeDynamicGaugeRemoteEp(REMOTE_EP_METRICS metric);
-    // func to remove all gauges of every RemoteEp
-    void removeDynamicGaugeRemoteEp(void);
+    // func to remove gauge for MoDBCount given metric type
+    bool removeDynamicGaugeMoDBCount(MODB_COUNT_METRICS metric);
+    // func to remove all gauges of every MoDBCount
+    void removeDynamicGaugeMoDBCount(void);
 
     /**
-     * cache Gauge ptr for every RemoteEp metric
+     * cache Gauge ptr for every MoDBCount metric
      */
-    Gauge* remote_ep_gauge_map[REMOTE_EP_METRICS_MAX+1];
-    /* End of RemoteEp related apis and state */
+    Gauge* modb_count_gauge_map[MODB_COUNT_METRICS_MAX+1];
+    /* End of MoDBCount related apis and state */
 
 
     /* Start of RDDropCounter related apis and state */
