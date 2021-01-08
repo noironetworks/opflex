@@ -3027,16 +3027,17 @@ void IntFlowManager::handleUpdateSvcStatsFlows (const string& task_id)
     updateSvcNodeStatsFlows(uuid, is_svc, is_add);
     updateSvcExtStatsFlows(uuid, is_svc, is_add);
 
-    if (is_svc && is_add) {
-        // Svc Stats flow programming happens in this low prio thread.
-        // SNAT/DNAT flows will be programmed initially from a different thread.
-        // It will get updated here if needed for stats to work.
-        ServiceManager& srvMgr = agent.getServiceManager();
-        shared_ptr<const Service> asWrapper = srvMgr.getService(uuid);
-        if (!asWrapper || !asWrapper->getDomainURI()) {
-            LOG(DEBUG) << "unable to get service from uuid";
-            return;
-        }
+    if (is_svc) {
+        // - SNAT/DNAT flows will be programmed initially from higher prio Agent thread.
+        // - This low prio Svc Stats thread today programs the flows with stats cookies
+        // later on so that snat/dnat flows become eventually consistent to correlate stats.
+        // - In case svc gets deleted, then agent io thread will delete svc flows immediately.
+        // Since svc stats thread is low priority, it could be in the process of updating
+        // SNAT/DNAT flows after agent thread deleted SNAT/DNAT flows. This can lead to
+        // stale snat/dnat flow entries for that svc.
+        // - To avoid these stale entries, call programServiceSnatDnatFlows() for the deleted
+        // svc so that the stale entries (if any) can be cleared for this service. If there
+        // are no stale entries (already deleted), then the below call is a NO-OP.
         programServiceSnatDnatFlows(uuid);
     } else {
         unordered_set<string> svcUuids;
