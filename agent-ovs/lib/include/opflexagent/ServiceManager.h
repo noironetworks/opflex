@@ -112,6 +112,16 @@ public:
     void getServicesByDomain(const opflex::modb::URI& domain,
                              /* out */ std::unordered_set<std::string>& servs);
 
+    /**
+     * Get the total number of Services
+     *
+     * @return total Service MODB objects
+     */
+    size_t getServiceCount() {
+        std::lock_guard<std::mutex> guard(serv_mutex);
+        return aserv_map.size();
+    }
+
 private:
     /**
      * Add or update the service state with new information about an

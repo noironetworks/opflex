@@ -91,6 +91,8 @@ public:
     void verifyRdDropPromMetrics(uint32_t pkts, uint32_t bytes);
     void updateOFPeerStats(std::shared_ptr<OFAgentStats> opflexStats);
     void verifyOFPeerMetrics(const std::string& peer, uint32_t count, bool del);
+    void updateMoDBCounts(std::shared_ptr<ModbCounts> pCounts, int count);
+    void verifyMoDBCounts(uint32_t count, bool del);
 #endif
     IntFlowManager  intFlowManager;
     MockContractStatsManager contractStatsManager;
@@ -100,6 +102,63 @@ private:
 };
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
+void ContractStatsManagerFixture::
+updateMoDBCounts (std::shared_ptr<ModbCounts> pCounts, int count)
+{
+    pCounts->setLocalEP(count++);
+    pCounts->setRemoteEP(count++);
+    pCounts->setExtEP(count++);
+    pCounts->setEpg(count++);
+    pCounts->setExtIntfs(count++);
+    pCounts->setRd(count++);
+    pCounts->setService(count++);
+    pCounts->setContract(count++);
+    pCounts->setSg(count);
+}
+
+void ContractStatsManagerFixture::
+verifyMoDBCounts (uint32_t count, bool del)
+{
+    const std::string& output = BaseFixture::getOutputFromCommand(cmd);
+    size_t pos = std::string::npos;
+
+    const std::string& local_ep = "opflex_total_ep_local " + std::to_string(count++) + ".000000";
+    pos = output.find(local_ep);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& remote_ep = "opflex_total_ep_remote " + std::to_string(count++) + ".000000";
+    pos = output.find(remote_ep);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& ext_ep = "opflex_total_ep_ext " + std::to_string(count++) + ".000000";
+    pos = output.find(ext_ep);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& epg = "opflex_total_epg " + std::to_string(count++) + ".000000";
+    pos = output.find(epg);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& ext_intf = "opflex_total_ext_intf " + std::to_string(count++) + ".000000";
+    pos = output.find(ext_intf);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& rd = "opflex_total_rd " + std::to_string(count++) + ".000000";
+    pos = output.find(rd);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& service = "opflex_total_service " + std::to_string(count++) + ".000000";
+    pos = output.find(service);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& contract = "opflex_total_contract " + std::to_string(count++) + ".000000";
+    pos = output.find(contract);
+    BaseFixture::expPosition(!del, pos);
+
+    const std::string& sg = "opflex_total_sg " + std::to_string(count) + ".000000";
+    pos = output.find(sg);
+    BaseFixture::expPosition(!del, pos);
+}
+
 void ContractStatsManagerFixture::
 updateOFPeerStats (std::shared_ptr<OFAgentStats> opflexStats)
 {
@@ -632,6 +691,32 @@ BOOST_FIXTURE_TEST_CASE(testOFPeer, ContractStatsManagerFixture) {
     agent.getPrometheusManager().removeOFPeerStats(peer);
     verifyOFPeerMetrics(peer, 0, true);
     LOG(DEBUG) << "### OFPeer end";
+}
+
+BOOST_FIXTURE_TEST_CASE(testMoDBCounts, ContractStatsManagerFixture) {
+
+    LOG(DEBUG) << "### MoDBCounts start";
+    Mutator mutator(agent.getFramework(), "policyelement");
+    optional<shared_ptr<SysStatUniverse> > ssu =
+                SysStatUniverse::resolve(agent.getFramework());
+    BOOST_CHECK(ssu);
+
+    auto pCounts = ssu.get()->addObserverModbCounts();
+    BOOST_CHECK(pCounts);
+
+    updateMoDBCounts(pCounts, 1);
+    agent.getPrometheusManager().addNUpdateMoDBCounts(pCounts);
+    verifyMoDBCounts(1, false);
+
+    updateMoDBCounts(pCounts, 10);
+    agent.getPrometheusManager().addNUpdateMoDBCounts(pCounts);
+    verifyMoDBCounts(10, false);
+
+    pCounts->remove();
+    mutator.commit();
+    agent.getPrometheusManager().removeMoDBCounts();
+    verifyMoDBCounts(0, true);
+    LOG(DEBUG) << "### MoDBCounts end";
 }
 #endif
 

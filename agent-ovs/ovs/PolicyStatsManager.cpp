@@ -283,8 +283,14 @@ on_timer_base(const error_code& ec,
             itr++;
     }
 
-    // flush OpFlex client stats
     // TODO: Move these to a separate class to avoid polluting Policy/FlowStatsManager
+    updateOpflexPeerStats();
+    updateMoDBCounts();
+}
+
+// Update peer specific opflex stats
+void PolicyStatsManager::updateOpflexPeerStats()
+{
     std::unordered_map<string, std::shared_ptr<OFAgentStats>> stats;
     agent->getFramework().getOpflexPeerStats(stats);
     Mutator mutator(agent->getFramework(), "policyelement");
@@ -333,7 +339,30 @@ on_timer_base(const error_code& ec,
             }
         }
     }
+    mutator.commit();
+}
 
+// Update total count per object type in MoDB
+void PolicyStatsManager::updateMoDBCounts()
+{
+    Mutator mutator(agent->getFramework(), "policyelement");
+    optional<shared_ptr<SysStatUniverse> > ssu =
+        SysStatUniverse::resolve(agent->getFramework());
+    if (ssu) {
+        auto pMoDBCounts = ssu.get()->addObserverModbCounts();
+        pMoDBCounts->setLocalEP(agent->getEndpointManager().getEpCount())
+                 .setRemoteEP(agent->getEndpointManager().getEpRemoteCount())
+                 .setExtEP(agent->getEndpointManager().getEpExternalCount())
+                 .setEpg(agent->getPolicyManager().getEPGCount())
+                 .setRd(agent->getPolicyManager().getRDCount())
+                 .setExtIntfs(agent->getPolicyManager().getExtIntfCount())
+                 .setService(agent->getServiceManager().getServiceCount())
+                 .setContract(agent->getPolicyManager().getContractCount())
+                 .setSg(agent->getPolicyManager().getSecGrpCount());
+#ifdef HAVE_PROMETHEUS_SUPPORT
+        prometheusManager.addNUpdateMoDBCounts(pMoDBCounts);
+#endif
+    }
     mutator.commit();
 }
 

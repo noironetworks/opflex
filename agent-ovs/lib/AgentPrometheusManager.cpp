@@ -26,6 +26,7 @@ using std::size_t;
 using std::to_string;
 using namespace prometheus::detail;
 using boost::split;
+using namespace modelgbp::observer;
 
 static string ep_family_names[] =
 {
@@ -155,14 +156,30 @@ static string ofpeer_family_help[] =
   "number of policies requested by the agent which aren't yet resolved by opflex peer"
 };
 
-static string remote_ep_family_names[] =
+static string modb_count_family_names[] =
 {
-  "opflex_remote_endpoint_count"
+  "opflex_total_ep_local",
+  "opflex_total_ep_remote",
+  "opflex_total_ep_ext",
+  "opflex_total_epg",
+  "opflex_total_ext_intf",
+  "opflex_total_rd",
+  "opflex_total_service",
+  "opflex_total_contract",
+  "opflex_total_sg"
 };
 
-static string remote_ep_family_help[] =
+static string modb_count_family_help[] =
 {
-  "number of remote endpoints under the same uplink port"
+  "number of local endpoints",
+  "number of remote endpoints",
+  "number of external endpoints",
+  "number of endpoint groups",
+  "number of external interfaces",
+  "number of routing domains",
+  "number of services",
+  "number of contracts",
+  "number of security groups"
 };
 
 static string rddrop_family_names[] =
@@ -225,8 +242,6 @@ AgentPrometheusManager::AgentPrometheusManager(Agent &agent_,
                                              PrometheusManager(),
                                              agent(agent_),
                                              framework(fwk_),
-                                             gauge_ep_total{0},
-                                             gauge_svc_total{0},
                                              exposeEpSvcNan{false}
 {
     //Init state to avoid coverty warnings
@@ -374,10 +389,10 @@ void AgentPrometheusManager::removeDynamicGauges ()
         removeDynamicGaugeOFPeer();
     }
 
-    // Remove RemoteEp related gauges
+    // Remove MoDBCounts related gauges
     {
-        const lock_guard<mutex> lock(remote_ep_mutex);
-        removeDynamicGaugeRemoteEp();
+        const lock_guard<mutex> lock(modb_count_mutex);
+        removeDynamicGaugeMoDBCount();
     }
 
     // Remove RDDropCounter related gauges
@@ -496,26 +511,26 @@ void AgentPrometheusManager::createStaticGaugeFamiliesSGClassifier (void)
     }
 }
 
-// create all RemoteEp specific gauge families during start
-void AgentPrometheusManager::createStaticGaugeFamiliesRemoteEp (void)
+// create all MoDBCount specific gauge families during start
+void AgentPrometheusManager::createStaticGaugeFamiliesMoDBCount (void)
 {
     // add a new gauge family to the registry (families combine values with the
     // same name, but distinct label dimensions)
     // Note: There is a unique ptr allocated and referencing the below reference
     // during Register().
 
-    for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
-            metric <= REMOTE_EP_METRICS_MAX;
-                metric = REMOTE_EP_METRICS(metric+1)) {
-        auto& gauge_remote_ep_family = BuildGauge()
-                             .Name(remote_ep_family_names[metric])
-                             .Help(remote_ep_family_help[metric])
+    for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+            metric <= MODB_COUNT_METRICS_MAX;
+                metric = MODB_COUNT_METRICS(metric+1)) {
+        auto& gauge_modb_count_family = BuildGauge()
+                             .Name(modb_count_family_names[metric])
+                             .Help(modb_count_family_help[metric])
                              .Labels({})
                              .Register(*registry_ptr);
-        gauge_remote_ep_family_ptr[metric] = &gauge_remote_ep_family;
+        gauge_modb_count_family_ptr[metric] = &gauge_modb_count_family;
 
         // metrics per family will be created later
-        remote_ep_gauge_map[metric] = nullptr;
+        modb_count_gauge_map[metric] = nullptr;
     }
 }
 
@@ -546,14 +561,6 @@ void AgentPrometheusManager::createStaticGaugeFamiliesEp (void)
     // same name, but distinct label dimensions)
     // Note: There is a unique ptr allocated and referencing the below reference
     // during Register().
-
-    auto& gauge_ep_total_family = BuildGauge()
-                         .Name("opflex_endpoint_active_total")
-                         .Help("Total active local end point count")
-                         .Labels({})
-                         .Register(*registry_ptr);
-    gauge_ep_total_family_ptr = &gauge_ep_total_family;
-
     for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
@@ -593,14 +600,6 @@ void AgentPrometheusManager::createStaticGaugeFamiliesSvc (void)
     // same name, but distinct label dimensions)
     // Note: There is a unique ptr allocated and referencing the below reference
     // during Register().
-
-    auto& gauge_svc_total_family = BuildGauge()
-                         .Name("opflex_svc_active_total")
-                         .Help("Total active service count")
-                         .Labels({})
-                         .Register(*registry_ptr);
-    gauge_svc_total_family_ptr = &gauge_svc_total_family;
-
     for (SVC_METRICS metric=SVC_METRICS_MIN;
             metric <= SVC_METRICS_MAX;
                 metric = SVC_METRICS(metric+1)) {
@@ -701,8 +700,8 @@ void AgentPrometheusManager::createStaticGaugeFamilies (void)
     }
 
     {
-        const lock_guard<mutex> lock(remote_ep_mutex);
-        createStaticGaugeFamiliesRemoteEp();
+        const lock_guard<mutex> lock(modb_count_mutex);
+        createStaticGaugeFamiliesMoDBCount();
     }
 
     {
@@ -723,66 +722,9 @@ void AgentPrometheusManager::createStaticGaugeFamilies (void)
     }
 }
 
-// create EpCounter gauges during start
-void AgentPrometheusManager::createStaticGaugesEp ()
-{
-    auto& gauge_ep_total = gauge_ep_total_family_ptr->Add({});
-    gauge_ep_total_ptr = &gauge_ep_total;
-}
-
-// create SvcCounter gauges during start
-void AgentPrometheusManager::createStaticGaugesSvc ()
-{
-    auto& gauge_svc_total = gauge_svc_total_family_ptr->Add({});
-    gauge_svc_total_ptr = &gauge_svc_total;
-}
-
-// create gauges during start
-void AgentPrometheusManager::createStaticGauges ()
-{
-    // EpCounter related gauges
-    {
-        const lock_guard<mutex> lock(ep_counter_mutex);
-        createStaticGaugesEp();
-    }
-
-    // SvcCounter related gauges
-    {
-        const lock_guard<mutex> lock(svc_counter_mutex);
-        createStaticGaugesSvc();
-    }
-}
-
-// remove ep gauges during stop
-void AgentPrometheusManager::removeStaticGaugesEp ()
-{
-    gauge_ep_total_family_ptr->Remove(gauge_ep_total_ptr);
-    gauge_ep_total_ptr = nullptr;
-    gauge_ep_total = 0;
-}
-
-// remove svc gauges during stop
-void AgentPrometheusManager::removeStaticGaugesSvc ()
-{
-    gauge_svc_total_family_ptr->Remove(gauge_svc_total_ptr);
-    gauge_svc_total_ptr = nullptr;
-    gauge_svc_total = 0;
-}
-
 // remove gauges during stop
 void AgentPrometheusManager::removeStaticGauges ()
 {
-
-    // Remove EpCounter related gauge metrics
-    {
-        const lock_guard<mutex> lock(ep_counter_mutex);
-        removeStaticGaugesEp();
-    }
-    // Remove SvcCounter related gauge metrics
-    {
-        const lock_guard<mutex> lock(svc_counter_mutex);
-        removeStaticGaugesSvc();
-    }
     // Remove TableDropCounter related gauges
     removeStaticGaugesTableDrop();
 
@@ -818,7 +760,6 @@ void AgentPrometheusManager::start (bool exposeLocalHostOnly, bool exposeEpSvcNa
 
     // Add static metrics
     createStaticCounters();
-    createStaticGauges();
 
     // ask the exposer to scrape the registry on incoming scrapes
     exposer_ptr->RegisterCollectable(registry_ptr);
@@ -836,10 +777,8 @@ void AgentPrometheusManager::init ()
         const lock_guard<mutex> lock(ep_counter_mutex);
         counter_ep_create_ptr = nullptr;
         counter_ep_remove_ptr = nullptr;
-        gauge_ep_total_ptr = nullptr;
         counter_ep_create_family_ptr = nullptr;
         counter_ep_remove_family_ptr = nullptr;
-        gauge_ep_total_family_ptr = nullptr;
         for (EP_METRICS metric=EP_METRICS_MIN;
                 metric < EP_METRICS_MAX;
                     metric = EP_METRICS(metric+1)) {
@@ -860,10 +799,8 @@ void AgentPrometheusManager::init ()
         const lock_guard<mutex> lock(svc_counter_mutex);
         counter_svc_create_ptr = nullptr;
         counter_svc_remove_ptr = nullptr;
-        gauge_svc_total_ptr = nullptr;
         counter_svc_create_family_ptr = nullptr;
         counter_svc_remove_family_ptr = nullptr;
-        gauge_svc_total_family_ptr = nullptr;
         for (SVC_METRICS metric=SVC_METRICS_MIN;
                 metric <= SVC_METRICS_MAX;
                     metric = SVC_METRICS(metric+1)) {
@@ -890,12 +827,12 @@ void AgentPrometheusManager::init ()
     }
 
     {
-        const lock_guard<mutex> lock(remote_ep_mutex);
-        for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
-                metric <= REMOTE_EP_METRICS_MAX;
-                    metric = REMOTE_EP_METRICS(metric+1)) {
-            gauge_remote_ep_family_ptr[metric] = nullptr;
-            remote_ep_gauge_map[metric] = nullptr;
+        const lock_guard<mutex> lock(modb_count_mutex);
+        for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+                metric <= MODB_COUNT_METRICS_MAX;
+                    metric = MODB_COUNT_METRICS(metric+1)) {
+            gauge_modb_count_family_ptr[metric] = nullptr;
+            modb_count_gauge_map[metric] = nullptr;
         }
     }
 
@@ -979,15 +916,6 @@ void AgentPrometheusManager::incStaticCounterEpRemove ()
     counter_ep_remove_ptr->Increment();
 }
 
-// track total ep count
-void AgentPrometheusManager::updateStaticGaugeEpTotal (bool add)
-{
-    if (add)
-        gauge_ep_total_ptr->Set(++gauge_ep_total);
-    else
-        gauge_ep_total_ptr->Set(--gauge_ep_total);
-}
-
 // Increment Svc count
 void AgentPrometheusManager::incStaticCounterSvcCreate ()
 {
@@ -998,15 +926,6 @@ void AgentPrometheusManager::incStaticCounterSvcCreate ()
 void AgentPrometheusManager::incStaticCounterSvcRemove ()
 {
     counter_svc_remove_ptr->Increment();
-}
-
-// track total svc count
-void AgentPrometheusManager::updateStaticGaugeSvcTotal (bool add)
-{
-    if (add)
-        gauge_svc_total_ptr->Set(++gauge_svc_total);
-    else
-        gauge_svc_total_ptr->Set(--gauge_svc_total);
 }
 
 // Create OFPeerStats gauge given metric type, peer (IP,port) tuple
@@ -1230,18 +1149,18 @@ string AgentPrometheusManager::stringizeClassifier (const string& tenant,
     return compressed;
 }
 
-// Create RemoteEp gauge given metric type
-void AgentPrometheusManager::createDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
+// Create MoDBCount gauge given metric type
+void AgentPrometheusManager::createDynamicGaugeMoDBCount (MODB_COUNT_METRICS metric)
 {
     // Retrieve the Gauge if its already created
-    if (getDynamicGaugeRemoteEp(metric))
+    if (getDynamicGaugeMoDBCount(metric))
         return;
 
-    LOG(DEBUG) << "creating remote ep dyn gauge family"
+    LOG(DEBUG) << "creating MoDB Count dyn gauge family"
                << " metric: " << metric;
 
-    auto& gauge = gauge_remote_ep_family_ptr[metric]->Add({});
-    remote_ep_gauge_map[metric] = &gauge;
+    auto& gauge = gauge_modb_count_family_ptr[metric]->Add({});
+    modb_count_gauge_map[metric] = &gauge;
 }
 
 // Create RDDropCounter gauge given metric type, rdURI
@@ -1770,10 +1689,10 @@ Gauge * AgentPrometheusManager::getDynamicGaugeSGClassifier (SGCLASSIFIER_METRIC
     return pgauge;
 }
 
-// Get RemoteEp gauge given the metric
-Gauge * AgentPrometheusManager::getDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
+// Get MoDBCount gauge given the metric
+Gauge * AgentPrometheusManager::getDynamicGaugeMoDBCount (MODB_COUNT_METRICS metric)
 {
-    return remote_ep_gauge_map[metric];
+    return modb_count_gauge_map[metric];
 }
 
 // Get RDDropCounter gauge given the metric, rdURI
@@ -1959,26 +1878,26 @@ void AgentPrometheusManager::removeDynamicGaugeSGClassifier ()
     }
 }
 
-// Remove dynamic RemoteEp gauge given a metic type
-bool AgentPrometheusManager::removeDynamicGaugeRemoteEp (REMOTE_EP_METRICS metric)
+// Remove dynamic MoDBCount gauge given a metic type
+bool AgentPrometheusManager::removeDynamicGaugeMoDBCount (MODB_COUNT_METRICS metric)
 {
-    Gauge *pgauge = getDynamicGaugeRemoteEp(metric);
+    Gauge *pgauge = getDynamicGaugeMoDBCount(metric);
     if (pgauge) {
-        gauge_remote_ep_family_ptr[metric]->Remove(pgauge);
+        gauge_modb_count_family_ptr[metric]->Remove(pgauge);
     } else {
-        LOG(TRACE) << "remove dynamic gauge RemoteEp not found";
+        LOG(TRACE) << "remove dynamic gauge MoDBCount not found; metric:" << metric;
         return false;
     }
     return true;
 }
 
-// Remove dynamic RemoteEp gauges for all metrics
-void AgentPrometheusManager::removeDynamicGaugeRemoteEp ()
+// Remove dynamic MoDBCount gauges for all metrics
+void AgentPrometheusManager::removeDynamicGaugeMoDBCount ()
 {
-    for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
-            metric <= REMOTE_EP_METRICS_MAX;
-                metric = REMOTE_EP_METRICS(metric+1)) {
-        removeDynamicGaugeRemoteEp(metric);
+    for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+            metric <= MODB_COUNT_METRICS_MAX;
+                metric = MODB_COUNT_METRICS(metric+1)) {
+        removeDynamicGaugeMoDBCount(metric);
     }
 }
 
@@ -2226,7 +2145,6 @@ void AgentPrometheusManager::removeDynamicGaugeEp (EP_METRICS metric)
 
         if (metric == (EP_METRICS_MAX-1)) {
             incStaticCounterEpRemove();
-            updateStaticGaugeEpTotal(false);
         }
     }
 
@@ -2317,13 +2235,13 @@ void AgentPrometheusManager::removeStaticGaugeFamiliesSGClassifier ()
     }
 }
 
-// Remove all statically allocated RemoteEp gauge families
-void AgentPrometheusManager::removeStaticGaugeFamiliesRemoteEp ()
+// Remove all statically allocated MoDBCount gauge families
+void AgentPrometheusManager::removeStaticGaugeFamiliesMoDBCount ()
 {
-    for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
-            metric <= REMOTE_EP_METRICS_MAX;
-                metric = REMOTE_EP_METRICS(metric+1)) {
-        gauge_remote_ep_family_ptr[metric] = nullptr;
+    for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+            metric <= MODB_COUNT_METRICS_MAX;
+                metric = MODB_COUNT_METRICS(metric+1)) {
+        gauge_modb_count_family_ptr[metric] = nullptr;
     }
 }
 
@@ -2350,7 +2268,6 @@ void AgentPrometheusManager::removeStaticGaugeFamiliesPodSvc()
 // Remove all statically allocated ep gauge families
 void AgentPrometheusManager::removeStaticGaugeFamiliesEp()
 {
-    gauge_ep_total_family_ptr = nullptr;
     for (EP_METRICS metric=EP_METRICS_MIN;
             metric < EP_METRICS_MAX;
                 metric = EP_METRICS(metric+1)) {
@@ -2371,7 +2288,6 @@ void AgentPrometheusManager::removeStaticGaugeFamiliesSvcTarget()
 // Remove all statically allocated svc gauge families
 void AgentPrometheusManager::removeStaticGaugeFamiliesSvc()
 {
-    gauge_svc_total_family_ptr = nullptr;
     for (SVC_METRICS metric=SVC_METRICS_MIN;
             metric <= SVC_METRICS_MAX;
                 metric = SVC_METRICS(metric+1)) {
@@ -2422,10 +2338,10 @@ void AgentPrometheusManager::removeStaticGaugeFamilies()
         removeStaticGaugeFamiliesOFPeer();
     }
 
-    // RemoteEp specific
+    // MoDBCount specific
     {
-        const lock_guard<mutex> lock(remote_ep_mutex);
-        removeStaticGaugeFamiliesRemoteEp();
+        const lock_guard<mutex> lock(modb_count_mutex);
+        removeStaticGaugeFamiliesMoDBCount();
     }
 
     // RDDropCounter specific
@@ -2784,7 +2700,6 @@ void AgentPrometheusManager::incSvcCounter (void)
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_counter_mutex);
     incStaticCounterSvcCreate();
-    updateStaticGaugeSvcTotal(true);
 }
 
 /* Function called from ServiceManager to decrement service count */
@@ -2793,23 +2708,62 @@ void AgentPrometheusManager::decSvcCounter (void)
     RETURN_IF_DISABLED
     const lock_guard<mutex> lock(svc_counter_mutex);
     incStaticCounterSvcRemove();
-    updateStaticGaugeSvcTotal(false);
 }
 
-/* Function called from EndpointManager to create/update RemoteEp count */
-void AgentPrometheusManager::addNUpdateRemoteEpCount (size_t count)
+/* Function to create/update MoDB counts */
+void AgentPrometheusManager::addNUpdateMoDBCounts (shared_ptr<ModbCounts> pCount)
 {
     RETURN_IF_DISABLED
-    const lock_guard<mutex> lock(remote_ep_mutex);
+    const lock_guard<mutex> lock(modb_count_mutex);
 
-    for (REMOTE_EP_METRICS metric=REMOTE_EP_METRICS_MIN;
-            metric <= REMOTE_EP_METRICS_MAX;
-                metric = REMOTE_EP_METRICS(metric+1)) {
-        // create the metric if its not present
-        createDynamicGaugeRemoteEp(metric);
-        Gauge *pgauge = getDynamicGaugeRemoteEp(metric);
-        if (pgauge)
-            pgauge->Set(static_cast<double>(count));
+    // create the metric if its not present
+    for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+            metric <= MODB_COUNT_METRICS_MAX;
+                metric = MODB_COUNT_METRICS(metric+1))
+        createDynamicGaugeMoDBCount(metric);
+
+    for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+            metric <= MODB_COUNT_METRICS_MAX;
+                metric = MODB_COUNT_METRICS(metric+1)) {
+        Gauge *pgauge = getDynamicGaugeMoDBCount(metric);
+        optional<uint64_t>   metric_opt;
+        switch (metric) {
+        case MODB_COUNT_EP_LOCAL:
+            metric_opt = pCount->getLocalEP();
+            break;
+        case MODB_COUNT_EP_REMOTE:
+            metric_opt = pCount->getRemoteEP();
+            break;
+        case MODB_COUNT_EP_EXT:
+            metric_opt = pCount->getExtEP();
+            break;
+        case MODB_COUNT_EPG:
+            metric_opt = pCount->getEpg();
+            break;
+        case MODB_COUNT_EXT_INTF:
+            metric_opt = pCount->getExtIntfs();
+            break;
+        case MODB_COUNT_RD:
+            metric_opt = pCount->getRd();
+            break;
+        case MODB_COUNT_SERVICE:
+            metric_opt = pCount->getService();
+            break;
+        case MODB_COUNT_CONTRACT:
+            metric_opt = pCount->getContract();
+            break;
+        case MODB_COUNT_SG:
+            metric_opt = pCount->getSg();
+            break;
+        default:
+            LOG(WARNING) << "Unhandled modb count metric: " << metric;
+        }
+        if (metric_opt && pgauge)
+            pgauge->Set(static_cast<double>(metric_opt.get()));
+        if (!pgauge) {
+            LOG(WARNING) << "Invalid modb count update";
+            break;
+        }
     }
 }
 
@@ -2981,7 +2935,6 @@ void AgentPrometheusManager::addNUpdateEpCounter (const string& uuid,
 
         if (metric == (EP_METRICS_MAX-1)) {
             incStaticCounterEpCreate();
-            updateStaticGaugeEpTotal(true);
         }
     }
 
@@ -3125,8 +3078,21 @@ void AgentPrometheusManager::removeEpCounter (const string& uuid,
 
         if (metric == (EP_METRICS_MAX-1)) {
             incStaticCounterEpRemove();
-            updateStaticGaugeEpTotal(false);
         }
+    }
+}
+
+// Function to remove MoDBCounts
+void AgentPrometheusManager::removeMoDBCounts ()
+{
+    RETURN_IF_DISABLED
+    LOG(DEBUG) << "Deleting MoDBCounts";
+    const lock_guard<mutex> lock(modb_count_mutex);
+    for (MODB_COUNT_METRICS metric=MODB_COUNT_METRICS_MIN;
+            metric <= MODB_COUNT_METRICS_MAX;
+                metric = MODB_COUNT_METRICS(metric+1)) {
+        if (!removeDynamicGaugeMoDBCount(metric))
+            break;
     }
 }
 
