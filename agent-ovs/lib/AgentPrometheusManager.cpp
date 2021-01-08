@@ -172,7 +172,7 @@ static string modb_count_family_names[] =
 static string modb_count_family_help[] =
 {
   "number of local endpoints",
-  "number of remote endpoints under the same uplink port",
+  "number of remote endpoints",
   "number of external endpoints",
   "number of endpoint groups",
   "number of external interfaces",
