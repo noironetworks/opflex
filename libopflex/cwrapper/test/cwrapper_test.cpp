@@ -51,18 +51,21 @@ class ServerFixture : public MDFixture {
 public:
     ServerFixture()
         : MDFixture(),
-          opflexServer(8009, SERVER_ROLES,
+          peerStatus(-1), poolHealth(1), db(threadManager) {
+        db.init(md);
+        db.start();
+        opflexServer = new GbpOpflexServerImpl(8009, SERVER_ROLES,
                      list_of(make_pair(SERVER_ROLES, LOCALHOST":8009")),
                      vector<string>(),
-                     md, 60),
-          peerStatus(-1), poolHealth(1) {
-        opflexServer.start();
-        WAIT_FOR(opflexServer.getListener().isListening(), 1000);
+                     db, 60);
+        opflexServer->start();
+        WAIT_FOR(opflexServer->getListener().isListening(), 1000);
     }
 
     ~ServerFixture() {
         try {
-            opflexServer.stop();
+            opflexServer->stop();
+            db.stop();
         } catch (...) {
             LOG(WARNING) << "Exception thrown while stopping opflex server instance";
         }
@@ -88,12 +91,14 @@ public:
         return poolHealth;
     }
 
-    GbpOpflexServerImpl opflexServer;
+    GbpOpflexServerImpl *opflexServer;
 
 private:
     int peerStatus;
     int poolHealth;
     boost::mutex fixtureMutex;
+    opflex::modb::ObjectStore db;
+    opflex::util::ThreadManager threadManager;
 };
 
 void handler(const char* file, int line, 

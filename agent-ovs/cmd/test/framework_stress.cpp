@@ -111,10 +111,14 @@ int main(int argc, char** argv) {
     initLogging(level_str, false /*syslog*/, log_file, "framework-stress");
 
     try {
+        opflex::ofcore::OFFramework fw;
+        fw.setModel(modelgbp::getMetadata());
+        fw.start();
+
         GbpOpflexServer::peer_vec_t peer_vec;
         peer_vec.push_back(make_pair(SERVER_ROLES, LOCALHOST":8009"));
         GbpOpflexServer server(8009, SERVER_ROLES, peer_vec, std::vector<std::string>(),
-                                modelgbp::getMetadata(), 30);
+                               fw.getStore(), 30);
 
         if (!policy_file.empty()) {
             server.readPolicy(policy_file);
@@ -207,6 +211,7 @@ int main(int argc, char** argv) {
         }
 
         server.stop();
+        fw.stop();
     } catch (const std::exception& e) {
         LOG(ERROR) << "Fatal error: " << e.what();
         return 4;
