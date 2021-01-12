@@ -202,7 +202,7 @@ Opflex-server connects with gbp server to accept policies. Opflex-agent connects
 # Grafana
 Following are a few graphs created in grafana using the exported opflex metrics.
 ### Endpoint
-#### Tx packet rate has grafana alert configured to show all EPs that have x% difference in their rates measured over specified intervals. Please refer [grafana-json-templates] for the actual alert configuration.
+Tx packet rate has grafana alert configured to show all EPs that have x% difference in their rates measured over specified intervals. Please refer [grafana-json-templates] for the actual alert configuration.
 ![][grafana-endpoint]
 ### Services
 ##### Top 5 Services (ClusterIP)
