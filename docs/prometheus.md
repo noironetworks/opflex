@@ -132,15 +132,21 @@ These metrics are annotated with a concise version of classifier which is qualif
 | opflex_sg_tx_bytes | Tx Byte count of traffic per security group |
 | opflex_sg_tx_packets | Tx Packet count of traffic per security group |
 
-### Remote EP
+### Total modb object counts
 
-This represents the total number of endpoints under the same physical interface connected to leaf. For e.g. if there are multiple blades connected via chassis to leaf, then EPs on these blades are kept as remote EPs to know their TEPs so that broadcasting of packets are avoided between the blades. In cloud deployments, until ivxlan/conversation based learning gets enabled, all the non-local endpoints are kept as remote EP within opflex-agent.
-
-Remote EP count is exported to mainly help identify issues where the remote EPs don’t get created.
+These are exported to help identify configuration issues by tracking object counts.
 
 | Family | Description |
 | ------ | ------ |
-| opflex_remote_ep_count | Count of total remote eps provisioned |
+| opflex_total_ep_local | Count of total local endpoints |
+| opflex_total_ep_remote | Count of total number of endpoints under the same physical interface connected to leaf. For e.g. if there are multiple blades connected via chassis to leaf, then EPs on these blades are kept as remote EPs to know their TEPs so that broadcasting of packets are avoided between the blades. In cloud deployments, until ivxlan/conversation based learning gets enabled, all the non-local endpoints are kept as remote EP within opflex-agent. In cloud/overlay deployments, until ivxlan/conversation-based learning gets enabled, all the non-local endpoints are kept as remote EP within opflex-agent. |
+| opflex_total_ep_ext | Count of total external endpoints |
+| opflex_total_epg | Count of total endpoint groups |
+| opflex_total_ext_intf | Count of total external interfaces |
+| opflex_total_rd | Count of total routing domains |
+| opflex_total_service | Count of total services |
+| opflex_total_contract | Count of total contracts |
+| opflex_total_sg | Count of total security groups |
 
 ### Peer
 
@@ -196,8 +202,8 @@ Opflex-server connects with gbp server to accept policies. Opflex-agent connects
 # Grafana
 Following are a few graphs created in grafana using the exported opflex metrics.
 ### Endpoint
-![][grafana-endpoint-1]
-![][grafana-endpoint-2]
+#### Tx packet rate has grafana alert configured to show all EPs that have x% difference in their rates measured over specified intervals. Please refer [grafana-json-templates] for the actual alert configuration.
+![][grafana-endpoint]
 ### Services
 ##### Top 5 Services (ClusterIP)
 ![][grafana-services-1]
@@ -216,6 +222,8 @@ Following are a few graphs created in grafana using the exported opflex metrics.
 ![][grafana-contracts]
 ### Security-Groups
 ![][grafana-sg]
+### Total opflex-agent object counts
+![][grafana-agent-count]
 ### Opflex Peer metrics from Agent
 ![][grafana-ofpeer-1]
 ![][grafana-ofpeer-2]
@@ -224,21 +232,42 @@ Following are a few graphs created in grafana using the exported opflex metrics.
 ![][grafana-server-1]
 ![][grafana-server-2]
 
-Sample [grafana-json-templates] for opflex-agent metrics can be imported in grafana.
+Sample [grafana-json-templates] for opflex-agent and opflex-server metrics can be imported in grafana.
+
+# Note:
+
+### Default Port Allocations
+[9612] and [9632] are being used by other exporters. The expectation is that customers won't be using other exporters that listen on the same ports. Just to be future proof, ports [9894] and [9895] have been reserved for opflex-agent and opflex-server respectively.
+
+### K8s Automatic Service Discovery
+Prometheus recommends the following annotations on pods to allow a fine control of automatic scraping from exporters:
+  - prometheus.io/scrape: The default configuration will scrape all pods and, if set to false, this annotation will exclude the pod from the scraping process.
+  - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+  - prometheus.io/port: Scrape the pod on the indicated port instead of the pod's declared ports (default is a port-free target if none are declared).
+
+opflex-agent and opflex-server are currently containers under aci-containers-host pod. To allow automatic scraping of metrics from both 9612 and 9632:
+  - aci-containers-host pod is annotated with prometheus.io/scrape: "true" and prometheus.io/port: "9612"
+  - opflex-server container has a named port with "name: metrics" and "containerPort: 9632"
+
+Recommended prometheus server configuration to automatically scrape both opflex-agent and opflex-server:
+  - Have a relabel config to query pods with prometheus.io/scrape="true". Use annotations "path" and "port" if available. This will scrape metrics from 9612.
+  - Have another relabel config to query pods with prometheus.io/scrape="true" and container port name="metrics". Use container port number if available. This will scrape metrics from 9632.
 
 # Disclaimer
-Opflex-agent exports a number of metrics based on the current implementation choices. This is still WIP. Useful metrics will be added every release. There could be few changes to the exported metrics across releases in light of optimizations in opflex-agent, prometheus and feedback from customers.
+Opflex-agent and Opflex-server exports a number of metrics based on the current implementation choices. This is still WIP. Useful metrics will be added every release. There could be few changes to the exported metrics across releases in light of optimizations in opflex-agent, opflex-server, prometheus and feedback from customers.
 
    [Prometheus]: <https://prometheus.io/>
    [grafana]: <https://grafana.com/>
    [prometheus-cpp]: <https://github.com/jupp0r/prometheus-cpp>
    [9612]: <https://github.com/prometheus/prometheus/wiki/Default-port-allocations>
    [9632]: <https://github.com/prometheus/prometheus/wiki/Default-port-allocations>
+   [9894]: <https://github.com/prometheus/prometheus/wiki/Default-port-allocations>
+   [9895]: <https://github.com/prometheus/prometheus/wiki/Default-port-allocations>
    [agent.conf]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/opflex-agent-ovs.conf.in>
    [grafana-json-templates]: <https://github.com/noironetworks/opflex/tree/master/agent-ovs/grafana>
    [drop-logs]: <https://github.com/noironetworks/opflex/blob/master/docs/drop_logs.md>
-   [grafana-endpoint-1]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Endpoint-1.png?raw=true>
-   [grafana-endpoint-2]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Endpoint-2.png?raw=true>
+   [grafana-endpoint]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Endpoint.png?raw=true>
+   [grafana-agent-count]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/AgentCounts.png?raw=true>
    [grafana-services-1]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Service-EW-LB-Top5.png?raw=true>
    [grafana-services-2]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Service-EW-PerPodLB-all.png?raw=true>
    [grafana-services-3]: <https://github.com/noironetworks/opflex/blob/master/agent-ovs/grafana/images/Service-EW-PerPodLB-kubedns.png?raw=true>
