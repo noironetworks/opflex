@@ -19,94 +19,42 @@
   "links": [],
   "panels": [
     {
-      "aliasColors": {},
-      "bars": false,
-      "cacheTimeout": null,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 0
+      "alert": {
+        "alertRuleTags": {},
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                1
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "percent_diff"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "alerting",
+        "for": "30s",
+        "frequency": "10s",
+        "handler": 1,
+        "message": "Tx rate of endpoint is above threshold",
+        "name": "Tx Packets alert",
+        "noDataState": "no_data",
+        "notifications": []
       },
-      "id": 2,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pluginVersion": "6.3.6",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum by (job) (opflex_endpoint_active_total)",
-          "legendFormat": ":",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Active local endpoints",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -117,7 +65,7 @@
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 0
       },
       "id": 4,
       "legend": {
@@ -146,17 +94,27 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (name,namespace) (rate(opflex_endpoint_tx_packets[5m]))",
+          "expr": "sum by (exported_name,namespace) (rate(opflex_endpoint_tx_packets[5m]))",
           "format": "time_series",
           "intervalFactor": 5,
+          "legendFormat": "pod={{exported_name}}, namespace={{namespace}}",
           "refId": "A"
         }
       ],
-      "thresholds": [],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 1,
+          "yaxis": "left"
+        }
+      ],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Tx Packets",
+      "title": "Tx Packets (5min avg pps)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -204,7 +162,7 @@
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 0
       },
       "id": 7,
       "legend": {
@@ -233,7 +191,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (name,namespace) (rate(opflex_endpoint_rx_packets[5m]))",
+          "expr": "sum by (exported_name,namespace) (rate(opflex_endpoint_rx_packets[5m]))",
           "format": "time_series",
           "intervalFactor": 5,
           "refId": "A"
@@ -243,7 +201,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Rx Packets",
+      "title": "Rx Packets (5min avg pps)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -291,7 +249,7 @@
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 11
       },
       "id": 6,
       "legend": {
@@ -330,7 +288,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Tx Dropped Packets",
+      "title": "Tx Dropped Packets (5min avg pps)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -378,7 +336,7 @@
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 11
       },
       "id": 5,
       "legend": {
@@ -417,7 +375,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Rx Dropped Packets",
+      "title": "Rx Dropped Packets (5min avg pps)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -464,7 +422,7 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
@@ -484,5 +442,5 @@
   "timezone": "",
   "title": "Opflex endpoints",
   "uid": "NTSLelUWk",
-  "version": 22
+  "version": 33
 }

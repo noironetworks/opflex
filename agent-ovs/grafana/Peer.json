@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 12,
+  "id": 24,
   "links": [],
   "panels": [
     {
@@ -1807,6 +1807,6 @@
   },
   "timezone": "",
   "title": "Opflex Peer Stats",
-  "uid": "7nfGOi_Zk",
-  "version": 18
+  "uid": "7nfGOi_Zl",
+  "version": 2
 }
