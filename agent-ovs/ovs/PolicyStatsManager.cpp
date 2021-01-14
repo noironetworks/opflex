@@ -39,12 +39,10 @@ using std::shared_ptr;
 using opflex::modb::URI;
 using opflex::modb::Mutator;
 using namespace modelgbp::gbp;
-using namespace modelgbp::observer;
 using namespace modelgbp::gbpe;
 using boost::asio::deadline_timer;
 using boost::posix_time::milliseconds;
 using boost::system::error_code;
-
 
 PolicyStatsManager::PolicyStatsManager(Agent* agent_, IdGenerator& idGen_,
                                        SwitchManager& switchManager_,
@@ -282,88 +280,6 @@ on_timer_base(const error_code& ec,
         } else
             itr++;
     }
-
-    // TODO: Move these to a separate class to avoid polluting Policy/FlowStatsManager
-    updateOpflexPeerStats();
-    updateMoDBCounts();
-}
-
-// Update peer specific opflex stats
-void PolicyStatsManager::updateOpflexPeerStats()
-{
-    std::unordered_map<string, std::shared_ptr<OFAgentStats>> stats;
-    agent->getFramework().getOpflexPeerStats(stats);
-    Mutator mutator(agent->getFramework(), "policyelement");
-    optional<shared_ptr<SysStatUniverse> > ssu =
-        SysStatUniverse::resolve(agent->getFramework());
-    if (ssu) {
-        for (const auto& peerStat : stats) {
-            ssu.get()->addObserverOpflexAgentCounter(peerStat.first)
-                    ->setIdentReqs(peerStat.second->getIdentReqs())
-                    .setIdentResps(peerStat.second->getIdentResps())
-                    .setIdentErrs(peerStat.second->getIdentErrs())
-                    .setPolResolves(peerStat.second->getPolResolves())
-                    .setPolResolveResps(peerStat.second->getPolResolveResps())
-                    .setPolResolveErrs(peerStat.second->getPolResolveErrs())
-                    .setPolUnresolves(peerStat.second->getPolUnresolves())
-                    .setPolUnresolveResps(peerStat.second->getPolUnresolveResps())
-                    .setPolUnresolveErrs(peerStat.second->getPolUnresolveErrs())
-                    .setPolUpdates(peerStat.second->getPolUpdates())
-                    .setEpDeclares(peerStat.second->getEpDeclares())
-                    .setEpDeclareResps(peerStat.second->getEpDeclareResps())
-                    .setEpDeclareErrs(peerStat.second->getEpDeclareErrs())
-                    .setEpUndeclares(peerStat.second->getEpUndeclares())
-                    .setEpUndeclareResps(peerStat.second->getEpUndeclareResps())
-                    .setEpUndeclareErrs(peerStat.second->getEpUndeclareErrs())
-                    .setStateReports(peerStat.second->getStateReports())
-                    .setStateReportResps(peerStat.second->getStateReportResps())
-                    .setStateReportErrs(peerStat.second->getStateReportErrs())
-                    .setPolUnresolvedCount(peerStat.second->getPolUnresolvedCount());
-#ifdef HAVE_PROMETHEUS_SUPPORT
-            prometheusManager.addNUpdateOFPeerStats(peerStat.first, peerStat.second);
-#endif
-        }
-        // Remove mos for deleted connections
-        std::vector<std::shared_ptr<modelgbp::observer::OpflexAgentCounter> > out;
-        ssu.get()->resolveObserverOpflexAgentCounter(out);
-        for (auto &peerCounter: out) {
-            boost::optional<const std::string&> peer =
-                                                peerCounter->getPeer();
-            if (peer) {
-                if (stats.find(peer.get()) == stats.end()) {
-                    peerCounter->remove();
-#ifdef HAVE_PROMETHEUS_SUPPORT
-                    prometheusManager.removeOFPeerStats(peer.get());
-#endif
-                }
-            }
-        }
-    }
-    mutator.commit();
-}
-
-// Update total count per object type in MoDB
-void PolicyStatsManager::updateMoDBCounts()
-{
-    Mutator mutator(agent->getFramework(), "policyelement");
-    optional<shared_ptr<SysStatUniverse> > ssu =
-        SysStatUniverse::resolve(agent->getFramework());
-    if (ssu) {
-        auto pMoDBCounts = ssu.get()->addObserverModbCounts();
-        pMoDBCounts->setLocalEP(agent->getEndpointManager().getEpCount())
-                 .setRemoteEP(agent->getEndpointManager().getEpRemoteCount())
-                 .setExtEP(agent->getEndpointManager().getEpExternalCount())
-                 .setEpg(agent->getPolicyManager().getEPGCount())
-                 .setRd(agent->getPolicyManager().getRDCount())
-                 .setExtIntfs(agent->getPolicyManager().getExtIntfCount())
-                 .setService(agent->getServiceManager().getServiceCount())
-                 .setContract(agent->getPolicyManager().getContractCount())
-                 .setSg(agent->getPolicyManager().getSecGrpCount());
-#ifdef HAVE_PROMETHEUS_SUPPORT
-        prometheusManager.addNUpdateMoDBCounts(pMoDBCounts);
-#endif
-    }
-    mutator.commit();
 }
 
 void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,

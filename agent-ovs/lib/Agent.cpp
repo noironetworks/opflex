@@ -66,10 +66,13 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       extraConfigManager(framework),
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
       faultManager(*this, framework),
+      sysStatsManager(this),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
-      qosManager(*this,framework, agent_io),	
+      qosManager(*this,framework, agent_io),
+      sysStatsEnabled(true),
+      sysStatsInterval(10000),
       prometheusEnabled(true),
       prometheusExposeLocalHostOnly(false),
       prometheusExposeEpSvcNan(false),
@@ -84,10 +87,13 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       extraConfigManager(framework),
       notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
       faultManager(*this, framework),
+      sysStatsManager(*this),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
       spanManager(framework, agent_io),
       netflowManager(framework,agent_io),
       qosManager(*this,framework,agent_io),
+      sysStatsEnabled(true),
+      sysStatsInterval(10000),
       behaviorL34FlowsWithoutSubnet(true),
       logParams(_logParams) {
 #endif
@@ -191,12 +197,8 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string RENDERERS_OPENVSWITCH("renderers.openvswitch");
     static const std::string OPFLEX_STATS("opflex.statistics");
     static const std::string OPFLEX_STATS_MODE("opflex.statistics.mode");
-    static const std::string OPFLEX_STATS_INTERFACE_SETTING("opflex.statistics.interface.enabled");
-    static const std::string OPFLEX_STATS_INTERFACE_INTERVAL("opflex.statistics.interface.interval");
-    static const std::string OPFLEX_STATS_CONTRACT_SETTING("opflex.statistics.contract.enabled");
-    static const std::string OPFLEX_STATS_CONTRACT_INTERVAL("opflex.statistics.contract.interval");
-    static const std::string OPFLEX_STATS_SECGRP_SETTING("opflex.statistics.security-group.enabled");
-    static const std::string OPFLEX_STATS_SECGRP_INTERVAL("opflex.statistics.security-group.interval");
+    static const std::string OPFLEX_STATS_SYSTEM_ENABLED("opflex.statistics.system.enabled");
+    static const std::string OPFLEX_STATS_SYSTEM_INTERVAL("opflex.statistics.system.interval");
     static const std::string OPFLEX_PRR_INTERVAL("opflex.timers.prr");
     static const std::string OPFLEX_HANDSHAKE("opflex.timers.handshake-timeout");
     static const std::string DISABLED_FEATURES("feature.disabled");
@@ -265,6 +267,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         properties.get_optional<bool>(BEHAVIOR_L34FLOWS_WITHOUT_SUBNET);
     if (behaviorAddL34FlowsWithoutSubnet) {
         behaviorL34FlowsWithoutSubnet = behaviorAddL34FlowsWithoutSubnet.get();
+    }
+
+    sysStatsEnabled = properties.get<bool>(OPFLEX_STATS_SYSTEM_ENABLED, true);
+    sysStatsInterval =
+        properties.get<long>(OPFLEX_STATS_SYSTEM_INTERVAL, 30000);
+    if (sysStatsInterval <= 0) {
+        sysStatsEnabled = false;
     }
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
@@ -568,6 +577,8 @@ void Agent::start() {
         spanManager.start();
     netflowManager.start();
     qosManager.start();
+    if (sysStatsEnabled)
+        sysStatsManager.start(sysStatsInterval);
     for (auto& r : renderers) {
         r.second->start();
     }
@@ -638,6 +649,7 @@ void Agent::start() {
         // disable reporting of some stats for now (MODB only)
         LOG(INFO) << "Disable unsupported stat reporting";
         framework.overrideObservableReporting(modelgbp::observer::OpflexAgentCounter::CLASS_ID, false);
+        framework.overrideObservableReporting(modelgbp::observer::ModbCounts::CLASS_ID, false);
         framework.overrideObservableReporting(modelgbp::gbpe::EpToSvcCounter::CLASS_ID, false);
         framework.overrideObservableReporting(modelgbp::gbpe::SvcToEpCounter::CLASS_ID, false);
         framework.overrideObservableReporting(modelgbp::gbpe::TableDropCounter::CLASS_ID, false);
@@ -690,6 +702,7 @@ void Agent::stop() {
         spanManager.stop();
     netflowManager.stop();
     qosManager.stop();
+    sysStatsManager.stop();
 #ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.stop();
     LOG(DEBUG) << "Prometheus Manager stopped";

@@ -27,6 +27,7 @@
 #include <opflexagent/SnatManager.h>
 #include <opflexagent/NetFlowManager.h>
 #include <opflexagent/QosManager.h>
+#include <opflexagent/SysStatsManager.h>
 
 #ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
@@ -316,6 +317,7 @@ private:
     FSWatcher fsWatcher;
     opflex_elem_t rendererFwdMode; 
     FaultManager faultManager;
+    SysStatsManager sysStatsManager;
 
     boost::optional<std::string> opflexName;
     boost::optional<std::string> opflexDomain;
@@ -384,6 +386,10 @@ private:
     SpanManager spanManager;
     NetFlowManager netflowManager;
     QosManager qosManager;
+
+    // System Stats
+    bool sysStatsEnabled;
+    long sysStatsInterval;
 
     // feature flag array
     bool featureFlag[FeatureList::MAX];
