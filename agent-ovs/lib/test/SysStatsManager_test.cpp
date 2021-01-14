@@ -33,10 +33,8 @@ using namespace opflex::modb;
 using modelgbp::observer::SysStatUniverse;
 
 class SysStatsManagerFixture : public ModbFixture {
-    typedef opflex::ofcore::OFConstants::OpflexElementMode opflex_elem_t;
 public:
-    SysStatsManagerFixture(opflex_elem_t mode = opflex_elem_t::INVALID_MODE)
-        : ModbFixture(mode) {
+    SysStatsManagerFixture() : ModbFixture() {
     }
 
     virtual ~SysStatsManagerFixture() {
