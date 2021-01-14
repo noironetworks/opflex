@@ -584,6 +584,8 @@ void Agent::start() {
     // BPF Map initialization
     conntrack4Map_ptr = std::make_shared<Conntrack4Map>();
     conntrack6Map_ptr = std::make_shared<Conntrack6Map>();
+    nextHop4Map_ptr = std::make_shared<NextHop4Map>();
+    nextHop6Map_ptr = std::make_shared<NextHop6Map>();
 
     // instantiate other components
 #ifdef HAVE_PROMETHEUS_SUPPORT
@@ -768,6 +770,12 @@ void Agent::stop() {
 
     conntrack6Map_ptr.reset();
     conntrack6Map_ptr = nullptr;
+
+    nextHop4Map_ptr.reset();
+    nextHop4Map_ptr = nullptr;
+
+    nextHop6Map_ptr.reset();
+    nextHop6Map_ptr = nullptr;
 
     LOG(INFO) << "Agent stopped";
 }

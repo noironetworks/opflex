@@ -33,4 +33,18 @@ Conntrack6Map::dumpElem(std::ostream& out, const void *key, const void *value) {
     DumpKV(out, k, v);
 }
 
+void
+NextHop4Map::dumpElem(std::ostream& out, const void *key, const void *value) {
+    const int *k = static_cast<const int *>(key);
+    const struct next_hop *v = static_cast<const struct next_hop *>(value);
+    DumpKV(out, k, v);
+}
+
+void
+NextHop6Map::dumpElem(std::ostream& out, const void *key, const void *value) {
+    const struct ip6_addr *k = static_cast<const struct ip6_addr *>(key);
+    const struct next_hop *v = static_cast<const struct next_hop *>(value);
+    DumpKV(out, k, v);
+}
+
 } /* namespace opflexagent */

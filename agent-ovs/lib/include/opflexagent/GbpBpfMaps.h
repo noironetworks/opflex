@@ -45,6 +45,32 @@ public:
     virtual void dumpElem(std::ostream &out, const void *key, const void *value);
 };
 
+class NextHop4Map : public BpfMap {
+public:
+    NextHop4Map() : BpfMap("nexthop4_map",
+                           TC,
+                           BPF_MAP_TYPE_HASH,
+                           sizeof(__be32),
+                           sizeof(struct next_hop),
+                           NEXTHOP4_MAP_SIZE,
+                           0) {};
+    ~NextHop4Map() {};
+    virtual void dumpElem(std::ostream &out, const void *key, const void *value);
+};
+
+class NextHop6Map : public BpfMap {
+public:
+    NextHop6Map() : BpfMap("nexthop6_map",
+                           TC,
+                           BPF_MAP_TYPE_HASH,
+                           sizeof(struct ip6_addr),
+                           sizeof(struct next_hop),
+                           NEXTHOP6_MAP_SIZE,
+                           0) {};
+    ~NextHop6Map() {};
+    virtual void dumpElem(std::ostream &out, const void *key, const void *value);
+};
+
 } /* namespace opflexagent */
 
 #endif /* OPFLEXAGENT_GBPBPFMAPS_H */

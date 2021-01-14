@@ -24,6 +24,22 @@
 #include <arp.h>
 
 static __always_inline
+int redirect_skb(struct __sk_buff *skb, struct next_hop *nh)
+{
+    union macaddr mac = GW_MAC;
+    if (nh->is_local) {
+        if (eth_store_saddr(skb, mac.addr, 0) < 0 ||
+            eth_store_daddr(skb, nh->local.mac.addr, 0) < 0)
+            return 0;
+    } else {
+        if (bpf_skb_set_tunnel_key(skb, &nh->remote.tunnel_key,
+                                   sizeof(nh->remote.tunnel_key), 0) < 0)
+            return 0;
+    }
+    return bpf_redirect(nh->ifindex, 0);
+}
+
+static __always_inline
 int process_flow(struct pktmeta *meta,
                  struct flow_state *flow,
                  int rev, struct __sk_buff *skb)
@@ -52,15 +68,16 @@ int process_flow(struct pktmeta *meta,
             flow->kill = 1;
     }
 
-    return 0;
+    return redirect_skb(skb, &flow->next_hop[rev]);
 }
-    
+
 static __always_inline
 int process_ip4(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bool from_ep)
 {
     struct pktmeta meta = {};
     struct ip4_tuple ip4 = {};
     struct flow_state *existing_flow, flow = {};
+    struct next_hop *nh1, *nh2;
     int rev, ret;
 
     ret = parse_ip4(data, off, data_end, &ip4, &meta);
@@ -83,10 +100,15 @@ int process_ip4(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
         if (meta.flags & (TCP_FLAG_RST | TCP_FLAG_FIN))
             flow.kill = 1;
     }
+    nh1 = bpf_map_lookup_elem(&nexthop4_map, &ip4.sip);
+    nh2 = bpf_map_lookup_elem(&nexthop4_map, &ip4.dip);
+    if (nh2)
+        flow.next_hop[0] = *nh2;
+    if (nh1)
+        flow.next_hop[1] = *nh1;
 
     bpf_map_update_elem(&conntrack4_map, &ip4, &flow, BPF_ANY);
-    
-    return 0;
+    return redirect_skb(skb, &flow.next_hop[rev]);
 }
 
 static __always_inline
@@ -95,6 +117,7 @@ int process_ip6(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
     struct pktmeta meta = {};
     struct ip6_tuple ip6 = {};
     struct flow_state *existing_flow, flow = {};
+    struct next_hop *nh1, *nh2;
     int rev, ret;
 
     ret = parse_ip6(data, off, data_end, &ip6, &meta);
@@ -112,10 +135,20 @@ int process_ip6(void *data, __u64 off, void *data_end, struct __sk_buff *skb, bo
     flow.packets[rev]++;
     flow.bytes[rev] += skb->len;
     flow.lasttime = bpf_ktime_get_ns();
+    flow.flags |= meta.flags;
+    if (meta.ip_proto == IPPROTO_TCP) {
+        if (meta.flags & (TCP_FLAG_RST | TCP_FLAG_FIN))
+            flow.kill = 1;
+    }
+    nh1 = bpf_map_lookup_elem(&nexthop4_map, ip6.sip);
+    nh2 = bpf_map_lookup_elem(&nexthop4_map, ip6.dip);
+    if (nh2)
+        flow.next_hop[0] = *nh2;
+    if (nh1)
+        flow.next_hop[1] = *nh1;
 
     bpf_map_update_elem(&conntrack6_map, &ip6, &flow, BPF_ANY);
-
-    return 0;
+    return redirect_skb(skb, &flow.next_hop[rev]);
 }
 
 /* from endpoint */

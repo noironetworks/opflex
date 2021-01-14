@@ -18,6 +18,8 @@
 
 #define CONNTRACK4_MAP_SIZE 65535
 #define CONNTRACK6_MAP_SIZE 65535
+#define NEXTHOP4_MAP_SIZE 65535
+#define NEXTHOP6_MAP_SIZE 65535
 
 struct l4_ports {
     __be16 dport;
@@ -73,34 +75,72 @@ struct ip6_tuple {
 #endif
 };
 
+struct ip6_addr {
+    __be32 addr[4];
+#ifdef __cplusplus
+    friend std::ostream& operator <<(std::ostream& out,
+                                     const struct ip6_addr& v) {
+        out << std::hex << '{' << '[';
+        for (int i = 0; i < 4; i++) {
+                out << std::hex << v.addr[i];
+                if (i < 3)
+                        out << ',';
+        }
+        out << ']' << '}';
+        return out;
+    }
+#endif
+};
+
 union macaddr {
         struct {
                 __u32 p1;
                 __u16 p2;
         } tuple;
         unsigned char addr[6];
+#ifdef __cplusplus
+    friend std::ostream& operator <<(std::ostream& out,
+                                     const union macaddr& v) {
+        out << std::hex << '{'
+            << v.tuple.p1 << ',' << v.tuple.p2
+            << '}';
+        return out;
+    }
+#endif
 };
 
 #define GW_MAC { .addr = { 0x0, 0x22, 0xbd, 0xf8, 0x19, 0xff } }
 
 struct next_hop_local {
-    int ifindex;
-    unsigned char mac[ETH_ALEN];
+    union macaddr mac;
 };
 
 struct next_hop_remote {
-    int ifindex;
-    __be32 remote_vtep;
-    __be64 tunnel_id;
+    struct bpf_tunnel_key tunnel_key;
 };
 
 struct next_hop {
+    int ifindex;
     __u8 is_local:1,
          reserve:7;
     union {
         struct next_hop_local local;
         struct next_hop_remote remote;
     };
+#ifdef __cplusplus
+    friend std::ostream& operator <<(std::ostream& out,
+                                     const struct next_hop& n) {
+        out << '{' << n.ifindex << ',';
+        if (n.is_local) {
+            out << std::hex << '{' << n.local.mac << '}';
+        } else {
+            out << std::hex << '{' << n.remote.tunnel_key.tunnel_id << ','
+                                   << n.remote.tunnel_key.remote_ipv4 << '}';
+        }
+        out << '}';
+        return out;
+    }
+#endif
 };
 
 struct flow_state {
@@ -122,6 +162,8 @@ struct flow_state {
                     << '{' << v.estb
                     << v.rev << v.allow << v.allow_reflexive
                     << v.kill << '}' << ','
+                    << '{' << v.next_hop[0] << '}' << ','
+                    << '{' << v.next_hop[1] << '}' << ','
                     << v.packets[0] << ',' << v.packets[1] << ','
                     << v.bytes[0] << ',' << v.bytes[1] << ','
                     << v.lasttime << '}';

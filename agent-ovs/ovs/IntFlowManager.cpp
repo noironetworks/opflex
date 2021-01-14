@@ -39,6 +39,7 @@
 #include <opflexagent/EndpointManager.h>
 #include <opflexagent/Faults.h>
 #include <opflexagent/Network.h>
+#include <opflexagent/GbpBpfMaps.h>
 
 #include "SwitchConnection.h"
 #include "IntFlowManager.h"

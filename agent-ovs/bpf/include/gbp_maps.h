@@ -16,6 +16,22 @@
 #include "bpf_elf.h"
 #include "gbp.h"
 
+struct bpf_elf_map SEC("maps") nexthop4_map = {
+	.type = BPF_MAP_TYPE_HASH,
+	.size_key = sizeof(__be32),
+	.size_value = sizeof(struct next_hop),
+	.pinning = PIN_GLOBAL_NS,
+	.max_elem = NEXTHOP4_MAP_SIZE,
+};
+
+struct bpf_elf_map SEC("maps") nexthop6_map = {
+        .type = BPF_MAP_TYPE_HASH,
+        .size_key = sizeof(struct ip6_addr),
+        .size_value = sizeof(struct next_hop),
+        .pinning = PIN_GLOBAL_NS,
+        .max_elem = NEXTHOP6_MAP_SIZE,
+};
+
 /* conntrack ip4 */
 struct bpf_elf_map SEC("maps") conntrack4_map = {
         .type = BPF_MAP_TYPE_HASH,
