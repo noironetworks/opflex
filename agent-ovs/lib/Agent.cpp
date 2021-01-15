@@ -271,7 +271,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
 
     sysStatsEnabled = properties.get<bool>(OPFLEX_STATS_SYSTEM_ENABLED, true);
     sysStatsInterval =
-        properties.get<long>(OPFLEX_STATS_SYSTEM_INTERVAL, 30000);
+        properties.get<long>(OPFLEX_STATS_SYSTEM_INTERVAL, 10000);
     if (sysStatsInterval <= 0) {
         sysStatsEnabled = false;
     }
