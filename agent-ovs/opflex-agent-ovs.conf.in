@@ -105,34 +105,39 @@
        // mode: can be either
        //       "real" - counters are based on actual data traffic. default.
        //       "off" - turn off all counters.
-       // There are three sections, one each for interface, contract and
-       // security-group counters. Each section has two fields, viz.,
+       // There are several sections, one each for interface, contract,
+       // security-group, service, table-drop and system counters.
+       // Each section has two fields, viz.,
        // enabled to enable/disable the counter and
-       // interval to set the counter update interval in secs.
+       // interval to set the counter update interval in milli-secs.
        "statistics": {
        //   "mode": "real",
        //   "interface": {
        //      "enabled": true,
-       //      "interval": 30
+       //      "interval": 30000
        //   },
        //   "contract": {
        //      "enabled": true,
-       //      "interval": 10
+       //      "interval": 10000
        //   },
        //   "security-group": {
        //      "enabled": true,
-       //      "interval": 10
+       //      "interval": 10000
        //   },
        //   "service": {
        //      // Disable/Enable stats flow creation
        //      "flow-disabled": false,
        //      // Disable/Enable stats collection
        //      "enabled": true,
-       //      "interval": 10
+       //      "interval": 10000
        //   },
        //   "table-drop": {
        //      "enabled": true,
-       //      "interval": 10
+       //      "interval": 10000
+       //   },
+       //   "system": {
+       //      "enabled": true,
+       //      "interval": 10000
        //   }
        }
     },

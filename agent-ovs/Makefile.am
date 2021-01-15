@@ -97,6 +97,7 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/ServiceSource.h \
 	lib/include/opflexagent/ServiceManager.h \
 	lib/include/opflexagent/FSServiceSource.h \
+	lib/include/opflexagent/SysStatsManager.h \
 	lib/include/opflexagent/LearningBridgeIface.h \
 	lib/include/opflexagent/LearningBridgeListener.h \
 	lib/include/opflexagent/LearningBridgeSource.h \
@@ -200,6 +201,7 @@ libopflex_agent_la_SOURCES = \
 	lib/ServiceSource.cpp \
 	lib/ServiceManager.cpp \
 	lib/FSServiceSource.cpp \
+	lib/SysStatsManager.cpp \
 	lib/LearningBridgeIface.cpp \
 	lib/LearningBridgeSource.cpp \
 	lib/LearningBridgeManager.cpp \
@@ -476,6 +478,7 @@ agent_test_SOURCES = \
 	lib/test/SpanManager_test.cpp \
 	lib/test/NetflowManager_test.cpp \
 	lib/test/ServiceManager_test.cpp \
+	lib/test/SysStatsManager_test.cpp \
 	lib/test/ExtraConfigManager_test.cpp \
 	lib/test/SnatManager_test.cpp \
 	lib/test/QosManager_test.cpp \

@@ -492,8 +492,6 @@ protected:
 
 private:
     bool handleFlowStats(ofpbuf *msg, const table_map_t& tableMap);
-    void updateOpflexPeerStats();
-    void updateMoDBCounts();
 };
 
 } /* namespace opflexagent */
