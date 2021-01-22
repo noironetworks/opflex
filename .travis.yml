@@ -2,7 +2,7 @@ language: c++
 compiler:
   - gcc
 os: linux
-dist: bionic
+dist: focal
 
 #default cache timeout is 3 minutes, if need be we can increase timeout
 cache:
@@ -17,11 +17,10 @@ addons:
       - libssl-dev
       - rapidjson-dev
       - autoconf
-      - openjdk-8-jdk-headless
+      - openjdk-11-jdk-headless
       - maven
-      - texlive-font-utils
-      - python-six
       - lcov
+      - cmake
 
 # In case we need to run perf, install the below in bionic:
 # linux-tools-common
