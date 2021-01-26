@@ -17,7 +17,7 @@ namespace opflexagent {
 
     enum FaultCodes {
         SAMPLE_FAULT = 1,
-        ENCAP_MISMATCH = 2
+        ENCAP_MISMATCH = 2,
         INTERFACE_ENUMERATE_FAIL = 3,
         MTU_EXCEEDS_OPFLEX_MTU = 4,
         MTU_EXCEEDS_UPLINK_MTU = 5,
