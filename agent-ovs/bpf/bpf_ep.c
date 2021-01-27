@@ -27,6 +27,7 @@ static __always_inline
 int redirect_skb(struct __sk_buff *skb, struct next_hop *nh)
 {
     union macaddr mac = GW_MAC;
+    char fmt[] = "forward to %d\n";
     if (nh->is_local) {
         if (eth_store_saddr(skb, mac.addr, 0) < 0 ||
             eth_store_daddr(skb, nh->local.mac.addr, 0) < 0)
@@ -36,6 +37,7 @@ int redirect_skb(struct __sk_buff *skb, struct next_hop *nh)
                                    sizeof(nh->remote.tunnel_key), 0) < 0)
             return 0;
     }
+    bpf_trace_printk(fmt, sizeof(fmt), nh->ifindex);
     return bpf_redirect(nh->ifindex, 0);
 }
 

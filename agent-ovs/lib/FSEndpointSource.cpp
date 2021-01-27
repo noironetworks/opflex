@@ -61,6 +61,7 @@ void FSEndpointSource::updated(const fs::path& filePath) {
 
     static const std::string EP_UUID("uuid");
     static const std::string EP_MAC("mac");
+    static const std::string ACCESS_IFACE_MAC("accessifacemac");
     static const std::string EP_IP("ip");
     static const std::string EP_ANYCAST_RETURN_IP("anycast-return-ip");
     static const std::string EP_VIRTUAL_IP("virtual-ip");
@@ -132,6 +133,10 @@ void FSEndpointSource::updated(const fs::path& filePath) {
         if (mac) {
             newep.setMAC(MAC(mac.get()));
         }
+        optional<string> accmac = properties.get_optional<string>(ACCESS_IFACE_MAC);
+	if (accmac) {
+	    newep.setAccMAC(MAC(accmac.get()));
+	}
         optional<ptree&> ips = properties.get_child_optional(EP_IP);
         if (ips) {
             for (const ptree::value_type &v : ips.get())

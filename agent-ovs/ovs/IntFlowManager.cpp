@@ -2084,6 +2084,37 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                             hasMac, macAddr, unkFloodMode, bcastFloodMode,
                             epgVnid, bdId, fgrpId, rdId);
 
+	bool hasAccMac = endPoint.getAccMAC() != boost::none;
+	if (hasAccMac && hasMac) {
+	    struct next_hop nh;
+	    //uint8_t accMacAddr[6];
+
+	    //endPoint.getAccMAC().get().toUIntArray(accMacAddr);
+	    nh.ifindex = if_nametoindex(endPoint.getAccessInterface().get().c_str());
+	    nh.is_local = 1;
+	    memcpy(nh.local.mac.addr, macAddr, 6);
+            for (const string& ipStr : endPoint.getIPs()) {
+                network::cidr_t cidr;
+                if (!network::cidr_from_string(ipStr, cidr, false)) {
+                    LOG(WARNING) << "Invalid endpoint IP: "
+                                 << ipStr;
+                    continue;
+                }
+	        if (cidr.first.is_v4()) {
+                    unsigned long key = htonl(cidr.first.to_v4().to_ulong());
+                    int ret = agent.getNextHop4Map()->updateElem((const void *)&key,
+                                  (const void *)&nh);
+                    if (ret) {
+                        LOG(ERROR) << "Failed to update BPF map for "
+                                   << ipStr << " " << key << " " << strerror(errno);
+                    } else {
+                        LOG(DEBUG) << "Successfully updated BPF map for "
+                                    << ipStr << " " << cidr.first.to_v4().to_ulong() << " " << key;
+                    }
+                }
+            }
+        }
+
         /* Bridge, route, and output flows */
         if (bdId != 0 && hasMac && ofPort != OFPP_NONE) {
             FlowBuilder().priority(10).ethDst(macAddr).reg(4, bdId)

@@ -11,11 +11,15 @@ using std::string;
 
 std::shared_ptr<Conntrack4Map> conntrack4Map_ptr;
 std::shared_ptr<Conntrack6Map> conntrack6Map_ptr;
+std::shared_ptr<NextHop4Map> nexthop4Map_ptr;
+std::shared_ptr<NextHop6Map> nexthop6Map_ptr;
 
 int main(int argc, char** argv) {
 
     conntrack4Map_ptr = std::make_shared<Conntrack4Map>();
     conntrack6Map_ptr = std::make_shared<Conntrack6Map>();
+    nexthop4Map_ptr = std::make_shared<NextHop4Map>();
+    nexthop6Map_ptr = std::make_shared<NextHop6Map>();
 
     po::options_description desc("Allowed options");
     try {
@@ -75,10 +79,16 @@ int main(int argc, char** argv) {
             conntrack4Map_ptr->dumpMap(std::cout);
         else if (map_name == "conntrack6_map")
             conntrack6Map_ptr->dumpMap(std::cout);
+        else if (map_name == "nexthop4_map")
+            nexthop4Map_ptr->dumpMap(std::cout);
+        else if (map_name == "nexthop6_map")
+            nexthop6Map_ptr->dumpMap(std::cout);
     }
 
     conntrack4Map_ptr.reset();
     conntrack6Map_ptr.reset();
+    nexthop4Map_ptr.reset();
+    nexthop6Map_ptr.reset();
 
     return 0;
 }

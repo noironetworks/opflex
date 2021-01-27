@@ -251,6 +251,24 @@ public:
     }
 
     /**
+     * Get the ACC MAC address for this endpoint
+     *
+     * @return the ACC MAC address
+     */
+    const boost::optional<opflex::modb::MAC>& getAccMAC() const {
+        return accmac;
+    }
+
+    /**
+     * Set the ACC MAC address for the endpoint
+     *
+     * @param mac the ACC MAC address
+     */
+    void setAccMAC(const opflex::modb::MAC& mac) {
+        this->accmac = mac;
+    }
+
+    /**
      * Unset the MAC address for the endpoint
      */
     void unsetMAC() {
@@ -1284,6 +1302,7 @@ public:
 private:
     std::string uuid;
     boost::optional<opflex::modb::MAC> mac;
+    boost::optional<opflex::modb::MAC> accmac;
     std::unordered_set<std::string> ips;
     std::unordered_set<std::string> anycastReturnIps;
     virt_ip_set virtualIps;

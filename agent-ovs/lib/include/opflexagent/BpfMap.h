@@ -89,7 +89,7 @@ private:
      */
     int sysCall(int cmd, union bpf_attr *attr);
 
-    uint32_t fd;
+    int fd;
     std::string name;
     std::string map_prefix;
     union bpf_attr mapAttr;

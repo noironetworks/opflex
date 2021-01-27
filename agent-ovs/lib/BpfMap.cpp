@@ -12,6 +12,10 @@
 #include <opflexagent/BpfMap.h>
 #include <opflexagent/logging.h>
 
+#include <cstring>
+#include <errno.h>
+#include <sys/resource.h>
+
 namespace opflexagent {
 
 BpfMap::BpfMap(const std::string& map_name,
@@ -23,6 +27,11 @@ BpfMap::BpfMap(const std::string& map_name,
                uint32_t flags)
     : fd(-1), name(map_name) {
     mapAttr = {};
+    struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
+    if (setrlimit(RLIMIT_MEMLOCK, &r)) {
+        LOG(ERROR) << "error setting rlimit " << strerror(errno);
+        return;
+    }
     /*
      * Try to open an existing map
      */
@@ -46,8 +55,11 @@ BpfMap::BpfMap(const std::string& map_name,
         mapAttr.value_size = size_value;
         mapAttr.max_entries = max_elem;
         mapAttr.map_flags = flags;
+        LOG(DEBUG) << "successfully opened map " << name
+		  << " fd " << fd;
     } else {
-        LOG(ERROR) << "Could not open map %s " << name;
+        LOG(ERROR) << "Could not open map " << name
+                   << " error: " << strerror(errno);
     }
 }
 
@@ -62,11 +74,24 @@ int BpfMap::updateElem(const void *key,
                        uint64_t flags) {
     union bpf_attr attr = {};
 
+    
+    if (fd < 0) {
+        std::string path = map_prefix + name;
+        attr.pathname = uintptr_t(path.c_str());
+        fd = sysCall(BPF_OBJ_GET, &attr);
+        if (fd < 0) {
+	    LOG(ERROR) << "update(get) failed for map " << path
+                       << " fd " << fd << " " << strerror(errno);
+            return -1;
+        }
+    }
+
     attr.map_fd = fd;
     attr.key = uintptr_t(key);
     attr.value = uintptr_t(value);
     attr.flags = flags;
 
+    LOG(DEBUG) << "updating BPF fd " << fd;
     return sysCall(BPF_MAP_UPDATE_ELEM, &attr);
 }
 
