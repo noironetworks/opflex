@@ -17,7 +17,15 @@ namespace opflexagent {
 
     enum FaultCodes {
         SAMPLE_FAULT = 1,
-        ENCAP_MISMATCH = 2
+        ENCAP_MISMATCH = 2,
+        INTERFACE_ENUMERATE_FAIL = 3,
+        MTU_EXCEEDS_OPFLEX_MTU = 4,
+        MTU_EXCEEDS_UPLINK_MTU = 5,
+        LINK_NOT_FOUND_OPFLEX_INTERFACE = 6,
+        LINK_ADDRESS_ENUMERATE_FAIL = 7,
+        IP_NOT_SET_OPFLEXLINK = 8,
+        INTERFACE_NOT_FOUND_FOR_VLAN = 9
+
     };
 }
 
