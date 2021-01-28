@@ -1702,6 +1702,24 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
                                    static_cast<uint16_t>(tunDsts.size()-1),
                                    32, MFF_REG7);
                 } else {
+                    if (addr.is_v4() && !proxyTunId) {
+                        struct next_hop nh;
+                        memset(&nh, 0, sizeof(nh));
+                        nh.ifindex = if_nametoindex("vxlan_sys_8472");
+                        nh.is_local = 0;
+                        nh.remote.tunnel_key.tunnel_id = epgVnid;
+                        nh.remote.tunnel_key.remote_ipv4 = tunDsts.front().to_v4().to_ulong();
+                        nh.remote.tunnel_key.tunnel_ttl = 64;
+                        unsigned long key = htonl(addr.to_v4().to_ulong());
+                        int ret = agent.getNextHop4Map()->updateElem((const void *)&key, (const void *)&nh);
+                        if (ret) {
+                            LOG(ERROR) << "Failed to update BPF map for "
+                                       << addr << " " << key << " " << strerror(errno);
+                        } else {
+                            LOG(DEBUG) << "Successfully updated BPF map for "
+                                       <<  addr << " " << key << " " << proxyTunId << " " << nh.remote.tunnel_key.remote_ipv4;
+                        }
+                    }
                     routeFlow
                         .action()
                         .reg(MFF_REG7, tunDsts.front().to_v4().to_ulong());
