@@ -32,4 +32,4 @@ clean:
 .PHONY: check
 check:
 	./check.sh bpf_ep.o ingress ep-ingress
-	./check.sh bpf_ep.o egress ep-egress
+	./check.sh bpf_ep.o ingress vxlan-ingress

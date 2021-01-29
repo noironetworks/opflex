@@ -28,6 +28,11 @@ int redirect_skb(struct __sk_buff *skb, struct next_hop *nh)
 {
     union macaddr mac = GW_MAC;
     char fmt[] = "forward to %d\n";
+
+    // handle in OVS
+    if (nh->ifindex == 0)
+        return 0;
+
     if (nh->is_local) {
         if (eth_store_saddr(skb, mac.addr, 0) < 0 ||
             eth_store_daddr(skb, nh->local.mac.addr, 0) < 0)
@@ -182,9 +187,9 @@ int ep_ingress(struct __sk_buff *ctx)
     return ret;
 }
 
-/* to endpoint */
-SEC("ep-egress")
-int ep_egress(struct __sk_buff *ctx)
+/* from vxlan */
+SEC("vxlan-ingress")
+int vxlan_ingress(struct __sk_buff *ctx)
 {
     void *data, *data_end;
     struct ethhdr *eth;
