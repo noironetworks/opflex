@@ -289,6 +289,7 @@ public:
                 #define IP_PROTO_UDP "17"
                 #define MDNS_PORT "5353"
                 #define V6_HOP_BY_HOP "0"
+                #define MDNS_IPV4 "224.0.0.251"
                 #define pushPruneSpec() defaultPruneSpec.push_back(unusedCtrlPacket); unusedCtrlPacket.clear();
                 PacketFilterSpec unusedCtrlPacket;
                 unusedCtrlPacket.setField(TFLD_DST_MAC, LLDP_MAC);
@@ -307,6 +308,11 @@ public:
                 unusedCtrlPacket.setField(TFLD_IP_PROTO, V6_HOP_BY_HOP);
                 unusedCtrlPacket.setField(TFLD_DST_MAC, MCAST_V6_MAC);
                 unusedCtrlPacket.setField(TFLD_DMAC_MASK, MCAST_MASK);
+                pushPruneSpec()
+                unusedCtrlPacket.setField(TFLD_DPORT, MDNS_PORT);
+                unusedCtrlPacket.setField(TFLD_SPORT, MDNS_PORT);
+                unusedCtrlPacket.setField(TFLD_IP_PROTO, IP_PROTO_UDP);
+                unusedCtrlPacket.setField(TFLD_DST_IP, MDNS_IPV4);
                 pushPruneSpec()
     }
     /**
