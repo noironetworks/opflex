@@ -105,6 +105,9 @@ static int validateMacMask(const std::string& arg,
         optional<opflex::modb::MAC> &_targetMacAddress,
         optional<opflex::modb::MAC> &_targetMacMask, const string &inputField) {
     using namespace boost;
+    if(arg.empty()) {
+        return 0;
+    }
     std::string address_string=arg,mask_string;
     if(arg.find("/") != std::string::npos) {
         std::vector<std::string> splitVec;

@@ -604,7 +604,7 @@ static void convertPruneFilter(std::shared_ptr<PacketDropLogPruneSpec> &sourceSp
     }
     if(sourceSpec->ipProto) {
         std::stringstream strIpProto;
-        strIpProto << sourceSpec->ipProto.get();
+        strIpProto << (uint16_t)sourceSpec->ipProto.get();
         filter->setField(TFLD_IP_PROTO,strIpProto.str());
     }
     if(sourceSpec->sport) {
