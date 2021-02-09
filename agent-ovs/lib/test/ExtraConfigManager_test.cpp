@@ -159,6 +159,9 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
        << "},\n"
        << "\"flt6\":{"
        << "\"name\":\"flt6\",\"sip\":\"10.0.0.10/24\",\"dip\":\"192.168.0.1/16\",\"smac\":\"00:01:02:03:04:05\",\"dmac\":\"06:07:08:09:0A:0B/a\",\"ip_proto\":17, \"dport\":13000"
+       << "},\n"
+       << "\"flt7\":{"
+       << "\"name\":\"flt7\",\"sip\":\"10.0.0.10/24\",\"dip\":\"224.0.0.251\",\"ip_proto\":17, \"dport\":13000"
        << "}\n"
        << "}\n"
        << "}" << std::endl;
@@ -179,6 +182,9 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     opflex::modb::URI dropPruneUri6 =
         opflex::modb::URIBuilder().addElement("PolicyUniverse")
             .addElement("ObserverDropPruneConfig").addElement("flt6").build();
+    opflex::modb::URI dropPruneUri7 =
+        opflex::modb::URIBuilder().addElement("PolicyUniverse")
+            .addElement("ObserverDropPruneConfig").addElement("flt7").build();
     WAIT_FOR(DropPruneConfig::resolve(agent.getFramework(), dropPruneUri2), 500);
     boost::optional<shared_ptr<DropPruneConfig>> dropPruneCfg2 = DropPruneConfig::resolve(agent.getFramework(), dropPruneUri2);
     BOOST_CHECK(dropPruneCfg2.get()->getFilterName().get() == "flt2");
@@ -201,9 +207,12 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     WAIT_FOR(!DropPruneConfig::resolve(agent.getFramework(), dropPruneUri5), 500);
     /*Incorrect macmask*/
     WAIT_FOR(!DropPruneConfig::resolve(agent.getFramework(), dropPruneUri6), 500);
+    /*Valid input*/
+    WAIT_FOR(DropPruneConfig::resolve(agent.getFramework(), dropPruneUri7), 500);
     fs::remove(path);
     WAIT_FOR(!(DropLogConfig::resolve(agent.getFramework(), uri)), 500);
     WAIT_FOR(!(DropPruneConfig::resolve(agent.getFramework(), dropPruneUri2)), 500);
+    WAIT_FOR(!(DropPruneConfig::resolve(agent.getFramework(), dropPruneUri7)), 500);
     watcher.stop();
 }
 
