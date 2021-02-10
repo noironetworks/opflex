@@ -116,10 +116,8 @@ namespace opflexagent {
             if (qosDscpMarkingOpt){
                 const shared_ptr<modelgbp::qos::DscpMarking> &qosDscpMarking =
                      qosDscpMarkingOpt.get();
-                if (qosDscpMarking->isMarkSet()) {
-                    LOG(INFO) << "DscpMarking: " << std::to_string(qosDscpMarking->getMark().get());
-                    processQosConfig(qosDscpMarking);
-                }
+                LOG(INFO) << "DscpMarking: " << std::to_string(qosDscpMarking->getMark(0));
+                processQosConfig(qosDscpMarking);
             } else {
                 qosmanager.reqToDscp.erase(reqUri);
             }
@@ -295,10 +293,8 @@ namespace opflexagent {
             if (dscpMarkingOpt){
                 const shared_ptr<modelgbp::qos::DscpMarking> & dscpMarking =
                     dscpMarkingOpt.get();
-                if (dscpMarking->isMarkSet()) {
-                    uint8_t dscp = dscpMarking->getMark().get();
-                    return dscp;
-                }
+                uint8_t dscp = dscpMarking->getMark(0);
+                return dscp;
             }
         }
         return 0;
@@ -443,8 +439,8 @@ namespace opflexagent {
         URI reqUri(dscpMarkingUri);
         reqToDscp.erase(reqUri);
 
-        if (qosconfig->isMarkSet()) {
-            uint8_t dscp = qosconfig->getMark().get();
+        uint8_t dscp = qosconfig->getMark(0);
+        if (dscp != 0){
             reqToDscp.insert(make_pair(reqUri, dscp));
         }
     }
