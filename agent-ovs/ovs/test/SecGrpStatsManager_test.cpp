@@ -98,42 +98,42 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
     if (classifier == classifier1) {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                     + std::to_string(bytes) + ".000000";
+                     + std::to_string(bytes);
         s_rx_bytes = "opflex_sg_rx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                     + std::to_string(bytes) + ".000000";
+                     + std::to_string(bytes);
         s_tx_pkts = "opflex_sg_tx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                    + std::to_string(pkts) + ".000000";
+                    + std::to_string(pkts);
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier1,[etype:2048,proto:6,dport:80]\"} "\
-                    + std::to_string(pkts) + ".000000";
+                    + std::to_string(pkts);
     } else if (classifier == classifier2) {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier2,[etype:2054,]\"} "\
-                     + std::to_string(bytes) + ".000000";
+                     + std::to_string(bytes);
         s_rx_bytes = "opflex_sg_rx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier2,[etype:2054,]\"} "\
-                     + std::to_string(bytes) + ".000000";
+                     + std::to_string(bytes);
         s_tx_pkts = "opflex_sg_tx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier2,[etype:2054,]\"} "\
-                    + std::to_string(pkts) + ".000000";
+                    + std::to_string(pkts);
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier2,[etype:2054,]\"} "\
-                    + std::to_string(pkts) + ".000000";
+                    + std::to_string(pkts);
     } else {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                     + std::to_string(bytes) + ".000000";
+                     + std::to_string(bytes);
         s_rx_bytes = "opflex_sg_rx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                     + std::to_string(bytes) + ".000000";
+                     + std::to_string(bytes);
         s_tx_pkts = "opflex_sg_tx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                    + std::to_string(pkts) + ".000000";
+                    + std::to_string(pkts);
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier3,[etype:2048,proto:6,dport:80-85,]\"} "\
-                    + std::to_string(pkts) + ".000000";
+                    + std::to_string(pkts);
     }
 
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);

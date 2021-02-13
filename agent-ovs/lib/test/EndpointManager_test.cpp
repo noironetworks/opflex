@@ -706,9 +706,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9612/metrics 2>&1;";
     const string& output0 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    pos = output0.find("opflex_endpoint_created_total 0.000000");
+    pos = output0.find("opflex_endpoint_created_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output0.find("opflex_endpoint_removed_total 0.000000");
+    pos = output0.find("opflex_endpoint_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
 
     opflexagent::EpCounters counters;
@@ -720,17 +720,17 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     agent.getEndpointManager().updateEndpointCounters(uuid1, counters);
 
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output1.find("opflex_endpoint_created_total 1.000000");
+    pos = output1.find("opflex_endpoint_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_removed_total 0.000000");
+    pos = output1.find("opflex_endpoint_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_rx_bytes{if=\"veth0-acc\",name=\"veth0-acc\"} 6400.000000");
+    pos = output1.find("opflex_endpoint_rx_bytes{if=\"veth0-acc\",name=\"veth0-acc\"} 6400");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_rx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100.000000");
+    pos = output1.find("opflex_endpoint_rx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_tx_bytes{if=\"veth0-acc\",name=\"veth0-acc\"} 6400.000000");
+    pos = output1.find("opflex_endpoint_tx_bytes{if=\"veth0-acc\",name=\"veth0-acc\"} 6400");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output1.find("opflex_endpoint_tx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100.000000");
+    pos = output1.find("opflex_endpoint_tx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100");
     BOOST_CHECK_NE(pos, std::string::npos);
 #endif
 
@@ -785,17 +785,17 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     agent.getEndpointManager().updateEndpointCounters(uuid1, counters);
 
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output2.find("opflex_endpoint_created_total 1.000000");
+    pos = output2.find("opflex_endpoint_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output2.find("opflex_endpoint_removed_total 0.000000");
+    pos = output2.find("opflex_endpoint_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output2.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 12800.000000");
+    pos = output2.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 12800");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output2.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 200.000000");
+    pos = output2.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 200");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output2.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 12800.000000");
+    pos = output2.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 12800");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output2.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 200.000000");
+    pos = output2.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 200");
     BOOST_CHECK_NE(pos, std::string::npos);
 #endif
 
@@ -851,9 +851,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output3.find("opflex_endpoint_created_total 1.000000");
+    pos = output3.find("opflex_endpoint_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output3.find("opflex_endpoint_removed_total 1.000000");
+    pos = output3.find("opflex_endpoint_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
 
     counters.txPackets = 300;
@@ -863,17 +863,17 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     agent.getEndpointManager().updateEndpointCounters(uuid3, counters);
 
     const string& output4 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output4.find("opflex_endpoint_created_total 2.000000");
+    pos = output4.find("opflex_endpoint_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output4.find("opflex_endpoint_removed_total 1.000000");
+    pos = output4.find("opflex_endpoint_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output4.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 30000.000000");
+    pos = output4.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 30000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output4.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 300.000000");
+    pos = output4.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 300");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output4.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 30000.000000");
+    pos = output4.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 30000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output4.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 300.000000");
+    pos = output4.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 300");
     BOOST_CHECK_NE(pos, std::string::npos);
 #endif
 
@@ -911,9 +911,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output5 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output5.find("opflex_endpoint_created_total 2.000000");
+    pos = output5.find("opflex_endpoint_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output5.find("opflex_endpoint_removed_total 1.000000");
+    pos = output5.find("opflex_endpoint_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
 
     counters.txPackets = 400;
@@ -924,25 +924,25 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     agent.getEndpointManager().updateEndpointCounters(uuid4, counters);
 
     const string& output6 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output6.find("opflex_endpoint_created_total 3.000000");
+    pos = output6.find("opflex_endpoint_created_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_removed_total 1.000000");
+    pos = output6.find("opflex_endpoint_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 40000.000000");
+    pos = output6.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 40000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 400.000000");
+    pos = output6.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 400");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 40000.000000");
+    pos = output6.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 40000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 400.000000");
+    pos = output6.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 400");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_rx_bytes{name=\"acc-veth1\"} 40000.000000");
+    pos = output6.find("opflex_endpoint_rx_bytes{name=\"acc-veth1\"} 40000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_rx_packets{name=\"acc-veth1\"} 400.000000");
+    pos = output6.find("opflex_endpoint_rx_packets{name=\"acc-veth1\"} 400");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_tx_bytes{name=\"acc-veth1\"} 40000.000000");
+    pos = output6.find("opflex_endpoint_tx_bytes{name=\"acc-veth1\"} 40000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output6.find("opflex_endpoint_tx_packets{name=\"acc-veth1\"} 400.000000");
+    pos = output6.find("opflex_endpoint_tx_packets{name=\"acc-veth1\"} 400");
     BOOST_CHECK_NE(pos, std::string::npos);
 #endif
 
@@ -954,9 +954,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output7 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output7.find("opflex_endpoint_created_total 3.000000");
+    pos = output7.find("opflex_endpoint_created_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output7.find("opflex_endpoint_removed_total 2.000000");
+    pos = output7.find("opflex_endpoint_removed_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
 
     counters.txPackets = 500;
@@ -966,17 +966,17 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     agent.getEndpointManager().updateEndpointCounters(uuid3, counters);
 
     const string& output8 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output8.find("opflex_endpoint_created_total 3.000000");
+    pos = output8.find("opflex_endpoint_created_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output8.find("opflex_endpoint_removed_total 2.000000");
+    pos = output8.find("opflex_endpoint_removed_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output8.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 50000.000000");
+    pos = output8.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"} 50000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output8.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 500.000000");
+    pos = output8.find("opflex_endpoint_rx_packets{name=\"acc-veth0\"} 500");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output8.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 50000.000000");
+    pos = output8.find("opflex_endpoint_tx_bytes{name=\"acc-veth0\"} 50000");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output8.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 500.000000");
+    pos = output8.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 500");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output8.find("opflex_endpoint_rx_bytes{name=\"acc-veth1\"}");
     BOOST_CHECK_EQUAL(pos, std::string::npos);
@@ -995,9 +995,9 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
 #ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output9 = BaseFixture::getOutputFromCommand(cmd);
-    pos = output9.find("opflex_endpoint_created_total 3.000000");
+    pos = output9.find("opflex_endpoint_created_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
-    pos = output9.find("opflex_endpoint_removed_total 3.000000");
+    pos = output9.find("opflex_endpoint_removed_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output9.find("opflex_endpoint_rx_bytes{name=\"acc-veth0\"}");
     BOOST_CHECK_EQUAL(pos, std::string::npos);
