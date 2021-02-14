@@ -749,9 +749,9 @@ void AgentPrometheusManager::start (bool exposeLocalHostOnly, bool exposeEpSvcNa
      */
     registry_ptr = make_shared<Registry>();
     if (exposeLocalHostOnly)
-        exposer_ptr = unique_ptr<Exposer>(new Exposer{"127.0.0.1:9612", "/metrics", 1});
+        exposer_ptr = unique_ptr<Exposer>(new Exposer{"127.0.0.1:9612", 1});
     else
-        exposer_ptr = unique_ptr<Exposer>(new Exposer{"9612", "/metrics", 1});
+        exposer_ptr = unique_ptr<Exposer>(new Exposer{"9612", 1});
 
     /* Initialize Metric families which can be created during
      * init time */

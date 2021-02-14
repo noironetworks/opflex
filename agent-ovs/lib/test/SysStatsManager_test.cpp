@@ -70,39 +70,39 @@ verifyMoDBCounts (uint32_t count, bool del)
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
 
-    const std::string& local_ep = "opflex_total_ep_local " + std::to_string(count++) + ".000000";
+    const std::string& local_ep = "opflex_total_ep_local " + std::to_string(count++);
     pos = output.find(local_ep);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& remote_ep = "opflex_total_ep_remote " + std::to_string(count++) + ".000000";
+    const std::string& remote_ep = "opflex_total_ep_remote " + std::to_string(count++);
     pos = output.find(remote_ep);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& ext_ep = "opflex_total_ep_ext " + std::to_string(count++) + ".000000";
+    const std::string& ext_ep = "opflex_total_ep_ext " + std::to_string(count++);
     pos = output.find(ext_ep);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& epg = "opflex_total_epg " + std::to_string(count++) + ".000000";
+    const std::string& epg = "opflex_total_epg " + std::to_string(count++);
     pos = output.find(epg);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& ext_intf = "opflex_total_ext_intf " + std::to_string(count++) + ".000000";
+    const std::string& ext_intf = "opflex_total_ext_intf " + std::to_string(count++);
     pos = output.find(ext_intf);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& rd = "opflex_total_rd " + std::to_string(count++) + ".000000";
+    const std::string& rd = "opflex_total_rd " + std::to_string(count++);
     pos = output.find(rd);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& service = "opflex_total_service " + std::to_string(count++) + ".000000";
+    const std::string& service = "opflex_total_service " + std::to_string(count++);
     pos = output.find(service);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& contract = "opflex_total_contract " + std::to_string(count++) + ".000000";
+    const std::string& contract = "opflex_total_contract " + std::to_string(count++);
     pos = output.find(contract);
     BaseFixture::expPosition(!del, pos);
 
-    const std::string& sg = "opflex_total_sg " + std::to_string(count) + ".000000";
+    const std::string& sg = "opflex_total_sg " + std::to_string(count);
     pos = output.find(sg);
     BaseFixture::expPosition(!del, pos);
 }
@@ -131,8 +131,8 @@ verifyOFPeerMetrics (const std::string& peer, uint32_t count, bool del)
 {
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    const auto& val1 = std::to_string(count) + ".000000";
-    const auto& val2 = "0.000000";
+    const auto& val1 = std::to_string(count);
+    const auto& val2 = "0";
 
     const std::string& ident_req = "opflex_peer_identity_req_count{peer=\""
                                    + peer + "\"} " + val1;

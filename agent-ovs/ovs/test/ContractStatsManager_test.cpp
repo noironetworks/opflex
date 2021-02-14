@@ -108,12 +108,12 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
                                 "policy:classifier3,[etype:2048,proto:6,dport:80-85,]\""\
                                 ",dst_epg=\"tenant:tenant0,policy:epg2\",src_epg=\""\
                                 "tenant:tenant0,policy:epg1\"} "\
-                                + std::to_string(pkts) + ".000000";
+                                + std::to_string(pkts);
     const std::string& s_bytes = "opflex_contract_bytes{classifier=\"tenant:tenant0,"\
                                  "policy:classifier3,[etype:2048,proto:6,dport:80-85,]\""\
                                  ",dst_epg=\"tenant:tenant0,policy:epg2\",src_epg=\""\
                                  "tenant:tenant0,policy:epg1\"} "\
-                                 + std::to_string(bytes) + ".000000";
+                                 + std::to_string(bytes);
 
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -128,9 +128,9 @@ verifyRdDropPromMetrics (uint32_t pkts,
                          uint32_t bytes)
 {
     const std::string& s_pkts = "opflex_policy_drop_packets{routing_domain=\"tenant0:rd0\"} "\
-                                + std::to_string(pkts) + ".000000";
+                                + std::to_string(pkts);
     const std::string& s_bytes = "opflex_policy_drop_bytes{routing_domain=\"tenant0:rd0\"} "\
-                                 + std::to_string(bytes) + ".000000";
+                                 + std::to_string(bytes);
 
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;

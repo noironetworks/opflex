@@ -211,9 +211,9 @@ AM_COND_IF([ENABLE_GRPC], [
 
 AM_COND_IF([ENABLE_PROMETHEUS], [
     # check for prometheus
-    PKG_CHECK_MODULES([PROMETHEUS_CORE], [prometheus-cpp-core],
+    PKG_CHECK_MODULES([PROMETHEUS_CORE], [prometheus-cpp-core >= 0.12.1],
                      [prometheus_core_found=yes], [prometheus_core_found=no])
-    PKG_CHECK_MODULES([PROMETHEUS_PULL], [prometheus-cpp-pull],
+    PKG_CHECK_MODULES([PROMETHEUS_PULL], [prometheus-cpp-pull >= 0.12.1],
                      [prometheus_pull_found=yes], [prometheus_pull_found=no])
     AS_IF([test x$prometheus_core_found = 'xyes' && test x$prometheus_pull_found = 'xyes'], [
         AC_DEFINE([HAVE_PROMETHEUS_SUPPORT],[1],[Define if prometheus support is enabled])

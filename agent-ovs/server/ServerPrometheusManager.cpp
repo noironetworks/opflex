@@ -105,9 +105,9 @@ void ServerPrometheusManager::start (bool exposeLocalHostOnly)
      */
     registry_ptr = make_shared<Registry>();
     if (exposeLocalHostOnly)
-        exposer_ptr = unique_ptr<Exposer>(new Exposer{"127.0.0.1:9632", "/metrics", 1});
+        exposer_ptr = unique_ptr<Exposer>(new Exposer{"127.0.0.1:9632", 1});
     else
-        exposer_ptr = unique_ptr<Exposer>(new Exposer{"9632", "/metrics", 1});
+        exposer_ptr = unique_ptr<Exposer>(new Exposer{"9632", 1});
 
     // ask the exposer to scrape the registry on incoming scrapes
     exposer_ptr->RegisterCollectable(registry_ptr);

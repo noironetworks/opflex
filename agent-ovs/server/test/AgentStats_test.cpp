@@ -86,7 +86,7 @@ verifyOFAgentMetrics (const std::string& agent, uint32_t count, bool del)
 {
     const std::string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
-    const auto& val = std::to_string(count) + ".000000";
+    const auto& val = std::to_string(count);
 
     const std::string& ident_req = "opflex_agent_identity_req_count{agent=\""
                                    + agent + "\"} " + val;

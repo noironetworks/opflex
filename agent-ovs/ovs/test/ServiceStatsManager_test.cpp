@@ -877,16 +877,16 @@ void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
     const string& uuid = isNodePort?"nodeport-"+as.getUUID():as.getUUID();
     const string& s_rx_bytes = "opflex_svc_rx_bytes{name=\"coredns\"" \
                                ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
-                            + std::to_string(bytes) + ".000000";
+                            + std::to_string(bytes);
     const string& s_rx_pkts = "opflex_svc_rx_packets{name=\"coredns\"" \
                               ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
-                            + std::to_string(pkts) + ".000000";
+                            + std::to_string(pkts);
     const string& s_tx_bytes = "opflex_svc_tx_bytes{name=\"coredns\"" \
                                ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
-                            + std::to_string(bytes) + ".000000";
+                            + std::to_string(bytes);
     const string& s_tx_pkts = "opflex_svc_tx_packets{name=\"coredns\"" \
                               ",namespace=\"kube-system\",scope=\"" + scope + "\",uuid=\"" + uuid + "\"} "
-                            + std::to_string(pkts) + ".000000";
+                            + std::to_string(pkts);
     pos = output.find(s_rx_bytes);
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find(s_rx_pkts);
@@ -912,13 +912,13 @@ void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
         tx_pkts = "opflex_svc_target_tx_packets{ip=\"";
     }
     const string& st_rx_bytes = rx_bytes + ip + s_ann
-                            + std::to_string(bytes) + ".000000";
+                            + std::to_string(bytes);
     const string& st_rx_pkts = rx_pkts + ip + s_ann
-                            + std::to_string(pkts) + ".000000";
+                            + std::to_string(pkts);
     const string& st_tx_bytes = tx_bytes + ip + s_ann
-                            + std::to_string(bytes) + ".000000";
+                            + std::to_string(bytes);
     const string& st_tx_pkts = tx_pkts + ip + s_ann
-                            + std::to_string(pkts) + ".000000";
+                            + std::to_string(pkts);
     pos = output.find(st_rx_bytes);
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find(st_rx_pkts);
@@ -937,19 +937,19 @@ void ServiceStatsManagerFixture::checkPodSvcPromMetrics (uint64_t pkts,
     const string& rx_bytes = "opflex_endpoint_to_svc_bytes{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + std::to_string(bytes) + ".000000";
+                            + std::to_string(bytes);
     const string& rx_pkts = "opflex_endpoint_to_svc_packets{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + std::to_string(pkts) + ".000000";
+                            + std::to_string(pkts);
     const string& tx_bytes = "opflex_svc_to_endpoint_bytes{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + std::to_string(bytes) + ".000000";
+                            + std::to_string(bytes);
     const string& tx_pkts = "opflex_svc_to_endpoint_packets{ep_name=\"coredns\"," \
                              "ep_namespace=\"default\",svc_name=\"coredns\"," \
                              "svc_namespace=\"kube-system\",svc_scope=\"cluster\"} " \
-                            + std::to_string(pkts) + ".000000";
+                            + std::to_string(pkts);
     size_t pos1 = output.find(rx_bytes);
     size_t pos2 = output.find(rx_pkts);
     size_t pos3 = output.find(tx_bytes);
