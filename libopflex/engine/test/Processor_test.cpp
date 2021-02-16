@@ -160,7 +160,7 @@ public:
     ServerFixture() : db(threadManager) {
         db.init(md);
         db.start();
-        opflexServer = new GbpOpflexServerImpl(8009, SERVER_ROLES,
+        opflexServer = std::make_shared<GbpOpflexServerImpl>(8009, SERVER_ROLES,
                      list_of(make_pair(SERVER_ROLES, LOCALHOST":8009")),
                      vector<std::string>(),
                      db, 60);
@@ -181,7 +181,7 @@ public:
         processor.addPeer(LOCALHOST, 8009);
     }
 
-    GbpOpflexServerImpl *opflexServer;
+    std::shared_ptr<GbpOpflexServerImpl> opflexServer;
     opflex::modb::ObjectStore db;
     opflex::util::ThreadManager threadManager;
 };
