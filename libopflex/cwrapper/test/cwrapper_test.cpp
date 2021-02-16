@@ -54,7 +54,7 @@ public:
           peerStatus(-1), poolHealth(1), db(threadManager) {
         db.init(md);
         db.start();
-        opflexServer = new GbpOpflexServerImpl(8009, SERVER_ROLES,
+        opflexServer = std::make_shared<GbpOpflexServerImpl>(8009, SERVER_ROLES,
                      list_of(make_pair(SERVER_ROLES, LOCALHOST":8009")),
                      vector<string>(),
                      db, 60);
@@ -91,7 +91,7 @@ public:
         return poolHealth;
     }
 
-    GbpOpflexServerImpl *opflexServer;
+    std::shared_ptr<GbpOpflexServerImpl> opflexServer;
 
 private:
     int peerStatus;
