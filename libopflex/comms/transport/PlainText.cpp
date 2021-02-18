@@ -60,8 +60,9 @@ void Cb< PlainText >::on_sent(CommunicationPeer const * peer) {
 
 template<>
 void Cb< PlainText >::alloc_cb(uv_handle_t * _, size_t size, uv_buf_t* buf) {
-    *buf = uv_buf_init((char*) malloc(size), size);
-    return;
+    // double the size of the buffer
+    size_t bufferSize = size * 2;
+    *buf = uv_buf_init((char*) malloc(bufferSize), bufferSize);
 }
 
 template<>
