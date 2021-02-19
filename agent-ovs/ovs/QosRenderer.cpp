@@ -9,8 +9,6 @@
 
 #include <vector>
 #include "QosRenderer.h"
-#include <opflexagent/logging.h>
-#include <opflexagent/QosManager.h>
 
 namespace opflexagent {
     using boost::optional;
@@ -18,7 +16,7 @@ namespace opflexagent {
     QosRenderer::QosRenderer(Agent& agent_) : JsonRpcRenderer(agent_) {
     }
 
-    void QosRenderer::start(const std::string& swName, OvsdbConnection* conn) {
+    void QosRenderer::start(const string& swName, OvsdbConnection* conn) {
         LOG(DEBUG) << "starting QosRenderer";
         JsonRpcRenderer::start(swName, conn);
         agent.getQosManager().registerListener(this);
@@ -26,26 +24,26 @@ namespace opflexagent {
 
     void QosRenderer::stop() {
         LOG(DEBUG) << "stopping QosRenderer";
+        JsonRpcRenderer::stop();
         agent.getQosManager().unregisterListener(this);
     }
 
     void QosRenderer::ingressQosUpdated(const string& interface,
-            const boost::optional<shared_ptr<QosConfigState>>& qosConfig) {
+            const optional<shared_ptr<QosConfigState>>& qosConfig) {
         LOG(DEBUG) << "interface: " << interface;
         handleIngressQosUpdate(interface, qosConfig);
     }
 
     void QosRenderer::egressQosUpdated(const string& interface,
-            const boost::optional<shared_ptr<QosConfigState>>& qosConfig) {
+            const optional<shared_ptr<QosConfigState>>& qosConfig) {
         LOG(DEBUG) << "interface: " << interface;
         handleEgressQosUpdate(interface, qosConfig);
     }
 
-
     void QosRenderer::qosDeleted(const string& interface) {
         LOG(DEBUG) << "Process QosDeleted for interface " << interface;
         if (!connect()) {
-            const std::lock_guard<std::mutex> guard(timer_mutex);
+            const lock_guard<mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
                         boost::posix_time::seconds(CONNECTION_RETRY)));
@@ -55,19 +53,17 @@ namespace opflexagent {
             return;
         }
 
-        LOG(DEBUG) << "clearing egress and ingress qos for interface: " << interface ;
+        LOG(DEBUG) << "clearing egress and ingress qos for interface: " << interface;
         deleteEgressQos(interface);
         deleteIngressQos(interface);
     }
 
-
     void QosRenderer::handleEgressQosUpdate(const string& interface,
             const optional<shared_ptr<QosConfigState>>& qosConfigState) {
-        LOG(DEBUG) << "thread " << std::this_thread::get_id();
         LOG(DEBUG) << "interface: " << interface;
 
         if (!connect()) {
-            const std::lock_guard<std::mutex> guard(timer_mutex);
+            const lock_guard<mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
 
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -90,14 +86,12 @@ namespace opflexagent {
         updateEgressQosParams(interface, rate, burst);
     }
 
-
     void QosRenderer::handleIngressQosUpdate(const string& interface,
             const optional<shared_ptr<QosConfigState>>& qosConfigState) {
-        LOG(DEBUG) << "thread " << std::this_thread::get_id();
         LOG(DEBUG) << "interface: "<< interface;
 
         if (!connect()) {
-            const std::lock_guard<std::mutex> guard(timer_mutex);
+            const lock_guard<mutex> guard(timer_mutex);
             LOG(DEBUG) << "failed to connect, retry in " << CONNECTION_RETRY << " seconds";
 
             connection_timer.reset(new deadline_timer(agent.getAgentIOService(),
@@ -126,7 +120,7 @@ namespace opflexagent {
             const string& interface, const optional<shared_ptr<QosConfigState>>& qosConfigState) {
         LOG(DEBUG) << "timer update cb";
         if (ec) {
-            const std::lock_guard<std::mutex> guard(timer_mutex);
+            const lock_guard<mutex> guard(timer_mutex);
             LOG(WARNING) << "reset timer";
             connection_timer.reset();
             return;
@@ -139,7 +133,7 @@ namespace opflexagent {
     void QosRenderer::delConnectCb(const boost::system::error_code& ec,
             const string& interface) {
         if (ec) {
-            const std::lock_guard<std::mutex> guard(timer_mutex);
+            const lock_guard<mutex> guard(timer_mutex);
             connection_timer.reset();
             return;
         }
@@ -175,12 +169,12 @@ namespace opflexagent {
         vector<OvsdbValue> values;
         OvsdbTransactMessage msg1(OvsdbOperation::INSERT, OvsdbTable::QUEUE);
 
-        std::ostringstream burstString;
+        ostringstream burstString;
         burstString << burst;
         const string burstS  = burstString.str();
         values.emplace_back("burst", burstS);
 
-        std::ostringstream rateString;
+        ostringstream rateString;
         rateString << rate;
         const string rateS = rateString.str();
         values.emplace_back("max-rate", rateS);
@@ -195,7 +189,7 @@ namespace opflexagent {
 
         values.clear();
 
-        std::map<std::string, std::string> queueUuid;
+        map<string, string> queueUuid;
         queueUuid.insert(make_pair("named-uuid",queue_uuid));
 
         values.emplace_back(Dtype::MAP, "0", queueUuid);
@@ -265,5 +259,4 @@ namespace opflexagent {
         const list<OvsdbTransactMessage> requests = {msg1};
         sendAsyncTransactRequests(requests);
     }
-
 }
