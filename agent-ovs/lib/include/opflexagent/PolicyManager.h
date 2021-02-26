@@ -602,6 +602,14 @@ public:
     bool groupExists(const opflex::modb::URI& eg);
 
     /**
+     * Check if a security group exists
+     *
+     * @param secGroup the URI for the security group to check
+     * @return true if group is found, false otherwise
+     */
+    bool secGroupExists(const opflex::modb::URI& secGroup);
+
+    /**
      * List of PolicyRule objects.
      */
     typedef std::list<std::shared_ptr<PolicyRule> > rule_list_t;

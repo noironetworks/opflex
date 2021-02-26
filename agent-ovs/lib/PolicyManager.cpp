@@ -1426,6 +1426,11 @@ bool PolicyManager::contractExists(const opflex::modb::URI& cURI) {
     return contractMap.find(cURI) != contractMap.end();
 }
 
+bool PolicyManager::secGroupExists(const opflex::modb::URI& secGroupURI) {
+    lock_guard<mutex> guard(state_mutex);
+    return secGrpMap.find(secGroupURI) != secGrpMap.end();
+}
+
 void PolicyManager::updateRemoteRouteChildrenForPolicyPrefix(
                  const URI& rdURI,
                  const URI& extNetURI,
