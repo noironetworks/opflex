@@ -84,6 +84,9 @@ module[gbpe]
         # IP protocol field
         member[prot; type=l3/IpProt]
 
+        # DNS egress destination FQDN or Regex(only leading *)
+        member[toDns; type=ascii/String]
+
         # Source port range [from-to]
         member[sFromPort; type=l4/Port]
         member[sToPort; type=l4/Port]
