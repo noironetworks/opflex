@@ -24,7 +24,6 @@ using namespace modelgbp::dmtree;
 
 namespace opflexagent {
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 StatsIO::StatsIO (ServerPrometheusManager& prometheusManager_,
                   opflex::test::GbpOpflexServer& server_,
                   opflex::ofcore::OFFramework& framework_,
@@ -35,16 +34,6 @@ StatsIO::StatsIO (ServerPrometheusManager& prometheusManager_,
                   stats_interval_secs(stats_interval_secs_),
                   stopping(false) {
 }
-#else
-StatsIO::StatsIO (opflex::test::GbpOpflexServer& server_,
-                  const opflex::ofcore::OFFramework& framework_,
-                  int stats_interval_secs_) :
-                  server(server_),
-                  framework(framework_),
-                  stats_interval_secs(stats_interval_secs_),
-                  stopping(false) {
-}
-#endif
 
 StatsIO::~StatsIO() {
 }
@@ -117,9 +106,7 @@ void StatsIO::on_timer_stats (const boost::system::error_code& ec) {
                     .setEpUnresolveErrs(peerStat.second->getEpUnresolveErrs())
                     .setStateReports(peerStat.second->getStateReports())
                     .setStateReportErrs(peerStat.second->getStateReportErrs());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.addNUpdateOFAgentStats(peerStat.first, peerStat.second);
-#endif
         }
         // Remove mos for deleted connections
         std::vector<std::shared_ptr<modelgbp::observer::OpflexServerCounter> > out;
@@ -130,9 +117,7 @@ void StatsIO::on_timer_stats (const boost::system::error_code& ec) {
             if (agent) {
                 if (stats.find(agent.get()) == stats.end()) {
                     serverCounter->remove();
-#ifdef HAVE_PROMETHEUS_SUPPORT
                     prometheusManager.removeOFAgentStats(agent.get());
-#endif
                 }
             }
         }

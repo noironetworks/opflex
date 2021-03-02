@@ -22,9 +22,7 @@
 #include <modelgbp/inv/IfaceSecurityEnumT.hpp>
 #include <modelgbp/inv/DiscoveryModeEnumT.hpp>
 #include <modelgbp/domain/Config.hpp>
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 namespace opflexagent {
 
@@ -165,7 +163,6 @@ void ModelEndpointSource::objectUpdated (opflex::modb::class_id_t class_id,
                 newep.addAttribute(attr->getName().get(),
                                    attr->getValue(""));
             }
-#ifdef HAVE_PROMETHEUS_SUPPORT
             auto acc_intf = newep.getAccessInterface();
             if (acc_intf) {
                 newep.setAttributeHash(
@@ -175,7 +172,6 @@ void ModelEndpointSource::objectUpdated (opflex::modb::class_id_t class_id,
                                             newep.getAttributes(),
                                             manager->getAgent().getPrometheusEpAttributes()));
             }
-#endif
         }
 
         {

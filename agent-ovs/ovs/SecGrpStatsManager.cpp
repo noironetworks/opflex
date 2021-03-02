@@ -120,7 +120,7 @@ void SecGrpStatsManager::on_timer(const error_code& ec) {
     }
 }
 
-void SecGrpStatsManager::clearCounterObject(const std::string& key,
+void SecGrpStatsManager::clearCounterObject(const string& key,
                                             uint8_t index) {
     SecGrpClassifierCounter::remove(agent->getFramework(),
                                     getAgentUUID(),
@@ -128,7 +128,7 @@ void SecGrpStatsManager::clearCounterObject(const std::string& key,
 }
 
 void SecGrpStatsManager::
-updatePolicyStatsCounters(const std::string& l24Classifier,
+updatePolicyStatsCounters(const string& l24Classifier,
                           FlowStats_t& newVals1,
                           FlowStats_t& newVals2) {
     Mutator mutator(agent->getFramework(), "policyelement");
@@ -145,50 +145,42 @@ updatePolicyStatsCounters(const std::string& l24Classifier,
                 .setTxbytes(newVals2.byte_count.get())
                 .setRxpackets(newVals1.packet_count.get())
                 .setRxbytes(newVals1.byte_count.get());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.addNUpdateSGClassifierCounter(l24Classifier,
                                                             newVals1.byte_count.get(),
                                                             newVals1.packet_count.get(),
                                                             newVals2.byte_count.get(),
                                                             newVals2.packet_count.get());
-#endif
         } else if (newVals1.byte_count) {
             su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
                                                      nextId,
                                                      l24Classifier)
                 ->setRxpackets(newVals1.packet_count.get())
                 .setRxbytes(newVals1.byte_count.get());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.addNUpdateSGClassifierCounter(l24Classifier,
                                                             newVals1.byte_count.get(),
                                                             newVals1.packet_count.get(),
                                                             0, 0);
-#endif
         } else if (newVals2.byte_count) {
             su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
                                                      nextId,
                                                      l24Classifier)
                 ->setTxpackets(newVals2.packet_count.get())
                 .setTxbytes(newVals2.byte_count.get());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.addNUpdateSGClassifierCounter(l24Classifier,
                                                             0, 0,
                                                             newVals2.byte_count.get(),
                                                             newVals2.packet_count.get());
-#endif
         }
     }
     mutator.commit();
 }
 
 void SecGrpStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
-                                       const opflex::modb::URI& uri) {
+                                       const URI& uri) {
     if (class_id == L24Classifier::CLASS_ID) {
         if (!L24Classifier::resolve(agent->getFramework(),uri)) {
             removeAllCounterObjects(uri.toString());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.removeSGClassifierCounter(uri.toString());
-#endif
         }
     }
 }

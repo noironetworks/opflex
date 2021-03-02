@@ -83,13 +83,11 @@ public:
                                       uint32_t packet_count,
                                       uint32_t byte_count);
     void waitForRdDropEntry(void);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     virtual void verifyPromMetrics(shared_ptr<L24Classifier> classifier,
                             uint32_t pkts,
                             uint32_t bytes,
                             bool isTx=false) override;
     void verifyRdDropPromMetrics(uint32_t pkts, uint32_t bytes);
-#endif
     IntFlowManager  intFlowManager;
     MockContractStatsManager contractStatsManager;
     PolicyManager& policyManager;
@@ -97,7 +95,6 @@ private:
     bool checkNewFlowMapSize(size_t pol_table_size);
 };
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 void ContractStatsManagerFixture::
 verifyPromMetrics (shared_ptr<L24Classifier> classifier,
                    uint32_t pkts,
@@ -139,7 +136,6 @@ verifyRdDropPromMetrics (uint32_t pkts,
     pos = output.find(s_bytes);
     BOOST_CHECK_NE(pos, std::string::npos);
 }
-#endif
 
 void ContractStatsManagerFixture::
 verifyRoutingDomainDropStats(shared_ptr<RoutingDomain> rd,
@@ -163,9 +159,7 @@ verifyRoutingDomainDropStats(shared_ptr<RoutingDomain> rd,
     BOOST_CHECK_EQUAL(myCounter.get()->getPackets().get(), packet_count);
     BOOST_CHECK_EQUAL(myCounter.get()->getBytes().get(), byte_count);
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     verifyRdDropPromMetrics(packet_count, byte_count);
-#endif
 }
 
 struct ofpbuf *makeFlowStatReplyMessage(uint32_t priority, uint64_t cookie,

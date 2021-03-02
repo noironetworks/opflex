@@ -172,15 +172,12 @@ public:
                              MockConnection& portConn,
                              PolicyStatsManager &statsManager);
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     void checkPrometheusCounters(uint64_t exp_packet_count,
                                  uint64_t exp_byte_count,
                                  const std::string &bridgeName,
                                  const std::string &tableName);
-#endif
 };
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 void TableDropStatsManagerFixture::checkPrometheusCounters(uint64_t exp_packet_count,
                              uint64_t exp_byte_count,
                              const std::string &bridgeName,
@@ -195,9 +192,7 @@ void TableDropStatsManagerFixture::checkPrometheusCounters(uint64_t exp_packet_c
     BOOST_CHECK_NE(pos, string::npos);
     pos = output.find(bytes_key);
     BOOST_CHECK_NE(pos, string::npos);
-    return;
 }
-#endif
 
 void TableDropStatsManagerFixture::verifyDropFlowStats (
                                     uint64_t exp_packet_count,
@@ -363,14 +358,12 @@ void TableDropStatsManagerFixture::testOneStaticDropFlow (
     verifyDropFlowStats(expected_pkt_count,
                         expected_byte_count,
                         table_id, portConn, statsManager);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     SwitchManager::TableDescriptionMap fwdTableMap;
     swMgr.getForwardingTableList(fwdTableMap);
     checkPrometheusCounters(expected_pkt_count,
                             expected_byte_count,
                             portConn.getSwitchName(),
                             fwdTableMap[table_id].first);
-#endif
 
 }
 

@@ -14,10 +14,8 @@
 #include <opflexagent/Agent.h>
 #include "FlowConstants.h"
 #include "IntFlowManager.h"
-#include "TableState.h"
 #include "PolicyStatsManager.h"
 
-#include "ovs-shim.h"
 #include "ovs-ofputil.h"
 
 #include <lib/util.h>
@@ -48,9 +46,7 @@ PolicyStatsManager::PolicyStatsManager(Agent* agent_, IdGenerator& idGen_,
                                        SwitchManager& switchManager_,
                                        long timer_interval_)
     : idGen(idGen_), agent(agent_),
-#ifdef HAVE_PROMETHEUS_SUPPORT
-    prometheusManager(agent->getPrometheusManager()),
-#endif
+      prometheusManager(agent->getPrometheusManager()),
       switchManager(switchManager_),
       connection(NULL),
       timer_interval(timer_interval_),
@@ -63,7 +59,7 @@ void PolicyStatsManager::registerConnection(SwitchConnection* connection) {
 }
 
 void PolicyStatsManager::start(bool register_listener,
-                               boost::optional<boost::asio::io_service&> io_service) {
+                               optional<boost::asio::io_service&> io_service) {
     stopping = false;
 
     LOG(DEBUG) << "Starting policy stats manager " << this;
@@ -583,7 +579,7 @@ generatePolicyStatsObjects(PolicyCounterMap_t *newCountersMap1,
                 continue;
             }
         }
-        boost::optional<std::string> idStr =
+        optional<string> idStr =
             idGen.getStringForId(IntFlowManager::
                                  getIdNamespace(L24Classifier::CLASS_ID),
                                  flowKey.cookie);
@@ -614,7 +610,7 @@ generatePolicyStatsObjects(PolicyCounterMap_t *newCountersMap1,
             const PolicyFlowMatchKey_t& flowKey = itr->first;
             FlowStats_t&  outCounters = itr->second;
             FlowStats_t   inCounters;
-            boost::optional<std::string> idStr =
+            optional<string> idStr =
                 idGen.getStringForId(IntFlowManager::
                                      getIdNamespace(L24Classifier::CLASS_ID),
                                      flowKey.cookie);
@@ -629,7 +625,7 @@ generatePolicyStatsObjects(PolicyCounterMap_t *newCountersMap1,
     }
 }
 
-void PolicyStatsManager::removeAllCounterObjects(const std::string& key) {
+void PolicyStatsManager::removeAllCounterObjects(const string& key) {
     if (!genIdList_.count(key)) return;
     Mutator mutator(agent->getFramework(), "policyelement");
     for (size_t i = 0; i < genIdList_[key]->uidList.size(); i++)
@@ -638,7 +634,7 @@ void PolicyStatsManager::removeAllCounterObjects(const std::string& key) {
     mutator.commit();
 }
 
-void PolicyStatsManager::clearOldCounters(const std::string& key,
+void PolicyStatsManager::clearOldCounters(const string& key,
                                           uint64_t nextId) {
     if (!genIdList_.count(key)) {
         genIdList_[key] =

@@ -80,14 +80,12 @@ public:
             FlowManagerFixture (mode) {
     };
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9612/metrics 2>&1;";
     virtual void verifyPromMetrics (shared_ptr<L24Classifier> classifier,
                             uint32_t pkts,
                             uint32_t bytes,
                             bool isTx=false) {
     }
-#endif
 
     // New counter objects get created for every diff in flow. Prometheus
     // maintains an aggregatiion of all these updates. On the second update
@@ -133,9 +131,7 @@ public:
                } else {
                    LOG(DEBUG) << "L24classifiercounter mo isnt present";
                });
-#ifdef HAVE_PROMETHEUS_SUPPORT
             verifyPromMetrics(classifier, t_packet_count, t_byte_count);
-#endif
         } else {
             auto uuid = statsManager->getAgentUUID();
             optional<shared_ptr<SecGrpClassifierCounter> > myCounter =
@@ -182,10 +178,8 @@ public:
                 } else {
                     LOG(DEBUG) << "SGclassifiercounter mo isnt present";
                 });
-#ifdef HAVE_PROMETHEUS_SUPPORT
             verifyPromMetrics(classifier, t_packet_count, t_byte_count,
                               table_id == AccessFlowManager::SEC_GROUP_OUT_TABLE_ID);
-#endif
         }
     }
 

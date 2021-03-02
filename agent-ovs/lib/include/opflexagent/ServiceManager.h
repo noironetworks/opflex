@@ -27,9 +27,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 #include <modelgbp/observer/SvcStatUniverse.hpp>
 
 namespace opflexagent {
@@ -45,14 +43,9 @@ public:
     /**
      * Instantiate a new service manager
      */
-#ifdef HAVE_PROMETHEUS_SUPPORT
     ServiceManager(Agent& agent_,
                    opflex::ofcore::OFFramework& framework_,
                    AgentPrometheusManager& prometheusManager_);
-#else
-    ServiceManager(Agent& agent,
-                   opflex::ofcore::OFFramework& framework);
-#endif
 
     /**
      * Register a listener for service change events
@@ -175,10 +168,8 @@ private:
     // reference to opflex framework
     opflex::ofcore::OFFramework& framework;
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     // reference to prometheus manager
     AgentPrometheusManager& prometheusManager;
-#endif
 
     class ServiceState {
     public:

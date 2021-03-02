@@ -17,9 +17,7 @@
 #include "TableDropStatsManager.h"
 
 #include "ovs-ofputil.h"
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 extern "C" {
 #include <openvswitch/ofp-msgs.h>
 }
@@ -30,8 +28,6 @@ extern "C" {
 
 namespace opflexagent {
 
-using std::string;
-using boost::optional;
 using boost::make_optional;
 using std::shared_ptr;
 using opflex::modb::URI;
@@ -102,11 +98,9 @@ void BaseTableDropStatsManager::start(bool register_listener) {
                 .setBytes(0);
        }
        mutator.commit();
-#ifdef HAVE_PROMETHEUS_SUPPORT
        AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
        prometheusManager.addTableDropGauge(connection->getSwitchName(),
                                             tbl_it.second.first);
-#endif
        CurrentDropCounterState[tbl_it.first];
        auto &counter = TableDropCounterState[tbl_it.first];
        counter.packet_count = boost::make_optional(false, 0);
@@ -126,14 +120,12 @@ void BaseTableDropStatsManager::stop(bool unregister_listener) {
     LOG(DEBUG) << "Stopping "
                << connection->getSwitchName()
                << " Table Drop stats manager";
-#ifdef HAVE_PROMETHEUS_SUPPORT
     AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
     for (const auto& tbl_it: tableDescMap) {
         prometheusManager.removeTableDropGauge(
                 connection->getSwitchName(),
                 tbl_it.second.first);
     }
-#endif
     stopping = true;
 
     PolicyStatsManager::stop(unregister_listener);
@@ -310,14 +302,11 @@ void BaseTableDropStatsManager::on_timer(const boost::system::error_code& ec) {
                 .setBytes(byte_count);
         }
         mutator.commit();
-#ifdef HAVE_PROMETHEUS_SUPPORT
         AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
         prometheusManager.updateTableDropGauge(connection->getSwitchName(),
                                                 tbl_it.second.first,
                                                 byte_count,
                                                 packet_count);
-#endif
-
     }
 
     for(const auto& tbl_it: tableDescMap) {

@@ -11,7 +11,6 @@
 
 #include <list>
 #include <boost/test/unit_test.hpp>
-#include <boost/assign/list_of.hpp>
 #include <modelgbp/dmtree/Root.hpp>
 #include <opflex/modb/Mutator.h>
 #include <modelgbp/gbp/DirectionEnumT.hpp>
@@ -35,7 +34,6 @@ using namespace std;
 using namespace modelgbp;
 using namespace modelgbp::gbp;
 using namespace modelgbp::gbpe;
-using namespace boost::assign;
 using namespace modelgbp::epdr;
 
 class PolicyIvLeafFixture : public BaseFixture {

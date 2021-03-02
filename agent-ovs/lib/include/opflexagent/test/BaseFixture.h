@@ -93,7 +93,6 @@ typedef opflex::ofcore::OFConstants::OpflexElementMode opflex_elem_t;
         return output;
     }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     /**
      * Function to check if given position of metric is expected or not
      * in the prometheus curl output
@@ -108,7 +107,6 @@ typedef opflex::ofcore::OFConstants::OpflexElementMode opflex_elem_t;
         else
             BOOST_CHECK_EQUAL(pos, std::string::npos);
     }
-#endif
 
     /**
      * A framework object
