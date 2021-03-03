@@ -304,11 +304,13 @@ void OpflexPool::doRemovePeer(const string& hostname, int port) {
     }
 }
 
-void OpflexPool::resetAllPeers() {
+void OpflexPool::resetAllUnconfiguredPeers() {
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     conn_map_t conns(connections);
     for (conn_map_t::value_type& v : conns) {
-        v.second.conn->close();
+        if (!isConfiguredPeer(v.first.first, v.first.second)) {
+            v.second.conn->close();
+        }
     }
 }
 
@@ -473,10 +475,9 @@ bool OpflexPool::isConfiguredPeer(const string& hostname, int port) {
 void OpflexPool::addConfiguredPeers() {
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     for (const peer_name_t& peer_name : configured_peers) {
-        addPeer(peer_name.first, peer_name.second, false);
+        addPeer(peer_name.first, peer_name.second, true);
     }
 }
-
 
 void OpflexPool::getOpflexPeerStats(std::unordered_map<string, std::shared_ptr<OFAgentStats>>& stats) {
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
