@@ -890,7 +890,7 @@ public:
      * Disconnect from all current peers and use the configured
      * peer list to establish new peers.
      */
-     virtual void resetAllPeers();
+     virtual void resetAllUnconfiguredPeers();
 
     /**
      * Retrieve OpFlex client stats for each available peer
