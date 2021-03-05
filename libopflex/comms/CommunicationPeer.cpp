@@ -190,9 +190,7 @@ void CommunicationPeer::readBufNoNull(char* buffer, size_t nread) {
         return;
     }
 
-    buffer[nread++] = '\0';
-
-    while ((--nread > 0) && connected_) {
+    while ((nread != 0 && --nread > 0) && connected_) {
         size_t chunk_size = readChunk(buffer);
         if (chunk_size == 0) {
             break;

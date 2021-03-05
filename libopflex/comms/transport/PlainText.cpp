@@ -89,6 +89,10 @@ void Cb< PlainText >::on_read(uv_stream_t * h, ssize_t nread, uv_buf_t const * b
                 (buf->len > static_cast< size_t >(nread))
             );
         } else {
+            // add null terminator to indicate end of message
+            if (buf->len > (size_t)nread) {
+                buf->base[nread++] = '\0';
+            }
             peer->readBufNoNull(buf->base, nread);
         }
     }
