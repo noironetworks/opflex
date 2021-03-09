@@ -56,7 +56,6 @@ using boost::asio::io_service;
 using boost::uuids::to_string;
 using boost::uuids::basic_random_generator;
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
     : framework(framework_),
       prometheusManager(*this, framework),
@@ -78,25 +77,6 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       prometheusExposeEpSvcNan(false),
       behaviorL34FlowsWithoutSubnet(true),
       logParams(_logParams) {
-#else
-Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
-    : framework(framework_),
-      policyManager(framework, agent_io),
-      endpointManager(*this, framework, policyManager),
-      serviceManager(*this, framework),
-      extraConfigManager(framework),
-      notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
-      faultManager(*this, framework),
-      sysStatsManager(*this),
-      started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
-      spanManager(framework, agent_io),
-      netflowManager(framework,agent_io),
-      qosManager(*this,framework,agent_io),
-      sysStatsEnabled(true),
-      sysStatsInterval(10000),
-      behaviorL34FlowsWithoutSubnet(true),
-      logParams(_logParams) {
-#endif
     std::random_device rng;
     std::mt19937 urng(rng());
     uuid = to_string(basic_random_generator<std::mt19937>(urng)());
@@ -159,12 +139,10 @@ void Agent::loadPlugin(const std::string& name) {
 
 void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string LOG_LEVEL("log.level");
-#ifdef HAVE_PROMETHEUS_SUPPORT
     static const std::string PROMETHEUS_ENABLED("prometheus.enabled");
     static const std::string PROMETHEUS_LOCALHOST_ONLY("prometheus.localhost-only");
     static const std::string PROMETHEUS_EXPOSE_EPSVC_NAN("prometheus.expose-epsvc-nan");
     static const std::string PROMETHEUS_EP_ATTRIBUTES("prometheus.ep-attributes");
-#endif
     static const std::string ENDPOINT_SOURCE_FSPATH("endpoint-sources.filesystem");
     static const std::string ENDPOINT_SOURCE_MODEL_LOCAL("endpoint-sources.model-local");
     static const std::string SERVICE_SOURCE_PATH("service-sources.filesystem");
@@ -218,32 +196,32 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         logParams = std::make_tuple(level_str, toSyslog, log_file);
     }
 
-    boost::optional<std::string> ofName =
+    optional<std::string> ofName =
         properties.get_optional<std::string>(OPFLEX_NAME);
     if (ofName) opflexName = ofName;
-    boost::optional<std::string> ofDomain =
+    optional<std::string> ofDomain =
         properties.get_optional<std::string>(OPFLEX_DOMAIN);
     if (ofDomain) opflexDomain = ofDomain;
 
-    boost::optional<bool> enabInspector =
+    optional<bool> enabInspector =
         properties.get_optional<bool>(OPFLEX_INSPECTOR);
-    boost::optional<std::string> inspSocket =
+    optional<std::string> inspSocket =
         properties.get_optional<std::string>(OPFLEX_INSPECTOR_SOCK);
     if (enabInspector) enableInspector = enabInspector;
     if (inspSocket) inspectorSock = inspSocket;
 
-    boost::optional<bool> enabNotif =
+    optional<bool> enabNotif =
         properties.get_optional<bool>(OPFLEX_NOTIF);
-    boost::optional<std::string> notSocket =
+    optional<std::string> notSocket =
         properties.get_optional<std::string>(OPFLEX_NOTIF_SOCK);
-    boost::optional<std::string> notOwner =
+    optional<std::string> notOwner =
         properties.get_optional<std::string>(OPFLEX_NOTIF_OWNER);
-    boost::optional<std::string> notGrp =
+    optional<std::string> notGrp =
         properties.get_optional<std::string>(OPFLEX_NOTIF_GROUP);
-    boost::optional<std::string> notPerms =
+    optional<std::string> notPerms =
         properties.get_optional<std::string>(OPFLEX_NOTIF_PERMS);
-    boost::optional<const ptree&> statChild = properties.get_child_optional(OPFLEX_STATS);
-    boost::optional<std::string> statMode_json;
+    optional<const ptree&> statChild = properties.get_child_optional(OPFLEX_STATS);
+    optional<std::string> statMode_json;
     if (statChild)
         statMode_json = properties.get_optional<std::string>(OPFLEX_STATS_MODE);
 
@@ -276,22 +254,21 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         sysStatsEnabled = false;
     }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
-    boost::optional<bool> prometheusIsEnabled =
+    optional<bool> prometheusIsEnabled =
                 properties.get_optional<bool>(PROMETHEUS_ENABLED);
     if (prometheusIsEnabled) {
         if (prometheusIsEnabled.get() == false)
             prometheusEnabled = false;
     }
 
-    boost::optional<bool> prometheusLocalHostOnly =
+    optional<bool> prometheusLocalHostOnly =
                 properties.get_optional<bool>(PROMETHEUS_LOCALHOST_ONLY);
     if (prometheusLocalHostOnly) {
         if (prometheusLocalHostOnly.get() == true)
             prometheusExposeLocalHostOnly = true;
     }
 
-    boost::optional<bool> prometheusEpSvcNan =
+    optional<bool> prometheusEpSvcNan =
                 properties.get_optional<bool>(PROMETHEUS_EXPOSE_EPSVC_NAN);
     if (prometheusEpSvcNan) {
         if (prometheusEpSvcNan.get() == true)
@@ -304,7 +281,6 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         for (const ptree::value_type &v : epAttributes.get())
             prometheusEpAttributes.insert(v.second.data());
     }
-#endif
 
     optional<const ptree&> fsEndpointSource =
         properties.get_child_optional(ENDPOINT_SOURCE_FSPATH);
@@ -376,13 +352,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         }
     }
 
-    boost::optional<std::string> confSslMode =
+    optional<std::string> confSslMode =
         properties.get_optional<std::string>(OPFLEX_SSL_MODE);
-    boost::optional<std::string> confsslCaStore =
+    optional<std::string> confsslCaStore =
         properties.get_optional<std::string>(OPFLEX_SSL_CA_STORE);
-    boost::optional<std::string> confsslClientCert =
+    optional<std::string> confsslClientCert =
         properties.get_optional<std::string>(OPFLEX_SSL_CERT_PATH);
-    boost::optional<std::string> confsslClientCertPass =
+    optional<std::string> confsslClientCertPass =
         properties.get_optional<std::string>(OPFLEX_SSL_CERT_PASS);
     if (confSslMode)
         sslMode = confSslMode;
@@ -463,7 +439,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         }
     }
 
-    boost::optional<boost::uint_t<64>::fast> prr_timer_present = 
+    optional<boost::uint_t<64>::fast> prr_timer_present =
         properties.get_optional<boost::uint_t<64>::fast>(OPFLEX_PRR_INTERVAL);
     if (prr_timer_present) { 
         prr_timer = prr_timer_present.get();
@@ -473,7 +449,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         LOG(INFO) << "prr timer set to " << prr_timer << " secs";
     }
 
-    boost::optional<uint32_t> handshakeOpt = properties.get_optional<uint32_t>(OPFLEX_HANDSHAKE);
+    optional<uint32_t> handshakeOpt = properties.get_optional<uint32_t>(OPFLEX_HANDSHAKE);
     if (handshakeOpt) {
         peerHandshakeTimeout = handshakeOpt.get();
         LOG(INFO) << "peer handshake timeout set to " << peerHandshakeTimeout << " ms";
@@ -562,14 +538,12 @@ void Agent::start() {
     mutator.commit();
 
     // instantiate other components
-#ifdef HAVE_PROMETHEUS_SUPPORT
     if (prometheusEnabled) {
         prometheusManager.start(prometheusExposeLocalHostOnly,
                           prometheusExposeEpSvcNan);
     } else {
         LOG(DEBUG) << "prometheus not enabled";
     }
-#endif
     policyManager.start();
     endpointManager.start();
     notifServer.start();
@@ -703,10 +677,8 @@ void Agent::stop() {
     netflowManager.stop();
     qosManager.stop();
     sysStatsManager.stop();
-#ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.stop();
     LOG(DEBUG) << "Prometheus Manager stopped";
-#endif
 
     if (io_work) {
         io_work.reset();

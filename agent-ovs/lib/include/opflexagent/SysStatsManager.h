@@ -20,9 +20,7 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 namespace opflexagent {
 
@@ -71,12 +69,10 @@ private:
      */
     Agent* agent;
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     /**
      * The prometheus manager that exports stats to prometheus server
      */
     AgentPrometheusManager& prometheusManager;
-#endif
 
     /**
      * mutex for timer

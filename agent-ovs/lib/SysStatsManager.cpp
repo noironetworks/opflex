@@ -23,9 +23,7 @@ using namespace modelgbp::observer;
 
 SysStatsManager::SysStatsManager (Agent* agent_) :
                                   agent(agent_),
-#ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager(agent->getPrometheusManager()),
-#endif
                                   stopping(true) {
 }
 
@@ -113,9 +111,7 @@ void SysStatsManager::updateOpflexPeerStats()
                     .setStateReportResps(peerStat.second->getStateReportResps())
                     .setStateReportErrs(peerStat.second->getStateReportErrs())
                     .setPolUnresolvedCount(peerStat.second->getPolUnresolvedCount());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.addNUpdateOFPeerStats(peerStat.first, peerStat.second);
-#endif
         }
         // Remove mos for deleted connections
         std::vector<std::shared_ptr<modelgbp::observer::OpflexAgentCounter> > out;
@@ -126,9 +122,7 @@ void SysStatsManager::updateOpflexPeerStats()
             if (peer) {
                 if (stats.find(peer.get()) == stats.end()) {
                     peerCounter->remove();
-#ifdef HAVE_PROMETHEUS_SUPPORT
                     prometheusManager.removeOFPeerStats(peer.get());
-#endif
                 }
             }
         }
@@ -153,9 +147,7 @@ void SysStatsManager::updateMoDBCounts()
                  .setService(agent->getServiceManager().getServiceCount())
                  .setContract(agent->getPolicyManager().getContractCount())
                  .setSg(agent->getPolicyManager().getSecGrpCount());
-#ifdef HAVE_PROMETHEUS_SUPPORT
         prometheusManager.addNUpdateMoDBCounts(pMoDBCounts);
-#endif
     }
     mutator.commit();
 }

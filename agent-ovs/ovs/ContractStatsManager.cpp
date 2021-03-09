@@ -121,7 +121,7 @@ void ContractStatsManager::handleDropStats(struct ofputil_flow_stats* fentry) {
     uint32_t rdId = (uint32_t)fentry->match.flow.regs[6];
     if (rdId == 0) return;
 
-    boost::optional<std::string> idStr =
+    optional<string> idStr =
         idGen.getStringForId(IntFlowManager::
                              getIdNamespace(RoutingDomain::CLASS_ID),
                              rdId);
@@ -154,19 +154,17 @@ void ContractStatsManager::handleDropStats(struct ofputil_flow_stats* fentry) {
     if (diffCounters.packet_count) {
         updatePolicyStatsDropCounters(idStr.get(),
                                       diffCounters);
-#ifdef HAVE_PROMETHEUS_SUPPORT
         prometheusManager.addNUpdateRDDropCounter(idStr.get(),
                                                   false,
                                                   diffCounters.byte_count.get(),
                                                   diffCounters.packet_count.get());
-#endif
     }
 }
 
 void ContractStatsManager::
-updatePolicyStatsCounters(const std::string& srcEpg,
-                          const std::string& dstEpg,
-                          const std::string& l24Classifier,
+updatePolicyStatsCounters(const string& srcEpg,
+                          const string& dstEpg,
+                          const string& l24Classifier,
                           FlowStats_t& newVals) {
 
     Mutator mutator(agent->getFramework(), "policyelement");
@@ -181,20 +179,18 @@ updatePolicyStatsCounters(const std::string& srcEpg,
             ->setPackets(newVals.packet_count.get())
             .setBytes(newVals.byte_count.get());
         counterObjectKeys_[nextId] = counter_key_t(l24Classifier,srcEpg,dstEpg);
-#ifdef HAVE_PROMETHEUS_SUPPORT
         prometheusManager.addNUpdateContractClassifierCounter(srcEpg,
                                                               dstEpg,
                                                               l24Classifier,
                                                               newVals.byte_count.get(),
                                                               newVals.packet_count.get());
-#endif
     }
     mutator.commit();
 }
 
-void ContractStatsManager::clearCounterObject(const std::string& key,
+void ContractStatsManager::clearCounterObject(const string& key,
                                               uint8_t index) {
-    std::string l24Classifier,srcEpg,dstEpg;
+    string l24Classifier,srcEpg,dstEpg;
     if (!genIdList_.count(key)) return;
     int uid = genIdList_[key]->uidList[index];
     std::tie(l24Classifier,srcEpg,dstEpg) = counterObjectKeys_[uid];
@@ -205,7 +201,7 @@ void ContractStatsManager::clearCounterObject(const std::string& key,
 }
 
 void ContractStatsManager::
-updatePolicyStatsDropCounters(const std::string& rdStr,
+updatePolicyStatsDropCounters(const string& rdStr,
                               PolicyDropCounters_t& newVals) {
     uint64_t nextId = getNextDropGenId();
     Mutator mutator(agent->getFramework(), "policyelement");
@@ -240,13 +236,12 @@ updatePolicyStatsDropCounters(const std::string& rdStr,
 }
 
 void ContractStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
-                                         const opflex::modb::URI& uri) {
+                                         const URI& uri) {
     if (class_id == L24Classifier::CLASS_ID) {
         if (!L24Classifier::resolve(agent->getFramework(),uri)) {
-#ifdef HAVE_PROMETHEUS_SUPPORT
             if (genIdList_.count(uri.toString())) {
                 for (size_t idx = 0; idx < genIdList_[uri.toString()]->uidList.size(); idx++) {
-                    std::string l24Classifier,srcEpg,dstEpg;
+                    string l24Classifier,srcEpg,dstEpg;
                     auto uid = genIdList_[uri.toString()]->uidList[idx];
                     std::tie(l24Classifier,srcEpg,dstEpg) = counterObjectKeys_[uid];
                     // Note: For eeach entry in uidList, the src and dst epg
@@ -259,12 +254,11 @@ void ContractStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
                                                                       l24Classifier);
                 }
             }
-#endif
             removeAllCounterObjects(uri.toString());
         }
     } else if (class_id == EpGroup::CLASS_ID) {
         if (!EpGroup::resolve(agent->getFramework(),uri)) {
-            const std::string& epgName = uri.toString();
+            const string& epgName = uri.toString();
             // iterate trough all keys and objects
             // and check which ones srcEpg or dstEpg is equal to epgName
             Mutator mutator(agent->getFramework(), "policyelement");
@@ -272,16 +266,14 @@ void ContractStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
             for (;it != genIdList_.end();++it) {
                 for (size_t i = 0; i < it->second->uidList.size(); i++) {
                     int uid = it->second->uidList[i];
-                    std::string l24Classifier,srcEpg,dstEpg;
+                    string l24Classifier,srcEpg,dstEpg;
                     std::tie(l24Classifier,srcEpg,dstEpg) =
                         counterObjectKeys_[uid];
                     if (srcEpg == epgName || dstEpg == epgName) {
                         clearCounterObject(it->first,i);
-#ifdef HAVE_PROMETHEUS_SUPPORT
                         prometheusManager.removeContractClassifierCounter(srcEpg,
                                                                           dstEpg,
                                                                           l24Classifier);
-#endif
                     }
                 }
             }
@@ -290,7 +282,7 @@ void ContractStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
     } else if (class_id == RoutingDomain::CLASS_ID) {
         if (!RoutingDomain::resolve(agent->getFramework(),uri)) {
             Mutator mutator(agent->getFramework(), "policyelement");
-            const std::string& rdName = uri.toString();
+            const string& rdName = uri.toString();
             if (!dropCounterList_.count(rdName)) return;
             for (size_t i = 0; i < dropCounterList_[rdName]->uidList.size();
                  i++) {

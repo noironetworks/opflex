@@ -40,10 +40,8 @@ public:
     Endpoint() : promiscuousMode(false), discoveryProxyMode(false), natMode(false),
                  external(false), aapModeAA(false), disableAdv(false),
                  accessAllowUntagged(false), extEncap(0) {
-#ifdef HAVE_PROMETHEUS_SUPPORT
         annotateEpName = false;
         attr_hash = 0;
-#endif
     }
 
     /**
@@ -57,10 +55,8 @@ public:
         : uuid(uuid_), promiscuousMode(false), discoveryProxyMode(false), natMode(false),
           external(false), aapModeAA(false), disableAdv(false),
           accessAllowUntagged(false), extEncap(0) {
-#ifdef HAVE_PROMETHEUS_SUPPORT
         annotateEpName = false;
         attr_hash = 0;
-#endif
     }
 
     /**
@@ -549,7 +545,6 @@ public:
      */
     typedef std::unordered_map<std::string, std::string> attr_map_t;
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     /**
       * Add EP name as annotation to avoid dup metric
       * issues in Openshift on openstack use case
@@ -579,7 +574,6 @@ public:
     const size_t& getAttributeHash () const {
         return attr_hash;
     }
-#endif
 
     /**
      * Get a reference to a map of name/value attributes
@@ -1351,7 +1345,6 @@ private:
     bool disableAdv;
     bool accessAllowUntagged;
     attr_map_t attributes;
-#ifdef HAVE_PROMETHEUS_SUPPORT
     bool annotateEpName;
     /**
      * Hash of all the ep attributes. Will be used to detect any
@@ -1359,7 +1352,6 @@ private:
      * manager.
      */
     size_t    attr_hash;
-#endif
     boost::optional<DHCPv4Config> dhcpv4Config;
     boost::optional<DHCPv6Config> dhcpv6Config;
     ipam_set ipAddressMappings;

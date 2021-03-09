@@ -29,19 +29,12 @@ using std::unique_lock;
 using std::mutex;
 using boost::optional;
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 ServiceManager::ServiceManager (Agent& agent_,
                                 opflex::ofcore::OFFramework& framework_,
                                 AgentPrometheusManager& prometheusManager_)
     : agent(agent_), framework(framework_),
       prometheusManager(prometheusManager_) {
 }
-#else
-ServiceManager::ServiceManager (Agent& agent_,
-                                opflex::ofcore::OFFramework& framework_)
-    : agent(agent_), framework(framework_) {
-}
-#endif
 
 void ServiceManager::registerListener(ServiceListener* listener) {
     unique_lock<mutex> guard(listener_mutex);
@@ -53,7 +46,7 @@ void ServiceManager::unregisterListener(ServiceListener* listener) {
     serviceListeners.remove(listener);
 }
 
-void ServiceManager::notifyListeners(const std::string& uuid) {
+void ServiceManager::notifyListeners(const string& uuid) {
     unique_lock<mutex> guard(listener_mutex);
     for (ServiceListener* listener : serviceListeners) {
         listener->serviceUpdated(uuid);
@@ -71,13 +64,12 @@ ServiceManager::getService(const string& uuid) {
 
 void ServiceManager::removeIfaces(const Service& service) {
     if (service.getInterfaceName()) {
-        string_serv_map_t::iterator it =
-            iface_aserv_map.find(service.getInterfaceName().get());
+        auto it = iface_aserv_map.find(service.getInterfaceName().get());
         if (it != iface_aserv_map.end()) {
-            unordered_set<std::string>& servs = it->second;
+            unordered_set<string>& servs = it->second;
             servs.erase(service.getUUID());
 
-            if (servs.size() == 0) {
+            if (servs.empty()) {
                 iface_aserv_map.erase(it);
             }
         }
@@ -86,13 +78,12 @@ void ServiceManager::removeIfaces(const Service& service) {
 
 void ServiceManager::removeDomains(const Service& service) {
     if (service.getDomainURI()) {
-        uri_serv_map_t::iterator it =
-            domain_aserv_map.find(service.getDomainURI().get());
+        auto it = domain_aserv_map.find(service.getDomainURI().get());
         if (it != domain_aserv_map.end()) {
-            unordered_set<std::string>& servs = it->second;
+            unordered_set<string>& servs = it->second;
             servs.erase(service.getUUID());
 
-            if (servs.size() == 0) {
+            if (servs.empty()) {
                 domain_aserv_map.erase(it);
             }
         }
@@ -127,7 +118,6 @@ void ServiceManager::clearSvcCounterStats (const Service& service,
          .setNodePortRxbytes(sNodePortRxByteCount - stNodePortRxByteCount)
          .setNodePortTxpackets(sNodePortTxPktCount - stNodePortTxPktCount)
          .setNodePortTxbytes(sNodePortTxByteCount - stNodePortTxByteCount);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.addNUpdateSvcCounter(service.getUUID(),
                                    pSvc->getRxbytes(0),
                                    pSvc->getRxpackets(0),
@@ -142,7 +132,6 @@ void ServiceManager::clearSvcCounterStats (const Service& service,
                                        pSvc->getNodePortTxpackets(0),
                                        attr_map_t(), true);
     }
-#endif
 }
 
 /* Populate MODB with service target observer */
@@ -170,7 +159,6 @@ ServiceManager::updateSvcTargetObserverMoDB (const opflexagent::Service& service
                 shared_ptr<SvcTargetCounter> pSvcTarget = nullptr;
                 if (!opSvcTarget) {
                     pSvcTarget = pSvcCounter->addGbpeSvcTargetCounter(ip);
-#ifdef HAVE_PROMETHEUS_SUPPORT
                     // Keeping prom and modb in sync. Create the metric with IP annotation.
                     // depending on EP being local, intflowmanager will update the
                     // metric with more annotations. If EP IP is deleted or becomes external,
@@ -190,10 +178,8 @@ ServiceManager::updateSvcTargetObserverMoDB (const opflexagent::Service& service
                                                              attr_map_t(),
                                                              true, true, true);
                     }
-#endif
                 } else {
                     pSvcTarget = opSvcTarget.get();
-#ifdef HAVE_PROMETHEUS_SUPPORT
                     // If service attributes are changing, and if flows are created for this
                     // svc-tgt, then IntFlowManager will take care of annotation updates. But
                     // if flows dont get created, following will update the right annotations.
@@ -221,7 +207,6 @@ ServiceManager::updateSvcTargetObserverMoDB (const opflexagent::Service& service
                     } else {
                         prometheusManager.removeSvcTargetCounter("nodeport-"+service.getUUID(), ip);
                     }
-#endif
                 }
                 for (size_t idx=0; idx < out.size(); idx++) {
                     if (out[idx]->getIp("") == ip)
@@ -230,11 +215,9 @@ ServiceManager::updateSvcTargetObserverMoDB (const opflexagent::Service& service
             } else {
                 if (opSvcTarget) {
                     clearSvcCounterStats(service, pSvcCounter, opSvcTarget.get());
-#ifdef HAVE_PROMETHEUS_SUPPORT
                     prometheusManager.removeSvcTargetCounter(service.getUUID(), ip);
                     if (!service.isExternal() && service.isNodePort())
                         prometheusManager.removeSvcTargetCounter("nodeport-"+service.getUUID(), ip);
-#endif
                     opSvcTarget.get()->remove();
                 }
             }
@@ -244,14 +227,12 @@ ServiceManager::updateSvcTargetObserverMoDB (const opflexagent::Service& service
     // Remove deleted service targets
     for (auto& pSvcTarget : out) {
         clearSvcCounterStats(service, pSvcCounter, pSvcTarget);
-#ifdef HAVE_PROMETHEUS_SUPPORT
         auto nhip = pSvcTarget->getIp();
         if (nhip) {
             prometheusManager.removeSvcTargetCounter(service.getUUID(), nhip.get());
             if (!service.isExternal() && service.isNodePort())
                 prometheusManager.removeSvcTargetCounter("nodeport-"+service.getUUID(), nhip.get());
         }
-#endif
         pSvcTarget->remove();
     }
 }
@@ -290,9 +271,7 @@ ServiceManager::updateSvcObserverMoDB (const opflexagent::Service& service, bool
             pService = opService.get();
         else {
             pService = ssu.get()->addGbpeSvcCounter(service.getUUID());
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.incSvcCounter();
-#endif
         }
 
         const Service::attr_map_t& svcAttr = service.getAttributes();
@@ -316,7 +295,6 @@ ServiceManager::updateSvcObserverMoDB (const opflexagent::Service& service, bool
         } else
             pService->unsetScope();
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
         prometheusManager.addNUpdateSvcCounter(service.getUUID(),
                                                pService->getRxbytes(0),
                                                pService->getRxpackets(0),
@@ -337,17 +315,14 @@ ServiceManager::updateSvcObserverMoDB (const opflexagent::Service& service, bool
             // This is not expected to happen, but keeping the agent generic.
             prometheusManager.removeSvcCounter("nodeport-"+service.getUUID());
         }
-#endif
     } else {
         if (opService) {
             updateSvcTargetObserverMoDB(service, false, opService.get());
             opService.get()->remove();
-#ifdef HAVE_PROMETHEUS_SUPPORT
             prometheusManager.decSvcCounter();
             prometheusManager.removeSvcCounter(service.getUUID());
             if (!service.isExternal() && service.isNodePort())
                 prometheusManager.removeSvcCounter("nodeport-"+service.getUUID());
-#endif
         }
     }
 
@@ -528,9 +503,9 @@ void ServiceManager::updateService(const Service& service) {
     notifyListeners(uuid);
 }
 
-void ServiceManager::removeService(const std::string& uuid) {
+void ServiceManager::removeService(const string& uuid) {
     unique_lock<mutex> guard(serv_mutex);
-    aserv_map_t::iterator it = aserv_map.find(uuid);
+    auto it = aserv_map.find(uuid);
     if (it != aserv_map.end()) {
         // update interface name to service mapping
         ServiceState& as = it->second;
@@ -546,7 +521,7 @@ void ServiceManager::removeService(const std::string& uuid) {
     notifyListeners(uuid);
 }
 
-void ServiceManager::getServicesByIface(const std::string& ifaceName,
+void ServiceManager::getServicesByIface(const string& ifaceName,
                                         /*out*/ unordered_set<string>& servs) {
     unique_lock<mutex> guard(serv_mutex);
     string_serv_map_t::const_iterator it = iface_aserv_map.find(ifaceName);
@@ -571,9 +546,7 @@ static void getSvcs(const M& map, /* out */ unordered_set<string>& svcs) {
     }
 }
 
-void ServiceManager::getServiceUUIDs ( /* out */
-                        std::unordered_set<std::string> &svcs)
-{
+void ServiceManager::getServiceUUIDs (unordered_set<string> &svcs) {
     unique_lock<mutex> guard(serv_mutex);
     getSvcs(aserv_map, svcs);
 }

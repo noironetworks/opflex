@@ -24,9 +24,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 namespace opflexagent {
 
@@ -57,7 +55,6 @@ public:
     void checkServiceState(bool isAdd);
     void createServices(bool isLB, bool isNodePort=false, bool isExternal=false);
     Service as;
-#ifdef HAVE_PROMETHEUS_SUPPORT
     void checkServicePromMetrics(bool isAdd, bool isExternal, bool isUpdate);
     void checkServiceTargetPromMetrics(bool isAdd, const string& ip, bool isExternal, bool isUpdate);
     void checkServiceExists(bool isAdd, bool isExternal=false, bool isUpdate=false);
@@ -69,9 +66,7 @@ public:
      * fails to port 1080 :(
      */
     const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9612/metrics 2>&1;";
-#else
-    void checkServiceExists(bool isAdd);
-#endif
+
 private:
     Service::ServiceMapping sm1;
     Service::ServiceMapping sm2;
@@ -301,7 +296,6 @@ void ServiceManagerFixture::checkServiceState (bool isCreate)
     }
 }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 // Check prom dyn gauge service metrics
 void ServiceManagerFixture::checkServicePromMetrics (bool isAdd, bool isExternal, bool isUpdate)
 {
@@ -405,15 +399,9 @@ void ServiceManagerFixture::checkServiceTargetPromMetrics (bool isAdd,
         BaseFixture::expPosition(isAdd, pos);
     }
 }
-#endif
 
 // Check service presence during create vs delete
-#ifdef HAVE_PROMETHEUS_SUPPORT
-void ServiceManagerFixture::checkServiceExists (bool isAdd, bool isExternal, bool isUpdate)
-#else
-void ServiceManagerFixture::checkServiceExists (bool isAdd)
-#endif
-{
+void ServiceManagerFixture::checkServiceExists (bool isAdd, bool isExternal, bool isUpdate) {
     optional<shared_ptr<ServiceUniverse> > su =
         ServiceUniverse::resolve(agent.getFramework());
     BOOST_CHECK(su);
@@ -431,28 +419,22 @@ void ServiceManagerFixture::checkServiceExists (bool isAdd)
             optional<shared_ptr<SvcCounter> > opSvcCounter =
                                 ssu.get()->resolveGbpeSvcCounter(as.getUUID());
             BOOST_CHECK(opSvcCounter);
-#ifdef HAVE_PROMETHEUS_SUPPORT
             checkServicePromMetrics(isAdd, isExternal, isUpdate);
-#endif
             for (const auto& sm : as.getServiceMappings()) {
                 for (const auto& ip : sm.getNextHopIPs()) {
                     WAIT_FOR_DO_ONFAIL(opSvcCounter.get()->resolveGbpeSvcTargetCounter(ip),
                                        500,,
                                        LOG(ERROR) << "SvcTargetCounter obs Obj not resolved";);
-#ifdef HAVE_PROMETHEUS_SUPPORT
                     checkServiceTargetPromMetrics(isAdd, ip, isExternal, isUpdate);
-#endif
                 }
             }
         } else {
             BOOST_CHECK(!ssu.get()->resolveGbpeSvcCounter(as.getUUID()));
-#ifdef HAVE_PROMETHEUS_SUPPORT
             checkServicePromMetrics(false, isExternal, isUpdate);
             checkServiceTargetPromMetrics(false, "10.20.44.2", isExternal, isUpdate);
             checkServiceTargetPromMetrics(false, "169.254.169.2", isExternal, isUpdate);
             checkServiceTargetPromMetrics(false, "2001:db8::2", isExternal, isUpdate);
             checkServiceTargetPromMetrics(false, "fe80::a9:fe:a9:2", isExternal, isUpdate);
-#endif
         }
     } else {
         WAIT_FOR_DO_ONFAIL(!su.get()->resolveSvcService(as.getUUID()),
@@ -461,13 +443,11 @@ void ServiceManagerFixture::checkServiceExists (bool isAdd)
         WAIT_FOR_DO_ONFAIL(!ssu.get()->resolveGbpeSvcCounter(as.getUUID()),
                            500,,
                            LOG(ERROR) << "Service obs Obj still present";);
-#ifdef HAVE_PROMETHEUS_SUPPORT
         checkServicePromMetrics(isAdd, isExternal, isUpdate);
         checkServiceTargetPromMetrics(isAdd, "10.20.44.2", isExternal, isUpdate);
         checkServiceTargetPromMetrics(isAdd, "169.254.169.2", isExternal, isUpdate);
         checkServiceTargetPromMetrics(isAdd, "2001:db8::2", isExternal, isUpdate);
         checkServiceTargetPromMetrics(isAdd, "fe80::a9:fe:a9:2", isExternal, isUpdate);
-#endif
     }
 }
 
@@ -480,14 +460,12 @@ BOOST_FIXTURE_TEST_CASE(testCreateAnycast, ServiceManagerFixture) {
     LOG(DEBUG) << "#### SERVICE CREATE END ####";
     checkServiceExists(true);
     checkServiceState(true);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output.find("opflex_svc_created_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE CREATE CHECK END ############";
 }
 
@@ -498,14 +476,12 @@ BOOST_FIXTURE_TEST_CASE(testCreateLB, ServiceManagerFixture) {
     LOG(DEBUG) << "#### SERVICE CREATE END ####";
     checkServiceExists(true);
     checkServiceState(true);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output.find("opflex_svc_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE CREATE CHECK END ############";
 }
 
@@ -516,14 +492,12 @@ BOOST_FIXTURE_TEST_CASE(testCreateLBNodePort, ServiceManagerFixture) {
     LOG(DEBUG) << "#### SERVICE CREATE END ####";
     checkServiceExists(true);
     checkServiceState(true);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output.find("opflex_svc_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE CREATE CHECK END ############";
 }
 
@@ -537,21 +511,16 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     // update to anycast
     updateServices(false);
     checkServiceState(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output1.find("opflex_svc_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // update to lb
     updateServices(true);
     checkServiceState(false);
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(true);
-#else
     checkServiceExists(true, false, true);
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
@@ -559,14 +528,10 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // update to lb+nodeport
     updateServices(true, true);
     checkServiceState(false);
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(true);
-#else
     checkServiceExists(true, false, true);
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
@@ -574,15 +539,11 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE UPDATE END ############";
 
     // update to lb without nodeport
     updateServices(true);
     checkServiceState(false);
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(true);
-#else
     checkServiceExists(true, false, true);
     const string& output4 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
@@ -590,7 +551,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdate, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output4.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE UPDATE END ############";
 }
 
@@ -602,34 +562,28 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLBNodePort, ServiceManagerFixture) {
     checkServiceExists(true);
     removeServiceObjects();
     checkServiceExists(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output1.find("opflex_svc_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     createServices(true, true);
     checkServiceExists(true);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = output2.find("opflex_svc_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     removeServiceObjects();
     checkServiceExists(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
     pos = output3.find("opflex_svc_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE DELETE END ############";
 }
 
@@ -641,34 +595,28 @@ BOOST_FIXTURE_TEST_CASE(testDeleteLB, ServiceManagerFixture) {
     checkServiceExists(true);
     removeServiceObjects();
     checkServiceExists(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output1.find("opflex_svc_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     createServices(true);
     checkServiceExists(true);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = output2.find("opflex_svc_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     removeServiceObjects();
     checkServiceExists(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
     pos = output3.find("opflex_svc_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE DELETE END ############";
 }
 
@@ -680,14 +628,12 @@ BOOST_FIXTURE_TEST_CASE(testDeleteAnycast, ServiceManagerFixture) {
     checkServiceExists(true);
     removeServiceObjects();
     checkServiceExists(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output1.find("opflex_svc_created_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE DELETE END ############";
 }
 
@@ -697,9 +643,6 @@ BOOST_FIXTURE_TEST_CASE(testCreateExternalLB, ServiceManagerFixture) {
     LOG(DEBUG) << "#### SERVICE EXT CREATE END ####";
     LOG(DEBUG) << "############# SERVICE EXT CREATE CHECK START ############";
     checkServiceState(true);
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(true);
-#else
     checkServiceExists(true, true);
     const string& output = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -707,7 +650,6 @@ BOOST_FIXTURE_TEST_CASE(testCreateExternalLB, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output.find("opflex_svc_removed_total 0");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE EXT CREATE CHECK END ############";
 }
 
@@ -716,30 +658,21 @@ BOOST_FIXTURE_TEST_CASE(testUpdateExtLB, ServiceManagerFixture) {
     createServices(true, true, true);
     LOG(DEBUG) << "#### SERVICE EXT CREATE END ####";
     LOG(DEBUG) << "############# SERVICE EXT UPDATE START ############";
-#ifdef HAVE_PROMETHEUS_SUPPORT
     checkServiceExists(true, true);
-#else
-    checkServiceExists(true);
-#endif
 
     // update to anycast
     updateServices(false, true, true);
     checkServiceState(false);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
     pos = output1.find("opflex_svc_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // update to lb
     updateServices(true, true, true);
     checkServiceState(false);
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(true);
-#else
     checkServiceExists(true, true, true);
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = std::string::npos;
@@ -747,7 +680,6 @@ BOOST_FIXTURE_TEST_CASE(testUpdateExtLB, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE EXT UPDATE END ############";
 }
 
@@ -756,15 +688,8 @@ BOOST_FIXTURE_TEST_CASE(testDeleteExtLB, ServiceManagerFixture) {
     createServices(true, true, true);
     LOG(DEBUG) << "#### SERVICE EXT CREATE END ####";
     LOG(DEBUG) << "############# SERVICE EXT DELETE START ############";
-#ifdef HAVE_PROMETHEUS_SUPPORT
     checkServiceExists(true, true);
-#else
-    checkServiceExists(true);
-#endif
     removeServiceObjects();
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(false);
-#else
     checkServiceExists(false, true);
     const string& output1 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -772,31 +697,22 @@ BOOST_FIXTURE_TEST_CASE(testDeleteExtLB, ServiceManagerFixture) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     createServices(true, true, true);
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(true);
-#else
     checkServiceExists(true, true);
     const string& output2 = BaseFixture::getOutputFromCommand(cmd);
     pos = output2.find("opflex_svc_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_svc_removed_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     removeServiceObjects();
-#ifndef HAVE_PROMETHEUS_SUPPORT
-    checkServiceExists(false);
-#else
     checkServiceExists(false, true);
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
     pos = output3.find("opflex_svc_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output3.find("opflex_svc_removed_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
     LOG(DEBUG) << "############# SERVICE EXT DELETE END ############";
 }
 

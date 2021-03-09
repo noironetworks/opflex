@@ -29,9 +29,7 @@
 #include <opflexagent/QosManager.h>
 #include <opflexagent/SysStatsManager.h>
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/optional.hpp>
@@ -135,12 +133,10 @@ public:
      */
     SpanManager& getSpanManager() { return spanManager; }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     /**
      * Get the prometheus manager object for this agent
      */
     AgentPrometheusManager& getPrometheusManager() { return prometheusManager; }
-#endif
 
     /**
      *  Get the netflow manager object for this agent
@@ -278,7 +274,6 @@ public:
      */
     void clearFeatureFlags();
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     /**
      * get allowed ep attributes specified in agent config file
      * @return true if feature is enabled, false otherwise.
@@ -287,7 +282,7 @@ public:
     {
         return prometheusEpAttributes;
     }
-#endif
+
     /**
      * Get packet event notification socket file name
      */
@@ -304,9 +299,7 @@ private:
     std::unique_ptr<boost::asio::io_service::work> io_work;
 
     opflex::ofcore::OFFramework& framework;
-#ifdef HAVE_PROMETHEUS_SUPPORT
     AgentPrometheusManager prometheusManager;
-#endif
     PolicyManager policyManager;
     EndpointManager endpointManager;
     ServiceManager serviceManager;
@@ -394,13 +387,11 @@ private:
     // feature flag array
     bool featureFlag[FeatureList::MAX];
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     // Prometheus related parameters
     bool prometheusEnabled;
     bool prometheusExposeLocalHostOnly;
     bool prometheusExposeEpSvcNan;
     std::unordered_set<std::string> prometheusEpAttributes;
-#endif
     bool behaviorL34FlowsWithoutSubnet;
     LogParams logParams;
 };

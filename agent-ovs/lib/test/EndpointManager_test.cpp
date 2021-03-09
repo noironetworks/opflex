@@ -25,9 +25,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 namespace opflexagent {
 
@@ -702,7 +700,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_2), 500);
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9612/metrics 2>&1;";
     const string& output0 = BaseFixture::getOutputFromCommand(cmd);
     size_t pos = std::string::npos;
@@ -732,7 +729,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output1.find("opflex_endpoint_tx_packets{if=\"veth0-acc\",name=\"veth0-acc\"} 100");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // Check updates to existing file: attr delete, sec grp delete, IP delete
     fs::ofstream os2(path1);
@@ -777,7 +773,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(!hasPolicyEntry<SecurityGroupContext>(framework, l32sgc_2), 500);
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
     WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_2), 500);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     counters.txPackets = 200;
     counters.rxPackets = 200;
     counters.txBytes = 12800;
@@ -797,7 +792,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output2.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 200");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // check for overwriting existing file with new ep
     fs::ofstream os3(path1);
@@ -849,7 +843,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
 
     WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr3, uuid3), 500);
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output3 = BaseFixture::getOutputFromCommand(cmd);
     pos = output3.find("opflex_endpoint_created_total 1");
     BOOST_CHECK_NE(pos, std::string::npos);
@@ -875,7 +868,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output4.find("opflex_endpoint_tx_packets{name=\"acc-veth0\"} 300");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // check for a new EP added to watch directory
     URI l2epr2 = URIBuilder()
@@ -909,7 +901,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(hasEPREntry<L2Ep>(framework, l2epr2), 500);
     WAIT_FOR(hasPolicyEntry<LocalL3Ep>(framework, l3epdr_3), 500);
     WAIT_FOR(hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output5 = BaseFixture::getOutputFromCommand(cmd);
     pos = output5.find("opflex_endpoint_created_total 2");
     BOOST_CHECK_NE(pos, std::string::npos);
@@ -944,7 +935,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_NE(pos, std::string::npos);
     pos = output6.find("opflex_endpoint_tx_packets{name=\"acc-veth1\"} 400");
     BOOST_CHECK_NE(pos, std::string::npos);
-#endif
 
     // check for removing an endpoint
     fs::remove(path2);
@@ -952,7 +942,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     WAIT_FOR(!hasEPREntry<L2Ep>(framework, l2epr2), 500);
     WAIT_FOR(!hasPolicyEntry<LocalL3Ep>(framework, l3epdr_3), 500);
     WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output7 = BaseFixture::getOutputFromCommand(cmd);
     pos = output7.find("opflex_endpoint_created_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
@@ -986,14 +975,12 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_EQUAL(pos, std::string::npos);
     pos = output8.find("opflex_endpoint_tx_packets{name=\"acc-veth1\"}");
     BOOST_CHECK_EQUAL(pos, std::string::npos);
-#endif
 
     // check for removing an endpoint
     fs::remove(path1);
     WAIT_FOR(!hasPolicyEntry<LocalL3Ep>(framework, l3epdr_4), 500);
     WAIT_FOR(!hasEPREntry<L2Ep>(framework, l2epr3, uuid3), 500);
     WAIT_FOR(!hasPolicyEntry<ReportedEpAttribute>(framework, epattr_1), 500);
-#ifdef HAVE_PROMETHEUS_SUPPORT
     const string& output9 = BaseFixture::getOutputFromCommand(cmd);
     pos = output9.find("opflex_endpoint_created_total 3");
     BOOST_CHECK_NE(pos, std::string::npos);
@@ -1015,7 +1002,6 @@ BOOST_FIXTURE_TEST_CASE( fssource, FSEndpointFixture ) {
     BOOST_CHECK_EQUAL(pos, std::string::npos);
     pos = output9.find("opflex_endpoint_tx_packets{name=\"acc-veth1\"}");
     BOOST_CHECK_EQUAL(pos, std::string::npos);
-#endif
 
     watcher.stop();
 }

@@ -17,7 +17,6 @@
 #include <opflexagent/logging.h>
 #include <opflexagent/test/ModbFixture.h>
 #include "ovs-ofputil.h"
-#include <lib/util.h>
 #include "IntFlowManager.h"
 #include "ServiceStatsManager.h"
 #include "TableState.h"
@@ -123,10 +122,8 @@ public:
     void testFlowAge(PolicyStatsManager *statsManager,
                      bool isOld, bool isFlowStateReAdd);
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     void checkSvcTgtPromMetrics(uint64_t pkts, uint64_t bytes, const string& ip, bool isNodePort=false);
     void checkPodSvcPromMetrics(uint64_t pkts, uint64_t bytes);
-#endif
 private:
     Service as;
     Service::ServiceMapping sm1;
@@ -864,7 +861,6 @@ ServiceStatsManagerFixture::testFlowRemovedPodSvc (MockConnection& portConn,
     checkPodSvcObjectStats(epToSvcUuid, svcToEpUuid, expPkts, expBytes);
 }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 // Check prom dyn gauge service metrics along with stats
 void ServiceStatsManagerFixture::checkSvcTgtPromMetrics (uint64_t pkts,
                                                          uint64_t bytes,
@@ -966,7 +962,6 @@ void ServiceStatsManagerFixture::checkPodSvcPromMetrics (uint64_t pkts,
         BOOST_CHECK_NE(pos4, std::string::npos);
     }
 }
-#endif
 
 void
 ServiceStatsManagerFixture::checkNodeSvcTgtObjectStats (const std::string& svcUuid,
@@ -1055,9 +1050,7 @@ ServiceStatsManagerFixture::checkNodeSvcTgtObjectStats (const std::string& svcUu
                    BOOST_CHECK_EQUAL(opSvcTgtCntr.get()->getNodePortTxbytes().get(), byte_count);
                });
         }
-#ifdef HAVE_PROMETHEUS_SUPPORT
         checkSvcTgtPromMetrics(packet_count, byte_count, nhip, true);
-#endif
     }
 }
 
@@ -1148,9 +1141,7 @@ ServiceStatsManagerFixture::checkAnySvcTgtObjectStats (const std::string& svcUui
                    BOOST_CHECK_EQUAL(opSvcTgtCntr.get()->getTxbytes().get(), byte_count);
                });
         }
-#ifdef HAVE_PROMETHEUS_SUPPORT
         checkSvcTgtPromMetrics(packet_count, byte_count, nhip);
-#endif
     }
 }
 
@@ -1216,9 +1207,7 @@ ServiceStatsManagerFixture::checkPodSvcObjectStats (const std::string& epToSvcUu
     } else {
         LOG(ERROR) << "SvcToEpCounter obj not present";
     }
-#ifdef HAVE_PROMETHEUS_SUPPORT
     checkPodSvcPromMetrics(packet_count, byte_count);
-#endif
 }
 
 void ServiceStatsManagerFixture::checkSvcTgtObsObj (bool add)

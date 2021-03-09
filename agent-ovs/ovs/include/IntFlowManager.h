@@ -22,9 +22,7 @@
 #include <opflexagent/TunnelEpManager.h>
 #include <opflexagent/RDConfig.h>
 #include <opflexagent/TaskQueue.h>
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 #include "SwitchStateHandler.h"
 
 #include <opflex/ofcore/PeerStatusListener.h>
@@ -260,13 +258,6 @@ public:
     bool getServiceStatsFlowDisabled() {
         return serviceStatsFlowDisabled;
     }
-
-    /**
-     * Get the multicast tunnel destination
-     * @return the tunnel destination
-     */
-    boost::asio::ip::address& getMcastTunDst()
-    { return mcastTunDst ? mcastTunDst.get() : tunnelDst; }
 
     /**
      * Get the router MAC address as an array of 6 bytes
@@ -883,24 +874,19 @@ private:
     IdGenerator& idGen;
     CtZoneManager& ctZoneManager;
     TunnelEpManager& tunnelEpManager;
-#ifdef HAVE_PROMETHEUS_SUPPORT
     AgentPrometheusManager& prometheusManager;
-#endif
     TaskQueue taskQueue;
 
     EncapType encapType;
     std::string encapIface, uplinkIface;
     FloodScope floodScope;
     boost::asio::ip::address tunnelDst;
-    std::string tunnelPortStr;
-    boost::optional<boost::asio::ip::address> mcastTunDst;
     bool virtualRouterEnabled;
     uint8_t routerMac[6];
     bool routerAdv;
     bool virtualDHCPEnabled;
     bool conntrackEnabled;
     uint8_t dhcpMac[6];
-    std::string flowIdCache;
     std::string mcastGroupFile;
     std::string dropLogIface;
     boost::asio::ip::address dropLogDst;

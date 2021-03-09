@@ -78,16 +78,13 @@ public:
     virtual ~SecGrpStatsManagerFixture() {
         stop();
     }
-#ifdef HAVE_PROMETHEUS_SUPPORT
     virtual void verifyPromMetrics(shared_ptr<L24Classifier> classifier,
                             uint32_t pkts,
                             uint32_t bytes,
                             bool isTx=false) override;
-#endif
     MockSecGrpStatsManager secGrpStatsManager;
 };
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 void SecGrpStatsManagerFixture::
 verifyPromMetrics (shared_ptr<L24Classifier> classifier,
                    uint32_t pkts,
@@ -150,7 +147,6 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
         BOOST_CHECK_NE(pos, std::string::npos);
     }
 }
-#endif
 
 BOOST_AUTO_TEST_SUITE(SecGrpStatsManager_test)
 

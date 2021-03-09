@@ -8,7 +8,6 @@
 
 #include <string>
 #include <cstring>
-#include <sstream>
 #include <sys/resource.h>
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -61,7 +60,6 @@ using std::ostringstream;
 using std::shared_ptr;
 using std::unordered_set;
 using std::unordered_map;
-using std::pair;
 using boost::optional;
 using boost::uuids::to_string;
 using boost::uuids::basic_random_generator;
@@ -138,13 +136,11 @@ IntFlowManager::IntFlowManager(Agent& agent_,
                                TunnelEpManager& tunnelEpManager_) :
     agent(agent_), switchManager(switchManager_), idGen(idGen_),
     ctZoneManager(ctZoneManager_), tunnelEpManager(tunnelEpManager_),
-#ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager(agent.getPrometheusManager()),
-#endif
     taskQueue(agent.getAgentIOService()), encapType(ENCAP_NONE),
-    floodScope(FLOOD_DOMAIN), tunnelPortStr("4789"),
-    virtualRouterEnabled(false), routerAdv(false),
-    virtualDHCPEnabled(false), conntrackEnabled(false), dropLogRemotePort(0),
+    floodScope(FLOOD_DOMAIN), virtualRouterEnabled(false),
+    routerMac{}, routerAdv(false), virtualDHCPEnabled(false),
+    conntrackEnabled(false), dhcpMac{}, dropLogRemotePort(0),
     serviceStatsFlowDisabled(false),
     advertManager(agent, *this), isSyncing(false), stopping(false),
     svcStatsTaskQueue(svcStatsIOService) {
@@ -153,9 +149,6 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     SwitchManager::TableDescriptionMap fwdTblDescr;
     populateTableDescriptionMap(fwdTblDescr);
     switchManager.setForwardingTableList(fwdTblDescr);
-
-    memset(routerMac, 0, sizeof(routerMac));
-    memset(dhcpMac, 0, sizeof(dhcpMac));
     tunnelDst = address::from_string("127.0.0.1");
 
     agent.getFramework().registerPeerStatusListener(this);
@@ -287,10 +280,6 @@ void IntFlowManager::setTunnel(const string& tunnelRemoteIp,
     } else {
         tunnelDst = tunDst;
     }
-
-    ostringstream ss;
-    ss << tunnelRemotePort;
-    tunnelPortStr = ss.str();
 }
 
 void IntFlowManager::setDropLog(const string& dropLogPort, const string& dropLogRemoteIp,
@@ -343,7 +332,7 @@ void IntFlowManager::setEndpointAdv(AdvertManager::EndpointAdvMode mode,
     advertManager.enableTunnelEndpointAdv(tunnelMode, tunnelAdvIntvl);
 }
 
-void IntFlowManager::setMulticastGroupFile(const std::string& mcastGroupFile) {
+void IntFlowManager::setMulticastGroupFile(const string& mcastGroupFile) {
     this->mcastGroupFile = mcastGroupFile;
 }
 
@@ -371,7 +360,7 @@ address IntFlowManager::getEPGTunnelDst(const URI& epgURI) {
         return getTunnelDst();
 }
 
-void IntFlowManager::endpointUpdated(const std::string& uuid) {
+void IntFlowManager::endpointUpdated(const string& uuid) {
     if (stopping) return;
 
     if(tunnelEpManager.isTunnelEp(uuid)){
@@ -389,7 +378,7 @@ void IntFlowManager::endpointUpdated(const std::string& uuid) {
     taskQueue.dispatch(uuid, [=]() { handleEndpointUpdate(uuid); });
 }
 
-void IntFlowManager::localExternalDomainUpdated(const opflex::modb::URI& egURI) {
+void IntFlowManager::localExternalDomainUpdated(const URI& egURI) {
     if (stopping) return;
     taskQueue.dispatch(egURI.toString(), [=]() { handleLocalExternalDomainUpdated(egURI); });
 }
@@ -400,18 +389,18 @@ void IntFlowManager::remoteEndpointUpdated(const string& uuid) {
                        [=](){ handleRemoteEndpointUpdate(uuid); });
 }
 
-void IntFlowManager::serviceUpdated(const std::string& uuid) {
+void IntFlowManager::serviceUpdated(const string& uuid) {
     if (stopping) return;
 
     advertManager.scheduleServiceAdv(uuid);
     taskQueue.dispatch(uuid, [=]() { handleServiceUpdate(uuid); });
 }
 
-void IntFlowManager::rdConfigUpdated(const opflex::modb::URI& rdURI) {
+void IntFlowManager::rdConfigUpdated(const URI& rdURI) {
     domainUpdated(RoutingDomain::CLASS_ID, rdURI);
 }
 
-void IntFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI) {
+void IntFlowManager::packetDropLogConfigUpdated(const URI& dropLogCfgURI) {
     if(stopping)
         return;
     using modelgbp::observer::DropLogConfig;
@@ -453,7 +442,7 @@ void IntFlowManager::packetDropLogConfigUpdated(const opflex::modb::URI& dropLog
     switchManager.writeFlow("DropLogConfig", DROP_LOG_TABLE_ID, dropLogFlows);
 }
 
-void IntFlowManager::packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI) {
+void IntFlowManager::packetDropFlowConfigUpdated(const URI& dropFlowCfgURI) {
     if(stopping)
         return;
     using modelgbp::observer::DropFlowConfig;
@@ -507,7 +496,7 @@ void IntFlowManager::packetDropFlowConfigUpdated(const opflex::modb::URI& dropFl
             dropLogFlows);
 }
 
-void IntFlowManager::lbIfaceUpdated(const std::string& uuid) {
+void IntFlowManager::lbIfaceUpdated(const string& uuid) {
     if (stopping) return;
 
     taskQueue.dispatch(uuid,
@@ -521,7 +510,7 @@ void IntFlowManager::lbVlanUpdated(LearningBridgeIface::vlan_range_t vlan) {
                        [=]() { handleLearningBridgeVlanUpdate(vlan); });
 }
 
-void IntFlowManager::egDomainUpdated(const opflex::modb::URI& egURI) {
+void IntFlowManager::egDomainUpdated(const URI& egURI) {
     if (stopping) return;
 
     taskQueue.dispatch(egURI.toString(),
@@ -535,18 +524,18 @@ void IntFlowManager::domainUpdated(opflex::modb::class_id_t cid, const URI& domU
                        [=]() { handleDomainUpdate(cid, domURI); });
 }
 
-void IntFlowManager::contractUpdated(const opflex::modb::URI& contractURI) {
+void IntFlowManager::contractUpdated(const URI& contractURI) {
     if (stopping) return;
     taskQueue.dispatch(contractURI.toString(),
                        [=]() { handleContractUpdate(contractURI); });
 }
 
-void IntFlowManager::configUpdated(const opflex::modb::URI& configURI) {
+void IntFlowManager::configUpdated(const URI& configURI) {
     if (stopping) return;
     optional<shared_ptr<modelgbp::platform::Config>> config_opt =
         modelgbp::platform::Config::resolve(agent.getFramework(), configURI);
     if (config_opt) {
-        boost::optional<const uint8_t> configEncapType =
+        optional<const uint8_t> configEncapType =
             config_opt.get()->getEncapType();
         if (configEncapType && configEncapType.get() != encapType) {
             LOG(INFO) << "fault raised for encapType from fabric doesn't match "
@@ -577,12 +566,12 @@ void IntFlowManager::portStatusUpdate(const string& portName,
             });
 }
 
-void IntFlowManager::snatUpdated(const std::string& uuid) {
+void IntFlowManager::snatUpdated(const string& uuid) {
     if (stopping) return;
     taskQueue.dispatch(uuid, [=]() { handleSnatUpdate(uuid); });
 }
 
-void IntFlowManager::peerStatusUpdated(const std::string&, int,
+void IntFlowManager::peerStatusUpdated(const string&, int,
                                        PeerStatus peerStatus) {
     if (stopping || isSyncing) return;
     if (peerStatus == PeerStatusListener::READY) {
@@ -1096,7 +1085,7 @@ static void flowsEndpointPortSec(FlowEntryList& elPortSec,
                                  uint32_t ofPort,
                                  bool hasMac,
                                  uint8_t* macAddr,
-                                 const std::vector<address>& ipAddresses) {
+                                 const vector<address>& ipAddresses) {
     if (ofPort == OFPP_NONE)
         return;
 
@@ -1435,9 +1424,9 @@ bool getHostAccess(EndpointManager& epMgr,
                    SwitchManager& switchMgr,
                    uint32_t& hostPort,
                    uint8_t* hostMac) {
-    unordered_set<std::string> eps;
+    unordered_set<string> eps;
     epMgr.getEndpointsByAccessIface("veth_host_ac", eps);
-    for (const std::string& ep : eps) {
+    for (const string& ep : eps) {
         shared_ptr<const Endpoint> epWrapper = epMgr.getEndpoint(ep);
         if (epWrapper) {
            const Endpoint& endPoint = *epWrapper.get();
@@ -1509,7 +1498,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
     // Get remote tunnel destination
     bool hasTunDest = false;
     optional<address> tunDst;
-    std::vector<address> tunDsts;
+    vector<address> tunDsts;
     if (ep.get()->isNextHopTunnelSet()) {
         string ipStr = ep.get()->getNextHopTunnel().get();
         tunDst = address::from_string(ipStr, ec);
@@ -1560,7 +1549,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
     FlowEntryList elSrc;
     FlowEntryList elPol;
     FlowEntryList outFlows;
-    std::vector<std::shared_ptr<modelgbp::inv::RemoteIp>> invIps;
+    vector<shared_ptr<modelgbp::inv::RemoteIp>> invIps;
 
     if (hasForwardingInfo) {
         FlowBuilder bridgeFlow;
@@ -1891,7 +1880,7 @@ static void flowsEndpointSNAT(SnatManager& snatMgr,
                .reg(6, rdId)
                .ipSrc(cidr.first);
             std::stringstream ss(*it);
-            std::string addr, mask;
+            string addr, mask;
             std::getline(ss, addr, '/');
             std::getline(ss, mask, '/');
             nwDst =
@@ -1912,7 +1901,7 @@ static void flowsEndpointSNAT(SnatManager& snatMgr,
                .parent().build(elRouteDst);
 
             // Program snat table flow to snat and output
-            boost::optional<Snat::PortRanges> prs = as.getPortRanges("local");
+            optional<Snat::PortRanges> prs = as.getPortRanges("local");
             if (prs != boost::none && prs.get().size() > 0) {
                 for (const auto& pr : prs.get()) {
                     flowsEndpointPortRangeSNAT(as, cidr.first, nwDst, prefixlen,
@@ -1968,7 +1957,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
     /* check and parse the IP-addresses */
     boost::system::error_code ec;
 
-    std::vector<address> ipAddresses;
+    vector<address> ipAddresses;
     for (const string& ipStr : endPoint.getIPs()) {
         network::cidr_t cidr;
         if (!network::cidr_from_string(ipStr, cidr, false)) {
@@ -2053,7 +2042,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
 
     bool hostAcc = false;
     /* Add ARP responder for veth_host */
-    if (uuid.find("veth_host_ac") != std::string::npos) {
+    if (uuid.find("veth_host_ac") != string::npos) {
         hostAcc = true;
         for (const string& ipStr : endPoint.getIPs()) {
             network::cidr_t cidr;
@@ -2269,8 +2258,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                              nextHopMacp);
                 }
 
-                const std::vector<std::string>& snatUuids
-                    = endPoint.getSnatUuids();
+                const vector<string>& snatUuids = endPoint.getSnatUuids();
                 int count = 0;
                 for (const auto& snatUuid: snatUuids) {
                     // Inform snat manager of our interest in this snat-ip
@@ -2307,7 +2295,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
             // is reachable only for traffic originating from service
             // interfaces.
             if (hasMac) {
-                std::vector<address> anycastReturnIps;
+                vector<address> anycastReturnIps;
                 for (const string& ipStr : endPoint.getAnycastReturnIPs()) {
                     address addr = address::from_string(ipStr, ec);
                     if (ec) {
@@ -2390,7 +2378,7 @@ void IntFlowManager::in6AddrToLong (address& sAddr, uint32_t *pAddr)
 }
 
 template <class MO>
-void IntFlowManager::updatePodSvcStatsAttr (const std::shared_ptr<MO> &obj,
+void IntFlowManager::updatePodSvcStatsAttr (const shared_ptr<MO> &obj,
                                             const attr_map &epAttr,
                                             const attr_map &svcAttr)
 {
@@ -2445,7 +2433,7 @@ updateSvcStatsCounters (const uint64_t &cookie,
     if (serviceStatsFlowDisabled)
         return;
 
-    boost::optional<std::string> str =
+    optional<string> str =
         idGen.getStringForId(ID_NMSPC_SVCSTATS, cookie);
     if (str == boost::none) {
         LOG(ERROR) << "Cookie: " << cookie
@@ -2551,7 +2539,6 @@ updateSvcStatsCounters (const bool &isIngress,
                 }
             }
             mutator.commit();
-#ifdef HAVE_PROMETHEUS_SUPPORT
             // MoDB takes some time to get updated. Updating prom metrics
             // with actual value if possible that getting the values from modb.
             // This is to keep prom and modb in sync. Not doing this will update
@@ -2589,7 +2576,6 @@ updateSvcStatsCounters (const bool &isIngress,
                                                    attr_map());
                 }
             }
-#endif
         }
     }
 }
@@ -2667,7 +2653,6 @@ updateSvcTgtStatsCounters (const uint64_t &cookie,
 
         }
         mutator.commit();
-#ifdef HAVE_PROMETHEUS_SUPPORT
         // MoDB takes some time to get updated. Updating prom metrics
         // with actual value if possible than getting the values from modb.
         // This is to keep prom and modb in sync. Not doing this will update
@@ -2717,7 +2702,6 @@ updateSvcTgtStatsCounters (const uint64_t &cookie,
                                                      false, !epAttr.empty());
             }
         }
-#endif
     }
     updateSvcStatsCounters(isIngress, svcUuid, newPktCount, newByteCount, true, isNodePort);
 }
@@ -2781,14 +2765,12 @@ updatePodSvcStatsCounters (const uint64_t &cookie,
                 auto updByteCount = oldByteCount + newByteCount;
                 pEpToSvc.get()->setPackets(updPktCount)
                                .setBytes(updByteCount);
-#ifdef HAVE_PROMETHEUS_SUPPORT
                 prometheusManager.addNUpdatePodSvcCounter(true,
                                                           idStr,
                                                           updByteCount,
                                                           updPktCount,
                                                           epAttr,
                                                           svcAttr);
-#endif
             }
         } else {
             auto pSvcToEp = su.get()->resolveGbpeSvcToEpCounter(
@@ -2811,14 +2793,12 @@ updatePodSvcStatsCounters (const uint64_t &cookie,
                 auto updByteCount = oldByteCount + newByteCount;
                 pSvcToEp.get()->setPackets(updPktCount)
                                .setBytes(updByteCount);
-#ifdef HAVE_PROMETHEUS_SUPPORT
                 prometheusManager.addNUpdatePodSvcCounter(false,
                                                           idStr,
                                                           updByteCount,
                                                           updPktCount,
                                                           epAttr,
                                                           svcAttr);
-#endif
             }
         }
     }
@@ -2826,7 +2806,7 @@ updatePodSvcStatsCounters (const uint64_t &cookie,
 }
 
 // Clear pod svc objects
-void IntFlowManager::clearPodSvcStatsCounters (const std::string& uuid)
+void IntFlowManager::clearPodSvcStatsCounters (const string& uuid)
 {
     Mutator mutator(agent.getFramework(), "policyelement");
     bool isEpToSvc = !strcmp(uuid.substr(0,7).c_str(),
@@ -2839,15 +2819,13 @@ void IntFlowManager::clearPodSvcStatsCounters (const std::string& uuid)
                                agent.getUuid(), uuid);
     }
     mutator.commit();
-#ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.removePodSvcCounter(isEpToSvc, uuid);
-#endif
 }
 
 // Reset svc-tgt counter stats, deletion of the object will be handled in
 // ServiceManager
-void IntFlowManager::clearSvcTgtStatsCounters (const std::string& svcUuid,
-                                               const std::string& nhipStr,
+void IntFlowManager::clearSvcTgtStatsCounters (const string& svcUuid,
+                                               const string& nhipStr,
                                                const attr_map& svcAttr,
                                                bool isExternal,
                                                bool isNodePort)
@@ -2895,7 +2873,6 @@ void IntFlowManager::clearSvcTgtStatsCounters (const std::string& svcUuid,
             updateSvcStatsCounters(true, svcUuid, oldRxPktCount, oldRxByteCount, false);
             updateSvcStatsCounters(false, svcUuid, oldTxPktCount, oldTxByteCount, false);
         }
-#ifdef HAVE_PROMETHEUS_SUPPORT
         // If the flows dont exist, reset the counts back to 0
         // also remove the extra pod specific label annotations
         if (isNodePort) {
@@ -2913,14 +2890,13 @@ void IntFlowManager::clearSvcTgtStatsCounters (const std::string& svcUuid,
                                                      attr_map(),
                                                      false, true);
         }
-#endif
     }
     mutator.commit();
 }
 
 // Reset svc counter stats, deletion of the object will be handled in
 // ServiceManager
-void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
+void IntFlowManager::clearSvcStatsCounters (const string& uuid,
                                             const attr_map& svcAttr,
                                             bool isExternal,
                                             bool isNodePort)
@@ -2938,7 +2914,7 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
             || (!isExternal && opSvc.get()->getScope("").compare("cluster")))
             return;
 
-        std::vector<shared_ptr<SvcTargetCounter> > out;
+        vector<shared_ptr<SvcTargetCounter> > out;
         opSvc.get()->resolveGbpeSvcTargetCounter(out);
         for (auto& pSvcTarget : out) {
             if (isNodePort) {
@@ -2954,7 +2930,6 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
                 pSvcTarget->unsetTxbytes();
                 pSvcTarget->unsetTxpackets();
             }
-#ifdef HAVE_PROMETHEUS_SUPPORT
             // If the flows dont exist, reset the counts back to 0
             // also remove the extra pod specific label annotations
             auto nhip = pSvcTarget->getIp();
@@ -2975,7 +2950,6 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
                                                              false, true);
                 }
             }
-#endif
         }
         if (isNodePort) {
             opSvc.get()->unsetNodePortRxbytes();
@@ -2988,7 +2962,6 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
             opSvc.get()->unsetTxbytes();
             opSvc.get()->unsetTxpackets();
         }
-#ifdef HAVE_PROMETHEUS_SUPPORT
         // If svc becomes external or anycast or if all the NH's dont
         // exist or create flows, then reset the counters back to 0
         if (isNodePort) {
@@ -3000,7 +2973,6 @@ void IntFlowManager::clearSvcStatsCounters (const std::string& uuid,
                                                0, 0, 0, 0,
                                                attr_map());
         }
-#endif
     }
     mutator.commit();
 }
@@ -3061,7 +3033,7 @@ void IntFlowManager::updateSvcStatsFlows (const string& uuid,
     if (serviceStatsFlowDisabled)
         return;
 
-    std::string task_id;
+    string task_id;
     if (is_svc)
         task_id += "1";
     else
@@ -3396,9 +3368,9 @@ void IntFlowManager::updateSvcNodeStatsFlows (const string &uuid,
             }
         }
 
-        unordered_set<std::string> eps;
+        unordered_set<string> eps;
         agent.getEndpointManager().getEndpointsByAccessIface("veth_host_ac", eps);
-        for (const std::string& ep : eps) {
+        for (const string& ep : eps) {
             shared_ptr<const Endpoint> epWrapper = agent.getEndpointManager().getEndpoint(ep);
             if (!epWrapper)
                 break;
@@ -3992,7 +3964,7 @@ void IntFlowManager::updatePodSvcStatsFlows (const string &uuid,
 
             for (const string& epUuid : epUuids) {
                 // Dont create pod<-->svc flows for veth_host_ac endpoint
-                if (epUuid.find("veth_host_ac") != std::string::npos) {
+                if (epUuid.find("veth_host_ac") != string::npos) {
                     continue;
                 }
 
@@ -4044,7 +4016,7 @@ void IntFlowManager::updatePodSvcStatsFlows (const string &uuid,
         epsvc_uuids.clear();
     } else {
         // Dont create pod<-->svc flows for veth_host_ac endpoint
-        if (uuid.find("veth_host_ac") != std::string::npos) {
+        if (uuid.find("veth_host_ac") != string::npos) {
             return;
         }
 
@@ -4869,7 +4841,7 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
                 continue;
             }
         }
-        boost::optional<Snat::PortRanges> prs = it.second;
+        optional<Snat::PortRanges> prs = it.second;
         if (prs != boost::none && prs.get().size() > 0) {
             for (const auto& pr : prs.get()) {
                 MaskList snatMasks;
@@ -5340,13 +5312,13 @@ void IntFlowManager::handleEndpointGroupDomainUpdate(const URI& epgURI) {
     unordered_set<string> epUuids;
     EndpointManager& epMgr = agent.getEndpointManager();
     epMgr.getEndpointsForIPMGroup(epgURI, epUuids);
-    std::unordered_set<URI> ipmRds;
+    unordered_set<URI> ipmRds;
     for (const string& uuid : epUuids) {
-        std::shared_ptr<const Endpoint> ep = epMgr.getEndpoint(uuid);
+        shared_ptr<const Endpoint> ep = epMgr.getEndpoint(uuid);
         if (!ep) continue;
-        const boost::optional<opflex::modb::URI>& egURI = ep->getEgURI();
+        const optional<URI>& egURI = ep->getEgURI();
         if (!egURI) continue;
-        boost::optional<std::shared_ptr<modelgbp::gbp::RoutingDomain> > rd =
+        optional<shared_ptr<modelgbp::gbp::RoutingDomain> > rd =
             polMgr.getRDForGroup(egURI.get());
         if (rd)
             ipmRds.insert(rd.get()->getURI());
@@ -5383,7 +5355,7 @@ void IntFlowManager::handleEndpointGroupDomainUpdate(const URI& epgURI) {
     }
 }
 
-void IntFlowManager::handleLocalExternalDomainUpdated(const opflex::modb::URI &epgURI) {
+void IntFlowManager::handleLocalExternalDomainUpdated(const URI &epgURI) {
     // Validate if URI is actually external
     // Generate IDs for bd and fd. rdId should be 0.
     LOG(DEBUG) << "Updating external endpoint-group " << epgURI;
@@ -5398,10 +5370,8 @@ void IntFlowManager::handleLocalExternalDomainUpdated(const opflex::modb::URI &e
         switchManager.clearFlows(epgId, POL_TABLE_ID);
         switchManager.clearFlows(epgId, OUT_TABLE_ID);
         switchManager.clearFlows(epgId, BRIDGE_TABLE_ID);
-        opflex::modb::URI fdURI =
-                opflex::modb::URI("extfd:" + epgURI.toString());
-        opflex::modb::URI bdURI =
-                opflex::modb::URI("extbd:" + epgURI.toString());
+        URI fdURI = URI("extfd:" + epgURI.toString());
+        URI bdURI = URI("extbd:" + epgURI.toString());
         uint32_t fgrpId = getId(FloodDomain::CLASS_ID, fdURI);
         localExternalFdSet.erase(fgrpId);
         updateMulticastList(boost::none, epgURI);
@@ -5545,16 +5515,12 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         switchManager.clearFlows(rdEnfPrefURIId, POL_TABLE_ID);
         idGen.erase(getIdNamespace(RoutingDomain::CLASS_ID), rdURI.toString());
         ctZoneManager.erase(rdURI.toString());
-#ifdef HAVE_PROMETHEUS_SUPPORT
         prometheusManager.removeRDDropCounter(rdURI.toString());
-#endif
         agent.getPolicyManager().deleteRoutingDomain(rdURI);
         return;
     }
-#ifdef HAVE_PROMETHEUS_SUPPORT
     prometheusManager.addNUpdateRDDropCounter(rdURI.toString(),
                                               true, 0, 0);
-#endif
 
     FlowEntryList rdRouteFlows;
     FlowEntryList rdNatFlows;
@@ -5610,10 +5576,10 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         PolicyManager::resolveSubnets(agent.getFramework(),
                                       subnets_uri, intSubnets);
     }
-    std::shared_ptr<const RDConfig> rdConfig =
+    shared_ptr<const RDConfig> rdConfig =
         agent.getExtraConfigManager().getRDConfig(rdURI);
     if (rdConfig) {
-        for (const std::string& cidrSn :
+        for (const string& cidrSn :
                  rdConfig->getInternalSubnets()) {
             network::cidr_t cidr;
             if (network::cidr_from_string(cidrSn, cidr)) {
@@ -5730,7 +5696,7 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
     switchManager.writeFlow(rdURI.toString(), NAT_IN_TABLE_ID, rdNatFlows);
     switchManager.writeFlow(rdURI.toString(), ROUTE_TABLE_ID, rdRouteFlows);
 
-    std::unordered_set<string> uuids;
+    unordered_set<string> uuids;
     agent.getServiceManager().getServicesByDomain(rdURI, uuids);
     for (const string& uuid : uuids) {
         serviceUpdated(uuid);
@@ -5842,11 +5808,11 @@ IntFlowManager::createGroupMod(uint16_t type, uint32_t groupId,
 
 void
 IntFlowManager::
-updateEndpointFloodGroup(const opflex::modb::URI& fgrpURI,
+updateEndpointFloodGroup(const URI& fgrpURI,
                          const Endpoint& endPoint,
                          uint32_t epPort,
                          optional<shared_ptr<FloodDomain> >& fd) {
-    const std::string& epUUID = endPoint.getUUID();
+    const string& epUUID = endPoint.getUUID();
     uint32_t fgrpId = getId(FloodDomain::CLASS_ID, fgrpURI);
     string fgrpStrId = "fd:" + fgrpURI.toString();
     auto fgrpItr = floodGroupMap.find(fgrpURI);
@@ -5894,7 +5860,7 @@ updateEndpointFloodGroup(const opflex::modb::URI& fgrpURI,
     switchManager.writeFlow(fgrpStrId, OUT_TABLE_ID, fdOutput);
 }
 
-void IntFlowManager::removeEndpointFromFloodGroup(const std::string& epUUID) {
+void IntFlowManager::removeEndpointFromFloodGroup(const string& epUUID) {
     for (auto itr = floodGroupMap.begin();
          itr != floodGroupMap.end();
          ++itr) {
@@ -5927,7 +5893,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
     for (const shared_ptr<PolicyRule>& pc : rules) {
         uint8_t dir = pc->getDirection();
         const shared_ptr<L24Classifier>& cls = pc->getL24Classifier();
-        const opflex::modb::URI& ruleURI = cls->getURI();
+        const URI& ruleURI = cls->getURI();
         uint64_t cookie = getId(L24Classifier::CLASS_ID, ruleURI);
         flowutils::ClassAction act = flowutils::CA_DENY;
         bool log = false;
@@ -5995,7 +5961,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
 }
 
 void
-IntFlowManager::handleContractUpdate(const opflex::modb::URI& contractURI) {
+IntFlowManager::handleContractUpdate(const URI& contractURI) {
     LOG(DEBUG) << "Updating contract " << contractURI;
 
     const string& contractId = contractURI.toString();
@@ -6064,7 +6030,6 @@ void IntFlowManager::initPlatformConfig() {
     optional<shared_ptr<Config> > config =
         Config::resolve(agent.getFramework(),
                         agent.getPolicyManager().getOpflexDomain());
-    mcastTunDst = boost::none;
     if (config) {
         optional<const string&> ipStr =
             config.get()->getMulticastGroupIP();
@@ -6077,8 +6042,6 @@ void IntFlowManager::initPlatformConfig() {
             } else if (!ip.is_v4()) {
                 LOG(ERROR) << "Multicast tunnel destination must be IPv4: "
                            << ipStr.get();
-            } else {
-                mcastTunDst = ip;
             }
         }
         updateMulticastList(
@@ -6087,7 +6050,7 @@ void IntFlowManager::initPlatformConfig() {
     }
 }
 
-void IntFlowManager::handleConfigUpdate(const opflex::modb::URI& configURI) {
+void IntFlowManager::handleConfigUpdate(const URI& configURI) {
     LOG(DEBUG) << "Updating platform config " << configURI;
     initPlatformConfig();
 
@@ -6158,7 +6121,7 @@ void IntFlowManager::handlePortStatusUpdate(const string& portName,
         handleDropLogPortUpdate();
     } else if(portName == uplinkIface) {
         createStaticFlows();
-        std::unordered_set<opflex::modb::URI> domains;
+        unordered_set<URI> domains;
         agent.getEndpointManager().getLocalExternalDomains(domains);
         for(const URI &domain:domains) {
             handleLocalExternalDomainUpdated(domain);
@@ -6239,16 +6202,16 @@ static const IdCb ID_NAMESPACE_CB[] =
      IdGenerator::uriIdGarbageCb<L24Classifier>};
 
 static bool serviceIdGarbageCb(ServiceManager& serviceManager,
-                               const std::string& nmspc,
-                               const std::string& str) {
+                               const string& nmspc,
+                               const string& str) {
     return (bool)serviceManager.getService(str);
 }
 
 static bool svcStatsIdGarbageCb(EndpointManager& epManager,
                               ServiceManager& serviceManager,
                               opflex::ofcore::OFFramework& framework,
-                              const std::string& nmspc,
-                              const std::string& str) {
+                              const string& nmspc,
+                              const string& str) {
     // The idgen strings for epToSvc and svcToEp will have below format
     // eptosvc:ep-uuid:svc-uuid
     // svctoep:ep-uuid:svc-uuid
@@ -6292,7 +6255,7 @@ static bool svcStatsIdGarbageCb(EndpointManager& epManager,
 
         // Ensure vethhostac is present
         if ((statType == "notosvc") || (statType == "svctono")) {
-            unordered_set<std::string> eps;
+            unordered_set<string> eps;
             epManager.getEndpointsByAccessIface("veth_host_ac", eps);
             if (!eps.size())
                 return false;
@@ -6309,8 +6272,8 @@ void IntFlowManager::cleanup() {
     for (size_t i = 0; i < sizeof(ID_NAMESPACE_CB)/sizeof(IdCb); i++) {
         agent.getAgentIOService()
             .dispatch([=]() {
-                    auto gcb = [this, i](const std::string& ns,
-                                         const std::string& str) -> bool {
+                    auto gcb = [this, i](const string& ns,
+                                         const string& str) -> bool {
                         return ID_NAMESPACE_CB[i](agent.getFramework(),
                                                   ns, str);
                     };
@@ -6320,8 +6283,8 @@ void IntFlowManager::cleanup() {
 
     agent.getAgentIOService()
         .dispatch([=]() {
-                auto sgcb = [this](const std::string& ns,
-                                   const std::string& str) -> bool {
+                auto sgcb = [this](const string& ns,
+                                   const string& str) -> bool {
                     return serviceIdGarbageCb(agent.getServiceManager(),
                                               ns, str);
                 };
@@ -6330,8 +6293,8 @@ void IntFlowManager::cleanup() {
 
     agent.getAgentIOService()
         .dispatch([=]() {
-                auto ssgcb = [this](const std::string& ns,
-                                   const std::string& str) -> bool {
+                auto ssgcb = [this](const string& ns,
+                                   const string& str) -> bool {
                     return svcStatsIdGarbageCb(agent.getEndpointManager(),
                                                agent.getServiceManager(),
                                                agent.getFramework(),
@@ -6364,14 +6327,14 @@ uint32_t IntFlowManager::getId(opflex::modb::class_id_t cid, const URI& uri) {
     return idGen.getId(getIdNamespace(cid), uri.toString());
 }
 
-uint32_t IntFlowManager::getExtNetVnid(const opflex::modb::URI& uri) {
+uint32_t IntFlowManager::getExtNetVnid(const URI& uri) {
     // External networks are assigned private VNIDs that have bit 31 (MSB)
     // set to 1. This is fine because legal VNIDs are 24-bits or less.
     return (getId(L3ExternalNetwork::CLASS_ID, uri) | (1 << 31));
 }
 
 void IntFlowManager::updateMulticastList(const optional<string>& mcastIp,
-                                      const URI& uri) {
+                                         const URI& uri) {
     bool update = false;
     if ((encapType != ENCAP_VXLAN && encapType != ENCAP_IVXLAN) ||
         getTunnelPort() == OFPP_NONE ||
@@ -6418,7 +6381,7 @@ bool IntFlowManager::removeFromMulticastList(const URI& uri) {
     return false;
 }
 
-static const std::string MCAST_QUEUE_ITEM("mcast-groups");
+static const string MCAST_QUEUE_ITEM("mcast-groups");
 
 void IntFlowManager::multicastGroupsUpdated() {
     taskQueue.dispatch(MCAST_QUEUE_ITEM,
@@ -6463,9 +6426,9 @@ void IntFlowManager::checkGroupEntry(GroupMap& recvGroups,
     }
 }
 
-std::vector<FlowEdit>
-IntFlowManager::reconcileFlows(std::vector<TableState> flowTables,
-                               std::vector<FlowEntryList>& recvFlows) {
+vector<FlowEdit>
+IntFlowManager::reconcileFlows(vector<TableState> flowTables,
+                               vector<FlowEntryList>& recvFlows) {
     // special handling for learning table; reconcile only the
     // reactive flows.
     FlowEntryList learnFlows;

@@ -19,9 +19,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 namespace opflexagent {
 
@@ -40,16 +38,13 @@ public:
     virtual ~SysStatsManagerFixture() {
     }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
     void updateOFPeerStats(std::shared_ptr<OFAgentStats> opflexStats);
     void verifyOFPeerMetrics(const std::string& peer, uint32_t count, bool del);
     void updateMoDBCounts(std::shared_ptr<ModbCounts> pCounts, int count);
     void verifyMoDBCounts(uint32_t count, bool del);
     const string cmd = "curl --proxy \"\" --compressed --silent http://127.0.0.1:9612/metrics 2>&1;";
-#endif
 };
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 void SysStatsManagerFixture::
 updateMoDBCounts (std::shared_ptr<ModbCounts> pCounts, int count)
 {
@@ -222,11 +217,9 @@ verifyOFPeerMetrics (const std::string& peer, uint32_t count, bool del)
     pos = output.find(unres_count);
     BaseFixture::expPosition(!del, pos);
 }
-#endif
 
 BOOST_AUTO_TEST_SUITE(SysStatsManager_test)
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
 BOOST_FIXTURE_TEST_CASE(testOFPeer, SysStatsManagerFixture) {
 
     LOG(DEBUG) << "### OfPeer start";
@@ -273,7 +266,6 @@ BOOST_FIXTURE_TEST_CASE(testMoDBCounts, SysStatsManagerFixture) {
     verifyMoDBCounts(0, true);
     LOG(DEBUG) << "### MoDBCounts end";
 }
-#endif
 
 BOOST_AUTO_TEST_SUITE_END()
 }

@@ -28,9 +28,7 @@
 #include <opflexagent/Agent.h>
 #include <opflexagent/EndpointManager.h>
 #include <opflexagent/logging.h>
-#ifdef HAVE_PROMETHEUS_SUPPORT
 #include <opflexagent/PrometheusManager.h>
-#endif
 
 namespace opflexagent {
 
@@ -278,7 +276,6 @@ void FSEndpointSource::updated(const fs::path& filePath) {
             }
         }
 
-#ifdef HAVE_PROMETHEUS_SUPPORT
         optional<string> isOpenStack = properties.get_optional<string>(NEUTRON_NW);
         if (isOpenStack) {
             newep.setAnnotateEpName(true);
@@ -292,7 +289,6 @@ void FSEndpointSource::updated(const fs::path& filePath) {
                                             newep.getAttributes(),
                                             manager->getAgent().getPrometheusEpAttributes()));
         }
-#endif
 
         optional<ptree&> dhcp4 = properties.get_child_optional(DHCP4);
         if (dhcp4) {
