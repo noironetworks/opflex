@@ -407,6 +407,14 @@ uint32_t dpp_size(const struct dp_packet* pkt) {
     return dp_packet_size(pkt);
 }
 
+void *dpp_at(const struct dp_packet* pkt, size_t offset, size_t size) {
+    return dp_packet_at(pkt, offset, size);
+}
+
+void dpp_delete(struct dp_packet* pkt) {
+    dp_packet_delete(pkt);
+}
+
 struct ds* alloc_ds() {
     struct ds* o = (struct ds*)malloc(sizeof(struct ds));
     ds_init(o);

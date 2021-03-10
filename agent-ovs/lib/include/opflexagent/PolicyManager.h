@@ -54,6 +54,7 @@ public:
      * @param redirect_ points to a redirect action
      * @param log_ if the LogAction is set by the leaf; false
      * @param rDG redirect URI
+     * @param dnsResolved_ DNS resolved addresses if dns egress policy
      */
     PolicyRule(const uint8_t dir,
                const uint16_t prio_,
@@ -62,11 +63,12 @@ public:
                const network::subnets_t& remoteSubnets_,
                bool redirect_,
                bool log_,
-               const boost::optional<opflex::modb::URI>& rDG
+               const boost::optional<opflex::modb::URI>& rDG,
+               const network::subnets_t& dnsResolved_
                ) :
         direction(dir), prio(prio_), l24Classifier(c), allow(allow_),
         redirect(redirect_), remoteSubnets(remoteSubnets_), log(log_),
-        redirDstGrp(rDG) {
+        redirDstGrp(rDG), egressDnsResolved(dnsResolved_) {
     }
 
     /**
@@ -99,6 +101,14 @@ public:
      */
     const network::subnets_t& getRemoteSubnets() const {
         return remoteSubnets;
+    }
+
+    /**
+     * Get named addresses for this rule
+     * @return the set of dns names
+     */
+    const network::subnets_t& getNamedAddresses() const {
+        return egressDnsResolved;
     }
 
     /**
@@ -145,6 +155,7 @@ private:
     network::subnets_t remoteSubnets; 
     bool log;
     boost::optional<opflex::modb::URI> redirDstGrp;
+    network::subnets_t egressDnsResolved;
     friend bool operator==(const PolicyRule& lhs, const PolicyRule& rhs);
 };
 
@@ -831,7 +842,18 @@ public:
         std::lock_guard<std::mutex> guard(state_mutex);
         return rd_map.size();
     }
-
+    /**
+     * Type to hold a set of (DNS) names
+     */
+    typedef std::unordered_set<std::string> named_addr_set_t;
+    /**
+     * Get cached Dns resolved addresses for a given domain name.
+     * if they exist in the cache. Call with the state mutex held.
+     * @param domainName
+     * @param egressDnsResolved resolved address set
+     */
+    void getDnsResolvedAddresses( const std::string &domainName,
+                                network::subnets_t &egressDnsResolved);
 private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;
@@ -887,6 +909,11 @@ private:
         uri_set_t static_routes;
     };
 
+    struct DnsDemandState {
+        uri_set_t secGrpSet;
+        network::subnets_t resolved;
+    };
+
     route_map_t static_route_map;
     route_map_t remote_route_map;
 
@@ -900,6 +927,7 @@ private:
     typedef std::unordered_map<opflex::modb::URI, ExternalNodeState> \
     ext_node_map_t;
     typedef std::unordered_map<opflex::modb::URI, uri_set_t> subnets_rd_map_t;
+    typedef std::unordered_map<std::string, DnsDemandState> dns_demand_map_t;
     /**
      * A map from EPG URI to its state
      */
@@ -941,6 +969,10 @@ private:
      */
     subnets_rd_map_t subnets_rd_map;
 
+    /**
+     * A map from DNS request string to its state
+     */
+    dns_demand_map_t dns_demand_map;
     std::mutex state_mutex;
     std::mutex subnets_rd_mutex;
 
@@ -996,7 +1028,11 @@ private:
      */
     contract_map_t contractMap;
 
-    typedef std::unordered_map<opflex::modb::URI, rule_list_t> secgrp_map_t;
+    struct SecGrpState {
+        std::unordered_set<std::string> dnsAsks;
+        rule_list_t rules;
+    };
+    typedef std::unordered_map<opflex::modb::URI, SecGrpState> secgrp_map_t;
 
     /**
      * Map of security group URI to its rules
@@ -1189,6 +1225,12 @@ private:
      * @param func the function to execute
      */
     void executeAndNotifyContract(const std::function<void(uri_set_t&)>& func);
+
+    /**
+     * Execute a function and notify sec group listeners
+     * @param func the function to execute
+     */
+    void executeAndNotifySecGroup(const std::function<void(uri_set_t&)>& func);
 
     /**
      * Execute a function and notify contract and route listeners
@@ -1433,6 +1475,13 @@ private:
      */
     bool isLocalRouteDeletable(
              std::shared_ptr<modelgbp::epdr::LocalRoute> &localRoute);
+    void updateDnsPolicies( const opflex::modb::class_id_t class_id,
+                            const opflex::modb::URI &uri,
+                            uri_set_t &notifyContracts);
+    void createDnsAsk(const opflex::modb::URI &uri,
+                      const std::string &domainName);
+    void deleteDnsAsk(const opflex::modb::URI &uri,
+                      const std::string &domainName);
 };
 
 /**

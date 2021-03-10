@@ -87,12 +87,7 @@ public:
         classifier4 = space->addGbpeL24Classifier("classifier4");
         classifier5 = space->addGbpeL24Classifier("classifier5");
         classifier6 = space->addGbpeL24Classifier("classifier6");
-        classifier7 = space->addGbpeL24Classifier("classifier7");
-        classifier7->setToDns("*.google.com").setOrder(10);
-        classifier8 = space->addGbpeL24Classifier("classifier8");
-        classifier8->setToDns("twitter.com").setOrder(100);
-        classifier9 = space->addGbpeL24Classifier("classifier9");
-        classifier9->setToDns("maps.google.com").setOrder(1000);
+
         action1 = space->addGbpAllowDenyAction("action1");
         action1->setAllow(0).setOrder(5);
         action2 = space->addGbpAllowDenyAction("action2");
@@ -136,11 +131,12 @@ public:
             .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());
 
         sec1 = space->addGbpSecGroup("sec1");
-        sec1->addGbpSecGroupSubject("1_subject1")->addGbpSecGroupRule("1_1_rule1")
-            ->setDirection(DirectionEnumT::CONST_OUT)
+        classifier7 = space->addGbpeL24Classifier("classifier7");
+        sec1->addGbpSecGroupSubject("sec1_sub1")->addGbpSecGroupRule("sec1_sub1_rule1")
+            ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
             .addGbpRuleToClassifierRSrc(classifier7->getURI().toString());
-        sec1->addGbpSecGroupSubject("1_subject1")->addGbpSecGroupRule("1_1_rule1")
-            ->addGbpRuleToActionRSrcAllowDenyAction(action2->getURI().toString());
+        sec1->addGbpSecGroupSubject("sec1_sub1")->addGbpSecGroupRule("sec1_sub1_rule1")
+        ->addGbpDnsName(std::string("*.google.com"));
 
         eg1 = space->addGbpEpGroup("group1");
         eg1->addGbpEpGroupToNetworkRSrc()
@@ -183,6 +179,17 @@ public:
             ->setAddress("0.0.0.0")
             .setPrefixLen(0);
         mutator.commit();
+        /*Fake resolve DNS*/
+        auto dDiscoveredU = DnsDiscovered::resolve(framework);
+        Mutator m0(framework, "policyelement");
+        dnsEntry1 = dDiscoveredU.get()->addEpdrDnsEntry("maps.google.com");
+        dnsEntry1.get()->setUpdated("Thu Mar 18 01:16:28 EDT 2021");
+        dnsEntry1.get()->setExpiry(300);
+        std::string mappedAddress1("142.250.68.174"),mappedAddress2("142.250.68.175");
+        dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress1);
+        dnsAns1 = dDiscoveredU.get()->addEpdrDnsAnswer(std::string("*.google.com"));
+        dnsAns1->addEpdrDnsAnswerToResultRSrc(dnsEntry1.get()->getName().get());
+        m0.commit();
     }
 
     virtual ~PolicyFixture() {
@@ -222,7 +229,7 @@ public:
     shared_ptr<L24Classifier> classifier4;
     shared_ptr<L24Classifier> classifier5;
     shared_ptr<L24Classifier> classifier6;
-    shared_ptr<L24Classifier> classifier7,classifier8,classifier9;
+    shared_ptr<L24Classifier> classifier7;
 
     shared_ptr<RedirectDest> redirDst4;
     shared_ptr<RedirectDest> redirDst5;
@@ -233,6 +240,8 @@ public:
     shared_ptr<Contract> con2;
     shared_ptr<Contract> con3;
     shared_ptr<SecGroup> sec1;
+    shared_ptr<DnsEntry> dnsEntry1;
+    shared_ptr<DnsAnswer> dnsAns1;
 };
 
 class MockListener : public PolicyListener {
@@ -639,42 +648,43 @@ BOOST_FIXTURE_TEST_CASE( group_contract_remove_add, PolicyFixture ) {
 
 BOOST_FIXTURE_TEST_CASE( egress_dns_policy_add_remove, PolicyFixture ) {
     PolicyManager& pm = agent.getPolicyManager();
-    // Check that egress dns classifier has been picked up
     PolicyManager::rule_list_t rules;
+    std::string dnsName1("*.google.com");
     WAIT_FOR_DO(!rules.empty(), 500,
-       pm.getSecGroupRules(sec1->getURI(),
-                            rules));
-    checkRules(rules,
-               list_of(classifier7),
-               list_of(true),
-               DirectionEnumT::CONST_OUT);
-    BOOST_CHECK(rules.front()->getL24Classifier()->getToDns().get() == "*.google.com");
-    // Add another egress dns classifier to the rule
-    Mutator m0(framework, "policyreg");
-    sec1->addGbpSecGroupSubject("1_subject1")->addGbpSecGroupRule("1_1_rule1")
-        ->setDirection(DirectionEnumT::CONST_OUT)
-        .addGbpRuleToClassifierRSrc(classifier8->getURI().toString());
+        pm.getSecGroupRules(sec1->getURI(), rules));
+    auto dnsAsk1 = DnsAsk::resolve(framework,dnsName1);
+    BOOST_CHECK(dnsAsk1);
+    /*Fake resolve DNS*/
+    auto dDiscoveredU = DnsDiscovered::resolve(framework);
+    Mutator m0(framework, "policyelement");
+    dnsEntry1 = dDiscoveredU.get()->addEpdrDnsEntry("maps.google.com");
+    dnsEntry1.get()->setUpdated("Thu Mar 18 01:16:28 EDT 2021");
+    dnsEntry1.get()->setExpiry(300);
+    std::string mappedAddress1("142.250.68.174"),mappedAddress2("142.250.68.175");
+    dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress1);
+    dnsAns1 = dDiscoveredU.get()->addEpdrDnsAnswer(dnsName1);
+    dnsAns1->addEpdrDnsAnswerToResultRSrc(dnsEntry1.get()->getURI().toString());
+    dnsAns1->setUuid("1");
     m0.commit();
-    rules.clear();
-    WAIT_FOR_DO(rules.size()==2, 500,
-         rules.clear(); pm.getSecGroupRules(sec1->getURI(), rules));
-    BOOST_CHECK(rules.front()->getL24Classifier()->getToDns().get() == "*.google.com");
-    BOOST_CHECK(rules.back()->getL24Classifier()->getToDns().get() == "twitter.com");
-    sec1->addGbpSecGroupSubject("1_subject1")->addGbpSecGroupRule("1_1_rule2")
-        ->setDirection(DirectionEnumT::CONST_OUT)
-        .addGbpRuleToClassifierRSrc(classifier9->getURI().toString());
-    sec1->addGbpSecGroupSubject("1_subject1")->addGbpSecGroupRule("1_1_rule2")
-        ->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString());
+    WAIT_FOR_DO(!rules.front()->getNamedAddresses().empty(), 500,
+        rules.clear(); pm.getSecGroupRules(sec1->getURI(), rules));
+    dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress2);
+    dnsAns1->setUuid("2");
     m0.commit();
-    WAIT_FOR_DO(rules.size()==3, 500,
-         rules.clear(); pm.getSecGroupRules(sec1->getURI(), rules));
-    BOOST_CHECK(rules.front()->getL24Classifier()->getToDns().get() == "maps.google.com");
-    sec1->addGbpSecGroupSubject("1_subject1")->remove();
-    sec1->remove();
+    WAIT_FOR_DO((rules.front()->getNamedAddresses().size()==2), 500,
+        rules.clear();pm.getSecGroupRules(sec1->getURI(), rules));
+    dnsAns1->remove();
     m0.commit();
-    WAIT_FOR(!pm.secGroupExists(sec1->getURI()), 500);
+    WAIT_FOR_DO(rules.front()->getNamedAddresses().empty(), 500,
+        rules.clear(); pm.getSecGroupRules(sec1->getURI(), rules));
+    Mutator m1(framework, "policyreg");
+    sec1->addGbpSecGroupSubject("sec1_sub1")->addGbpSecGroupRule("sec1_sub1_rule1")
+    ->remove();
+    m1.commit();
+    optional<shared_ptr<DnsAsk>> dnsAsk2 = DnsAsk::resolve(framework,dnsName1);
+    WAIT_FOR_DO(!dnsAsk2,500,
+                (dnsAsk2 = DnsAsk::resolve(framework,dnsName1)));
 }
-
 BOOST_AUTO_TEST_SUITE_END()
 
 } /* namespace opflexagent */

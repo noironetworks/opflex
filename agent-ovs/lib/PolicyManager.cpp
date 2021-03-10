@@ -15,10 +15,13 @@
 #include <modelgbp/gbp/RoutingModeEnumT.hpp>
 #include <modelgbp/gbp/DirectionEnumT.hpp>
 #include <modelgbp/gbp/HashingAlgorithmEnumT.hpp>
+#include <modelgbp/epdr/DnsEntry.hpp>
+#include <modelgbp/epdr/DnsDemand.hpp>
 #include <opflex/modb/URIBuilder.h>
 
 #include <opflexagent/logging.h>
 #include <opflexagent/PolicyManager.h>
+#include <boost/asio/ip/address.hpp>
 
 namespace opflexagent {
 
@@ -63,6 +66,7 @@ void PolicyManager::start() {
     using namespace modelgbp;
     using namespace modelgbp::gbp;
     using namespace modelgbp::gbpe;
+    using namespace modelgbp::epdr;
 
     platform::Config::registerListener(framework, &configListener);
 
@@ -94,6 +98,7 @@ void PolicyManager::start() {
     L24Classifier::registerListener(framework, &secGroupListener);
     Subnets::registerListener(framework, &secGroupListener);
     Subnet::registerListener(framework, &secGroupListener);
+    DnsAnswer::registerListener(framework, &secGroupListener);
 
     ExternalNode::registerListener(framework, &routeListener);
     StaticRoute::registerListener(framework, &routeListener);
@@ -119,6 +124,7 @@ void PolicyManager::stop() {
     using namespace modelgbp;
     using namespace modelgbp::gbp;
     using namespace modelgbp::gbpe;
+    using namespace modelgbp::epdr;
     BridgeDomain::unregisterListener(framework, &domainListener);
     FloodDomain::unregisterListener(framework, &domainListener);
     FloodContext::unregisterListener(framework, &domainListener);
@@ -147,6 +153,7 @@ void PolicyManager::stop() {
     L24Classifier::unregisterListener(framework, &secGroupListener);
     Subnets::unregisterListener(framework, &secGroupListener);
     Subnet::unregisterListener(framework, &secGroupListener);
+    DnsAnswer::unregisterListener(framework, &secGroupListener);
 
     ExternalNode::unregisterListener(framework, &routeListener);
     StaticRoute::unregisterListener(framework, &routeListener);
@@ -770,7 +777,8 @@ bool operator==(const PolicyRule& lhs, const PolicyRule& rhs) {
             (lhs.getRemoteSubnets() == rhs.getRemoteSubnets()) &&
             (*lhs.getL24Classifier() == *rhs.getL24Classifier()) &&
             (lhs.getRedirectDestGrpURI() == rhs.getRedirectDestGrpURI()) && 
-            (lhs.getLog() == rhs.getLog()));
+            (lhs.getLog() == rhs.getLog()) &&
+            (lhs.egressDnsResolved == rhs.egressDnsResolved));
 }
 
 bool operator!=(const PolicyRule& lhs, const PolicyRule& rhs) {
@@ -805,7 +813,9 @@ std::ostream & operator<<(std::ostream &os, const PolicyRule& rule) {
         os << ",remoteSubnets=" << rule.getRemoteSubnets();
     if (rule.getRedirectDestGrpURI())
         os << ",redirectGroup=" << rule.getRedirectDestGrpURI().get();
-
+    if(!rule.getNamedAddresses().empty()) {
+        os << ",resolved DNS addresses=" << rule.getNamedAddresses();
+    }
     os << "]";
     return os;
 }
@@ -1053,6 +1063,30 @@ void resolveRemoteSubnets(OFFramework& framework,
     }
 }
 
+template <typename Rule>
+void resolveNamedAddress(PolicyManager &pMgr,
+                         OFFramework& framework,
+                         shared_ptr<Rule>& parent,
+                         /* out */PolicyManager::named_addr_set_t &newDnsRefs,
+                         /* out */network::subnets_t  &namedAddresses) {}
+
+template <>
+void resolveNamedAddress(PolicyManager &pMgr,
+                         OFFramework& framework,
+                         shared_ptr<modelgbp::gbp::SecGroupRule>& rule,
+                         /* out */ PolicyManager::named_addr_set_t &newDnsRefs,
+                         /* out */ network::subnets_t &namedAddresses) {
+    using modelgbp::gbp::DnsName;
+    vector<shared_ptr<DnsName>> dnsNames;
+    rule->resolveGbpDnsName(dnsNames);
+    for (const shared_ptr<DnsName>& dnsName : dnsNames) {
+        if (dnsName->getName()) {
+            newDnsRefs.insert(dnsName->getName().get());
+            pMgr.getDnsResolvedAddresses(dnsName->getName().get(), namedAddresses);
+        }
+    }
+}
+
 void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
      using modelgbp::gbpe::L24Classifier;
      vector<shared_ptr<L24Classifier>>::iterator begin = classifiers.begin();
@@ -1090,12 +1124,122 @@ void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& cla
       }
 }
 
+void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, uri_set_t &notifyContracts) {
+    using modelgbp::epdr::DnsAnswer;
+    using modelgbp::epdr::DnsAsk;
+    using modelgbp::epdr::DnsAnswerToResultRSrc;
+    using modelgbp::epdr::DnsEntry;
+    using modelgbp::epdr::DnsMappedAddress;
+    using network::operator<<;
+
+    if(class_id != DnsAnswer::CLASS_ID) {
+        return;
+    }
+    auto dnsAnswer = DnsAnswer::resolve(framework, uri);
+    if(!dnsAnswer) {
+        vector<string> elements;
+        uri.getElements(elements);
+	if(elements.size() < 1) {
+            return;
+        }
+	LOG(DEBUG) << "Clear DNS cache for " << elements.back();
+        auto itr = dns_demand_map.find(elements.back());
+        if(itr != dns_demand_map.end()) {
+	    itr->second.resolved.clear();
+            notifyContracts = itr->second.secGrpSet;
+	    for(auto &secGrp: notifyContracts) {
+		bool notFound;
+		updateSecGrpRules(secGrp, notFound);
+	    }
+        }
+        return;
+    }
+    auto itr = dns_demand_map.find(dnsAnswer.get()->getName().get());
+    if(itr == dns_demand_map.end()) {
+        return;
+    }
+    network::subnets_t newResolved;
+    std::vector<std::shared_ptr<DnsAnswerToResultRSrc>> result;
+    dnsAnswer.get()->resolveEpdrDnsAnswerToResultRSrc(result);
+    for(auto &res :result) {
+        if(!res->isTargetSet() ||
+           (res->getTargetClass().get() != DnsEntry::CLASS_ID)) {
+            continue;
+        }
+        optional<shared_ptr<DnsEntry> > dnsEntry =
+            DnsEntry::resolve(framework, res->getTargetURI().get());
+        if(dnsEntry) {
+            std::vector<shared_ptr<DnsMappedAddress>> mappedAddresses;
+            dnsEntry.get()->resolveEpdrDnsMappedAddress(mappedAddresses);
+            for(auto &mappedAddress: mappedAddresses) {
+                boost::system::error_code ec;
+                address addr =
+                    address::from_string(mappedAddress->getAddress().get(), ec);
+                if(ec) {
+                    LOG(ERROR) << "Failed to add mapped address" <<
+                        mappedAddress->getAddress().get();
+                    continue;
+                }
+                newResolved.insert(std::make_pair(addr.to_string(),
+                                  (addr.is_v4()?32:128)));
+            }
+        }
+    }
+    if(itr->second.resolved != newResolved) {
+        itr->second.resolved = newResolved;
+        notifyContracts = itr->second.secGrpSet;
+	for(auto &secGrp: notifyContracts) {
+	    bool notFound;
+	    updateSecGrpRules(secGrp, notFound);
+	}
+	LOG(DEBUG) << "Update DNS cache for " << dnsAnswer.get()->getName().get() << string(" ") << newResolved;
+    }
+}
+
+/*Call this while holding the stateMutex*/
+void PolicyManager::getDnsResolvedAddresses(
+        const std::string &domainName,
+        network::subnets_t &egressDnsResolved)
+{
+    auto itr = dns_demand_map.find(domainName);
+    if(itr != dns_demand_map.end()) {
+        egressDnsResolved = itr->second.resolved;
+    }
+}
+
+/*Call this while holding the stateMutex*/
+void PolicyManager::createDnsAsk(const URI &uri, const std::string &domainName)
+{
+    dns_demand_map[domainName];
+    dns_demand_map[domainName].secGrpSet.insert(uri);
+    auto dDemandU = modelgbp::epdr::DnsDemand::resolve(framework);
+    opflex::modb::Mutator mutator(framework,"policyelement");
+    dDemandU.get()->addEpdrDnsAsk(domainName);
+    mutator.commit();
+    LOG(DEBUG) << "Added DNS ask for " << domainName ;
+}
+
+void PolicyManager::deleteDnsAsk(const URI &uri, const std::string &domainName)
+{
+    if(dns_demand_map.find(domainName) == dns_demand_map.end()) {
+        return;
+    }
+    dns_demand_map[domainName].secGrpSet.erase(uri);
+    if(dns_demand_map[domainName].secGrpSet.empty()) {
+        opflex::modb::Mutator mutator(framework,"policyelement");
+        modelgbp::epdr::DnsAsk::remove(framework,domainName);
+        mutator.commit();
+	LOG(DEBUG) << "Removed DNS ask for " << domainName ;
+    }
+}
+
 template <typename Parent, typename Subject, typename Rule>
-static bool updatePolicyRules(OFFramework& framework,
+static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
                               const URI& parentURI, bool& notFound,
                               PolicyManager::rule_list_t& oldRules,
                               PolicyManager::uri_set_t &oldRedirGrps, bool log,
-                              PolicyManager::uri_set_t &newRedirGrps)
+                              PolicyManager::uri_set_t &newRedirGrps,
+                              PolicyManager::named_addr_set_t &newDnsRefs)
 {
     using modelgbp::gbpe::L24Classifier;
     using modelgbp::gbp::RuleToClassifierRSrc;
@@ -1131,8 +1275,9 @@ static bool updatePolicyRules(OFFramework& framework,
                 continue;       // ignore rules with no direction
             }
             uint8_t dir = rule->getDirection().get();
-            network::subnets_t remoteSubnets;
+            network::subnets_t remoteSubnets, namedAddresses;
             resolveRemoteSubnets(framework, rule, remoteSubnets);
+            resolveNamedAddress(pMgr, framework, rule, newDnsRefs, namedAddresses);
             vector<shared_ptr<L24Classifier> > classifiers;
             vector<shared_ptr<RuleToClassifierRSrc> > clsRel;
             rule->resolveGbpRuleToClassifierRSrc(clsRel);
@@ -1206,13 +1351,13 @@ static bool updatePolicyRules(OFFramework& framework,
             sortOrderOfSameRange(classifiers);
             uint16_t clsPrio = 0;
             for (const shared_ptr<L24Classifier>& c : classifiers) {
-                newRules.push_back(std::
-                            make_shared<PolicyRule>(dir,
+                newRules.push_back(std::make_shared<PolicyRule>(dir,
                                                     rulePrio - clsPrio,
                                                     c, ruleAllow,
                                                     remoteSubnets,
                                                     ruleRedirect, ruleLog,
-                                                    destGrpUri));
+                                                    destGrpUri,
+                                                    namedAddresses));
                 if (clsPrio < 127)
                     clsPrio += 1;
             }
@@ -1247,23 +1392,42 @@ static bool updatePolicyRules(OFFramework& framework,
 bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
     using namespace modelgbp::gbp;
     uri_set_t oldRedirGrps, newRedirGrps;
+    PolicyManager::named_addr_set_t newDnsRefs;
+    PolicyManager::named_addr_set_t  &oldDnsRefs = secGrpMap[secGrpURI].dnsAsks;
     bool log = false;
-    return updatePolicyRules<SecGroup, SecGroupSubject,
-                             SecGroupRule>(framework, secGrpURI,
-                                           notFound, secGrpMap[secGrpURI],
-                                           oldRedirGrps, log, newRedirGrps);
+    bool updated =  updatePolicyRules<SecGroup, SecGroupSubject,
+                             SecGroupRule>(*this, framework, secGrpURI,
+                                           notFound, secGrpMap[secGrpURI].rules,
+                                           oldRedirGrps, log, newRedirGrps,
+                                           newDnsRefs);
+    for (auto s : oldDnsRefs) {
+        /*lost Dns Ref*/
+        if(dns_demand_map.find(s) != dns_demand_map.end() && (newDnsRefs.find(s) == newDnsRefs.end())) {
+            deleteDnsAsk(secGrpURI, s);
+        }
+    }
+    for (auto s : newDnsRefs) {
+        /*new Dns Ref*/
+        if(oldDnsRefs.find(s) == oldDnsRefs.end()) {
+            createDnsAsk(secGrpURI, s);
+        }
+    }
+    secGrpMap[secGrpURI].dnsAsks = newDnsRefs;
+    return updated;
 }
 
 bool PolicyManager::updateContractRules(const URI& contrURI, bool& notFound) {
     using namespace modelgbp::gbp;
     uri_set_t oldRedirGrps, newRedirGrps;
     ContractState& cs = contractMap[contrURI];
+    named_addr_set_t newDnsRef;
     bool log = false;
     bool updated = updatePolicyRules<Contract, Subject,
-                                     Rule>(framework, contrURI,
+                                     Rule>(*this, framework, contrURI,
                                            notFound, cs.rules,
                                            oldRedirGrps, log,
-                                           newRedirGrps);
+                                           newRedirGrps,
+                                           newDnsRef);
     for (const URI& u : oldRedirGrps) {
         if(redirGrpMap.find(u) != redirGrpMap.end()) {
             redirGrpMap[u].ctrctSet.erase(contrURI);
@@ -1417,7 +1581,7 @@ void PolicyManager::getSecGroupRules(const URI& secGroupURI,
     lock_guard<mutex> guard(state_mutex);
     secgrp_map_t::const_iterator it = secGrpMap.find(secGroupURI);
     if (it != secGrpMap.end()) {
-        rules.insert(rules.end(), it->second.begin(), it->second.end());
+        rules.insert(rules.end(), it->second.rules.begin(), it->second.rules.end());
     }
 }
 
@@ -2804,6 +2968,20 @@ executeAndNotifyContract(const std::function<void(uri_set_t&)>& func) {
 }
 
 void PolicyManager::
+executeAndNotifySecGroup(const std::function<void(uri_set_t&)>& func) {
+    uri_set_t secGroupsToNotify;
+
+    {
+        unique_lock<mutex> guard(state_mutex);
+        func(secGroupsToNotify);
+    }
+
+    for (const URI& u : secGroupsToNotify) {
+        notifySecGroup(u);
+    }
+}
+
+void PolicyManager::
         executeAndNotifyContractAndRoute(
             const std::function<void(uri_set_t&, uri_set_t&)>& func) {
     uri_set_t contractsToNotify;
@@ -2881,16 +3059,22 @@ PolicyManager::SecGroupListener::~SecGroupListener() {}
 void PolicyManager::SecGroupListener::objectUpdated(class_id_t classId,
                                                     const URI& uri) {
     LOG(DEBUG) << "SecGroupListener update for URI " << uri;
-    {
+    if (classId == modelgbp::epdr::DnsAnswer::CLASS_ID) {
+        pmanager.taskQueue.dispatch("cl"+uri.toString(), [=]() {
+            pmanager.executeAndNotifySecGroup([&](uri_set_t& notif) {
+                pmanager.updateDnsPolicies(classId, uri, notif);
+            });
+        });
+    } else {
         unique_lock<mutex> guard(pmanager.state_mutex);
         if (classId == modelgbp::gbp::SecGroup::CLASS_ID) {
             pmanager.secGrpMap[uri];
         }
-    }
 
-    pmanager.taskQueue.dispatch("secgroup", [this]() {
-            pmanager.updateSecGrps();
-        });
+	pmanager.taskQueue.dispatch("secgroup", [this]() {
+		pmanager.updateSecGrps();
+	    });
+    }
 }
 
 PolicyManager::ConfigListener::ConfigListener(PolicyManager& pmanager_)

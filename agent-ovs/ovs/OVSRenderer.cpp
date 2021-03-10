@@ -52,7 +52,7 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       accessSwitchManager(agent_, accessFlowExecutor,
                           accessFlowReader, accessPortMapper),
       accessFlowManager(agent_, accessSwitchManager, idGen, ctZoneManager),
-      pktInHandler(agent_, intFlowManager),
+      pktInHandler(agent_, intFlowManager, dnsManager),
       interfaceStatsManager(&agent_, intSwitchManager.getPortMapper(),
                             accessSwitchManager.getPortMapper()),
       contractStatsManager(&agent_, idGen, intSwitchManager),
@@ -61,6 +61,7 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       secGrpStatsManager(&agent_, idGen, accessSwitchManager),
       tableDropStatsManager(&agent_, idGen, intSwitchManager,
               accessSwitchManager),
+      dnsManager(agent_),
       encapType(IntFlowManager::ENCAP_NONE),
       tunnelRemotePort(0), uplinkVlan(0),
       virtualRouter(true), routerAdv(true),
@@ -74,7 +75,8 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       secGroupStatsEnabled(true), secGroupStatsInterval(0),
       tableDropStatsEnabled(true), tableDropStatsInterval(0),
       spanRenderer(agent_), netflowRenderer(agent_), qosRenderer(agent_), started(false),
-      dropLogRemotePort(6081), dropLogLocalPort(50000), pktLogger(pktLoggerIO, exporterIO, idGen) {
+      dropLogRemotePort(6081), dropLogLocalPort(50000), pktLogger(pktLoggerIO, exporterIO, idGen)
+{
 
 }
 
@@ -159,6 +161,7 @@ void OVSRenderer::start() {
     if (accessBridgeName != "") {
         accessFlowManager.start();
     }
+    dnsManager.start();
 
     pktInHandler.registerConnection(intSwitchManager.getConnection(),
                                     (accessBridgeName != "")
@@ -271,7 +274,7 @@ void OVSRenderer::stop() {
         tableDropStatsManager.stop();
 
     pktInHandler.stop();
-
+    dnsManager.stop();
     intFlowManager.stop();
     accessFlowManager.stop();
 

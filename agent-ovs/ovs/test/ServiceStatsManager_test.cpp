@@ -64,7 +64,8 @@ public:
     ServiceStatsManagerFixture() : PolicyStatsManagerFixture(),
                                     intFlowManager(agent, switchManager, idGen,
                                                    ctZoneManager, tunnelEpManager),
-                                    pktInHandler(agent, intFlowManager),
+                                    dnsManager(agent),
+                                    pktInHandler(agent, intFlowManager, dnsManager),
                                     serviceStatsManager(&agent, idGen,
                                                        switchManager,
                                                        intFlowManager, 300) {
@@ -98,6 +99,7 @@ public:
     }
 
     IntFlowManager  intFlowManager;
+    DnsManager dnsManager;
     PacketInHandler pktInHandler;
     MockServiceStatsManager serviceStatsManager;
     void testFlowStatsPodSvc(MockConnection& portConn,
