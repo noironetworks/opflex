@@ -154,6 +154,7 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
+                            boost::optional<const network::subnets_t&> destNamedAddresses,
                             uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
@@ -195,6 +196,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 
     network::subnets_t effSourceSub(compute_eff_sub(sourceSub));
     network::subnets_t effDestSub(compute_eff_sub(destSub));
+    network::append(effDestSub, destNamedAddresses);
 
     for (const network::subnet_t& ss : effSourceSub) {
         flow_func src_func(make_flow_functor(ss, &FlowBuilder::ipSrc));

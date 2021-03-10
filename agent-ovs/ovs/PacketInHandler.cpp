@@ -25,11 +25,12 @@
 #include "eth.h"
 #include "IntFlowManager.h"
 #include "FlowConstants.h"
-#include "ovs-shim.h"
-#include "ovs-ofputil.h"
 
 // OVS lib
+#include "ovs-shim.h"
+#include "ovs-ofputil.h"
 #include <lib/util.h>
+
 #include <openvswitch/ofp-msgs.h>
 #include <openvswitch/match.h>
 
@@ -51,8 +52,10 @@ using modelgbp::gbp::Subnet;
 namespace opflexagent {
 
 PacketInHandler::PacketInHandler(Agent& agent_,
-                                 IntFlowManager& intFlowManager_)
+                                 IntFlowManager& intFlowManager_,
+                                 DnsManager& dnsManager_)
     : agent(agent_), intFlowManager(intFlowManager_),
+      dnsManager(dnsManager_),
       intPortMapper(NULL), accessPortMapper(NULL),
       intFlowReader(NULL),
       intSwConnection(NULL), accSwConnection(NULL) {}
@@ -888,6 +891,13 @@ static void handleICMPEchoPktIn(bool v4,
     }
 }
 
+void PacketInHandler::handleDNSPktIn(struct ofputil_packet_in& pi,
+                                ofputil_protocol& proto,
+                                struct dp_packet* pkt) {
+    struct dp_packet *copiedPkt = dp_packet_clone(pkt);
+    dnsManager.handlePacketIn(copiedPkt);
+}
+
 /**
  * Dispatch packet-in messages to the appropriate handlers
  */
@@ -949,6 +959,8 @@ void PacketInHandler::Handle(SwitchConnection* conn,
         handleICMPEchoPktIn(false, agent, intFlowManager,
                             intPortMapper, accessPortMapper,
                             conn, accSwConnection, pi, proto, pkt.get());
+    else if ((pi.cookie == flow::cookie::DNS_RESPONSE_V4) || (pi.cookie == flow::cookie::DNS_RESPONSE_V6))
+        handleDNSPktIn(pi, proto, pkt.get());
 }
 
 } /* namespace opflexagent */

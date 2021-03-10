@@ -89,6 +89,7 @@ private:
     ServiceStatsManager serviceStatsManager;
     SecGrpStatsManager secGrpStatsManager;
     TableDropStatsManager tableDropStatsManager;
+    DnsManager dnsManager;
 
     std::string intBridgeName;
     std::string accessBridgeName;

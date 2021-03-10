@@ -33,6 +33,15 @@ using boost::asio::ip::address_v6;
 using boost::algorithm::is_any_of;
 using boost::algorithm::split;
 
+void append(subnets_t &current, boost::optional<const subnets_t &> addendum) {
+    if(!addendum) {
+        return;
+    }
+    for (auto toAdd:addendum.get()) {
+        current.insert(toAdd);
+    }
+}
+
 std::ostream & operator<<(std::ostream &os, const subnet_t& subnet) {
     os << subnet.first << "/" << (int)subnet.second;
     return os;

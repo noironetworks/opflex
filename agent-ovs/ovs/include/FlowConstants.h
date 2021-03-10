@@ -79,6 +79,16 @@ extern const uint64_t RD_POL_DROP_FLOW;
  * The cookie used for flows for per table drops.
  */
 extern const uint64_t TABLE_DROP_FLOW;
+
+/**
+ * The cookie used for flows to capture DNS v4 response packets
+ */
+extern const uint64_t DNS_RESPONSE_V4;
+
+/**
+ * The cookie used for flows to capture DNS v6 response packets
+ */
+extern const uint64_t DNS_RESPONSE_V6;
 } // namespace cookie
 
 namespace meta {

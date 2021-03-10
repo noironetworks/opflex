@@ -17,6 +17,7 @@
 #include <unordered_set>
 
 #include <boost/asio/ip/address.hpp>
+#include <boost/optional.hpp>
 #include <opflex/modb/MAC.h>
 
 #include <cstdint>
@@ -58,6 +59,7 @@ namespace network {
  */
 typedef std::unordered_set<subnet_t> subnets_t;
 
+void append(subnets_t &current, boost::optional<const subnets_t &> addendum);
 /**
  * subnet_t stream insertion
  */

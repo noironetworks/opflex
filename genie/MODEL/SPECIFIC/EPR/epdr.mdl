@@ -180,4 +180,82 @@ module[epdr]
             parent[class=epdr/LocalRouteDiscovered]
         }
     }
+
+    class[DnsMappedAddress;
+          super=policy/Definition;
+          concrete]
+    {
+        member[address; type=address/IP]
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=address]
+            }
+        }
+        contained
+        {
+            parent[class=epdr/DnsEntry]
+        }
+    }
+
+    class[DnsEntry;
+          super=policy/NamedDefinition;
+          concrete]
+    {
+        member[updated; type=ascii/String]
+        member[expiry; type=scalar/UInt32]
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=name]
+            }
+        }
+        contained
+        {
+            parent[class=epdr/DnsDiscovered]
+        }
+    }
+
+    class[DnsAnswer;
+          super=policy/NamedDefinition;
+          concrete]
+    {
+        dependency[result;
+                   cardinality=many;]
+        {
+            to[class=epdr/DnsEntry;
+               cardinality=many;]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=name]
+            }
+        }
+        contained
+        {
+            parent[class=epdr/DnsDiscovered]
+        }
+        member[uuid; type=reference/UUID]
+    }
+
+    class[DnsAsk;
+          super=policy/NamedDefinition;
+          concrete]
+    {
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=name]
+            }
+        }
+        contained
+        {
+            parent[class=epdr/DnsDemand]
+        }
+    }
 }

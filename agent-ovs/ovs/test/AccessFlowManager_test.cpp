@@ -8,6 +8,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <opflexagent/test/ModbFixture.h>
 #include <opflexagent/test/BaseFixture.h>
 #include <opflexagent/LearningBridgeSource.h>
 #include "FlowManagerFixture.h"
@@ -63,6 +64,7 @@ public:
     void initExpSecGrpSet1();
     void initExpSecGrpSet12(bool second = true, int remoteAddress = 0);
     uint16_t initExpSecGrp3(int remoteAddress);
+    void initExpSecGrp4(std::vector<std::string>& namedAddressSet);
 
     /** Initialize dscp flow entries */
     void addDscpFlows(shared_ptr<Endpoint>& ep);
@@ -72,6 +74,7 @@ public:
     shared_ptr<SecGroup> secGrp1;
     shared_ptr<SecGroup> secGrp2;
     shared_ptr<SecGroup> secGrp3;
+    shared_ptr<L24Classifier> classifier100;
 
     shared_ptr<modelgbp::policy::Space> pSpace;
     shared_ptr<modelgbp::qos::Requirement> reqCfg;
@@ -230,7 +233,7 @@ BOOST_FIXTURE_TEST_CASE(learningBridge, AccessFlowManagerFixture) {
 
 #define ADDF(flow) addExpFlowEntry(expTables, flow)
 enum TABLE {
-    DROP_LOG=0, SVC_BYPASS = 1, GRP = 2, IN_POL = 3, OUT_POL = 4, OUT = 5, EXP_DROP=6
+    DROP_LOG=0, SVC_BYPASS = 1, GRP = 2, IN_POL = 3, OUT_POL = 4, TAP=5, OUT = 6, EXP_DROP=7
 };
 
 enum CaptureReason {
@@ -460,6 +463,55 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("deny-rule", 500);
 }
 
+BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
+    using namespace modelgbp::epdr;
+    createObjects();
+    createPolicyObjects();
+    {
+       Mutator mutator(framework, "policyreg");
+       shared_ptr<modelgbp::gbp::SecGroup> sec4;
+        //secgrp 4
+       sec4 = space->addGbpSecGroup("sec4");
+       //classifier 100
+       classifier100 = space->addGbpeL24Classifier("classifier100");
+       classifier100->setEtherT(modelgbp::l2::EtherTypeEnumT::CONST_IPV4);
+       //action 1
+       action1 = space->addGbpAllowDenyAction("action1");
+       action1->setAllow(0).setOrder(5);
+       //security group rule
+       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule1")
+           ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
+           .addGbpRuleToClassifierRSrc(classifier100->getURI().toString());
+       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule1")
+           ->addGbpDnsName(std::string("cnn.com"));
+       mutator.commit();
+       Mutator mutator1(framework, "policyelement");
+       auto dDU = DnsDiscovered::resolve(framework);
+       auto dnsEntry = dDU.get()->addEpdrDnsEntry(std::string("cnn.com"));
+       dnsEntry->addEpdrDnsMappedAddress(std::string("151.101.1.67"));
+       dnsEntry->addEpdrDnsMappedAddress(std::string("151.101.193.67"));
+       auto dnsAnswer = dDU.get()->addEpdrDnsAnswer(std::string("cnn.com"));
+       dnsAnswer->addEpdrDnsAnswerToResultRSrc(dnsEntry->getURI().toString());
+       mutator1.commit();
+     }
+
+    ep0.reset(new Endpoint("0-0-0-0"));
+    epSrc.updateEndpoint(*ep0);
+
+    initExpStatic();
+    WAIT_FOR_TABLES("empty-secgrp", 500);
+
+    ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
+                                            "/tenant0/GbpSecGroup/sec4/"));
+    epSrc.updateEndpoint(*ep0);
+
+    clearExpFlowTables();
+    initExpStatic();
+    std::vector<std::string> namedAddressSet = {"151.101.1.67","151.101.193.67"};
+    initExpSecGrp4(namedAddressSet);
+    WAIT_FOR_TABLES("egress-dns-rule", 500);
+}
+
 void AccessFlowManagerFixture::addDscpFlows(shared_ptr<Endpoint>& ep) {
     uint32_t access = portmapper.FindPort(ep->getAccessInterface().get());
     if (access == OFPP_NONE) return;
@@ -485,11 +537,28 @@ void AccessFlowManagerFixture::initExpStatic() {
          .isMdAct(opflexagent::flow::meta::access_out::POP_VLAN)
          .isVlanTci("0x1000/0x1000")
          .actions().popVlan().out(OUTPORT).done());
-
+    ADDF(Bldr().table(TAP).priority(2)
+         .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V4))
+         .tcp().isTpSrc(53)
+         .actions().controller(65535).go(OUT).done());
+    ADDF(Bldr().table(TAP).priority(2)
+         .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V6))
+         .tcp6().isTpSrc(53)
+         .actions().controller(65535).go(OUT).done());
+    ADDF(Bldr().table(TAP).priority(2)
+         .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V4))
+         .udp().isTpSrc(53)
+         .actions().controller(65535).go(OUT).done());
+    ADDF(Bldr().table(TAP).priority(2)
+         .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V6))
+         .udp6().isTpSrc(53)
+         .actions().controller(65535).go(OUT).done());
+    ADDF(Bldr().table(TAP).priority(1)
+         .actions().go(OUT).done());
     ADDF(Bldr().table(OUT_POL).priority(PolicyManager::MAX_POLICY_RULE_PRIORITY)
-         .reg(SEPG, 1).actions().go(OUT).done());
+         .reg(SEPG, 1).actions().go(TAP).done());
     ADDF(Bldr().table(IN_POL).priority(PolicyManager::MAX_POLICY_RULE_PRIORITY)
-         .reg(SEPG, 1).actions().go(OUT).done());
+         .reg(SEPG, 1).actions().go(TAP).done());
     ADDF(Bldr().table(DROP_LOG).priority(0)
             .actions().go(SVC_BYPASS).done());
     ADDF(Bldr().table(SVC_BYPASS).priority(1)
@@ -517,7 +586,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
              .actions()
              .load(OUTPORT, uplink)
              .mdAct(opflexagent::flow::meta::access_out::POP_VLAN)
-             .go(OUT).done());
+             .go(TAP).done());
         if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
             ADDF(Bldr()
                  .table(GRP).priority(200).udp().in(access)
@@ -525,7 +594,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
                  .isTpSrc(68).isTpDst(67)
                  .actions()
                  .load(OUTPORT, uplink)
-                 .go(OUT).done());
+                 .go(TAP).done());
         }
     }
     if (ep->getDHCPv6Config()) {
@@ -536,7 +605,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
              .actions()
              .load(OUTPORT, uplink)
              .mdAct(opflexagent::flow::meta::access_out::POP_VLAN)
-             .go(OUT).done());
+             .go(TAP).done());
         if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
             ADDF(Bldr()
                  .table(GRP).priority(200).udp6().in(access)
@@ -544,7 +613,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
                  .isTpSrc(546).isTpDst(547)
                  .actions()
                  .load(OUTPORT, uplink)
-                 .go(OUT).done());
+                 .go(TAP).done());
         }
     }
 }
@@ -626,60 +695,60 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio).cookie(ruleId)
              .tcp().reg(SEPG, setId).isIpSrc("192.168.0.0/16").isTpDst(80)
-             .actions().go(OUT).done());
+             .actions().go(TAP).done());
         if (remoteAddress > 1)
             ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio).cookie(ruleId)
                  .tcp().reg(SEPG, setId).isIpSrc("10.0.0.0/8").isTpDst(80)
-                 .actions().go(OUT).done());
+                 .actions().go(TAP).done());
     }
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio).cookie(ruleId)
-         .tcp().reg(SEPG, setId).isTpDst(80).actions().go(OUT).done());
+         .tcp().reg(SEPG, setId).isTpDst(80).actions().go(TAP).done());
     /* classifer 8  */
     ruleId = idGen.getId("l24classifierRule",
                          classifier8->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
              .tcp6().reg(SEPG, setId).isIpv6Src("fd80::/32").isTpDst(80)
-             .actions().go(OUT).done());
+             .actions().go(TAP).done());
         if (remoteAddress > 1)
             ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
                  .tcp6().reg(SEPG, setId)
                  .isIpv6Src("fd34:9c39:1374:358c::/64")
-                 .isTpDst(80).actions().go(OUT).done());
+                 .isTpDst(80).actions().go(TAP).done());
     }
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
         .tcp6().reg(SEPG, setId).isTpDst(80)
-        .actions().go(OUT).done());
+        .actions().go(TAP).done());
     /* classifier 2  */
     ruleId = idGen.getId("l24classifierRule",
                          classifier2->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
               .arp().reg(SEPG, setId).isTpa("192.168.0.0/16")
-              .actions().go(OUT).done());
+              .actions().go(TAP).done());
         if (remoteAddress > 1)
            ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
                  .arp().reg(SEPG, setId).isTpa("10.0.0.0/8")
-                 .actions().go(OUT).done());
+                 .actions().go(TAP).done());
     } else {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
-             .arp().reg(SEPG, setId).actions().go(OUT).done());
+             .arp().reg(SEPG, setId).actions().go(TAP).done());
     }
     /* classifier 6 */
     ruleId = idGen.getId("l24classifierRule",
                          classifier6->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-384).cookie(ruleId)
          .tcp().reg(SEPG, setId).isTpSrc(22)
-         .isTcpFlags("+syn+ack").actions().go(OUT).done());
+         .isTcpFlags("+syn+ack").actions().go(TAP).done());
     /* classifier 7 */
     ruleId = idGen.getId("l24classifierRule",
                          classifier7->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-512).cookie(ruleId)
          .tcp().reg(SEPG, setId).isTpSrc(21)
-         .isTcpFlags("+ack").actions().go(OUT).done());
+         .isTcpFlags("+ack").actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-512).cookie(ruleId)
          .tcp().reg(SEPG, setId).isTpSrc(21)
-         .isTcpFlags("+rst").actions().go(OUT).done());
+         .isTcpFlags("+rst").actions().go(TAP).done());
 
     return 512;
 }
@@ -694,19 +763,19 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
     ruleId = idGen.getId("l24classifierRule",
                          classifier5->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio).cookie(ruleId)
-         .reg(SEPG, setId).isEth(0x8906).actions().go(OUT).done());
+         .reg(SEPG, setId).isEth(0x8906).actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
-         .reg(SEPG, setId).isEth(0x8906).actions().go(OUT).done());
+         .reg(SEPG, setId).isEth(0x8906).actions().go(TAP).done());
 
     /* classifier 9 */
     ruleId = idGen.getId("l24classifierRule",
                          classifier9->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("-new+est-rel+rpl-inv+trk").tcp().reg(SEPG, setId)
-         .actions().go(OUT).done());
+         .actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("-new-est+rel+rpl-inv+trk").ip().reg(SEPG, setId)
-         .actions().go(OUT).done());
+         .actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128)
          .isCtState("-trk").tcp().reg(SEPG, setId)
          .actions().ct("table=2,zone=NXM_NX_REG6[0..15]").done());
@@ -718,12 +787,12 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
          .isCtState("+est+trk")
          .tcp().reg(SEPG, setId).isTpDst(22)
          .actions()
-         .go(OUT).done());
+         .go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("+new+trk")
          .tcp().reg(SEPG, setId).isTpDst(22)
          .actions().ct("commit,zone=NXM_NX_REG6[0..15]")
-         .go(OUT).done());
+         .go(TAP).done());
 
     return 1;
 }
@@ -766,4 +835,16 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     }
     return 512;
 }
+
+void AccessFlowManagerFixture::initExpSecGrp4(std::vector<std::string>& namedAddressSet) {
+    uint32_t setId = 2;
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    uint64_t ruleId = idGen.getId("l24classifierRule", classifier100->getURI().toString());
+    for( auto& addr : namedAddressSet) {
+        ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
+             .ip().reg(SEPG, setId).isIpDst(addr).actions()
+             .go(TAP).done());
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
