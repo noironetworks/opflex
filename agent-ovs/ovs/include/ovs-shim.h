@@ -294,6 +294,10 @@ extern "C" {
      * dp_packet_size
      */
     uint32_t dpp_size(const struct dp_packet *);
+    /**
+     * dpp_at
+     */
+    void * dpp_at(const struct dp_packet* pkt, size_t offset, size_t size);
 
     /**
      * flow_extract
@@ -316,6 +320,9 @@ extern "C" {
 
     void print_tlv_map(struct ds *s, const struct ofputil_tlv_map *map);
 
+    struct dp_packet *dp_packet_clone(const struct dp_packet *);
+
+    void dpp_delete(struct dp_packet *);
 #ifdef __cplusplus
 }
 

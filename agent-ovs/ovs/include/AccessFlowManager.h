@@ -150,6 +150,11 @@ public:
          */
         SEC_GROUP_OUT_TABLE_ID,
         /**
+         * Punt packets to the controller/other ports to examine and handle additional
+         * policy:currently DNS packets
+         */
+        TAP_TABLE_ID,
+        /**
          * Output to the final destination port
          */
         OUT_TABLE_ID,

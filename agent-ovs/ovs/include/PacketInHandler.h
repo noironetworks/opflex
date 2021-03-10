@@ -19,6 +19,7 @@
 #include "FlowReader.h"
 #include "TableState.h"
 #include <opflexagent/Agent.h>
+#include "DnsManager.h"
 
 struct dp_packet;
 struct flow;
@@ -37,7 +38,7 @@ public:
     /**
      * Construct a PacketInHandler
      */
-    PacketInHandler(Agent& agent, IntFlowManager& intFlowManager);
+    PacketInHandler(Agent& agent, IntFlowManager& intFlowManager, DnsManager& dnsManager);
 
     /**
      * Set the port mapper to use
@@ -83,11 +84,15 @@ public:
 private:
     Agent& agent;
     IntFlowManager& intFlowManager;
+    DnsManager& dnsManager;
     PortMapper* intPortMapper;
     PortMapper* accessPortMapper;
     FlowReader* intFlowReader;
     SwitchConnection* intSwConnection;
     SwitchConnection* accSwConnection;
+    void handleDNSPktIn(struct ofputil_packet_in& pi,
+                        ofputil_protocol& proto,
+                        struct dp_packet* pkt);
 };
 } /* namespace opflexagent */
 

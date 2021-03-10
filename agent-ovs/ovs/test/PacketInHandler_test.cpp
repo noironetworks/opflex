@@ -38,7 +38,8 @@ public:
           switchManager(agent, flowExecutor, flowReader, intPortMapper),
           intFlowManager(agent, switchManager, idGen,
                          ctZoneManager, tunnelEpManager),
-          pktInHandler(agent, intFlowManager),
+          dnsManager(agent),
+          pktInHandler(agent, intFlowManager, dnsManager),
           proto(ofputil_protocol_from_ofp_version
                 ((ofp_version)intConn.GetProtocolVersion())) {
         createObjects();
@@ -98,6 +99,7 @@ public:
     MockPortMapper accPortMapper;
     MockSwitchManager switchManager;
     IntFlowManager intFlowManager;
+    DnsManager dnsManager;
     PacketInHandler pktInHandler;
     ofputil_protocol proto;
 };

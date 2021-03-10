@@ -27,6 +27,7 @@
 #include <opflexagent/logging.h>
 #include <opflexagent/LearningBridgeSource.h>
 #include "IntFlowManager.h"
+#include "DnsManager.h"
 #include "FlowExecutor.h"
 #include "Packets.h"
 
@@ -78,7 +79,8 @@ public:
         : FlowManagerFixture(),
           intFlowManager(agent, switchManager, idGen,
                          ctZoneManager, tunnelEpManager),
-          pktInHandler(agent, intFlowManager),
+          dnsManager(agent),
+          pktInHandler(agent, intFlowManager,dnsManager),
           policyMgr(agent.getPolicyManager()),
           ep2_port(11), ep4_port(22) {
 
@@ -250,6 +252,7 @@ public:
     void remoteEndpointTest();
 
     IntFlowManager intFlowManager;
+    DnsManager dnsManager;
     PacketInHandler pktInHandler;
     PolicyManager& policyMgr;
 

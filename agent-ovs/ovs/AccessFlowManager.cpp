@@ -14,6 +14,7 @@
 #include "FlowConstants.h"
 #include "RangeMask.h"
 #include "eth.h"
+#include "ip.h"
 #include <opflexagent/logging.h>
 
 #include <boost/system/error_code.hpp>
@@ -62,6 +63,8 @@ void AccessFlowManager::populateTableDescriptionMap(
             "Egress Security group derivation missing/incorrect")
     TABLE_DESC(SEC_GROUP_OUT_TABLE_ID, "SEC_GROUP_OUT_TABLE",
             "Ingress security group missing/incorrect")
+    TABLE_DESC(TAP_TABLE_ID, "TAP_TABLE",
+            "Tap missing/incorrect")
     TABLE_DESC(OUT_TABLE_ID, "OUT_TABLE", "Output port missing/incorrect")
 #undef TABLE_DESC
 }
@@ -178,7 +181,7 @@ static FlowEntryPtr flowEmptySecGroup(uint32_t emptySecGrpSetId) {
     flowutils::match_group(noSecGrp,
                            PolicyManager::MAX_POLICY_RULE_PRIORITY,
                            emptySecGrpSetId, 0);
-    noSecGrp.action().go(AccessFlowManager::OUT_TABLE_ID);
+    noSecGrp.action().go(AccessFlowManager::TAP_TABLE_ID);
     return noSecGrp.build();
 }
 
@@ -211,7 +214,7 @@ static void flowBypassDhcpRequest(FlowEntryList& el, bool v4,
     if (skip_pop_vlan)
         fb.tci(0, 0x1fff);
 
-    fb.action().go(AccessFlowManager::OUT_TABLE_ID);
+    fb.action().go(AccessFlowManager::TAP_TABLE_ID);
     fb.build(el);
 }
 
@@ -256,7 +259,7 @@ static void flowBypassFloatingIP(FlowEntryList& el, uint32_t inport,
     if (skip_pop_vlan && !in)
         fb.tci(0, 0x1fff);
 
-    fb.action().go(AccessFlowManager::OUT_TABLE_ID);
+    fb.action().go(AccessFlowManager::TAP_TABLE_ID);
     fb.build(el);
 }
 
@@ -288,7 +291,7 @@ static void flowBypassServiceIP(FlowEntryList& el,
                        .metadata(flow::meta::access_out::PUSH_VLAN,
                                  flow::meta::out::MASK);
             }
-            ingress.action().go(AccessFlowManager::OUT_TABLE_ID);
+            ingress.action().go(AccessFlowManager::TAP_TABLE_ID);
             ingress.build(el);
 
             egress.priority(10)
@@ -306,7 +309,7 @@ static void flowBypassServiceIP(FlowEntryList& el,
             } else {
                 egress.tci(0, 0x1fff);
             }
-            egress.action().go(AccessFlowManager::OUT_TABLE_ID);
+            egress.action().go(AccessFlowManager::TAP_TABLE_ID);
             egress.build(el);
         }
     }
@@ -390,6 +393,42 @@ void AccessFlowManager::createStaticFlows() {
         switchManager.writeFlow("static", SERVICE_BYPASS_TABLE_ID, skipServiceFlows);
     }
 
+    {
+        FlowEntryList tapFlows;
+        /*For now make the DNS punt flows static*/
+        FlowBuilder().priority(2).cookie(flow::cookie::DNS_RESPONSE_V4)
+            .ethType(eth::type::IP)
+            .proto(ip::type::TCP)
+            .tpSrc(tcp::type::DNS)
+            .action().controller()
+            .go(OUT_TABLE_ID)
+            .parent().build(tapFlows);
+        FlowBuilder().priority(2).cookie(flow::cookie::DNS_RESPONSE_V6)
+            .ethType(eth::type::IPV6)
+            .proto(ip::type::TCP)
+            .tpSrc(tcp::type::DNS)
+            .action().controller()
+            .go(OUT_TABLE_ID)
+            .parent().build(tapFlows);
+        FlowBuilder().priority(2).cookie(flow::cookie::DNS_RESPONSE_V4)
+            .ethType(eth::type::IP)
+            .proto(ip::type::UDP)
+            .tpSrc(udp::type::DNS)
+            .action().controller()
+            .go(OUT_TABLE_ID)
+            .parent().build(tapFlows);
+        FlowBuilder().priority(2).cookie(flow::cookie::DNS_RESPONSE_V6)
+            .ethType(eth::type::IPV6)
+            .proto(ip::type::UDP)
+            .tpSrc(udp::type::DNS)
+            .action().controller()
+            .go(OUT_TABLE_ID)
+            .parent().build(tapFlows);
+        FlowBuilder().priority(1)
+            .action().go(OUT_TABLE_ID)
+            .parent().build(tapFlows);
+        switchManager.writeFlow("static", TAP_TABLE_ID, tapFlows);
+    }
     // everything is allowed for endpoints with no security group set
     uint32_t emptySecGrpSetId = idGen.getId(ID_NMSPC_SECGROUP_SET, "");
     switchManager.writeFlow("static", SEC_GROUP_OUT_TABLE_ID,
@@ -716,9 +755,10 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
             const URI& ruleURI = cls.get()->getURI();
             uint64_t secGrpCookie =
                 idGen.getId("l24classifierRule", ruleURI.toString());
-            boost::optional<const network::subnets_t&> remoteSubs;
-            if (!pc->getRemoteSubnets().empty()) {
+            boost::optional<const network::subnets_t&> remoteSubs, namedAddresses;
+            if (!pc->getRemoteSubnets().empty() || !pc->getNamedAddresses().empty()) {
                 remoteSubs = pc->getRemoteSubnets();
+                namedAddresses = pc->getNamedAddresses();
             } else {
                 skipL34 = !agent.addL34FlowsWithoutSubnet();
                 LOG(DEBUG) << "skipL34 flows: " << skipL34
@@ -758,7 +798,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                             secGrpIn); 
                     } else { 
                          flowutils::add_l2classifier_entries(*cls, act, log,
-                                                             OUT_TABLE_ID, 0,
+                                                             TAP_TABLE_ID, 0,
                                                              pc->getPriority(),
                                                              OFPUTIL_FF_SEND_FLOW_REM,
                                                              secGrpCookie,
@@ -778,7 +818,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                             secGrpOut);
                     } else {
                          flowutils::add_l2classifier_entries(*cls, act, log,
-                                                             OUT_TABLE_ID, 0,
+                                                             TAP_TABLE_ID, 0,
                                                              pc->getPriority(),
                                                              OFPUTIL_FF_SEND_FLOW_REM,
                                                              secGrpCookie,
@@ -794,6 +834,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                          flowutils::add_classifier_entries(*cls, act, log,
                                                           remoteSubs,
                                                           boost::none,
+                                                          boost::none,
                                                           EXP_DROP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
                                                           pc->getPriority(),
                                                           OFPUTIL_FF_SEND_FLOW_REM,
@@ -804,7 +845,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                          flowutils::add_classifier_entries(*cls, act, log,
                                                            remoteSubs,
                                                            boost::none,
-                                                           OUT_TABLE_ID, 0,
+                                                           boost::none,
+                                                           TAP_TABLE_ID, 0,
                                                            pc->getPriority(),
                                                            OFPUTIL_FF_SEND_FLOW_REM,
                                                            secGrpCookie,
@@ -815,6 +857,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK, log,
                                                       remoteSubs,
                                                       boost::none,
+                                                      boost::none,
                                                       GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
@@ -824,7 +867,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      OUT_TABLE_ID, 0,
+                                                      boost::none,
+                                                      TAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
@@ -834,6 +878,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK, log,
                                                       boost::none,
                                                       remoteSubs,
+                                                      namedAddresses,
                                                       GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
@@ -843,7 +888,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      OUT_TABLE_ID, 0,
+                                                      namedAddresses,
+                                                      TAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
@@ -852,7 +898,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      OUT_TABLE_ID, 0,
+                                                      namedAddresses,
+                                                      TAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
@@ -866,6 +913,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, act, log,
                                                       boost::none,
                                                       remoteSubs,
+                                                      namedAddresses,
                                                       EXP_DROP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
@@ -876,7 +924,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                       flowutils::add_classifier_entries(*cls, act, log,
                                                         boost::none,
                                                         remoteSubs,
-                                                        OUT_TABLE_ID, 0,
+                                                        namedAddresses,
+                                                        TAP_TABLE_ID, 0,
                                                         pc->getPriority(),
                                                         OFPUTIL_FF_SEND_FLOW_REM,
                                                         secGrpCookie,
@@ -887,6 +936,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK, log,
                                                       boost::none,
                                                       remoteSubs,
+                                                      namedAddresses,
                                                       GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
@@ -896,7 +946,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST, log,
                                                       boost::none,
                                                       remoteSubs,
-                                                      OUT_TABLE_ID, 0,
+                                                      namedAddresses,
+                                                      TAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
@@ -905,6 +956,7 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     // add reverse entries for reflexive classifier
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK, log,
                                                       remoteSubs,
+                                                      boost::none,
                                                       boost::none,
                                                       GROUP_MAP_TABLE_ID, 0,
                                                       pc->getPriority(),
@@ -915,7 +967,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      OUT_TABLE_ID, 0,
+                                                      boost::none,
+                                                      TAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
@@ -924,7 +977,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED, log,
                                                       remoteSubs,
                                                       boost::none,
-                                                      OUT_TABLE_ID, 0,
+                                                      boost::none,
+                                                      TAP_TABLE_ID, 0,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,

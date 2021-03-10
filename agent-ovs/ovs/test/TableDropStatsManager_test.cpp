@@ -121,7 +121,8 @@ public:
                                                  ctZoneManager, tunnelEpManager),
                                   accFlowManager(agent, accBr, idGen,
                                                  ctZoneManager),
-                                  pktInHandler(agent, intFlowManager),
+                                  dnsManager(agent),
+                                  pktInHandler(agent, intFlowManager, dnsManager),
                                   tableDropStatsManager(&agent, idGen,
                                             switchManager, accBr, 20000000) {
         tableDropStatsManager.setAgentUUID(agent.getUuid());
@@ -153,6 +154,7 @@ public:
     MockSwitchManager accBr;
     IntFlowManager intFlowManager;
     AccessFlowManager accFlowManager;
+    DnsManager dnsManager;
     PacketInHandler pktInHandler;
     MockTableDropStatsManager tableDropStatsManager;
 

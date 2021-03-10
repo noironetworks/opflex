@@ -102,6 +102,7 @@ enum ClassAction {
  * @param act an action to take for the flows
  * @param sourceSub A set of source networks to which the rule should apply
  * @param destSub A set of dest networks to which the rule should apply
+ * @param destNamedAddresses A set of resolved domain names to which the rule should apply
  * @param nextTable the table to send to if the traffic is allowed
  * @param priority Priority of the entry created
  * @param cookie Cookie of the entry created
@@ -113,6 +114,7 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                             ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
+                            boost::optional<const network::subnets_t&> destNamedAddresses,
                             uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,

@@ -60,4 +60,32 @@ module[epdr]
         }
     }
 
+    # universe containing discovered DNS mappings
+    class[DnsDiscovered;
+          super=epr/Universe;
+          concrete;
+          ]
+    {
+        named
+        {
+            parent[class=*;]
+            {
+                component[prefix=dns-cache;]
+            }
+        }
+    }
+    # universe containing DNS demands
+    class[DnsDemand;
+          super=epr/Universe;
+          concrete;
+          ]
+    {
+        named
+        {
+            parent[class=*;]
+            {
+                component[prefix=dns-demand;]
+            }
+        }
+    }
 }

@@ -170,6 +170,7 @@ noinst_HEADERS = \
 	ovs/include/FlowUtils.h \
 	ovs/include/FlowConstants.h \
 	ovs/include/udp.h \
+	ovs/include/ip.h \
 	ovs/include/dhcp.h \
 	ovs/include/arp.h \
 	ovs/include/eth.h \
@@ -184,7 +185,8 @@ noinst_HEADERS = \
 	ovs/include/OvsdbMessage.h \
 	ovs/include/OvsdbMonitorMessage.h \
 	ovs/include/OvsdbTransactMessage.h \
-	ovs/include/OvsdbState.h
+	ovs/include/OvsdbState.h \
+	ovs/include/DnsManager.h
 
 libopflex_agent_la_SOURCES = \
 	lib/AgentLogHandler.cpp \
@@ -295,7 +297,9 @@ if RENDERER_OVS
 	ovs/OvsdbTransactMessage.cpp \
 	ovs/OvsdbMessage.cpp \
 	ovs/OvsdbMonitorMessage.cpp \
-	ovs/CtZoneManager.cpp
+	ovs/CtZoneManager.cpp \
+	ovs/DnsManager.cpp
+
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
 	-I$(top_srcdir)/ovs/include \
@@ -538,7 +542,8 @@ if RENDERER_OVS
 	ovs/test/QosRenderer_test.cpp \
 	ovs/test/PacketDecoder_test.cpp \
 	ovs/test/TableDropStatsManager_test.cpp \
-    ovs/test/OvsdbConnection_test.cpp
+	ovs/test/OvsdbConnection_test.cpp \
+	ovs/test/DnsManager_test.cpp
 endif
 
 

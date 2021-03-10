@@ -43,7 +43,8 @@ public:
           intFlowManager(agent, switchManager, idGen,
                          ctZoneManager, tunnelEpManager),
           advertManager(agent, intFlowManager),
-          pktInHandler(agent, intFlowManager) {
+          dnsManager(agent),
+          pktInHandler(agent, intFlowManager, dnsManager) {
         createObjects();
         PolicyManager::uri_set_t rdURIs;
         WAIT_FOR_DO(rdURIs.find(rd0->getURI()) != rdURIs.end(), 1000,
@@ -156,6 +157,7 @@ public:
     MockSwitchConnection* conn;
     IntFlowManager intFlowManager;
     AdvertManager advertManager;
+    DnsManager dnsManager;
     PacketInHandler pktInHandler;
     ofputil_protocol proto;
 };

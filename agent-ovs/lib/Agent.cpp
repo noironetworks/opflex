@@ -758,6 +758,8 @@ void Agent::createUniverse (std::shared_ptr<modelgbp::dmtree::Root> root)
     root->addEprPeerRouteUniverse();
     root->addFaultUniverse();
     root->addObserverSysStatUniverse();
+    root->addEpdrDnsDiscovered();
+    root->addEpdrDnsDemand();
 }
 
 inline StatMode Agent::getStatModeFromString(const std::string& mode) {

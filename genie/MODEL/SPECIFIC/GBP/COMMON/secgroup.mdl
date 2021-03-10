@@ -36,6 +36,24 @@ module[gbp]
         }
     }
 
+    # DNS FQDN or Regex(only leading *)
+    class[DnsName;
+          super=policy/NamedDefinition;
+          concrete]
+    {
+        contained
+        {
+            parent[class=gbp/SecGroupRule]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=name]
+            }
+        }
+    }
+
     class[SecGroupRule;
           super=gbp/Rule;
           concrete]
