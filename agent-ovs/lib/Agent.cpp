@@ -641,7 +641,7 @@ void Agent::stop() {
     // timeout
     std::mutex mutex;
     std::condition_variable terminate;
-    bool terminated = false;
+    std::atomic<bool> terminated(false);
 
     std::thread abort_timer([&mutex, &terminate, &terminated]() {
             std::unique_lock<std::mutex> guard(mutex);
@@ -650,7 +650,8 @@ void Agent::stop() {
                                      std::chrono::steady_clock::now() +
                                      std::chrono::seconds(10),
                                      [&terminated]() {
-                                         return terminated;
+                                         bool result = terminated;
+                                         return result;
                                      });
             if (!completed) {
                 LOG(ERROR) << "Failed to cleanly shut down Agent: "
@@ -695,11 +696,7 @@ void Agent::stop() {
     serviceSources.clear();
 
     started = false;
-
-    {
-        std::lock_guard<std::mutex> guard(mutex);
-        terminated = true;
-    }
+    terminated = true;
     terminate.notify_all();
     abort_timer.join();
 
