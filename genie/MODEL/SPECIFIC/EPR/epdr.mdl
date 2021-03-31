@@ -186,6 +186,7 @@ module[epdr]
           concrete]
     {
         member[address; type=address/IP]
+        member[expiry; type=ascii/String]
         named
         {
             parent[class=*;]
@@ -204,7 +205,6 @@ module[epdr]
           concrete]
     {
         member[updated; type=ascii/String]
-        member[expiry; type=scalar/UInt32]
         named
         {
             parent[class=*;]

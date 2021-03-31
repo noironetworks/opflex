@@ -14,19 +14,35 @@
 
 #include <opflexagent/Agent.h>
 #include "PortMapper.h"
-
+#include <functional>
 #include <boost/noncopyable.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/io_service.hpp>
+#include <boost/system/error_code.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <time.h>
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/local_time/local_time.hpp>
 #include <list>
 #include <unordered_set>
 #include <mutex>
 #include <random>
 #include <queue>
 #include "ip.h"
+
+namespace opflexagent {
+    class DnsCachedAddress;
+}
+
+namespace std {
+
+template<> struct hash<opflexagent::DnsCachedAddress>
+{
+    std::size_t operator()(const opflexagent::DnsCachedAddress& cA) const;
+};
+
+}
 
 namespace opflexagent {
 
@@ -101,17 +117,12 @@ public:
     };
     class DnsRR {
     public:
-        DnsRR()
+        DnsRR():currTime(boost::posix_time::second_clock::local_time()),
+        rType(RRTypeA),rClass(RRClassIN),ttl(0),rdLen(0)
         {
-            time_t rawtime = std::time(nullptr);
-            char currTime[256];
-            struct tm tp;
-            std::strftime(currTime, sizeof(currTime),"%a %b %d %H:%M:%S %Z %Y",
-                    localtime_r(&rawtime, &tp));
-            timeStamp = std::string(currTime);
         }
         std::string domainName;
-        std::string timeStamp;
+        boost::posix_time::ptime currTime;
         RRType rType;
         RRClass rClass;
         uint16_t ttl;
@@ -119,6 +130,15 @@ public:
         //std::variant available only in C++17
         union {
             uint32_t rrTypeAData;
+            //RFC-2874
+            struct {
+                uint8_t prefixLen;
+                //Could be a max of 255 bytes
+                void *data;
+            } rrTypeA6Data;
+            struct {
+                void *data;
+            } rrTypeCNameData;
         };
     };
 
@@ -130,30 +150,54 @@ public:
     std::list<DnsRR> answers;
 };
 
+class DnsCachedAddress {
+public:
+    DnsCachedAddress(DnsParsingContext::DnsRR dnsRR);
+    DnsCachedAddress(const std::string &addrStr):
+	expiryTime(boost::posix_time::second_clock::local_time()) {
+	boost::system::error_code ec;
+	addr = boost::asio::ip::address::from_string(addrStr, ec);
+    };
+    boost::posix_time::ptime expiryTime;
+    boost::asio::ip::address addr;
+};
+
+bool operator==(const DnsCachedAddress& lhs, const DnsCachedAddress& rhs);
+
+class DnsManager;
 
 class DnsCacheEntry {
 public:
     DnsCacheEntry(DnsParsingContext::DnsRR &dnsRR):
-        domainName(dnsRR.domainName), ttl(dnsRR.ttl),
-        lastUpdated(dnsRR.timeStamp) {
-        if(dnsRR.rType == DnsParsingContext::RRTypeA) {
-            Ips.insert(boost::asio::ip::address_v4(dnsRR.rrTypeAData).to_string());
-        }
+        domainName(dnsRR.domainName),
+        lastUpdated(dnsRR.currTime) {
+        DnsCachedAddress cachedAddr(dnsRR);
+        Ips.insert(cachedAddr);
     }
-    /*Only required because of map container*/
-    DnsCacheEntry():ttl(0)
-    {
-        time_t rawtime = std::time(nullptr);
-        char currTime[256];
-        struct tm tp;
-        std::strftime(currTime, sizeof(currTime),"%a %b %d %H:%M:%S %Z %Y",
-            localtime_r(&rawtime, &tp));
-        lastUpdated = std::string(currTime);
-    }
+    DnsCacheEntry():lastUpdated(boost::posix_time::second_clock::local_time()){};
     std::string domainName;
-    std::unordered_set<std::string> Ips;
-    uint32_t ttl;
-    std::string lastUpdated;
+    std::unordered_set<DnsCachedAddress> Ips;
+    std::unordered_set<opflex::modb::URI> linkedAnswers;
+    boost::posix_time::ptime lastUpdated;
+    /**
+     * Update cache entry
+     * @param dnsRR DNS resource record
+     * @return whether a new address was added
+     */
+    bool update(DnsParsingContext::DnsRR &dnsRR);
+    /**
+     * Age cache entry
+     * @param mgr DNS Manager instance
+     * @return whether cache entry is aged out
+     * and can be removed
+     */
+    bool age(DnsManager &mgr);
+};
+
+class DnsDemandState {
+public:
+    std::unordered_set<std::string> resolved;
+    std::unordered_set<std::string> linkedEntries;
 };
 
 class DnsManager : public opflex::modb::ObjectListener, private boost::noncopyable {
@@ -198,6 +242,7 @@ public:
      */
     virtual void objectUpdated (opflex::modb::class_id_t class_id,
                                     const opflex::modb::URI& uri);
+    friend DnsCacheEntry;
 private:
     boost::asio::io_service io_ctxt;
     std::unique_ptr<boost::asio::io_service::work> work;
@@ -205,7 +250,7 @@ private:
     /*Map of domainName to DNS Entry*/
     std::unordered_map<std::string, DnsCacheEntry> learntMappings;
     /*Map of dns demand to resolved addresses*/
-    std::unordered_map<std::string, std::unordered_set<std::string>> demandMappings;
+    std::unordered_map<std::string, DnsDemandState> demandMappings;
     std::list<DnsListener *> dnsListeners;
     std::mutex listenerMutex,packetQMutex,askQMutex,stateMutex;
     std::queue<void *> packetInQ;
@@ -214,6 +259,7 @@ private:
     std::unique_ptr<std::thread> parserThread;
     std::unique_ptr<boost::uuids::basic_random_generator<boost::mt19937>> uuidGen;
     std::atomic<bool> started;
+    boost::mt19937 randomSeed;
     void notifyListeners(class_id_t cid, const URI& notifyURI);
     void updateMOs(DnsCacheEntry &entry, bool updated);
     void updateCache(DnsParsingContext &ctxt);
@@ -223,6 +269,7 @@ private:
                     std::function<void (URI&, std::unordered_set<URI>&)> func);
     bool handlePacket(struct dp_packet *pkt);
     void processPacket();
+    void onExpiryTimer(const boost::system::error_code &e);
 };
 
 /**

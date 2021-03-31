@@ -70,7 +70,8 @@ libopflex_agent_la_LIBADD = \
 	$(libmodelgbp_LIBS) \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
-	$(BOOST_ASIO_LIB)
+	$(BOOST_ASIO_LIB) \
+	$(BOOST_DATE_TIME_LIB)
 if ENABLE_PROMETHEUS
 libopflex_agent_la_LIBADD += $(PROMETHEUS_CORE_LIBS)
 libopflex_agent_la_LIBADD += $(PROMETHEUS_PULL_LIBS)
@@ -335,6 +336,7 @@ endif
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_ASIO_LIB) \
+	$(BOOST_DATE_TIME_LIB) \
 	$(libnfct_LIBS)
   libopflex_agent_renderer_openvswitch_la_LIBADD = \
 	librenderer_openvswitch.la

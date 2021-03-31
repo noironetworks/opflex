@@ -61,7 +61,9 @@ static unsigned parseHexDump( std::string hexdump, unsigned char *buf) {
 }
 
 enum PacketDesc {
-DNS_RESP_WITH_MULTIPLE_TYPE_A
+DNS_RESP_WITH_MULTIPLE_TYPE_A,
+DNS_RESP_WITH_SINGLE_TYPE_A,
+DNS_RESP_WITH_TWO_TYPE_A,
 };
 static const std::string PacketDef[] = {
 "\
@@ -80,7 +82,22 @@ ba ba ba ba ba ba 48 f8  b3 26 df 49 08 00 45 08\
 00 04 4a 7d ec 22 c0 0c  00 01 00 01 00 00 00 04\
 00 04 4a 7d ec 24 c0 0c  00 01 00 01 00 00 00 04\
 00 04 4a 7d ec 2e c0 0c  00 01 00 01 00 00 00 04\
-00 04 4a 7d ec 26"
+00 04 4a 7d ec 26",
+"\
+d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
+00 4a c5 80 40 00 39 11 b8 40 d0 43 dc dc c0 a8\
+56 19 00 35 88 11 00 36 7c 64 0e 6e 81 80 00 01\
+00 01 00 00 00 00 08 66 61 63 65 62 6f 6f 6b 03\
+63 6f 6d 00 00 01 00 01 c0 0c 00 01 00 01 00 00\
+00 01 00 04 9d f0 ce 23",
+"\
+d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
+00 59 dc a1 40 00 39 11 a1 10 d0 43 dc dc c0 a8\
+56 19 00 35 87 5d 00 45 1e 0c da 16 81 80 00 01\
+00 02 00 00 00 00 07 74 77 69 74 74 65 72 03 63\
+6f 6d 00 00 01 00 01 c0 0c 00 01 00 01 00 00 06\
+ee 00 04 68 f4 2a 81 c0 0c 00 01 00 01 00 00 00\
+01 00 04 68 f4 2a 01"
 };
 
 BOOST_AUTO_TEST_SUITE(DnsManager_test)
@@ -105,6 +122,7 @@ public:
     ~DnsManagerFixture() {
         dnsManager.stop();
     }
+    typedef std::unordered_set<std::string> str_set_t;
 private:
     IdGenerator idGen;
     CtZoneManager ctZoneManager;
@@ -121,11 +139,12 @@ private:
     ofputil_protocol proto;
 protected:
     void testHandleDnsResponsePacket(bool is_v4, PacketDesc pd);
+    void getResolvedAddressesFromAnswer(std::shared_ptr<modelgbp::epdr::DnsAnswer>&, str_set_t&);
 };
 
 static void init_packet_in(ofputil_packet_in_private& pin,
                            void* packet_buf, size_t len,
-                           uint64_t cookie = flow::cookie::DNS_RESPONSE_V4,
+                           uint64_t cookie = opflexagent::flow::cookie::DNS_RESPONSE_V4,
                            uint8_t table_id = AccessFlowManager::TAP_TABLE_ID)
 {
     memset(&pin, 0, sizeof(pin));
@@ -151,10 +170,31 @@ void DnsManagerFixture::testHandleDnsResponsePacket(bool is_v4, PacketDesc pd) {
     pktInHandler.Handle(&accConn, OFPTYPE_PACKET_IN, b.get());
 }
 
+void DnsManagerFixture::getResolvedAddressesFromAnswer(std::shared_ptr<modelgbp::epdr::DnsAnswer> &dnsAnswer,
+        str_set_t &out) {
+    using namespace modelgbp::epdr;
+    out.clear();
+    std::vector<std::shared_ptr<DnsAnswerToResultRSrc> > result;
+    dnsAnswer.get()->resolveEpdrDnsAnswerToResultRSrc(result);
+    for(auto &res :result) {
+        if(!res->isTargetSet() ||
+           (res->getTargetClass().get() != DnsEntry::CLASS_ID)) {
+            continue;
+        }
+        optional<shared_ptr<DnsEntry> > dnsEntry =
+            DnsEntry::resolve(framework, res->getTargetURI().get());
+        if(dnsEntry) {
+            std::vector<std::shared_ptr<DnsMappedAddress>> mappedAddresses;
+            dnsEntry.get()->resolveEpdrDnsMappedAddress(mappedAddresses);
+            for(auto &mappedAddress: mappedAddresses) {
+                out.insert(mappedAddress->getAddress().get());
+            }
+        }
+    }
+}
 
 BOOST_FIXTURE_TEST_CASE(handleDnsResponsePacket, DnsManagerFixture) {
     using namespace modelgbp::epdr;
-    typedef std::unordered_set<std::string> str_set_t;
     testHandleDnsResponsePacket(true, DNS_RESP_WITH_MULTIPLE_TYPE_A);
     std::string domainName("google.com");
     auto dnsEntry = DnsEntry::resolve(framework, domainName);
@@ -171,24 +211,8 @@ BOOST_FIXTURE_TEST_CASE(handleDnsResponsePacket, DnsManagerFixture) {
    WAIT_FOR_DO(dnsAnswer,
 	       500,
 	       (dnsAnswer = DnsAnswer::resolve(framework, askDomainName)));
-   std::vector<std::shared_ptr<DnsAnswerToResultRSrc> > result;
    str_set_t out;
-   dnsAnswer.get()->resolveEpdrDnsAnswerToResultRSrc(result);
-   for(auto &res :result) {
-      if(!res->isTargetSet() ||
-         (res->getTargetClass().get() != DnsEntry::CLASS_ID)) {
-          continue;
-      }
-      optional<shared_ptr<DnsEntry> > dnsEntry =
-          DnsEntry::resolve(framework, res->getTargetURI().get());
-      if(dnsEntry) {
-          std::vector<std::shared_ptr<DnsMappedAddress>> mappedAddresses;
-          dnsEntry.get()->resolveEpdrDnsMappedAddress(mappedAddresses);
-          for(auto &mappedAddress: mappedAddresses) {
-              out.insert(mappedAddress->getAddress().get());
-          }
-      }
-   }
+   getResolvedAddressesFromAnswer(dnsAnswer.get(),out);
    //Check resolved address list against packet
    std::unordered_set<std::string> expectedResolved = {"74.125.236.35","74.125.236.37","74.125.236.39","74.125.236.32",
 	"74.125.236.40","74.125.236.33","74.125.236.41","74.125.236.34","74.125.236.36","74.125.236.38","74.125.236.46"};
@@ -202,4 +226,53 @@ BOOST_FIXTURE_TEST_CASE(handleDnsResponsePacket, DnsManagerFixture) {
 	       (dnsAnswer2 = DnsAnswer::resolve(framework, askDomainName)));
 }
 
+
+BOOST_FIXTURE_TEST_CASE(testExpiryAgeOut, DnsManagerFixture) {
+    using namespace modelgbp::epdr;
+    std::string domainName("facebook.com");
+    auto ddU = DnsDemand::resolve(framework);
+    Mutator m0(framework, "policyelement");
+    auto dnsAsk = ddU.get()->addEpdrDnsAsk(domainName);
+    m0.commit();
+    testHandleDnsResponsePacket(true, DNS_RESP_WITH_SINGLE_TYPE_A);
+    auto dnsAnswer = DnsAnswer::resolve(framework, domainName);
+    WAIT_FOR_DO(dnsAnswer,
+	        500,
+	        (dnsAnswer = DnsAnswer::resolve(framework, domainName)));
+    str_set_t out;
+    getResolvedAddressesFromAnswer(dnsAnswer.get(),out);
+    std::unordered_set<std::string> expectedResolved = {"157.240.206.35"};
+    BOOST_CHECK(expectedResolved==out);
+    //Check expiry
+    WAIT_FOR_DO(!dnsAnswer,
+                1000,
+                (dnsAnswer = DnsAnswer::resolve(framework, domainName)));
+}
+
+BOOST_FIXTURE_TEST_CASE(testExpiryAgeUpdate, DnsManagerFixture) {
+    using namespace modelgbp::epdr;
+    auto ddU = DnsDemand::resolve(framework);
+    Mutator m0(framework, "policyelement");
+    std::string askDomainName("*twitter.com");
+    auto dnsAsk = ddU.get()->addEpdrDnsAsk(askDomainName);
+    m0.commit();
+    testHandleDnsResponsePacket(true, DNS_RESP_WITH_TWO_TYPE_A);
+    std::string domainName("twitter.com");
+    auto dnsAnswer = DnsAnswer::resolve(framework, askDomainName);
+    WAIT_FOR_DO(dnsAnswer,
+	        500,
+	       (dnsAnswer = DnsAnswer::resolve(framework, askDomainName)));
+    str_set_t out;
+    getResolvedAddressesFromAnswer(dnsAnswer.get(),out);
+    std::unordered_set<std::string> expectedResolved = {"104.244.42.129","104.244.42.1"};
+    BOOST_CHECK(expectedResolved==out);
+    out.clear();
+    //Check expiry
+    std::unordered_set<std::string> expectedResolved2 = {"104.244.42.129"};
+    auto dnsAnswer2 = DnsAnswer::resolve(framework, askDomainName);
+    WAIT_FOR_DO((out == expectedResolved2),
+ 	        1000,
+	        (dnsAnswer2 = DnsAnswer::resolve(framework, askDomainName));
+                getResolvedAddressesFromAnswer(dnsAnswer2.get(),out));
+}
 BOOST_AUTO_TEST_SUITE_END()

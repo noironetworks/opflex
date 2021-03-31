@@ -17,7 +17,6 @@
 #include <thread>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
-#include <boost/system/error_code.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/placeholders.hpp>
 #include "ovs-shim.h"
@@ -37,20 +36,140 @@ namespace opflexagent {
         using boost::uuids::basic_random_generator;
         if(started)
             return;
-        std::random_device randomDevice;
-        boost::mt19937 randomSeed(randomDevice());
-        uuidGen.reset(new basic_random_generator<boost::mt19937>(randomSeed));
+        uuidGen.reset(new basic_random_generator<boost::mt19937>(&randomSeed));
         modelgbp::epdr::DnsAsk::registerListener(agent.getFramework(),this);
         work.reset(new boost::asio::io_service::work(io_ctxt));
+        expiryTimer.reset( new boost::asio::deadline_timer(io_ctxt));
+        expiryTimer->expires_from_now(boost::posix_time::seconds(1));
+        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
         parserThread.reset(new std::thread([this]() {
            started = true;
            io_ctxt.run();
         }));
     }
 
+    bool DnsCacheEntry::age(DnsManager &mgr) {
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        using namespace modelgbp::epdr;
+        bool moChanged = false;
+        ptime currTime = second_clock::local_time();
+        for(auto cAItr = Ips.begin(); cAItr != Ips.end();) {
+            if(currTime >= cAItr->expiryTime) {
+                LOG(DEBUG) << domainName << "->" << cAItr->addr << " expired " <<
+                    to_simple_string(cAItr->expiryTime);
+                cAItr = Ips.erase(cAItr);
+                moChanged=true;
+            } else {
+                cAItr++;
+            }
+        }
+        if(!moChanged) {
+            return Ips.empty();
+        }
+        opflex::modb::Mutator mutator(mgr.agent.getFramework(), "policyelement");
+        //Handle DnsEntry
+        if (Ips.empty()) {
+            DnsEntry::remove(mgr.agent.getFramework(), domainName);
+        } else {
+            auto dnsEntry = DnsEntry::resolve(mgr.agent.getFramework(),domainName);
+            std::vector<std::shared_ptr<modelgbp::epdr::DnsMappedAddress>> out;
+            dnsEntry.get()->resolveEpdrDnsMappedAddress(out);
+            for(const auto &mA:out) {
+                if(!mA->getAddress())
+                    continue;
+                DnsCachedAddress cachedAddr(mA->getAddress().get());
+                if(Ips.find(cachedAddr) == Ips.end()) {
+                    dnsEntry.get()->addEpdrDnsMappedAddress(
+                        mA->getAddress().get())->remove();
+                }
+            }
+            dnsEntry.get()->setUpdated(to_simple_string(currTime));
+        }
+        //Handle DnsAnswer
+        for(auto lAItr= linkedAnswers.begin(); lAItr != linkedAnswers.end();) {
+            auto dnsAnswer = DnsAnswer::resolve(mgr.agent.getFramework(), *lAItr);
+            if(!dnsAnswer) {
+                lAItr = linkedAnswers.erase(lAItr);
+                continue;
+            }
+            if (Ips.empty()) {
+                auto buildDnsEntryUri = [](const std::string &name){
+                   return opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
+                   .addElement("EpdrDnsEntry").addElement(name).build();
+                };
+                if (dnsAnswer.get()->getName().get() == domainName) {
+                    mgr.demandMappings[domainName].resolved.clear();
+                    mgr.demandMappings[domainName].linkedEntries.erase(domainName);
+                    dnsAnswer.get()->remove();
+                } else {
+                    mgr.demandMappings[dnsAnswer.get()->getName().get()].resolved.clear();
+                    mgr.demandMappings[dnsAnswer.get()->getName().get()].linkedEntries.erase(domainName);
+                    dnsAnswer.get()->addEpdrDnsAnswerToResultRSrc(
+                        buildDnsEntryUri(domainName).toString())->remove();
+                }
+                lAItr = linkedAnswers.erase(lAItr);
+                continue;
+            } else {
+                DnsDemandState &demandState = mgr.demandMappings[dnsAnswer.get()->getName().get()];
+                for(auto rItr = demandState.resolved.begin();
+                        rItr != demandState.resolved.end();) {
+                    DnsCachedAddress cachedAddr(*rItr);
+                    if(Ips.find(cachedAddr) == Ips.end()) {
+                        rItr = demandState.resolved.erase(rItr);
+                        continue;
+                    }
+                    rItr++;
+                }
+                dnsAnswer.get()->setUuid(boost::uuids::to_string((*mgr.uuidGen)()));
+            }
+            lAItr++;
+        }
+        mutator.commit();
+        return Ips.empty();
+    }
+
+    void DnsManager::onExpiryTimer(const boost::system::error_code &e) {
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        using modelgbp::epdr::DnsAnswer;
+        using modelgbp::epdr::DnsEntry;
+        if(e == boost::asio::error::operation_aborted) {
+            return;
+        }
+        {
+            std::unique_lock<std::mutex> lk(stateMutex);
+            for(auto itr = learntMappings.begin();
+                itr != learntMappings.end();) {
+                if (itr->second.age(*this)) {
+                    itr = learntMappings.erase(itr);
+                } else {
+                    itr++;
+                }
+            }
+        }
+        expiryTimer->expires_from_now(seconds(1));
+        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
+    }
+
+    bool DnsCacheEntry::update(DnsParsingContext::DnsRR &dnsRR) {
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+
+        DnsCachedAddress cA(dnsRR);
+        auto pr = Ips.insert(cA);
+        if(pr.second)
+            return true;
+        if (cA.expiryTime > pr.first->expiryTime) {
+            Ips.erase(pr.first);
+            Ips.insert(cA);
+        }
+        return false;
+    }
+
     bool DnsManager::getResolvedAddresses(const std::string& name, std::unordered_set<std::string> &addr_set) {
         if(demandMappings.find(name) != demandMappings.end()) {
-            addr_set = demandMappings[name];
+            addr_set = demandMappings[name].resolved;
             return true;
         }
         return false;
@@ -69,13 +188,13 @@ namespace opflexagent {
                                   size_t &dnsOffset)
     {
         eth::eth_header *eth_hdr;
+        if(pkt == NULL) {
+            return false;
+        }
         char* pkt_data = (char*)dpp_data(pkt);
         size_t l3_offset = (char*)dpp_l3(pkt)-pkt_data;
         size_t l4_offset = (char*)dpp_l4(pkt)-pkt_data;
         uint8_t ip_proto=0;
-        if(pkt == NULL) {
-            return false;
-        }
         if (!(eth_hdr = (eth::eth_header *)dpp_at(pkt, 0,
                     sizeof(eth::eth_header)))) {
             return false;
@@ -256,13 +375,14 @@ namespace opflexagent {
         os << "Questions: " << dnsCtxt.qdCount << ", Answer RRs: " << dnsCtxt.anCount <<
            ", Authority RRs: " << dnsCtxt.nsCount << ", Additional RRs: " << dnsCtxt.arCount << endl;
         os << "Queries:" << endl;
-        for(auto &q: dnsCtxt.questions){
+        for(const auto &q: dnsCtxt.questions){
             os << q.domainName << ":  " << "type " << q.qType << ", class " << q.qClass;
         }
         os << endl;
         os << "Answers: " << endl;
-        for(auto &rr: dnsCtxt.answers){
+        for(const auto &rr: dnsCtxt.answers){
             os << rr.domainName << ":  " << "type " << rr.rType << ", class " << rr.rClass;
+            os << ", ttl: " << rr.ttl;
             switch(rr.rType){
                 case RRType::RRTypeA:
                     os << ", addr " <<((rr.rType == RRType::RRTypeA)?
@@ -309,43 +429,60 @@ namespace opflexagent {
         auto dDiscoveredU = modelgbp::epdr::DnsDiscovered::resolve(agent.getFramework());
         opflex::modb::Mutator mutator(agent.getFramework(), "policyelement");
         auto dnsEntry = dDiscoveredU.get()->addEpdrDnsEntry(entry.domainName);
-        dnsEntry->setUpdated(entry.lastUpdated);
-        dnsEntry->setExpiry(entry.ttl);
-        for(const auto& addr: entry.Ips) {
-            dnsEntry->addEpdrDnsMappedAddress(addr);
+        dnsEntry->setUpdated(boost::posix_time::to_simple_string(entry.lastUpdated));
+        for(const auto& cA: entry.Ips) {
+            auto mA = dnsEntry->addEpdrDnsMappedAddress(cA.addr.to_string());
+            mA->setExpiry(boost::posix_time::to_simple_string(cA.expiryTime));
         }
         mutator.commit();
-        for(const auto &demandItr : demandMappings) {
+        for(auto demandItr : demandMappings) {
             if(DomainNameMatch(entry.domainName,demandItr.first)){
                 auto dnsAnswer = dDiscoveredU.get()->addEpdrDnsAnswer(demandItr.first);
                 if(changed) {
                     dnsAnswer->setUuid(boost::uuids::to_string((*uuidGen)()));
                 }
                 dnsAnswer->addEpdrDnsAnswerToResultRSrc(dnsEntry->getURI().toString());
+                entry.linkedAnswers.insert(dnsAnswer->getURI());
+                demandItr.second.linkedEntries.insert(entry.domainName);
             }
         }
         mutator.commit();
+    }
+
+    DnsCachedAddress::DnsCachedAddress(DnsParsingContext::DnsRR dnsRR)
+    {
+        using namespace boost::posix_time;
+        boost::system::error_code ec;
+        //Resolve addresses using the RRs here
+        switch(dnsRR.rType) {
+            case DnsParsingContext::RRTypeA:
+            {
+                addr = boost::asio::ip::address_v4(dnsRR.rrTypeAData);
+                break;
+            }
+            default:
+                break;
+        }
+        expiryTime = dnsRR.currTime + seconds(dnsRR.ttl);
     }
 
     void DnsManager::updateCache(DnsParsingContext &ctxt) {
         bool changed = false;
         std::unique_lock<std::mutex> lk(stateMutex);
         for(auto itr=ctxt.answers.begin(); itr != ctxt.answers.end(); itr++) {
+            if(itr->domainName.empty()) {
+                continue;
+            }
             if(learntMappings.find(itr->domainName) != learntMappings.end()){
-                learntMappings[itr->domainName].lastUpdated = itr->timeStamp;
-                learntMappings[itr->domainName].ttl = itr->ttl;
-                if(itr->rType == DnsParsingContext::RRTypeA) {
-                    std::string pA(boost::asio::ip::address_v4(itr->rrTypeAData).to_string());
-                    if(learntMappings[itr->domainName].Ips.find(pA) ==
-                       learntMappings[itr->domainName].Ips.end()) {
-                       changed = true;
-                    }
-                    learntMappings[itr->domainName].Ips.insert(pA);
-                }
+                learntMappings[itr->domainName].lastUpdated = itr->currTime;
+                changed = learntMappings[itr->domainName].update(*itr);
             } else {
-                DnsCacheEntry entry(*itr);
-                learntMappings.emplace(std::make_pair(itr->domainName,entry));
-                changed = true;
+                if(!itr->domainName.empty()) {
+                    DnsCacheEntry entry(*itr);
+                    learntMappings.emplace(std::make_pair(itr->domainName,entry));
+                    learntMappings[itr->domainName].lastUpdated = itr->currTime;
+                    changed = true;
+                }
             }
             updateMOs(learntMappings[itr->domainName], changed);
         }
@@ -457,59 +594,74 @@ namespace opflexagent {
 
     void DnsManager::handleDnsAsk(URI &askUri, std::unordered_set<URI> &notifySet) {
        auto ask = modelgbp::epdr::DnsAsk::resolve(agent.getFramework(),askUri);
-       auto buildDnsAskUri = [](std::string &name){
-           return opflex::modb::URIBuilder().addElement("EpdrDnsDemand")
-           .addElement("EpdrDnsAsk").addElement(name).build();
+       auto buildDnsAnswerUri = [](const std::string &name){
+           return opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
+           .addElement("EpdrDnsAnswer").addElement(name).build();
         };
        auto buildDnsEntryUri = [](const std::string &name){
            return opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
            .addElement("EpdrDnsEntry").addElement(name).build();
         };
+       auto addCacheEntryToAnswer = [](std::string &askName, URI &askUri,
+                                       DnsCacheEntry & cacheEntry, DnsDemandState &demandState,
+                                       std::unordered_set<std::string> &cacheSet,
+                                       std::unordered_set<URI> &notifySet) {
+           for(const auto &mappedIp: cacheEntry.Ips) {
+               demandState.resolved.insert(mappedIp.addr.to_string());
+           }
+           demandState.linkedEntries.insert(cacheEntry.domainName);
+           URI dnsAnswerUri = opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
+           .addElement("EpdrDnsAnswer").addElement(askName).build();
+           cacheEntry.linkedAnswers.insert(dnsAnswerUri);
+           cacheSet.insert(cacheEntry.domainName);
+           notifySet.insert(askUri);
+        };
        if(ask) {
            std::unordered_set<std::string> cacheSet;
            std::string askName = ask.get()->getName().get();
-           std::unordered_set<std::string> emptySet;
+           DnsDemandState emptySet;
            std::unique_lock<std::mutex> lk(stateMutex);
            auto p = demandMappings.insert(std::make_pair(askName,emptySet));
            if(askName.data()[0] =='*') {
-               for(const auto &lm: learntMappings) {
+               for(auto lm: learntMappings) {
                    if(DomainNameMatch(lm.first,askName)) {
-                       for(auto &mappedIp: lm.second.Ips) {
-                           p.first->second.insert(mappedIp);
-                       }
-                       cacheSet.insert(lm.first);
-                       notifySet.insert(buildDnsAskUri(askName));
+                       addCacheEntryToAnswer(askName, askUri,
+                        lm.second, p.first->second, cacheSet, notifySet);
                    }
                }
            } else {
                if (learntMappings.find(askName) != learntMappings.end()) {
-                   p.first->second = learntMappings[askName].Ips;
-                   cacheSet.insert(askName);
-                   notifySet.insert(buildDnsAskUri(askName));
+                   addCacheEntryToAnswer(askName, askUri,
+                    learntMappings[askName], p.first->second, cacheSet, notifySet);
                }
            }
            if(!notifySet.empty()) {
                auto dDiscoveredU = modelgbp::epdr::DnsDiscovered::resolve(agent.getFramework());
                opflex::modb::Mutator mutator(agent.getFramework(), "policyelement");
                auto dnsAnswer = dDiscoveredU.get()->addEpdrDnsAnswer(askName);
-               for(auto &cacheStr:cacheSet) {
+               for(const auto &cacheStr:cacheSet) {
                    dnsAnswer->addEpdrDnsAnswerToResultRSrc(buildDnsEntryUri(cacheStr).toString());
                }
                dnsAnswer->setUuid(boost::uuids::to_string((*uuidGen)()));
                mutator.commit();
            }
        } else {
+           std::unique_lock<std::mutex> lk(stateMutex);
            vector<string> elements;
            askUri.getElements(elements);
            if( elements.size()<1 ) {
                return;
            }
            if (demandMappings.find(elements.back()) != demandMappings.end()) {
+               for(const auto &entryStr: demandMappings[elements.back()].linkedEntries) {
+                   auto dnsAnswerUri = buildDnsAnswerUri(entryStr);
+                   learntMappings[entryStr].linkedAnswers.erase(dnsAnswerUri);
+               }
                opflex::modb::Mutator mutator(agent.getFramework(), "policyelement");
                modelgbp::epdr::DnsAnswer::remove(agent.getFramework(),elements.back());
                mutator.commit();
                demandMappings.erase(demandMappings.find(elements.back()));
-               notifySet.insert(buildDnsAskUri(elements.back()));
+               notifySet.insert(askUri);
            }
        }
     }
@@ -537,7 +689,7 @@ namespace opflexagent {
         }
         std::unordered_set<URI> notifySet;
         func(uri.get(),notifySet);
-        for(auto &notifyUri: notifySet) {
+        for(const auto &notifyUri: notifySet) {
             notifyListeners(class_id, notifyUri);
         }
     }
@@ -562,7 +714,22 @@ namespace opflexagent {
     void DnsManager::stop() {
         if(!started)
             return;
+        boost::system::error_code ec;
+        expiryTimer->cancel(ec);
         work.reset();
         parserThread->join();
     }
+
+    bool operator==(const DnsCachedAddress& lhs, const DnsCachedAddress& rhs) {
+        return lhs.addr == rhs.addr;
+    }
+}
+
+namespace std {
+
+size_t hash<opflexagent::DnsCachedAddress>::operator()(const opflexagent::DnsCachedAddress& cA) const
+{
+    return hash<string>{}( cA.addr.to_string());
+}
+
 }
