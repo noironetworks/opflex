@@ -184,7 +184,6 @@ public:
         Mutator m0(framework, "policyelement");
         dnsEntry1 = dDiscoveredU.get()->addEpdrDnsEntry("maps.google.com");
         dnsEntry1.get()->setUpdated("Thu Mar 18 01:16:28 EDT 2021");
-        dnsEntry1.get()->setExpiry(300);
         std::string mappedAddress1("142.250.68.174"),mappedAddress2("142.250.68.175");
         dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress1);
         dnsAns1 = dDiscoveredU.get()->addEpdrDnsAnswer(std::string("*.google.com"));
@@ -659,7 +658,6 @@ BOOST_FIXTURE_TEST_CASE( egress_dns_policy_add_remove, PolicyFixture ) {
     Mutator m0(framework, "policyelement");
     dnsEntry1 = dDiscoveredU.get()->addEpdrDnsEntry("maps.google.com");
     dnsEntry1.get()->setUpdated("Thu Mar 18 01:16:28 EDT 2021");
-    dnsEntry1.get()->setExpiry(300);
     std::string mappedAddress1("142.250.68.174"),mappedAddress2("142.250.68.175");
     dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress1);
     dnsAns1 = dDiscoveredU.get()->addEpdrDnsAnswer(dnsName1);
