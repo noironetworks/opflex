@@ -91,7 +91,7 @@ Agent::~Agent() {
 }
 
 #define DEF_INSPECT_SOCKET LOCALSTATEDIR"/run/opflex-agent-inspect.sock"
-#define DEF_NOTIF_SOCKET LOCALSTATEDIR"/run/opflex-agent-notif.sock"
+#define DEF_NOTIF_SOCKET LOCALSTATEDIR"/run/opflex_notify/opflex-agent-notif.sock"
 
 Renderer* disabled_create(Agent& agent) {
     return NULL;

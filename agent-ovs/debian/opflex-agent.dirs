@@ -6,3 +6,4 @@ var/lib/opflex-agent-ovs/droplog
 var/lib/opflex-agent-ovs/faults
 etc/opflex-agent-ovs/conf.d
 etc/opflex-agent-ovs/plugins.conf.d
+/run/opflex_notify

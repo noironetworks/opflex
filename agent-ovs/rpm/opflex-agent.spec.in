@@ -142,6 +142,7 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/opflex-agent-ovs/mcast
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/opflex-agent-ovs/droplog
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/opflex-agent-ovs/faults
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/opflex-agent-ovs/conf.d
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/opflex_notify
 
 %check
 %if %{with check}

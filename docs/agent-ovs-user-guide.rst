@@ -83,8 +83,8 @@ options:
                 "enabled": true,
 
                 // Listen on the specified socket for the inspector
-                // Default: "/var/run/opflex-agent-ovs-notif.sock"
-                "socket-name": "/var/run/opflex-agent-ovs-notif.sock",
+                // Default: "/var/run/opflex_notify/opflex-agent-ovs-notif.sock"
+                "socket-name": "/var/run/opflex_notify/opflex-agent-ovs-notif.sock",
 
                 // Set the socket owner user after binding if the user
                 // exists
