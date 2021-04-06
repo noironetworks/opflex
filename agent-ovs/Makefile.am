@@ -59,11 +59,9 @@ lib_LTLIBRARIES = libopflex_agent.la
 libopflex_agent_la_CXXFLAGS = -pthread \
 	$(libopflex_CFLAGS) \
 	$(libmodelgbp_CFLAGS) \
-	$(rapidjson_CFLAGS)
-if ENABLE_PROMETHEUS
-libopflex_agent_la_CXXFLAGS += $(PROMETHEUS_CORE_CFLAGS)
-libopflex_agent_la_CXXFLAGS += $(PROMETHEUS_PULL_CFLAGS)
-endif
+	$(rapidjson_CFLAGS) \
+	$(PROMETHEUS_CORE_CFLAGS) \
+	$(PROMETHEUS_PULL_CFLAGS)
 
 libopflex_agent_la_LIBADD = \
 	$(libopflex_LIBS) \
@@ -71,11 +69,9 @@ libopflex_agent_la_LIBADD = \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_ASIO_LIB) \
-	$(BOOST_DATE_TIME_LIB)
-if ENABLE_PROMETHEUS
-libopflex_agent_la_LIBADD += $(PROMETHEUS_CORE_LIBS)
-libopflex_agent_la_LIBADD += $(PROMETHEUS_PULL_LIBS)
-endif
+	$(BOOST_DATE_TIME_LIB) \
+	$(PROMETHEUS_CORE_LIBS) \
+	$(PROMETHEUS_PULL_LIBS)
 
 libopflex_agent_la_includedir = $(includedir)/opflexagent
 libopflex_agent_la_include_HEADERS = \
@@ -136,10 +132,8 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/SnatListener.h \
 	lib/include/opflexagent/FSPacketDropLogConfigSource.h \
 	lib/include/opflexagent/PacketDropLogConfig.h \
-	lib/include/opflexagent/Faults.h
-if ENABLE_PROMETHEUS
-libopflex_agent_la_include_HEADERS += lib/include/opflexagent/PrometheusManager.h
-endif
+	lib/include/opflexagent/Faults.h \
+	lib/include/opflexagent/PrometheusManager.h
 
 noinst_HEADERS = \
 	ovs/include/OVSRenderer.h \
@@ -232,10 +226,8 @@ libopflex_agent_la_SOURCES = \
 	lib/Snat.cpp \
 	lib/SnatManager.cpp \
 	lib/SnatSource.cpp \
-	lib/FSPacketDropLogConfigSource.cpp
-if ENABLE_PROMETHEUS
-libopflex_agent_la_SOURCES += lib/AgentPrometheusManager.cpp
-endif
+	lib/FSPacketDropLogConfigSource.cpp \
+	lib/AgentPrometheusManager.cpp
 
 libopflex_agent_la_LDFLAGS = -shared -version-info ${VERSION_INFO}
 if ENABLE_TSAN
@@ -365,11 +357,9 @@ bin_PROGRAMS += gbp_client_stress
 endif
 opflex_agent_CXXFLAGS = -DSYSCONFDIR='"$(sysconfdir)"' \
 	$(libopflex_CFLAGS) \
-	$(libmodelgbp_CFLAGS)
-if ENABLE_PROMETHEUS
-opflex_agent_CXXFLAGS += $(PROMETHEUS_CORE_CFLAGS)
-opflex_agent_CXXFLAGS += $(PROMETHEUS_PULL_CFLAGS)
-endif
+	$(libmodelgbp_CFLAGS) \
+	$(PROMETHEUS_CORE_CFLAGS) \
+	$(PROMETHEUS_PULL_CFLAGS)
 
 opflex_agent_SOURCES = \
 	cmd/opflex_agent.cpp
@@ -378,11 +368,9 @@ opflex_agent_LDADD = \
 	$(BOOST_PROGRAM_OPTIONS_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB) \
+	$(PROMETHEUS_CORE_LIBS) \
+	$(PROMETHEUS_PULL_LIBS) \
 	libopflex_agent.la
-if ENABLE_PROMETHEUS
-opflex_agent_LDADD += $(PROMETHEUS_CORE_LIBS)
-opflex_agent_LDADD += $(PROMETHEUS_PULL_LIBS)
-endif
 
 gbp_inspect_CXXFLAGS = -DSYSCONFDIR='"$(sysconfdir)"'
 if ENABLE_TSAN
@@ -499,11 +487,9 @@ agent_test_LDADD = \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LIB) \
+	$(PROMETHEUS_CORE_LIBS) \
+	$(PROMETHEUS_PULL_LIBS) \
 	libopflex_agent.la
-if ENABLE_PROMETHEUS
-agent_test_LDADD += $(PROMETHEUS_CORE_LIBS)
-agent_test_LDADD += $(PROMETHEUS_PULL_LIBS)
-endif
 
 if RENDERER_OVS
   agent_test_CFLAGS += \
@@ -610,10 +596,9 @@ endif
 opflex_server_SOURCES = \
 	server/opflex_server.cpp \
 	server/include/StatsIO.h \
-	server/StatsIO.cpp
-if ENABLE_PROMETHEUS
-opflex_server_SOURCES += server/ServerPrometheusManager.cpp
-endif
+	server/StatsIO.cpp \
+	server/ServerPrometheusManager.cpp
+
 if ENABLE_GRPC
 %.grpc.pb.cc %.grpc.pb.h %.pb.cc %.pb.h: %.proto
 	protoc --cpp_out=. $^
@@ -635,17 +620,12 @@ opflex_server_LDADD = \
 	$(BOOST_PROGRAM_OPTIONS_LIB) \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB) \
+	$(PROMETHEUS_CORE_LIBS) \
+	$(PROMETHEUS_PULL_LIBS) \
 	libopflex_agent.la
-if ENABLE_PROMETHEUS
-opflex_server_LDADD += $(PROMETHEUS_CORE_LIBS)
-opflex_server_LDADD += $(PROMETHEUS_PULL_LIBS)
-endif
+
 if ENABLE_GRPC
 opflex_server_LDADD += $(GRPC_LIBS) $(PROTOBUF_LIBS) -lgrpc++_reflection
-endif
-
-
-if ENABLE_GRPC
 gbp_client_stress_CXXFLAGS = \
 	-I$(top_srcdir)/server/include \
 	-I$(top_srcdir)/server $(GRPC_CFLAGS)
