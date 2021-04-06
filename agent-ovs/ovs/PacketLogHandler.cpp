@@ -75,7 +75,7 @@ void LocalClient::run() {
         }
         if(pendingDataLen>0) {
             try {
-                boost::asio::write(clientSocket,
+                (void)boost::asio::write(clientSocket,
                         boost::asio::buffer(send_buffer, pendingDataLen));
                 pendingDataLen = 0;
             } catch (boost::system::system_error &bse ) {

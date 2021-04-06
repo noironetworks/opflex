@@ -253,6 +253,7 @@ private:
     std::unordered_map<std::string, DnsDemandState> demandMappings;
     std::list<DnsListener *> dnsListeners;
     std::mutex listenerMutex,packetQMutex,askQMutex,stateMutex;
+    std::recursive_mutex timerMutex;
     std::queue<void *> packetInQ;
     std::queue<URI> askQ;
     std::unique_ptr<boost::asio::deadline_timer> expiryTimer;
