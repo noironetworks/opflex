@@ -64,13 +64,13 @@ public:
 
 void readMessage(stream_protocol::socket& s, Document& result) {
     uint32_t rsize;
-    ba::read(s, ba::buffer(&rsize, 4));
+    (void)ba::read(s, ba::buffer(&rsize, 4));
     rsize = ntohl(rsize);
     std::vector<uint8_t> rbuffer;
     rbuffer.resize(rsize+1);
     rbuffer[rsize] = '\0';
 
-    ba::read(s, ba::buffer(rbuffer, rsize));
+    (void)ba::read(s, ba::buffer(rbuffer, rsize));
     result.Parse((const char*)&rbuffer[0]);
 
 }

@@ -39,9 +39,12 @@ namespace opflexagent {
         uuidGen.reset(new basic_random_generator<boost::mt19937>(&randomSeed));
         modelgbp::epdr::DnsAsk::registerListener(agent.getFramework(),this);
         work.reset(new boost::asio::io_service::work(io_ctxt));
-        expiryTimer.reset( new boost::asio::deadline_timer(io_ctxt));
-        expiryTimer->expires_from_now(boost::posix_time::seconds(1));
-        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
+        {
+            lock_guard<recursive_mutex> lk(timerMutex);
+            expiryTimer.reset( new boost::asio::deadline_timer(io_ctxt));
+            expiryTimer->expires_from_now(boost::posix_time::seconds(1));
+            expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
+        }
         parserThread.reset(new std::thread([this]() {
            started = true;
            io_ctxt.run();
@@ -148,6 +151,7 @@ namespace opflexagent {
                 }
             }
         }
+        lock_guard<recursive_mutex> lk(timerMutex);
         expiryTimer->expires_from_now(seconds(1));
         expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
     }
@@ -715,7 +719,10 @@ namespace opflexagent {
         if(!started)
             return;
         boost::system::error_code ec;
-        expiryTimer->cancel(ec);
+        {
+            lock_guard<recursive_mutex> lk(timerMutex);
+            expiryTimer->cancel(ec);
+        }
         work.reset();
         parserThread->join();
     }
