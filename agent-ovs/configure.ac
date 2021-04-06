@@ -102,14 +102,6 @@ AM_COND_IF([ENABLE_GRPC],
           [AC_MSG_NOTICE([GRPC is enabled])],
           [AC_MSG_NOTICE([GRPC is disabled])])
 
-# Enable prometheus support, disabled by default
-AC_ARG_ENABLE(prometheus,
-              AC_HELP_STRING([--enable-prometheus], [Enable Prometheus support]))
-AM_CONDITIONAL(ENABLE_PROMETHEUS, [test x$enable_prometheus != 'xno'])
-AM_COND_IF([ENABLE_PROMETHEUS],
-          [AC_MSG_NOTICE([PROMETHEUS is enabled])],
-          [AC_MSG_NOTICE([PROMETHEUS is disabled])])
-
 dnl Create an option to build with TSAN enabled
 AC_ARG_ENABLE(tsan, AC_HELP_STRING([--enable-tsan], [Enable TSAN]))
 AM_CONDITIONAL(ENABLE_TSAN, [test x$enable_tsan = 'xyes'])
@@ -209,17 +201,15 @@ AM_COND_IF([ENABLE_GRPC], [
     ])
 ])
 
-AM_COND_IF([ENABLE_PROMETHEUS], [
-    # check for prometheus
-    PKG_CHECK_MODULES([PROMETHEUS_CORE], [prometheus-cpp-core >= 0.12.1],
-                     [prometheus_core_found=yes], [prometheus_core_found=no])
-    PKG_CHECK_MODULES([PROMETHEUS_PULL], [prometheus-cpp-pull >= 0.12.1],
-                     [prometheus_pull_found=yes], [prometheus_pull_found=no])
-    AS_IF([test x$prometheus_core_found = 'xyes' && test x$prometheus_pull_found = 'xyes'], [
-        AC_DEFINE([HAVE_PROMETHEUS_SUPPORT],[1],[Define if prometheus support is enabled])
-    ], [
-        AC_MSG_ERROR([***PROMETHEUS requested but not found ***])
-    ])
+# check for prometheus
+PKG_CHECK_MODULES([PROMETHEUS_CORE], [prometheus-cpp-core >= 0.12.1],
+                  [prometheus_core_found=yes], [prometheus_core_found=no])
+PKG_CHECK_MODULES([PROMETHEUS_PULL], [prometheus-cpp-pull >= 0.12.1],
+                  [prometheus_pull_found=yes], [prometheus_pull_found=no])
+AS_IF([test x$prometheus_core_found = 'xyes' && test x$prometheus_pull_found = 'xyes'], [
+    AC_DEFINE([HAVE_PROMETHEUS_SUPPORT],[1],[Define if prometheus support is enabled])
+], [
+    AC_MSG_ERROR([***PROMETHEUS requested but not found ***])
 ])
 
 # inotify check
