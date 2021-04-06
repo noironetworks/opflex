@@ -24,6 +24,7 @@ using namespace modelgbp::observer;
 SysStatsManager::SysStatsManager (Agent* agent_) :
                                   agent(agent_),
     prometheusManager(agent->getPrometheusManager()),
+                                  timer_interval(0),
                                   stopping(true) {
 }
 
