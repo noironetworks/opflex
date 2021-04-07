@@ -327,6 +327,13 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
                 resolutions.insert(mo);
             }
             mos.push_back(mo);
+            // see if resolved MO is present for stats tracking
+            StoreClient& client = *server->getSystemClient();
+            std::shared_ptr<const modb::mointernal::ObjectInstance> oi;
+            client.get(ci.getId(), puri, oi);
+            if (!oi) {
+                conn->getOpflexStats()->incrPolUnavailableResolves();
+            }
         } catch (const std::out_of_range& e) {
             sendErrorRes(id, "ERROR",
                          std::string("Unknown subject: ") +
@@ -335,9 +342,6 @@ void OpflexServerHandler::handlePolicyResolveReq(const rapidjson::Value& id,
             return;
         }
     }
-
-    if (!found)
-        conn->getOpflexStats()->incrPolUnavailableResolves();
 
     if (flakyMode && !found) {
         LOG(INFO) << "Flaking out";
