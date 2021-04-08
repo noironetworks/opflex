@@ -345,8 +345,8 @@ namespace opflexagent {
             case DnsParsingContext::RRTypeA:
                 os << "A";
                 break;
-            case DnsParsingContext::RRTypeA6:
-                os << "A6";
+            case DnsParsingContext::RRTypeA4:
+                os << "AAAA";
                 break;
             default:
                 os << (unsigned)rType;
@@ -389,8 +389,16 @@ namespace opflexagent {
             os << ", ttl: " << rr.ttl;
             switch(rr.rType){
                 case RRType::RRTypeA:
-                    os << ", addr " <<((rr.rType == RRType::RRTypeA)?
-                    boost::asio::ip::address_v4(rr.rrTypeAData).to_string():"");
+                    os << ", addr " <<
+                    boost::asio::ip::address_v4(rr.rrTypeAData).to_string();
+                    break;
+                case RRType::RRTypeA4:
+                    std::array<unsigned char, IP6_ADDR_LEN> bytes;
+                    for(int i=0; i<IP6_ADDR_LEN; i++) {
+                        bytes[i] = rr.rrTypeA4Data.v6Bytes[i];
+                    }
+                    os << ", addr " <<
+                    boost::asio::ip::address_v6(bytes).to_string();
                     break;
                 default:
                     break;
@@ -462,6 +470,15 @@ namespace opflexagent {
             case DnsParsingContext::RRTypeA:
             {
                 addr = boost::asio::ip::address_v4(dnsRR.rrTypeAData);
+                break;
+            }
+            case DnsParsingContext::RRTypeA4:
+            {
+                std::array<unsigned char, IP6_ADDR_LEN> bytes;
+                for(int i=0; i<IP6_ADDR_LEN; i++) {
+                    bytes[i] = dnsRR.rrTypeA4Data.v6Bytes[i];
+                }
+                addr = boost::asio::ip::address_v6(bytes);
                 break;
             }
             default:
@@ -557,15 +574,30 @@ namespace opflexagent {
                     LOG(ERROR) << "Incorrect answer record";
                     return false;
                 }
-                //Support v4 host address records only as of now
                 switch(dnsRR.rType) {
                     case DnsParsingContext::RRTypeA:
                     {
+                        if(dnsRR.rdLen < 4) {
+                            LOG(ERROR) << "Incorrect A record";
+                            return false;
+                        }
                         dnsRR.rrTypeAData = ntohl(*(uint32_t *)ctxt.dptr);
                         break;
                     }
-                    default:
+                    case DnsParsingContext::RRTypeA4:
+                    {
+                        if(dnsRR.rdLen < IP6_ADDR_LEN) {
+                            LOG(ERROR) << "Incorrect AAAA record";
+                            return false;
+                        }
+                        memcpy(dnsRR.rrTypeA4Data.v6Bytes, ctxt.dptr, IP6_ADDR_LEN);
                         break;
+                    }
+                    default:
+                    {
+                        LOG(DEBUG) << "Unhandled record type " << dnsRR.rType;
+                        break;
+                    }
                 }
                 ctxt.dptr += dnsRR.rdLen;
                 ctxt.tailRoom -= dnsRR.rdLen;
