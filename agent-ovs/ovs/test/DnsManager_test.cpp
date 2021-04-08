@@ -64,6 +64,7 @@ enum PacketDesc {
 DNS_RESP_WITH_MULTIPLE_TYPE_A,
 DNS_RESP_WITH_SINGLE_TYPE_A,
 DNS_RESP_WITH_TWO_TYPE_A,
+DNS_RESP_WITH_A4_RECORD
 };
 static const std::string PacketDef[] = {
 "\
@@ -97,7 +98,15 @@ d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
 00 02 00 00 00 00 07 74 77 69 74 74 65 72 03 63\
 6f 6d 00 00 01 00 01 c0 0c 00 01 00 01 00 00 06\
 ee 00 04 68 f4 2a 81 c0 0c 00 01 00 01 00 00 00\
-01 00 04 68 f4 2a 01"
+01 00 04 68 f4 2a 01",
+"\
+d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
+00 56 4c a4 40 00 39 11 31 11 d0 43 dc dc c0 a8\
+56 19 00 35 98 f2 00 42 4f 25 81 51 81 80 00 01\
+00 01 00 00 00 00 08 66 61 63 65 62 6f 6f 6b 03\
+63 6f 6d 00 00 1c 00 01 c0 0c 00 1c 00 01 00 00\
+00 f7 00 10 2a 03 28 80 f1 4b 00 82 fa ce b0 0c\
+00 00 25 de"
 };
 
 BOOST_AUTO_TEST_SUITE(DnsManager_test)
@@ -274,5 +283,37 @@ BOOST_FIXTURE_TEST_CASE(testExpiryAgeUpdate, DnsManagerFixture) {
  	        1000,
 	        (dnsAnswer2 = DnsAnswer::resolve(framework, askDomainName));
                 getResolvedAddressesFromAnswer(dnsAnswer2.get(),out));
+}
+
+BOOST_FIXTURE_TEST_CASE(handleDnsv6Record, DnsManagerFixture) {
+    using namespace modelgbp::epdr;
+    testHandleDnsResponsePacket(true, DNS_RESP_WITH_A4_RECORD);
+    std::string domainName("facebook.com");
+    auto dnsEntry = DnsEntry::resolve(framework, domainName);
+    WAIT_FOR_DO(dnsEntry,
+                500,
+                (dnsEntry = DnsEntry::resolve(framework, domainName)));
+   auto ddU = DnsDemand::resolve(framework);
+   Mutator m0(framework, "policyelement");
+   std::string askDomainName("facebook.com");
+   auto dnsAsk = ddU.get()->addEpdrDnsAsk(askDomainName);
+   m0.commit();
+   //Check for an answer based on cached dns response
+   auto dnsAnswer = DnsAnswer::resolve(framework, askDomainName);
+   WAIT_FOR_DO(dnsAnswer,
+	       500,
+	       (dnsAnswer = DnsAnswer::resolve(framework, askDomainName)));
+   str_set_t out;
+   getResolvedAddressesFromAnswer(dnsAnswer.get(),out);
+   //Check resolved address list against packet
+   std::unordered_set<std::string> expectedResolved = {"2a03:2880:f14b:82:face:b00c:0:25de"};
+   BOOST_CHECK(expectedResolved==out);
+   //Remove demand and ensure answer goes away
+   dnsAsk.get()->remove();
+   m0.commit();
+   auto dnsAnswer2 = DnsAnswer::resolve(framework, askDomainName);
+   WAIT_FOR_DO(!dnsAnswer2,
+	       500,
+	       (dnsAnswer2 = DnsAnswer::resolve(framework, askDomainName)));
 }
 BOOST_AUTO_TEST_SUITE_END()

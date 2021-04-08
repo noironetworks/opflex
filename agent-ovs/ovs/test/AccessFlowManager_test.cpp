@@ -74,7 +74,7 @@ public:
     shared_ptr<SecGroup> secGrp1;
     shared_ptr<SecGroup> secGrp2;
     shared_ptr<SecGroup> secGrp3;
-    shared_ptr<L24Classifier> classifier100;
+    shared_ptr<L24Classifier> classifier100,classifier101;
 
     shared_ptr<modelgbp::policy::Space> pSpace;
     shared_ptr<modelgbp::qos::Requirement> reqCfg;
@@ -475,6 +475,8 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
        //classifier 100
        classifier100 = space->addGbpeL24Classifier("classifier100");
        classifier100->setEtherT(modelgbp::l2::EtherTypeEnumT::CONST_IPV4);
+       classifier101 = space->addGbpeL24Classifier("classifier101");
+       classifier101->setEtherT(modelgbp::l2::EtherTypeEnumT::CONST_IPV6);
        //action 1
        action1 = space->addGbpAllowDenyAction("action1");
        action1->setAllow(0).setOrder(5);
@@ -484,6 +486,11 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
            .addGbpRuleToClassifierRSrc(classifier100->getURI().toString());
        sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule1")
            ->addGbpDnsName(std::string("cnn.com"));
+       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule2")
+           ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
+           .addGbpRuleToClassifierRSrc(classifier101->getURI().toString());
+       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule2")
+           ->addGbpDnsName(std::string("facebook.com"));
        mutator.commit();
        Mutator mutator1(framework, "policyelement");
        auto dDU = DnsDiscovered::resolve(framework);
@@ -492,6 +499,10 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
        dnsEntry->addEpdrDnsMappedAddress(std::string("151.101.193.67"));
        auto dnsAnswer = dDU.get()->addEpdrDnsAnswer(std::string("cnn.com"));
        dnsAnswer->addEpdrDnsAnswerToResultRSrc(dnsEntry->getURI().toString());
+       auto dnsEntry2 = dDU.get()->addEpdrDnsEntry(std::string("facebook.com"));
+       dnsEntry2->addEpdrDnsMappedAddress(std::string("2a03:2880:f14b:82:face:b00c:0:25de"));
+       auto dnsAnswer2 = dDU.get()->addEpdrDnsAnswer(std::string("facebook.com"));
+       dnsAnswer2->addEpdrDnsAnswerToResultRSrc(dnsEntry2->getURI().toString());
        mutator1.commit();
      }
 
@@ -507,7 +518,8 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
 
     clearExpFlowTables();
     initExpStatic();
-    std::vector<std::string> namedAddressSet = {"151.101.1.67","151.101.193.67"};
+    std::vector<std::string> namedAddressSet = {"151.101.1.67","151.101.193.67",
+        "2a03:2880:f14b:82:face:b00c:0:25de"};
     initExpSecGrp4(namedAddressSet);
     WAIT_FOR_TABLES("egress-dns-rule", 500);
 }
@@ -837,14 +849,22 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
 }
 
 void AccessFlowManagerFixture::initExpSecGrp4(std::vector<std::string>& namedAddressSet) {
+    using boost::asio::ip::address;
     uint32_t setId = 2;
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     uint64_t ruleId = idGen.getId("l24classifierRule", classifier100->getURI().toString());
+    uint64_t rule6Id = idGen.getId("l24classifierRule", classifier101->getURI().toString());
     for( auto& addr : namedAddressSet) {
-        ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
+        auto destAddr = address::from_string(addr);
+        if(destAddr.is_v4()) {
+            ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
              .ip().reg(SEPG, setId).isIpDst(addr).actions()
              .go(TAP).done());
+        } else {
+            ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-128).cookie(rule6Id)
+             .ipv6().reg(SEPG, setId).isIpv6Dst(addr).actions()
+             .go(TAP).done());
+        }
     }
 }
-
 BOOST_AUTO_TEST_SUITE_END()

@@ -107,6 +107,8 @@ public:
         RRTypeHINFO=13,
         RRTypeMINFO=14,
         //V6 Host Address
+        RRTypeA4=28,
+        //V6 Host Address
         RRTypeA6=38
     };
     class DnsQuestion {
@@ -136,6 +138,10 @@ public:
                 //Could be a max of 255 bytes
                 void *data;
             } rrTypeA6Data;
+            //RFC-1886,RFC-3596
+            struct {
+                uint8_t v6Bytes[16];
+            } rrTypeA4Data;
             struct {
                 void *data;
             } rrTypeCNameData;

@@ -14,6 +14,7 @@
 
 namespace opflexagent {
 namespace ip {
+#define IP6_ADDR_LEN 16
 namespace type {
 /**
  * IP UDP type
