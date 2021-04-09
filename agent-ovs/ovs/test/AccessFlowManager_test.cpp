@@ -487,7 +487,7 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
        sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule1")
            ->addGbpDnsName(std::string("cnn.com"));
        sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule2")
-           ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
+           ->setOrder(20).setDirection(DirectionEnumT::CONST_OUT)
            .addGbpRuleToClassifierRSrc(classifier101->getURI().toString());
        sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule2")
            ->addGbpDnsName(std::string("facebook.com"));
