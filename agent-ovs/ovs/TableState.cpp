@@ -417,13 +417,22 @@ void TableState::apply(const std::string& objId,
             }
         } else {
             // there is no existing entry.  Add a new one
+            // Do not save entries with timeouts
+            // These can go away without knowledge of the
+            // agent and it would only be accurate to reprogram
+            // them if needed since there is a very tiny
+            // probability the new timeout is same as the
+            // remaining timeout
             FlowEntryPtr& toadd = e.second.back();
 
-            updateCookieMap(pimpl->cookie_map,
-                            0, toadd->entry->cookie,
-                            e.first);
+            if (toadd->entry->hard_timeout == 0) {
+                updateCookieMap(pimpl->cookie_map,
+                                0, toadd->entry->cookie,
+                                e.first);
 
-            pimpl->match_obj_map[e.first].push_back(make_pair(objId, toadd));
+                pimpl->match_obj_map[e.first].push_back(make_pair(objId, toadd));
+            }
+
             diffs.add(FlowEdit::ADD, toadd);
         }
     }

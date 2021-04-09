@@ -73,6 +73,9 @@ void FSServiceSource::updated(const fs::path& filePath) {
     static const std::string SM_NEXT_HOP_PORT("next-hop-port");
     static const std::string SM_NODE_PORT("node-port");
     static const std::string SM_CONNTRACK("conntrack-enabled");
+    static const std::string SESSION_AFFINITY("session-affinity");
+    static const std::string CLIENT_IP("client-ip");
+    static const std::string TIMEOUT_SECONDS("timeout-seconds");
     static const std::string SVC_ATTRIBUTES("attributes");
     try {
         using boost::property_tree::ptree;
@@ -250,6 +253,18 @@ void FSServiceSource::updated(const fs::path& filePath) {
                 if (conntrack)
                     sm.setConntrackMode(conntrack.get());
 
+                optional<const ptree&> sa =
+                    v.second.get_child_optional(SESSION_AFFINITY);
+                if (sa) {
+                    optional<const ptree&> clientIp =
+                        sa.get().get_child_optional(CLIENT_IP);
+                    if (clientIp) {
+                        optional<uint32_t> timeoutSecs =
+                            clientIp.get().get_optional<uint32_t>(TIMEOUT_SECONDS);
+                        if (timeoutSecs)
+                            sm.setClientAffinity(timeoutSecs.get());
+                    }
+                }
                 newserv.addServiceMapping(sm);
             }
         }

@@ -152,7 +152,8 @@ FlowExecutor::EncodeMod<FlowEdit::Entry>(const FlowEdit::Entry& edit,
     /* fill out defaults */
     flowMod.modify_cookie = false;
     flowMod.idle_timeout = OFP_FLOW_PERMANENT;
-    flowMod.hard_timeout = OFP_FLOW_PERMANENT;
+    flowMod.hard_timeout = flow.hard_timeout ? flow.hard_timeout
+                                             : OFP_FLOW_PERMANENT;
     flowMod.buffer_id = UINT32_MAX;
     flowMod.out_port = OFPP_NONE;
     flowMod.out_group = OFPG_ANY;
