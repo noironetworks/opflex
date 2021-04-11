@@ -81,6 +81,9 @@ std::ostream & operator<<(std::ostream &os, const Service& s) {
 
             if (sm.isConntrackMode())
                 os << " (conntrack)";
+
+            if (sm.getClientAffinity())
+                os << ",session-affinity-timeout:" << sm.getClientAffinity().get();
         }
 
         os << "]";

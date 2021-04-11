@@ -100,6 +100,13 @@ public:
      */
     FlowBuilder& inPort(uint32_t port);
 
+   /**
+     * Set hard_timeout for flow entry
+     * @param timeout hard timeout in seconds
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& hardTimeout(int timeout);
+
     /**
      * Add a match against ethernet source
      * @param mac the mac to match

@@ -4472,8 +4472,16 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
             // Traffic sent to services is intercepted in the bridge
             // table, despite the fact that it is effectively
             // performing a routing action for historical reasons
-            {
+            int serviceDestFlowCount = sm.getClientAffinity() ? 2 : 1;
+            for (int i = 0; i < serviceDestFlowCount; i++) {
                 FlowBuilder serviceDest;
+                enum nx_hash_fields hash_fields;
+                if (i > 0) {
+                    hash_fields = NX_HASH_FIELDS_NW_SRC;
+                    serviceDest.hardTimeout(sm.getClientAffinity().get());
+                } else {
+                    hash_fields = NX_HASH_FIELDS_SYMMETRIC_L3L4_UDP;
+                }
                 matchDestDom(serviceDest, 0, rdId);
                 matchActionServiceProto(serviceDest, proto, sm, true, false);
                 if (as.getServiceMAC() &&
@@ -4481,7 +4489,7 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                     serviceDest.ethDst(macAddr);
 
                 serviceDest
-                    .priority(50)
+                    .priority(50 + i)
                     .ipDst(serviceAddr);
                 if (as.getServiceMode() == Service::LOCAL_ANYCAST) {
                     serviceDest.action().ethSrc(getRouterMacAddr());
@@ -4496,7 +4504,7 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                         serviceDest.action().ethDst(getRouterMacAddr());
                     }
                     serviceDest.action()
-                        .multipath(NX_HASH_FIELDS_SYMMETRIC_L3L4_UDP,
+                        .multipath(hash_fields,
                                    1024,
                                    ActionBuilder::NX_MP_ALG_ITER_HASH,
                                    static_cast<uint16_t>(nextHopAddrs.size()-1),
