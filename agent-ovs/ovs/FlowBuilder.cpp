@@ -70,6 +70,11 @@ FlowBuilder& FlowBuilder::inPort(uint32_t port) {
     return *this;
 }
 
+FlowBuilder& FlowBuilder::hardTimeout(int timeout) {
+    entry_->entry->hard_timeout = timeout;
+    return *this;
+}
+
 FlowBuilder& FlowBuilder::ethSrc(const uint8_t mac[6], const uint8_t mask[6]) {
     eth_addr macAddr;
     memcpy(&macAddr, mac, sizeof(eth_addr));

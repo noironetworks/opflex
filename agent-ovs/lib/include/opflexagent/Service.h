@@ -486,6 +486,31 @@ public:
             return ctMode;
         }
 
+       /**
+        * Set the clientIp session affinity timeout
+        *
+        * @param saTimeoutSecs affinity value in seconds
+        */
+        void setClientAffinity(uint32_t saTimeoutSecs) {
+            this->saTimeoutSecs = saTimeoutSecs;
+        }
+
+       /**
+        * Unset the saTimeoutSecs
+        */
+        void unsetClientAffinity() {
+            saTimeoutSecs = boost::none;
+        }
+
+       /**
+        * Get the clientIp session affinity timeout
+        *
+        * @return affinity value in seconds
+        */
+        boost::optional<uint32_t> getClientAffinity() const {
+            return saTimeoutSecs;
+        }
+
     private:
         boost::optional<std::string> serviceIp;
         boost::optional<std::string> serviceProto;
@@ -494,6 +519,7 @@ public:
         std::set<std::string> nextHopIps;
         boost::optional<uint16_t> nextHopPort;
         boost::optional<uint16_t> nodePort;
+        boost::optional<uint32_t> saTimeoutSecs;
         bool ctMode;
     };
 
