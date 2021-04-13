@@ -158,7 +158,7 @@ public:
 
 class DnsCachedAddress {
 public:
-    DnsCachedAddress(DnsParsingContext::DnsRR dnsRR);
+    DnsCachedAddress(const DnsParsingContext::DnsRR &dnsRR);
     DnsCachedAddress(const std::string &addrStr):
 	expiryTime(boost::posix_time::second_clock::local_time()) {
 	boost::system::error_code ec;
@@ -174,7 +174,7 @@ class DnsManager;
 
 class DnsCacheEntry {
 public:
-    DnsCacheEntry(DnsParsingContext::DnsRR &dnsRR):
+    DnsCacheEntry(const DnsParsingContext::DnsRR &dnsRR):
         domainName(dnsRR.domainName),
         lastUpdated(dnsRR.currTime) {
         DnsCachedAddress cachedAddr(dnsRR);
@@ -274,7 +274,7 @@ private:
     void processURI(class_id_t class_id,
                     std::mutex &qMutex, std::queue<URI> &uriQ,
                     std::function<void (URI&, std::unordered_set<URI>&)> func);
-    bool handlePacket(struct dp_packet *pkt);
+    bool handlePacket(const struct dp_packet *pkt);
     void processPacket();
     void onExpiryTimer(const boost::system::error_code &e);
 };
