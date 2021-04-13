@@ -539,31 +539,46 @@ void AccessFlowManagerFixture::initExpStatic() {
     ADDF(Bldr().table(OUT).priority(1).isMdAct(0)
          .actions().out(OUTPORT).done());
     ADDF(Bldr().table(OUT).priority(1)
-         .isMdAct(opflexagent::flow::meta::access_out::PUSH_VLAN)
+         .isMdAct(opflexagent::flow::meta::access_out::PUSH_VLAN,
+                  opflexagent::flow::meta::out::MASK)
          .actions().pushVlan().move(FD12, VLAN).out(OUTPORT).done());
     ADDF(Bldr().table(OUT).priority(1)
-         .isMdAct(opflexagent::flow::meta::access_out::UNTAGGED_AND_PUSH_VLAN)
+         .isMdAct(opflexagent::flow::meta::access_out::UNTAGGED_AND_PUSH_VLAN,
+                  opflexagent::flow::meta::out::MASK)
          .actions().out(OUTPORT).pushVlan()
          .move(FD12, VLAN).out(OUTPORT).done());
     ADDF(Bldr().table(OUT).priority(1)
-         .isMdAct(opflexagent::flow::meta::access_out::POP_VLAN)
+         .isMdAct(opflexagent::flow::meta::access_out::POP_VLAN,
+                  opflexagent::flow::meta::out::MASK)
          .isVlanTci("0x1000/0x1000")
          .actions().popVlan().out(OUTPORT).done());
     ADDF(Bldr().table(TAP).priority(2)
          .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V4))
-         .tcp().isTpSrc(53)
+         .tcp()
+         .isMdAct(opflexagent::flow::meta::access_meta::INGRESS_DIR,
+                  opflexagent::flow::meta::access_meta::MASK)
+         .isTpSrc(53)
          .actions().controller(65535).go(OUT).done());
     ADDF(Bldr().table(TAP).priority(2)
          .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V6))
-         .tcp6().isTpSrc(53)
+         .tcp6()
+         .isMdAct(opflexagent::flow::meta::access_meta::INGRESS_DIR,
+                  opflexagent::flow::meta::access_meta::MASK)
+         .isTpSrc(53)
          .actions().controller(65535).go(OUT).done());
     ADDF(Bldr().table(TAP).priority(2)
          .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V4))
-         .udp().isTpSrc(53)
+         .udp()
+         .isMdAct(opflexagent::flow::meta::access_meta::INGRESS_DIR,
+                  opflexagent::flow::meta::access_meta::MASK)
+         .isTpSrc(53)
          .actions().controller(65535).go(OUT).done());
     ADDF(Bldr().table(TAP).priority(2)
          .cookie(ovs_ntohll(opflexagent::flow::cookie::DNS_RESPONSE_V6))
-         .udp6().isTpSrc(53)
+         .udp6()
+         .isMdAct(opflexagent::flow::meta::access_meta::INGRESS_DIR,
+                  opflexagent::flow::meta::access_meta::MASK)
+         .isTpSrc(53)
          .actions().controller(65535).go(OUT).done());
     ADDF(Bldr().table(TAP).priority(1)
          .actions().go(OUT).done());
@@ -597,7 +612,9 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
              .isTpSrc(68).isTpDst(67)
              .actions()
              .load(OUTPORT, uplink)
-             .mdAct(opflexagent::flow::meta::access_out::POP_VLAN)
+             .meta((opflexagent::flow::meta::access_meta::EGRESS_DIR|
+                    opflexagent::flow::meta::access_out::POP_VLAN),
+                   opflexagent::flow::meta::ACCESS_MASK)
              .go(TAP).done());
         if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
             ADDF(Bldr()
@@ -606,6 +623,8 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
                  .isTpSrc(68).isTpDst(67)
                  .actions()
                  .load(OUTPORT, uplink)
+                 .meta(opflexagent::flow::meta::access_meta::EGRESS_DIR,
+                       opflexagent::flow::meta::ACCESS_MASK)
                  .go(TAP).done());
         }
     }
@@ -616,7 +635,9 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
              .isTpSrc(546).isTpDst(547)
              .actions()
              .load(OUTPORT, uplink)
-             .mdAct(opflexagent::flow::meta::access_out::POP_VLAN)
+             .meta((opflexagent::flow::meta::access_meta::EGRESS_DIR|
+                    opflexagent::flow::meta::access_out::POP_VLAN),
+                   opflexagent::flow::meta::ACCESS_MASK)
              .go(TAP).done());
         if (ep->isAccessAllowUntagged() && ep->getAccessIfaceVlan()) {
             ADDF(Bldr()
@@ -625,6 +646,8 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
                  .isTpSrc(546).isTpDst(547)
                  .actions()
                  .load(OUTPORT, uplink)
+                 .meta(opflexagent::flow::meta::access_meta::EGRESS_DIR,
+                       opflexagent::flow::meta::ACCESS_MASK)
                  .go(TAP).done());
         }
     }
@@ -643,7 +666,9 @@ void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
              .actions()
              .load(RD, zoneId).load(SEPG, 1)
              .load(OUTPORT, uplink)
-             .mdAct(opflexagent::flow::meta::access_out::POP_VLAN)
+             .meta((opflexagent::flow::meta::access_out::POP_VLAN|
+                    opflexagent::flow::meta::access_meta::EGRESS_DIR),
+                   opflexagent::flow::meta::ACCESS_MASK)
              .go(OUT_POL).done());
         if (ep->isAccessAllowUntagged()) {
             ADDF(Bldr().table(GRP).priority(99).in(access)
@@ -651,21 +676,31 @@ void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
                  .actions()
                  .load(RD, zoneId).load(SEPG, 1)
                  .load(OUTPORT, uplink)
+                 .meta(opflexagent::flow::meta::access_meta::EGRESS_DIR,
+                       opflexagent::flow::meta::access_meta::MASK)
                  .go(OUT_POL).done());
         }
         ADDF(Bldr().table(GRP).priority(100).in(uplink)
              .actions().load(RD, zoneId).load(SEPG, 1).load(OUTPORT, access)
              .load(FD, ep->getAccessIfaceVlan().get())
-             .mdAct(opflexagent::flow::meta::access_out::PUSH_VLAN)
+             .meta((opflexagent::flow::meta::access_out::PUSH_VLAN|
+                    opflexagent::flow::meta::access_meta::INGRESS_DIR),
+                   opflexagent::flow::meta::ACCESS_MASK)
              .go(IN_POL).done());
     } else {
         ADDF(Bldr().table(GRP).priority(100).in(access)
              .noVlan()
              .actions().load(RD, zoneId).load(SEPG, 1)
-             .load(OUTPORT, uplink).go(OUT_POL).done());
+             .load(OUTPORT, uplink)
+             .meta(opflexagent::flow::meta::access_meta::EGRESS_DIR,
+                   opflexagent::flow::meta::access_meta::MASK)
+             .go(OUT_POL).done());
         ADDF(Bldr().table(GRP).priority(100).in(uplink)
              .actions().load(RD, zoneId).load(SEPG, 1)
-             .load(OUTPORT, access).go(IN_POL).done());
+             .load(OUTPORT, access)
+             .meta(opflexagent::flow::meta::access_meta::INGRESS_DIR,
+                   opflexagent::flow::meta::access_meta::MASK)
+             .go(IN_POL).done());
     }
 }
 

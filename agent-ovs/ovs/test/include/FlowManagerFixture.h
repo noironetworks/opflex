@@ -207,6 +207,9 @@ public:
     Bldr& isMdAct(uint8_t a) {
         m("metadata", str(a, true) + "/0xff"); return *this;
     }
+    Bldr& isMdAct(uint32_t a, uint32_t mask) {
+        m("metadata", str(a, true) + "/" + str(mask, true)); return *this;
+    }
     Bldr& isPolicyApplied() { m("metadata", "0x100/0x100"); return *this; }
     Bldr& isToHostAccess() { m("metadata", "0x8/0xff"); return *this; }
     Bldr& isFromServiceIface(bool yes = true) {

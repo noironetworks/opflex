@@ -75,11 +75,15 @@ void PacketInHandler::setPortMapper(PortMapper* intMapper,
 void PacketInHandler::start() {
     if (intSwConnection)
         intSwConnection->RegisterMessageHandler(OFPTYPE_PACKET_IN, this);
+    if (accSwConnection)
+        accSwConnection->RegisterMessageHandler(OFPTYPE_PACKET_IN, this);
 }
 
 void PacketInHandler::stop() {
     if (intSwConnection)
         intSwConnection->UnregisterMessageHandler(OFPTYPE_PACKET_IN, this);
+    if (accSwConnection)
+        accSwConnection->UnregisterMessageHandler(OFPTYPE_PACKET_IN, this);
 }
 
 typedef std::function<void (ActionBuilder&)> output_act_t;
