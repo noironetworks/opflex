@@ -60,9 +60,9 @@ void AccessFlowManager::populateTableDescriptionMap(
                "Skip security-group checks for Service loopback traffic")
     TABLE_DESC(GROUP_MAP_TABLE_ID, "GROUP_MAP_TABLE", "Access port incorrect")
     TABLE_DESC(SEC_GROUP_IN_TABLE_ID, "SEC_GROUP_IN_TABLE",
-            "Egress Security group derivation missing/incorrect")
+            "Ingress Security group derivation missing/incorrect")
     TABLE_DESC(SEC_GROUP_OUT_TABLE_ID, "SEC_GROUP_OUT_TABLE",
-            "Ingress security group missing/incorrect")
+            "Egress security group missing/incorrect")
     TABLE_DESC(TAP_TABLE_ID, "TAP_TABLE",
             "Tap missing/incorrect")
     TABLE_DESC(OUT_TABLE_ID, "OUT_TABLE", "Output port missing/incorrect")
@@ -207,12 +207,21 @@ static void flowBypassDhcpRequest(FlowEntryList& el, bool v4,
 
     if (ep->getAccessIfaceVlan() && !skip_pop_vlan) {
         fb.vlan(ep->getAccessIfaceVlan().get());
-        fb.action().metadata(flow::meta::access_out::POP_VLAN,
-                             flow::meta::out::MASK);
+        fb.action().metadata(flow::meta::access_out::POP_VLAN|
+                             flow::meta::access_meta::EGRESS_DIR,
+                             flow::meta::ACCESS_MASK);
     }
 
-    if (skip_pop_vlan)
+    if(!ep->getAccessIfaceVlan() && !skip_pop_vlan) {
+        fb.action().metadata(flow::meta::access_meta::EGRESS_DIR,
+                             flow::meta::access_meta::MASK);
+    }
+
+    if (skip_pop_vlan) {
         fb.tci(0, 0x1fff);
+        fb.action().metadata(flow::meta::access_meta::EGRESS_DIR,
+                             flow::meta::access_meta::MASK);
+    }
 
     fb.action().go(AccessFlowManager::TAP_TABLE_ID);
     fb.build(el);
@@ -246,18 +255,35 @@ static void flowBypassFloatingIP(FlowEntryList& el, uint32_t inport,
     if (ep->getAccessIfaceVlan() && !skip_pop_vlan) {
         if (in) {
             fb.action()
-                .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
-                .metadata(getPushVlanMeta(ep), flow::meta::out::MASK);
+              .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
+              .metadata((getPushVlanMeta(ep)|flow::meta::access_meta::INGRESS_DIR),
+                        flow::meta::ACCESS_MASK);
         } else {
             fb.vlan(ep->getAccessIfaceVlan().get());
             fb.action()
-                .metadata(flow::meta::access_out::POP_VLAN,
-                          flow::meta::out::MASK);
+              .metadata((flow::meta::access_out::POP_VLAN|
+                        flow::meta::access_meta::EGRESS_DIR),
+                        flow::meta::ACCESS_MASK);
         }
     }
 
-    if (skip_pop_vlan && !in)
-        fb.tci(0, 0x1fff);
+    if(!ep->getAccessIfaceVlan() && !skip_pop_vlan) {
+        fb.action()
+          .metadata((in?flow::meta::access_meta::INGRESS_DIR:
+                    flow::meta::access_meta::EGRESS_DIR),
+                    flow::meta::access_meta::MASK);
+
+    }
+
+    if (skip_pop_vlan) {
+        if(!in) {
+            fb.tci(0, 0x1fff);
+        }
+        fb.action()
+          .metadata((in?flow::meta::access_meta::INGRESS_DIR:
+                    flow::meta::access_meta::EGRESS_DIR),
+                    flow::meta::access_meta::MASK);
+    }
 
     fb.action().go(AccessFlowManager::TAP_TABLE_ID);
     fb.build(el);
@@ -288,8 +314,13 @@ static void flowBypassServiceIP(FlowEntryList& el,
             if (ep->getAccessIfaceVlan()) {
                 ingress.action()
                        .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
-                       .metadata(flow::meta::access_out::PUSH_VLAN,
-                                 flow::meta::out::MASK);
+                       .metadata((flow::meta::access_out::PUSH_VLAN|
+                                  flow::meta::access_meta::INGRESS_DIR),
+                                 flow::meta::ACCESS_MASK);
+            } else {
+                ingress.action()
+                       .metadata(flow::meta::access_meta::INGRESS_DIR,
+                                 flow::meta::access_meta::MASK);
             }
             ingress.action().go(AccessFlowManager::TAP_TABLE_ID);
             ingress.build(el);
@@ -304,10 +335,14 @@ static void flowBypassServiceIP(FlowEntryList& el,
             if (ep->getAccessIfaceVlan()) {
                 egress.vlan(ep->getAccessIfaceVlan().get());
                 egress.action()
-                      .metadata(flow::meta::access_out::POP_VLAN,
-                                flow::meta::out::MASK);
+                      .metadata((flow::meta::access_out::POP_VLAN|
+                                flow::meta::access_meta::EGRESS_DIR),
+                                flow::meta::ACCESS_MASK);
             } else {
                 egress.tci(0, 0x1fff);
+                egress.action()
+                      .metadata(flow::meta::access_meta::EGRESS_DIR,
+                                flow::meta::access_meta::MASK);
             }
             egress.action().go(AccessFlowManager::TAP_TABLE_ID);
             egress.build(el);
@@ -400,6 +435,8 @@ void AccessFlowManager::createStaticFlows() {
             .ethType(eth::type::IP)
             .proto(ip::type::TCP)
             .tpSrc(tcp::type::DNS)
+            .metadata(flow::meta::access_meta::INGRESS_DIR,
+                      flow::meta::access_meta::MASK)
             .action().controller()
             .go(OUT_TABLE_ID)
             .parent().build(tapFlows);
@@ -407,6 +444,8 @@ void AccessFlowManager::createStaticFlows() {
             .ethType(eth::type::IPV6)
             .proto(ip::type::TCP)
             .tpSrc(tcp::type::DNS)
+            .metadata(flow::meta::access_meta::INGRESS_DIR,
+                      flow::meta::access_meta::MASK)
             .action().controller()
             .go(OUT_TABLE_ID)
             .parent().build(tapFlows);
@@ -414,6 +453,8 @@ void AccessFlowManager::createStaticFlows() {
             .ethType(eth::type::IP)
             .proto(ip::type::UDP)
             .tpSrc(udp::type::DNS)
+            .metadata(flow::meta::access_meta::INGRESS_DIR,
+                      flow::meta::access_meta::MASK)
             .action().controller()
             .go(OUT_TABLE_ID)
             .parent().build(tapFlows);
@@ -421,6 +462,8 @@ void AccessFlowManager::createStaticFlows() {
             .ethType(eth::type::IPV6)
             .proto(ip::type::UDP)
             .tpSrc(udp::type::DNS)
+            .metadata(flow::meta::access_meta::INGRESS_DIR,
+                      flow::meta::access_meta::MASK)
             .action().controller()
             .go(OUT_TABLE_ID)
             .parent().build(tapFlows);
@@ -505,10 +548,14 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             if (ep->getAccessIfaceVlan()) {
                 in.vlan(ep->getAccessIfaceVlan().get());
                 in.action()
-                    .metadata(flow::meta::access_out::POP_VLAN,
-                              flow::meta::out::MASK);
+                  .metadata((flow::meta::access_out::POP_VLAN|
+                             flow::meta::access_meta::EGRESS_DIR),
+                            flow::meta::ACCESS_MASK);
             } else {
                 in.tci(0, 0x1fff);
+                in.action()
+                  .metadata(flow::meta::access_meta::EGRESS_DIR,
+                            flow::meta::access_meta::MASK);
             }
 
             in.action().go(SEC_GROUP_OUT_TABLE_ID);
@@ -539,6 +586,8 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             inSkipVlan.action()
                 .reg(MFF_REG0, secGrpSetId)
                 .reg(MFF_REG7, uplinkPort)
+                .metadata(flow::meta::access_meta::EGRESS_DIR,
+                          flow::meta::access_meta::MASK)
                 .go(SEC_GROUP_OUT_TABLE_ID);
             inSkipVlan.build(el);
         }
@@ -579,8 +628,13 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
                 .reg(MFF_REG7, accessPort);
             if (ep->getAccessIfaceVlan()) {
                 out.action()
-                    .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
-                    .metadata(getPushVlanMeta(ep), flow::meta::out::MASK);
+                   .reg(MFF_REG5, ep->getAccessIfaceVlan().get())
+                   .metadata((getPushVlanMeta(ep)|flow::meta::access_meta::INGRESS_DIR),
+                             flow::meta::ACCESS_MASK);
+            } else {
+                out.action()
+                   .metadata(flow::meta::access_meta::INGRESS_DIR,
+                             flow::meta::access_meta::MASK);
             }
             out.action().go(SEC_GROUP_IN_TABLE_ID);
             out.build(el);
@@ -593,11 +647,13 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             uint16_t mask = 0x1000 | (0xfff & m.second);
             FlowBuilder().priority(500).inPort(accessPort)
                 .tci(tci, mask)
-                .action().output(uplinkPort)
+                .action()
+                .output(uplinkPort)
                 .parent().build(el);
             FlowBuilder().priority(500).inPort(uplinkPort)
                 .tci(tci, mask)
-                .action().output(accessPort)
+                .action()
+                .output(accessPort)
                 .parent().build(el);
         }
 

@@ -55,6 +55,7 @@ const uint64_t REMOTE_TUNNEL_BOUNCE_TO_NODE = 0xb;
 
 } // namespace out
 
+const uint64_t ACCESS_MASK = (out::MASK | access_meta::MASK);
 } // namespace meta
 
 } // namespace flow

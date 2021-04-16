@@ -187,7 +187,7 @@ namespace opflexagent {
         io_ctxt.post([=]() {this->processPacket();});
     }
 
-    static bool ValidateDnsPacket(struct dp_packet *pkt,
+    static bool ValidateDnsPacket(const struct dp_packet *pkt,
                                   dns::dns_hdr **hdr,
                                   size_t &dnsOffset)
     {
@@ -461,7 +461,7 @@ namespace opflexagent {
         mutator.commit();
     }
 
-    DnsCachedAddress::DnsCachedAddress(DnsParsingContext::DnsRR dnsRR)
+    DnsCachedAddress::DnsCachedAddress(const DnsParsingContext::DnsRR &dnsRR)
     {
         using namespace boost::posix_time;
         boost::system::error_code ec;
@@ -509,7 +509,7 @@ namespace opflexagent {
         }
     }
 
-    bool DnsManager::handlePacket(struct dp_packet *pkt) {
+    bool DnsManager::handlePacket(const struct dp_packet *pkt) {
         struct dns::dns_hdr *hdr;
         size_t l5_offset = 0;
         if(!ValidateDnsPacket(pkt, &hdr, l5_offset)) {

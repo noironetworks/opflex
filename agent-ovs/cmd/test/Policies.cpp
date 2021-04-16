@@ -116,6 +116,10 @@ void Policies::writeTestPolicy(opflex::ofcore::OFFramework& framework) {
     shared_ptr<L24Classifier> classifier5;
     shared_ptr<L24Classifier> classifier6;
     shared_ptr<L24Classifier> classifier7;
+    shared_ptr<L24Classifier> classifier8;
+    shared_ptr<L24Classifier> classifier9;
+    shared_ptr<L24Classifier> classifier10;
+    shared_ptr<L24Classifier> classifier11;
 
     shared_ptr<Contract> con1;
     shared_ptr<Contract> con2;
@@ -126,6 +130,9 @@ void Policies::writeTestPolicy(opflex::ofcore::OFFramework& framework) {
     shared_ptr<SecGroup> secGrp1;
     shared_ptr<SecGroup> secGrp2;
     shared_ptr<SecGroup> secGrp3;
+    shared_ptr<SecGroup> secGrp4;
+    shared_ptr<SecGroup> secGrp5;
+    shared_ptr<SecGroup> secGrp6;
 
     shared_ptr<RedirectDestGroup> redirDstGrp1;
     shared_ptr<RedirectDest> redirDst1;
@@ -289,6 +296,30 @@ void Policies::writeTestPolicy(opflex::ofcore::OFFramework& framework) {
     classifier7->setOrder(90)
     .setEtherT(EtherTypeEnumT::CONST_IPV4);
 
+    // Pass all Ipv4 packets
+    classifier8 = space->addGbpeL24Classifier("classifier8");
+    classifier8->setOrder(90)
+    .setEtherT(EtherTypeEnumT::CONST_IPV4);
+
+    // Pass all Ipv6 packets
+    classifier9 = space->addGbpeL24Classifier("classifier9");
+    classifier9->setOrder(90)
+    .setEtherT(EtherTypeEnumT::CONST_IPV6);
+
+    // DNS client
+    classifier10 = space->addGbpeL24Classifier("classifier10");
+    classifier10->setEtherT(EtherTypeEnumT::CONST_IPV4)
+        .setProt(17)
+        .setDFromPort(53)
+        .setDToPort(53);
+
+    // DNS server
+    classifier11 = space->addGbpeL24Classifier("classifier11");
+    classifier11->setEtherT(EtherTypeEnumT::CONST_IPV4)
+        .setProt(17)
+        .setSFromPort(53)
+        .setSToPort(53);
+
     // Basic ARP and ICMP
     con1 = space->addGbpContract("contract1");
     con1->addGbpSubject("1_subject1")->addGbpRule("1_1_rule1")
@@ -383,6 +414,46 @@ void Policies::writeTestPolicy(opflex::ofcore::OFFramework& framework) {
         ->addGbpSecGroupRule("3_2_rule1")
         ->setDirection(DirectionEnumT::CONST_IN)
         .addGbpRuleToClassifierRSrc(classifier6->getURI().toString());
+    //DNS client
+    secGrp5 = space->addGbpSecGroup("secGrp5");
+    secGrp5->addGbpSecGroupSubject("5_subject1")
+        ->addGbpSecGroupRule("5_1_rule1")
+        ->setDirection(DirectionEnumT::CONST_OUT)
+        .addGbpRuleToClassifierRSrc(classifier10->getURI().toString());
+    secGrp5->addGbpSecGroupSubject("5_subject1")
+        ->addGbpSecGroupRule("5_1_rule2")
+        ->setDirection(DirectionEnumT::CONST_IN)
+        .addGbpRuleToClassifierRSrc(classifier11->getURI().toString());
+
+    //DNS server
+    secGrp6 = space->addGbpSecGroup("secGrp6");
+    secGrp6->addGbpSecGroupSubject("6_subject1")
+        ->addGbpSecGroupRule("6_1_rule1")
+        ->setDirection(DirectionEnumT::CONST_OUT)
+        .addGbpRuleToClassifierRSrc(classifier11->getURI().toString());
+    secGrp6->addGbpSecGroupSubject("6_subject1")
+        ->addGbpSecGroupRule("6_1_rule2")
+        ->setDirection(DirectionEnumT::CONST_IN)
+        .addGbpRuleToClassifierRSrc(classifier10->getURI().toString());
+
+    secGrp4 = space->addGbpSecGroup("secGrp4");
+    secGrp4->addGbpSecGroupSubject("4_subject1")
+        ->addGbpSecGroupRule("4_1_rule1")
+        ->setDirection(DirectionEnumT::CONST_OUT)
+        .addGbpRuleToClassifierRSrc(classifier8->getURI().toString());
+    secGrp4->addGbpSecGroupSubject("4_subject1")
+        ->addGbpSecGroupRule("4_1_rule1")
+        ->addGbpDnsName(std::string("google.com"));
+    secGrp4->addGbpSecGroupSubject("4_subject1")
+        ->addGbpSecGroupRule("4_1_rule2")
+        ->setDirection(DirectionEnumT::CONST_OUT)
+        .addGbpRuleToClassifierRSrc(classifier9->getURI().toString());
+    secGrp4->addGbpSecGroupSubject("4_subject1")
+        ->addGbpSecGroupRule("4_1_rule2")
+        ->addGbpDnsName(std::string("facebook.com"));
+    secGrp4->addGbpSecGroupSubject("4_subject1")
+        ->addGbpSecGroupRule("4_1_rule2")
+        ->addGbpDnsName(std::string("google.com"));
 
     // Add span related artifacts
     shared_ptr<span::Session> sess =

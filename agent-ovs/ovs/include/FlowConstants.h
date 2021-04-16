@@ -180,6 +180,19 @@ extern const uint64_t REMOTE_TUNNEL_BOUNCE_TO_CSR;
 extern const uint64_t REMOTE_TUNNEL_BOUNCE_TO_NODE;
 } // namespace out
 
+namespace access_meta {
+
+const uint64_t MASK =0xff00;
+/**
+ * Ingress to ep
+ */
+const uint64_t INGRESS_DIR = 0x100;
+/**
+ * Egress from ep
+ */
+const uint64_t EGRESS_DIR = 0x200;
+
+} // namespace access_meta
 
 namespace access_out {
 
@@ -198,8 +211,9 @@ const uint64_t PUSH_VLAN = 0x2;
  */
 const uint64_t UNTAGGED_AND_PUSH_VLAN = 0x3;
 
-} // namespace access
+} // namespace access_out
 
+extern const uint64_t ACCESS_MASK;
 } // namespace meta
 
 } // namespace flow

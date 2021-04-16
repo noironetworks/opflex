@@ -1064,14 +1064,16 @@ void resolveRemoteSubnets(OFFramework& framework,
 }
 
 template <typename Rule>
-void resolveNamedAddress(PolicyManager &pMgr,
+bool resolveNamedAddress(PolicyManager &pMgr,
                          OFFramework& framework,
                          shared_ptr<Rule>& parent,
                          /* out */PolicyManager::named_addr_set_t &newDnsRefs,
-                         /* out */network::subnets_t  &namedAddresses) {}
+                         /* out */network::subnets_t  &namedAddresses) {
+    return true;
+}
 
 template <>
-void resolveNamedAddress(PolicyManager &pMgr,
+bool resolveNamedAddress(PolicyManager &pMgr,
                          OFFramework& framework,
                          shared_ptr<modelgbp::gbp::SecGroupRule>& rule,
                          /* out */ PolicyManager::named_addr_set_t &newDnsRefs,
@@ -1085,6 +1087,7 @@ void resolveNamedAddress(PolicyManager &pMgr,
             pMgr.getDnsResolvedAddresses(dnsName->getName().get(), namedAddresses);
         }
     }
+    return (dnsNames.empty() || !namedAddresses.empty());
 }
 
 void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
@@ -1203,7 +1206,8 @@ void PolicyManager::getDnsResolvedAddresses(
 {
     auto itr = dns_demand_map.find(domainName);
     if(itr != dns_demand_map.end()) {
-        egressDnsResolved = itr->second.resolved;
+        boost::optional<const network::subnets_t &> res(itr->second.resolved);
+        network::append(egressDnsResolved, res);
     }
 }
 
@@ -1277,7 +1281,9 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
             uint8_t dir = rule->getDirection().get();
             network::subnets_t remoteSubnets, namedAddresses;
             resolveRemoteSubnets(framework, rule, remoteSubnets);
-            resolveNamedAddress(pMgr, framework, rule, newDnsRefs, namedAddresses);
+            if(!resolveNamedAddress(pMgr, framework, rule, newDnsRefs, namedAddresses)) {
+               continue;  //ignore policies with DNS names that do not have atleast one name resolved.
+            }
             vector<shared_ptr<L24Classifier> > classifiers;
             vector<shared_ptr<RuleToClassifierRSrc> > clsRel;
             rule->resolveGbpRuleToClassifierRSrc(clsRel);

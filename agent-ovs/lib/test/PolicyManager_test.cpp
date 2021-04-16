@@ -649,9 +649,9 @@ BOOST_FIXTURE_TEST_CASE( egress_dns_policy_add_remove, PolicyFixture ) {
     PolicyManager& pm = agent.getPolicyManager();
     PolicyManager::rule_list_t rules;
     std::string dnsName1("*.google.com");
-    WAIT_FOR_DO(!rules.empty(), 500,
-        pm.getSecGroupRules(sec1->getURI(), rules));
-    auto dnsAsk1 = DnsAsk::resolve(framework,dnsName1);
+    optional<std::shared_ptr<DnsAsk>> dnsAsk1;
+    WAIT_FOR_DO(dnsAsk1, 500,
+        (dnsAsk1 = DnsAsk::resolve(framework,dnsName1)));
     BOOST_CHECK(dnsAsk1);
     /*Fake resolve DNS*/
     auto dDiscoveredU = DnsDiscovered::resolve(framework);
@@ -664,7 +664,7 @@ BOOST_FIXTURE_TEST_CASE( egress_dns_policy_add_remove, PolicyFixture ) {
     dnsAns1->addEpdrDnsAnswerToResultRSrc(dnsEntry1.get()->getURI().toString());
     dnsAns1->setUuid("1");
     m0.commit();
-    WAIT_FOR_DO(!rules.front()->getNamedAddresses().empty(), 500,
+    WAIT_FOR_DO(!rules.empty(), 500,
         rules.clear(); pm.getSecGroupRules(sec1->getURI(), rules));
     dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress2);
     dnsAns1->setUuid("2");
@@ -673,7 +673,7 @@ BOOST_FIXTURE_TEST_CASE( egress_dns_policy_add_remove, PolicyFixture ) {
         rules.clear();pm.getSecGroupRules(sec1->getURI(), rules));
     dnsAns1->remove();
     m0.commit();
-    WAIT_FOR_DO(rules.front()->getNamedAddresses().empty(), 500,
+    WAIT_FOR_DO(rules.empty(), 500,
         rules.clear(); pm.getSecGroupRules(sec1->getURI(), rules));
     Mutator m1(framework, "policyreg");
     sec1->addGbpSecGroupSubject("sec1_sub1")->addGbpSecGroupRule("sec1_sub1_rule1")
