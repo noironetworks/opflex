@@ -51,28 +51,51 @@ namespace opflexagent {
         }));
     }
 
+    void DnsManager::expireCName(DnsCacheEntry &entry) {
+        const std::string &cName = entry.getCName();
+        if(cName.empty()) {
+            return;
+        }
+        auto learntItr = learntMappings.find(cName);
+        while(learntItr != learntMappings.end()) {
+            learntItr->second.aNames.erase(entry.domainName);
+            learntItr = learntMappings.find(learntItr->second.getCName());
+        }
+        entry.setCName(std::string(""));
+    }
+
     bool DnsCacheEntry::age(DnsManager &mgr) {
         using namespace boost::posix_time;
         using namespace boost::gregorian;
         using namespace modelgbp::epdr;
-        bool moChanged = false;
+        bool moChanged = false,cNameAged = false;
+        str_set_t expiredAddresses;
         ptime currTime = second_clock::local_time();
+        if(isHolder) {
+            return false;
+        }
         for(auto cAItr = Ips.begin(); cAItr != Ips.end();) {
             if(currTime >= cAItr->expiryTime) {
                 LOG(DEBUG) << domainName << "->" << cAItr->addr << " expired " <<
                     to_simple_string(cAItr->expiryTime);
+                expiredAddresses.insert(cAItr->addr.to_string());
                 cAItr = Ips.erase(cAItr);
                 moChanged=true;
             } else {
                 cAItr++;
             }
         }
-        if(!moChanged) {
-            return Ips.empty();
+        if(isCName()) {
+            if(currTime >= cachedCName.expiryTime) {
+                cNameAged=true;
+            }
+        }
+        if(!moChanged && !cNameAged) {
+            return canExpire();
         }
         opflex::modb::Mutator mutator(mgr.agent.getFramework(), "policyelement");
         //Handle DnsEntry
-        if (Ips.empty()) {
+        if(((isCName() && cNameAged) || !isCName()) && Ips.empty()) {
             DnsEntry::remove(mgr.agent.getFramework(), domainName);
         } else {
             auto dnsEntry = DnsEntry::resolve(mgr.agent.getFramework(),domainName);
@@ -87,7 +110,9 @@ namespace opflexagent {
                         mA->getAddress().get())->remove();
                 }
             }
-            dnsEntry.get()->setUpdated(to_simple_string(currTime));
+            if(moChanged) {
+                dnsEntry.get()->setUpdated(to_simple_string(currTime));
+            }
         }
         //Handle DnsAnswer
         for(auto lAItr= linkedAnswers.begin(); lAItr != linkedAnswers.end();) {
@@ -96,20 +121,30 @@ namespace opflexagent {
                 lAItr = linkedAnswers.erase(lAItr);
                 continue;
             }
-            if (Ips.empty()) {
+            std::vector<std::shared_ptr<DnsAnswerToResultRSrc>> out;
+            dnsAnswer.get()->resolveEpdrDnsAnswerToResultRSrc(out);
+            if(((isCName() && cNameAged) || !isCName()) && Ips.empty()) {
                 auto buildDnsEntryUri = [](const std::string &name){
                    return opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
                    .addElement("EpdrDnsEntry").addElement(name).build();
                 };
+                // A direct match means answer is non-wildcard
                 if (dnsAnswer.get()->getName().get() == domainName) {
                     mgr.demandMappings[domainName].resolved.clear();
                     mgr.demandMappings[domainName].linkedEntries.erase(domainName);
                     dnsAnswer.get()->remove();
                 } else {
-                    mgr.demandMappings[dnsAnswer.get()->getName().get()].resolved.clear();
+                    //An indirect match could mean answer is wild-card or alias
+                    for(auto &expiredAddress: expiredAddresses) {
+                        mgr.demandMappings[dnsAnswer.get()->getName().get()].resolved.erase(expiredAddress);
+                    }
                     mgr.demandMappings[dnsAnswer.get()->getName().get()].linkedEntries.erase(domainName);
-                    dnsAnswer.get()->addEpdrDnsAnswerToResultRSrc(
-                        buildDnsEntryUri(domainName).toString())->remove();
+                    if(out.size()<=1) {
+                        dnsAnswer.get()->remove();
+                    } else {
+                        dnsAnswer.get()->addEpdrDnsAnswerToResultRSrc(
+                            buildDnsEntryUri(domainName).toString())->remove();
+                    }
                 }
                 lAItr = linkedAnswers.erase(lAItr);
                 continue;
@@ -129,7 +164,14 @@ namespace opflexagent {
             lAItr++;
         }
         mutator.commit();
-        return Ips.empty();
+        //Update CName chain
+        if(isCName() && cNameAged) {
+            mgr.expireCName(*this);
+        }
+        if(Ips.empty() && getCName().empty() && !aNames.empty()) {
+            isHolder = true;
+        }
+        return canExpire();
     }
 
     void DnsManager::onExpiryTimer(const boost::system::error_code &e) {
@@ -156,17 +198,23 @@ namespace opflexagent {
         expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
     }
 
-    bool DnsCacheEntry::update(DnsParsingContext::DnsRR &dnsRR) {
+    bool DnsCacheEntry::update(DnsRR &dnsRR) {
         using namespace boost::posix_time;
         using namespace boost::gregorian;
-
-        DnsCachedAddress cA(dnsRR);
-        auto pr = Ips.insert(cA);
-        if(pr.second)
-            return true;
-        if (cA.expiryTime > pr.first->expiryTime) {
-            Ips.erase(pr.first);
-            Ips.insert(cA);
+        /**
+         * Regardless of rType, getting a real RR
+         * makes the entry not a holder anymore
+         */
+        isHolder = false;
+        if(dnsRR.hasDirectAddress()) {
+            DnsCachedAddress cA(dnsRR);
+            auto pr = Ips.insert(cA);
+            if(pr.second)
+                return true;
+            if (cA.expiryTime > pr.first->expiryTime) {
+                Ips.erase(pr.first);
+                Ips.insert(cA);
+            }
         }
         return false;
     }
@@ -281,6 +329,7 @@ namespace opflexagent {
                     labelLen = (unsigned)*ctxt.dptr;
                     if(labelLen == 0) {
                         ctxt.labelState = DnsParsingContext::terminatingLabel;
+                        ctxt.labelOffset++;
                         break;
                     }
                     if((labelLen & 0xc0) == 0xc0) {
@@ -302,6 +351,8 @@ namespace opflexagent {
                                 itr!=ctxt.labelMap[labelPtr].first->end();itr++) {
                             labelSetItr->push_back(*itr);
                         }
+                    } else {
+                        LOG(ERROR) << "Failed to find label at offset " << std::hex << labelPtr;
                     }
                     ctxt.labelOffset += 2;
                     oldLabelOffset = ctxt.labelOffset;
@@ -340,13 +391,16 @@ namespace opflexagent {
     }
 
     /* Debug printing*/
-    std::ostream & operator <<(std::ostream &os,const DnsParsingContext::RRType &rType) {
+    std::ostream & operator <<(std::ostream &os,const DnsRRType &rType) {
         switch(rType){
-            case DnsParsingContext::RRTypeA:
+            case RRTypeA:
                 os << "A";
                 break;
-            case DnsParsingContext::RRTypeA4:
+            case RRTypeA4:
                 os << "AAAA";
+                break;
+            case RRTypeCName:
+                os << "CNAME";
                 break;
             default:
                 os << (unsigned)rType;
@@ -355,15 +409,15 @@ namespace opflexagent {
         return os;
     }
 
-    std::ostream & operator <<(std::ostream &os,const DnsParsingContext::RRClass &rClass) {
+    std::ostream & operator <<(std::ostream &os,const DnsRRClass &rClass) {
         switch(rClass){
-            case DnsParsingContext::RRClassIN:
+            case RRClassIN:
                 os << "IN";
                 break;
-            case DnsParsingContext::RRClassCS:
+            case RRClassCS:
                 os << "CS";
                 break;
-            case DnsParsingContext::RRClassAny:
+            case RRClassAny:
                 os << "Any";
                 break;
             default:
@@ -374,7 +428,6 @@ namespace opflexagent {
     }
 
     std::ostream & operator<<(std::ostream &os, const DnsParsingContext& dnsCtxt) {
-        typedef DnsParsingContext::RRType RRType;
         os << endl;
         os << "Questions: " << dnsCtxt.qdCount << ", Answer RRs: " << dnsCtxt.anCount <<
            ", Authority RRs: " << dnsCtxt.nsCount << ", Additional RRs: " << dnsCtxt.arCount << endl;
@@ -388,17 +441,20 @@ namespace opflexagent {
             os << rr.domainName << ":  " << "type " << rr.rType << ", class " << rr.rClass;
             os << ", ttl: " << rr.ttl;
             switch(rr.rType){
-                case RRType::RRTypeA:
+                case DnsRRType::RRTypeA:
                     os << ", addr " <<
                     boost::asio::ip::address_v4(rr.rrTypeAData).to_string();
                     break;
-                case RRType::RRTypeA4:
+                case DnsRRType::RRTypeA4:
                     std::array<unsigned char, IP6_ADDR_LEN> bytes;
                     for(int i=0; i<IP6_ADDR_LEN; i++) {
                         bytes[i] = rr.rrTypeA4Data.v6Bytes[i];
                     }
                     os << ", addr " <<
                     boost::asio::ip::address_v6(bytes).to_string();
+                    break;
+                case DnsRRType::RRTypeCName:
+                    os << ", cname " << rr.rrTypeCNameData.cName;
                     break;
                 default:
                     break;
@@ -437,18 +493,52 @@ namespace opflexagent {
         return true;
     }
 
+    DnsCacheEntry *DnsManager::getTerminalNode(DnsCacheEntry &startNode) {
+        DnsCacheEntry *terminalNode = &startNode;
+        while(!terminalNode->getCName().empty()) {
+            auto learntItr = learntMappings.find(terminalNode->getCName());
+            if(learntItr == learntMappings.end()) {
+                break;
+            }
+            terminalNode = &learntItr->second;
+        }
+        return terminalNode;
+    }
+
+    bool DnsCacheEntry::matchesAliases(const std::string &askName, std::string &matchingAlias) {
+        auto itr = std::find_if(aNames.begin(),aNames.end(),
+                                [&](const std::string &aName){return DomainNameMatch(aName,askName);});
+        if(itr != std::end(aNames)) {
+            matchingAlias = *itr;
+            return true;
+        }
+        return false;
+    }
+
     void DnsManager::updateMOs(DnsCacheEntry &entry, bool changed) {
         auto dDiscoveredU = modelgbp::epdr::DnsDiscovered::resolve(agent.getFramework());
         opflex::modb::Mutator mutator(agent.getFramework(), "policyelement");
         auto dnsEntry = dDiscoveredU.get()->addEpdrDnsEntry(entry.domainName);
         dnsEntry->setUpdated(boost::posix_time::to_simple_string(entry.lastUpdated));
+        //Revisit:dnsEntry->setCName(entry.getCName());
         for(const auto& cA: entry.Ips) {
             auto mA = dnsEntry->addEpdrDnsMappedAddress(cA.addr.to_string());
             mA->setExpiry(boost::posix_time::to_simple_string(cA.expiryTime));
         }
         mutator.commit();
         for(auto demandItr : demandMappings) {
-            if(DomainNameMatch(entry.domainName,demandItr.first)){
+            DnsCacheEntry *terminalNode=NULL;
+            std::string matchingAlias;
+            bool regularMatch = DomainNameMatch(entry.domainName, demandItr.first);
+            if(regularMatch || entry.matchesAliases(demandItr.first, matchingAlias)) {
+                if(entry.isCName() && entry.Ips.empty()) {
+                    terminalNode = getTerminalNode(entry);
+                    if((terminalNode != NULL) && terminalNode->Ips.empty())
+                        continue;
+                    if(terminalNode != NULL) {
+                        dnsEntry = dDiscoveredU.get()->addEpdrDnsEntry(terminalNode->domainName);
+                    }
+                }
                 auto dnsAnswer = dDiscoveredU.get()->addEpdrDnsAnswer(demandItr.first);
                 if(changed) {
                     dnsAnswer->setUuid(boost::uuids::to_string((*uuidGen)()));
@@ -456,23 +546,70 @@ namespace opflexagent {
                 dnsAnswer->addEpdrDnsAnswerToResultRSrc(dnsEntry->getURI().toString());
                 entry.linkedAnswers.insert(dnsAnswer->getURI());
                 demandItr.second.linkedEntries.insert(entry.domainName);
+                if((terminalNode != NULL) && (terminalNode->domainName != entry.domainName)) {
+                    terminalNode->linkedAnswers.insert(dnsAnswer->getURI());
+                    demandItr.second.linkedEntries.insert(terminalNode->domainName);
+                }
+                if(!regularMatch) {
+                    auto learntItr = learntMappings.find(matchingAlias);
+                    learntItr->second.linkedAnswers.insert(dnsAnswer->getURI());
+                    demandItr.second.linkedEntries.insert(matchingAlias);
+                }
             }
         }
         mutator.commit();
     }
 
-    DnsCachedAddress::DnsCachedAddress(const DnsParsingContext::DnsRR &dnsRR)
+    DnsRR::DnsRR(const DnsRR &dnsRR):
+        domainName(dnsRR.domainName),
+        currTime(dnsRR.currTime),
+        rType(dnsRR.rType),rClass(dnsRR.rClass),ttl(dnsRR.ttl),rdLen(dnsRR.rdLen)
+    {
+        switch(rType) {
+            case RRTypeCName:
+            {
+                new (&rrTypeCNameData.cName) std::string;
+                rrTypeCNameData.cName = dnsRR.rrTypeCNameData.cName;
+                break;
+            }
+            case RRTypeA:
+            {
+                rrTypeAData = dnsRR.rrTypeAData;
+                break;
+            }
+            case RRTypeA4:
+            {
+                memcpy(rrTypeA4Data.v6Bytes,
+                       dnsRR.rrTypeA4Data.v6Bytes,
+                       IP6_ADDR_LEN);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    DnsCachedCName::DnsCachedCName(const DnsRR &dnsRR)
+    {
+        using namespace boost::posix_time;
+        if(dnsRR.rType == DnsRRType::RRTypeCName) {
+            cName = dnsRR.rrTypeCNameData.cName;
+        }
+        expiryTime = dnsRR.currTime + seconds(dnsRR.ttl);
+    }
+
+    DnsCachedAddress::DnsCachedAddress(const DnsRR &dnsRR)
     {
         using namespace boost::posix_time;
         boost::system::error_code ec;
         //Resolve addresses using the RRs here
         switch(dnsRR.rType) {
-            case DnsParsingContext::RRTypeA:
+            case RRTypeA:
             {
                 addr = boost::asio::ip::address_v4(dnsRR.rrTypeAData);
                 break;
             }
-            case DnsParsingContext::RRTypeA4:
+            case RRTypeA4:
             {
                 std::array<unsigned char, IP6_ADDR_LEN> bytes;
                 for(int i=0; i<IP6_ADDR_LEN; i++) {
@@ -487,6 +624,93 @@ namespace opflexagent {
         expiryTime = dnsRR.currTime + seconds(dnsRR.ttl);
     }
 
+    DnsCacheEntry::DnsCacheEntry(const DnsRR &dnsRR):
+        domainName(dnsRR.domainName),
+        cachedCName(dnsRR),isHolder(false),
+        lastUpdated(dnsRR.currTime) {
+        if(dnsRR.hasDirectAddress()) {
+            DnsCachedAddress cachedAddr(dnsRR);
+            Ips.insert(cachedAddr);
+        }
+    }
+
+    DnsCacheEntry::DnsCacheEntry(const std::string &name):
+        domainName(name), isHolder(true),
+        lastUpdated(boost::posix_time::second_clock::local_time()) {
+    }
+
+    DnsCacheEntry::DnsCacheEntry():
+        isHolder(true),
+        lastUpdated(boost::posix_time::second_clock::local_time()) {
+    }
+
+    bool DnsCacheEntry::validateCName(const std::string &_cName) {
+        if(!isCName()) {
+            if(aNames.find(_cName) == aNames.end()) {
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    bool DnsCacheEntry::addAlias(DnsManager &mgr, const std::string &aName) {
+        if(!isCName()) {
+            aNames.insert(aName);
+            return true;
+        }
+        if(getCName() == aName) {
+            return false;
+        }
+        auto learntItr = mgr.learntMappings.find(getCName());
+        while(learntItr != mgr.learntMappings.end()){
+            if(learntItr->second.getCName() == aName) {
+                return false;
+            }
+            learntItr = mgr.learntMappings.find(learntItr->second.getCName());
+        }
+        /*Now add the alias recursively*/
+        learntItr = mgr.learntMappings.find(getCName());
+        while(learntItr != mgr.learntMappings.end()){
+            learntItr->second.aNames.insert(aName);
+            learntItr = mgr.learntMappings.find(learntItr->second.getCName());
+        }
+        aNames.insert(aName);
+        return true;
+    }
+
+    bool DnsManager::validateCName(DnsRR &dnsRR,
+            DnsCacheEntry *existingEntry) {
+        if(!dnsRR.isCName()) {
+            return true;
+        }
+        if(existingEntry != NULL) {
+            if(!existingEntry->validateCName(dnsRR.getCName())) {
+                return false;
+            }
+        }
+        auto cNameItr = learntMappings.find(dnsRR.getCName());
+        if(cNameItr != learntMappings.end()) {
+            if(!cNameItr->second.addAlias(*this, dnsRR.domainName)) {
+                return false;
+            }
+        } else {
+            DnsCacheEntry entry2(dnsRR.getCName());
+            learntMappings.emplace(
+                    std::make_pair(dnsRR.getCName(),entry2));
+            if(existingEntry != NULL) {
+                for(const auto &aName: existingEntry->aNames) {
+                    (void)entry2.addAlias(*this, aName);
+                }
+            }
+            (void)entry2.addAlias(*this, dnsRR.domainName);
+        }
+        if(existingEntry != NULL) {
+            existingEntry->setCName(dnsRR.getCName());
+        }
+        return true;
+    }
+
     void DnsManager::updateCache(DnsParsingContext &ctxt) {
         bool changed = false;
         std::unique_lock<std::mutex> lk(stateMutex);
@@ -494,16 +718,20 @@ namespace opflexagent {
             if(itr->domainName.empty()) {
                 continue;
             }
-            if(learntMappings.find(itr->domainName) != learntMappings.end()){
-                learntMappings[itr->domainName].lastUpdated = itr->currTime;
-                changed = learntMappings[itr->domainName].update(*itr);
-            } else {
-                if(!itr->domainName.empty()) {
-                    DnsCacheEntry entry(*itr);
-                    learntMappings.emplace(std::make_pair(itr->domainName,entry));
-                    learntMappings[itr->domainName].lastUpdated = itr->currTime;
-                    changed = true;
+            auto learntMapItr = learntMappings.find(itr->domainName);
+            if(learntMapItr != learntMappings.end()){
+                if(!validateCName(*itr, &learntMapItr->second)) {
+                    continue;
                 }
+                learntMapItr->second.lastUpdated = itr->currTime;
+                changed = learntMapItr->second.update(*itr);
+            } else {
+                DnsCacheEntry entry(*itr);
+                if(!validateCName(*itr)) {
+                    continue;
+                }
+                learntMappings.emplace(std::make_pair(itr->domainName,entry));
+                changed = true;
             }
             updateMOs(learntMappings[itr->domainName], changed);
         }
@@ -544,62 +772,78 @@ namespace opflexagent {
                 LOG(ERROR) << "Incorrect question section";
                 return false;
             }
-                dnsQuestion.qType = (DnsParsingContext::RRType)(ntohs(*(uint16_t *)(ctxt.dptr)));
+                dnsQuestion.qType = (DnsRRType)(ntohs(*(uint16_t *)(ctxt.dptr)));
                 ctxt.dptr += 2;
-                dnsQuestion.qClass = (DnsParsingContext::RRClass)(ntohs(*(uint16_t *)(ctxt.dptr)));
+                dnsQuestion.qClass = (DnsRRClass)(ntohs(*(uint16_t *)(ctxt.dptr)));
                 ctxt.dptr += 2;
                 ctxt.tailRoom -= 4;
+                ctxt.labelOffset += 4;
                 ctxt.questions.emplace_back(dnsQuestion);
             }
             //Answer section
             ctxt.parsingSection = DnsParsingContext::answerSection;
             for(int anc = ctxt.anCount; anc>0; anc--) {
-                DnsParsingContext::DnsRR dnsRR;
-                ParseDomainName(ctxt,dnsRR.domainName);
+                DnsRRType rType;
+                DnsRRClass rClass;
+                std::string rrDomainName;
+                uint16_t ttl,rdLen;
+                ParseDomainName(ctxt,rrDomainName);
                 if((ctxt.labelState != DnsParsingContext::seekingLabel) ||
                    (ctxt.tailRoom < 10)) {
                     LOG(ERROR) << "Incorrect answer section";
                     return false;
                 }
-                dnsRR.rType = (DnsParsingContext::RRType)ntohs((*(uint16_t *)ctxt.dptr));
+                rType = (DnsRRType)ntohs((*(uint16_t *)ctxt.dptr));
                 ctxt.dptr += 2;
-                dnsRR.rClass = (DnsParsingContext::RRClass)ntohs(*((uint16_t *)ctxt.dptr));
+                rClass = (DnsRRClass)ntohs(*((uint16_t *)ctxt.dptr));
                 ctxt.dptr += 2;
-                dnsRR.ttl = ntohl(*(uint32_t *)ctxt.dptr);
+                ttl = ntohl(*(uint32_t *)ctxt.dptr);
                 ctxt.dptr += 4;
-                dnsRR.rdLen = ntohs(*(uint16_t *)ctxt.dptr);
+                rdLen = ntohs(*(uint16_t *)ctxt.dptr);
                 ctxt.dptr += 2;
                 ctxt.tailRoom -= 10;
-                if (ctxt.tailRoom < dnsRR.rdLen) {
+                ctxt.labelOffset += 10;
+                if (ctxt.tailRoom < rdLen) {
                     LOG(ERROR) << "Incorrect answer record";
                     return false;
                 }
+                DnsRR dnsRR(rrDomainName, rType, rClass, ttl, rdLen);
                 switch(dnsRR.rType) {
-                    case DnsParsingContext::RRTypeA:
+                    case RRTypeA:
                     {
                         if(dnsRR.rdLen < 4) {
                             LOG(ERROR) << "Incorrect A record";
                             return false;
                         }
                         dnsRR.rrTypeAData = ntohl(*(uint32_t *)ctxt.dptr);
+                        ctxt.dptr += dnsRR.rdLen;
+                        ctxt.labelOffset += dnsRR.rdLen;
                         break;
                     }
-                    case DnsParsingContext::RRTypeA4:
+                    case RRTypeA4:
                     {
                         if(dnsRR.rdLen < IP6_ADDR_LEN) {
                             LOG(ERROR) << "Incorrect AAAA record";
                             return false;
                         }
                         memcpy(dnsRR.rrTypeA4Data.v6Bytes, ctxt.dptr, IP6_ADDR_LEN);
+                        ctxt.dptr += dnsRR.rdLen;
+                        ctxt.labelOffset += dnsRR.rdLen;
+                        break;
+                    }
+                    case RRTypeCName:
+                    {
+                        ParseDomainName(ctxt, dnsRR.rrTypeCNameData.cName);
                         break;
                     }
                     default:
                     {
                         LOG(DEBUG) << "Unhandled record type " << dnsRR.rType;
+                        ctxt.dptr += dnsRR.rdLen;
+                        ctxt.labelOffset += dnsRR.rdLen;
                         break;
                     }
                 }
-                ctxt.dptr += dnsRR.rdLen;
                 ctxt.tailRoom -= dnsRR.rdLen;
                 ctxt.answers.emplace_back(dnsRR);
             }
@@ -638,16 +882,27 @@ namespace opflexagent {
            return opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
            .addElement("EpdrDnsEntry").addElement(name).build();
         };
-       auto addCacheEntryToAnswer = [](std::string &askName, URI &askUri,
-                                       DnsCacheEntry & cacheEntry, DnsDemandState &demandState,
+       auto addCacheEntryToAnswer = [this](std::string &askName, URI &askUri,
+                                       DnsCacheEntry &cacheEntry, DnsDemandState &demandState,
                                        std::unordered_set<std::string> &cacheSet,
                                        std::unordered_set<URI> &notifySet) {
+           URI dnsAnswerUri = opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
+           .addElement("EpdrDnsAnswer").addElement(askName).build();
+           if(cacheEntry.isCName() && cacheEntry.Ips.empty()) {
+               DnsCacheEntry *terminalNode = getTerminalNode(cacheEntry);
+               if((terminalNode != NULL) && terminalNode->Ips.empty()) {
+                   return;
+               }
+               if((terminalNode != NULL) && (terminalNode->domainName != cacheEntry.domainName)) {
+                   terminalNode->linkedAnswers.insert(dnsAnswerUri);
+                   demandState.linkedEntries.insert(terminalNode->domainName);
+                   cacheSet.insert(terminalNode->domainName);
+               }
+           }
            for(const auto &mappedIp: cacheEntry.Ips) {
                demandState.resolved.insert(mappedIp.addr.to_string());
            }
            demandState.linkedEntries.insert(cacheEntry.domainName);
-           URI dnsAnswerUri = opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
-           .addElement("EpdrDnsAnswer").addElement(askName).build();
            cacheEntry.linkedAnswers.insert(dnsAnswerUri);
            cacheSet.insert(cacheEntry.domainName);
            notifySet.insert(askUri);
