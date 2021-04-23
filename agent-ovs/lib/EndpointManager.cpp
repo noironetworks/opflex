@@ -96,6 +96,7 @@ void EndpointManager::start() {
     EpAttributeSet::registerListener(framework, &epgMappingListener);
     RemoteEndpointInventory::registerListener(framework, &epgMappingListener);
     RemoteInventoryEp::registerListener(framework, &epgMappingListener);
+    RemoteIp::registerListener(framework, &epgMappingListener);
     policyManager.registerListener(this);
 }
 
@@ -1532,7 +1533,14 @@ void EndpointManager::EPGMappingListener::objectUpdated(class_id_t classId,
         }
     } else if (classId == modelgbp::inv::RemoteInventoryEp::CLASS_ID) {
         epmanager.updateEndpointRemote(uri);
-    }
+    } else if (classId == modelgbp::inv::RemoteIp::CLASS_ID) {
+        boost::filesystem::path puri(uri.toString());
+        puri = puri.parent_path()
+                   .parent_path()
+                   .parent_path();
+        URI curi(puri.string() + "/");
+        epmanager.updateEndpointRemote(curi);
+   }
 }
 
 void EndpointManager::configUpdated(const URI& uri) {
