@@ -24,6 +24,7 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/local_time/local_time.hpp>
+#include <string>
 #include <list>
 #include <unordered_set>
 #include <mutex>
@@ -56,6 +57,92 @@ class DnsListener {
         virtual void dnsDemandUpdated(opflex::modb::class_id_t cid, opflex::modb::URI dnsDemand);
 };
 
+//RFC-883
+enum DnsRRClass {
+    RRClassIN=1,
+    RRClassCS=2,
+    RRClassAny=255
+};
+
+enum DnsRRType {
+    //V4 Host Address
+    RRTypeA=1,
+    RRTypeNS=2,
+    RRTypeMD=3,
+    RRTypeMF=4,
+    //Canonical Name
+    RRTypeCName=5,
+    RRTypeSOA=6,
+    RRTypeMB=7,
+    RRTypeMG=8,
+    RRTypeMR=9,
+    RRTypeNULL=10,
+    RRTypeWKS=11,
+    RRTypePTR=12,
+    RRTypeHINFO=13,
+    RRTypeMINFO=14,
+    //V6 Host Address
+    RRTypeA4=28,
+    //V6 Host Address
+    RRTypeA6=38
+};
+
+class DnsRR {
+public:
+    DnsRR(const std::string &_domainName, DnsRRType _rType,
+          DnsRRClass _rclass=DnsRRClass::RRClassIN,
+          uint16_t _ttl=0, uint16_t _rdLen=0):
+        domainName(_domainName),
+        currTime(boost::posix_time::second_clock::local_time()),
+        rType(_rType),rClass(_rclass),ttl(_ttl),rdLen(_rdLen)
+    {
+        if(rType == RRTypeCName) {
+            new (&rrTypeCNameData.cName) std::string;
+        }
+    }
+    DnsRR(const DnsRR& dnsRR);
+    ~DnsRR() {
+        if(rType == RRTypeCName) {
+            rrTypeCNameData.cName.~basic_string();
+        }
+    }
+    std::string domainName;
+    boost::posix_time::ptime currTime;
+    DnsRRType rType;
+    DnsRRClass rClass;
+    uint16_t ttl;
+    uint16_t rdLen;
+    inline bool hasDirectAddress() const {
+        return ((rType == DnsRRType::RRTypeA) ||
+            (rType == DnsRRType::RRTypeA4));
+    }
+    inline bool isCName() const {
+        return (rType == DnsRRType::RRTypeCName);
+    }
+    inline std::string getCName() const {
+        if(rType == DnsRRType::RRTypeCName) {
+            return rrTypeCNameData.cName;
+        }
+        return std::string();
+    }
+    //std::variant available only in C++17
+    union {
+        uint32_t rrTypeAData;
+        //RFC-2874
+        struct {
+            uint8_t prefixLen;
+            //Could be a max of 255 bytes
+            void *data;
+        } rrTypeA6Data;
+        //RFC-1886,RFC-3596
+        struct {
+            uint8_t v6Bytes[16];
+        } rrTypeA4Data;
+        struct {
+            std::string cName;
+        } rrTypeCNameData;
+    };
+};
 
 class DnsParsingContext {
 public:
@@ -83,71 +170,12 @@ public:
         authoritySection,
         additionalSection
     } parsingSection;
-    //RFC-883
-    enum RRClass {
-        RRClassIN=1,
-        RRClassCS=2,
-        RRClassAny=255
-    };
-    enum RRType {
-        //V4 Host Address
-        RRTypeA=1,
-        RRTypeNS=2,
-        RRTypeMD=3,
-        RRTypeMF=4,
-        //Canonical Name
-        RRTypeCName=5,
-        RRTypeSOA=6,
-        RRTypeMB=7,
-        RRTypeMG=8,
-        RRTypeMR=9,
-        RRTypeNULL=10,
-        RRTypeWKS=11,
-        RRTypePTR=12,
-        RRTypeHINFO=13,
-        RRTypeMINFO=14,
-        //V6 Host Address
-        RRTypeA4=28,
-        //V6 Host Address
-        RRTypeA6=38
-    };
     class DnsQuestion {
     public:
         std::string domainName;
-        RRType qType;
-        RRClass qClass;
+        DnsRRType qType;
+        DnsRRClass qClass;
     };
-    class DnsRR {
-    public:
-        DnsRR():currTime(boost::posix_time::second_clock::local_time()),
-        rType(RRTypeA),rClass(RRClassIN),ttl(0),rdLen(0)
-        {
-        }
-        std::string domainName;
-        boost::posix_time::ptime currTime;
-        RRType rType;
-        RRClass rClass;
-        uint16_t ttl;
-        uint16_t rdLen;
-        //std::variant available only in C++17
-        union {
-            uint32_t rrTypeAData;
-            //RFC-2874
-            struct {
-                uint8_t prefixLen;
-                //Could be a max of 255 bytes
-                void *data;
-            } rrTypeA6Data;
-            //RFC-1886,RFC-3596
-            struct {
-                uint8_t v6Bytes[16];
-            } rrTypeA4Data;
-            struct {
-                void *data;
-            } rrTypeCNameData;
-        };
-    };
-
     typedef std::list<std::list<std::string>>::iterator LabelSetIterator;
     typedef std::list<std::string>::iterator LabelStringIterator;
     std::unordered_map<uint32_t, std::pair<LabelSetIterator,LabelStringIterator>> labelMap;
@@ -156,9 +184,19 @@ public:
     std::list<DnsRR> answers;
 };
 
+class DnsCachedCName {
+public:
+    DnsCachedCName(const DnsRR &dnsRR);
+    DnsCachedCName():
+	expiryTime(boost::posix_time::second_clock::local_time()) {
+    }
+    boost::posix_time::ptime expiryTime;
+    std::string cName;
+};
+
 class DnsCachedAddress {
 public:
-    DnsCachedAddress(const DnsParsingContext::DnsRR &dnsRR);
+    DnsCachedAddress(const DnsRR &dnsRR);
     DnsCachedAddress(const std::string &addrStr):
 	expiryTime(boost::posix_time::second_clock::local_time()) {
 	boost::system::error_code ec;
@@ -172,16 +210,26 @@ bool operator==(const DnsCachedAddress& lhs, const DnsCachedAddress& rhs);
 
 class DnsManager;
 
+/**
+ * Class to hold a cached DNS entry
+ * Note that there is no explicit flag to call out
+ * a CName entry vs A/A4 entry.
+ * According to RFC-1034,a CName record is exclusive
+ * and we should not expect A/A4 params. In the event
+ * that we get both, we will honor the CName record
+ * for chained resolution and A/A4 entry for exclusive
+ * resolution of this specific name
+ */
 class DnsCacheEntry {
 public:
-    DnsCacheEntry(const DnsParsingContext::DnsRR &dnsRR):
-        domainName(dnsRR.domainName),
-        lastUpdated(dnsRR.currTime) {
-        DnsCachedAddress cachedAddr(dnsRR);
-        Ips.insert(cachedAddr);
-    }
-    DnsCacheEntry():lastUpdated(boost::posix_time::second_clock::local_time()){};
+    DnsCacheEntry(const DnsRR &dnsRR);
+    DnsCacheEntry(const std::string &name);
+    DnsCacheEntry();
+    typedef std::unordered_set<std::string> str_set_t;
     std::string domainName;
+    DnsCachedCName cachedCName;
+    str_set_t aNames;
+    bool isHolder;
     std::unordered_set<DnsCachedAddress> Ips;
     std::unordered_set<opflex::modb::URI> linkedAnswers;
     boost::posix_time::ptime lastUpdated;
@@ -190,7 +238,7 @@ public:
      * @param dnsRR DNS resource record
      * @return whether a new address was added
      */
-    bool update(DnsParsingContext::DnsRR &dnsRR);
+    bool update(DnsRR &dnsRR);
     /**
      * Age cache entry
      * @param mgr DNS Manager instance
@@ -198,6 +246,36 @@ public:
      * and can be removed
      */
     bool age(DnsManager &mgr);
+    /**
+     * Add alias
+     * @param aName alternate name for this domainName
+     * @return whether it is a loop free definition
+     */
+    bool addAlias(DnsManager &mgr, const std::string &aName);
+    /**
+     * Validate Canonical name
+     * @param _cName canonical name for this domainName
+     * @return whether it is a loop free definition
+     */
+    bool validateCName(const std::string &_cName);
+    void setCName(const std::string &_cName) {
+        cachedCName.cName = _cName;
+    }
+    std::string getCName() {
+        return cachedCName.cName;
+    }
+    bool isCName() {
+        return !cachedCName.cName.empty();
+    }
+    bool canExpire() {
+        if(isCName()) {
+            return (!isHolder && aNames.empty());
+        } else {
+            return Ips.empty();
+        }
+    }
+    bool matchesAliases(const std::string &askName,
+            std::string &matchingAlias);
 };
 
 class DnsDemandState {
@@ -244,10 +322,17 @@ public:
      */
     bool getResolvedAddresses(const std::string& name, std::unordered_set<std::string> &addr_set);
     /**
+     * expireCName
+     * Recurse cname chains to adjust for expired entry
+     * @param entry expired cname entry
+     */
+    void expireCName(DnsCacheEntry &entry);
+    /**
      * MODB listener interface
      */
     virtual void objectUpdated (opflex::modb::class_id_t class_id,
                                     const opflex::modb::URI& uri);
+
     friend DnsCacheEntry;
 private:
     boost::asio::io_service io_ctxt;
@@ -269,6 +354,9 @@ private:
     boost::mt19937 randomSeed;
     void notifyListeners(class_id_t cid, const URI& notifyURI);
     void updateMOs(DnsCacheEntry &entry, bool updated);
+    void updateMOs(const std::string &alias);
+    DnsCacheEntry *getTerminalNode(DnsCacheEntry &startNode);
+    bool validateCName(DnsRR &ctxt, DnsCacheEntry *existingEntry=NULL);
     void updateCache(DnsParsingContext &ctxt);
     void handleDnsAsk(URI &askUri, std::unordered_set<URI> &notifySet);
     void processURI(class_id_t class_id,
@@ -282,8 +370,8 @@ private:
 /**
  * Print parsing context to an ostream
  */
-std::ostream & operator <<(std::ostream &os, const DnsParsingContext::RRType &rType);
-std::ostream & operator <<(std::ostream &os, const DnsParsingContext::RRClass &rClass);
+std::ostream & operator <<(std::ostream &os, const DnsRRType &rType);
+std::ostream & operator <<(std::ostream &os, const DnsRRClass &rClass);
 std::ostream & operator <<(std::ostream &os, const DnsParsingContext& dnsCtxt);
 
 }
