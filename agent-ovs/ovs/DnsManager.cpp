@@ -43,7 +43,7 @@ namespace opflexagent {
             lock_guard<recursive_mutex> lk(timerMutex);
             expiryTimer.reset( new boost::asio::deadline_timer(io_ctxt));
             expiryTimer->expires_from_now(boost::posix_time::seconds(1));
-            expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
+            expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::placeholders::_1));
         }
         parserThread.reset(new std::thread([this]() {
            started = true;
@@ -195,7 +195,7 @@ namespace opflexagent {
         }
         lock_guard<recursive_mutex> lk(timerMutex);
         expiryTimer->expires_from_now(seconds(1));
-        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,_1));
+        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::placeholders::_1));
     }
 
     bool DnsCacheEntry::update(DnsRR &dnsRR) {
@@ -995,7 +995,7 @@ namespace opflexagent {
        switch(class_id) {
            case modelgbp::epdr::DnsAsk::CLASS_ID:
            {
-               func = boost::bind(&DnsManager::handleDnsAsk,this,_1,_2);
+               func = boost::bind(&DnsManager::handleDnsAsk,this,boost::placeholders::_1,boost::placeholders::_2);
                break;
            }
        }
