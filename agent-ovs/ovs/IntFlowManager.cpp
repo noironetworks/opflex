@@ -5647,14 +5647,15 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
 
                 {
                     FlowBuilder snr;
-                    matchSubnet(snr, rdId, 150, addr,
+                    matchSubnet(snr, rdId, 40, addr,
                                 extsub->getPrefixLen(0), false);
 
                     if (natRef) {
+                        uint16_t natprio = addr.is_v4() ? 40 : 130;
                         // For external networks mapped to a NAT EPG,
                         // set the next hop action to NAT_OUT
                         if (natEpgVnid) {
-                            snr.priority(151 + extsub->getPrefixLen(0))
+                            snr.priority(40 + natprio + extsub->getPrefixLen(0))
                                 .action()
                                 .reg(MFF_REG2, netVnid)
                                 .reg(MFF_REG7, natEpgVnid.get())
