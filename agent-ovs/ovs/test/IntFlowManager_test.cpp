@@ -2506,20 +2506,20 @@ void BaseIntFlowManagerFixture::initExpIpMapping(bool natEpgMap, bool nextHop) {
          .controller(65535).done());
 
     if (natEpgMap) {
-        ADDF(Bldr().table(RT).priority(167).ipv6().reg(RD, 1)
+        ADDF(Bldr().table(RT).priority(186).ipv6().reg(RD, 1)
              .isIpv6Dst("fdf1::/16")
              .actions().load(DEPG, 0x80000001).load(OUTPORT, 0x4242)
              .mdAct(flow::meta::out::NAT).go(POL).done());
-        ADDF(Bldr().table(RT).priority(159).ip().reg(RD, 1)
+        ADDF(Bldr().table(RT).priority(88).ip().reg(RD, 1)
              .isIpDst("5.0.0.0/8")
              .actions().load(DEPG, 0x80000001).load(OUTPORT, 0x4242)
              .mdAct(flow::meta::out::NAT).go(POL).done());
     } else {
-        ADDF(Bldr().table(RT).priority(166).ipv6().reg(RD, 1)
+        ADDF(Bldr().table(RT).priority(56).ipv6().reg(RD, 1)
              .isIpv6Dst("fdf1::/16")
              .actions().mdAct(flow::meta::out::TUNNEL)
              .go(STAT).done());
-        ADDF(Bldr().table(RT).priority(158).ip().reg(RD, 1)
+        ADDF(Bldr().table(RT).priority(48).ip().reg(RD, 1)
              .isIpDst("5.0.0.0/8")
              .actions().mdAct(flow::meta::out::TUNNEL)
              .go(STAT).done());
