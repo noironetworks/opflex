@@ -12,7 +12,6 @@
 #include "Packets.h"
 #include <opflexagent/logging.h>
 #include <modelgbp/epdr/DnsDiscovered.hpp>
-#include <modelgbp/epdr/DnsDemand.hpp>
 #include <modelgbp/epdr/DnsAsk.hpp>
 #include <thread>
 #include <netinet/in.h>
@@ -43,7 +42,7 @@ namespace opflexagent {
             lock_guard<recursive_mutex> lk(timerMutex);
             expiryTimer.reset( new boost::asio::deadline_timer(io_ctxt));
             expiryTimer->expires_from_now(boost::posix_time::seconds(1));
-            expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::placeholders::_1));
+            expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::arg<1>()));
         }
         parserThread.reset(new std::thread([this]() {
            started = true;
@@ -195,7 +194,7 @@ namespace opflexagent {
         }
         lock_guard<recursive_mutex> lk(timerMutex);
         expiryTimer->expires_from_now(seconds(1));
-        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::placeholders::_1));
+        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::arg<1>()));
     }
 
     bool DnsCacheEntry::update(DnsRR &dnsRR) {
@@ -601,7 +600,6 @@ namespace opflexagent {
     DnsCachedAddress::DnsCachedAddress(const DnsRR &dnsRR)
     {
         using namespace boost::posix_time;
-        boost::system::error_code ec;
         //Resolve addresses using the RRs here
         switch(dnsRR.rType) {
             case RRTypeA:
@@ -995,7 +993,7 @@ namespace opflexagent {
        switch(class_id) {
            case modelgbp::epdr::DnsAsk::CLASS_ID:
            {
-               func = boost::bind(&DnsManager::handleDnsAsk,this,boost::placeholders::_1,boost::placeholders::_2);
+               func = boost::bind(&DnsManager::handleDnsAsk,this,boost::arg<1>(),boost::arg<2>());
                break;
            }
        }
