@@ -206,6 +206,20 @@ public:
     }
 
     /**
+     * Get the keepalive timeout
+     */
+    uint32_t getKeepaliveTimeout() const {
+        return keepaliveTimeout;
+    }
+
+    /**
+     * Set the keepalive timeout
+     */
+    void setKeepaliveTimeout(const uint32_t timeout) {
+        keepaliveTimeout = timeout;
+    }
+\
+    /**
      * Set the prr timer duration in secs
      */
     uint64_t getPrrTimerDuration() { return prrTimerDuration; }
@@ -524,6 +538,7 @@ private:
     uint64_t prrTimerDuration = DEFAULT_PRR_TIMER_DURATION;
 
     uint32_t peerHandshakeTimeout = 45000;
+    uint32_t keepaliveTimeout = 120000;
 
     /**
      *  policy refresh timer duration in msecs

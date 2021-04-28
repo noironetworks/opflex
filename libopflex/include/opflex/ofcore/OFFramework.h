@@ -742,6 +742,12 @@ public:
      void setHandshakeTimeout(const uint32_t timeout);
 
     /**
+     * Set the keepalive timeout
+     * @param timeout keepalive timeout in milliseconds
+     */
+    void setKeepaliveTimeout(const uint32_t timeout);
+
+    /**
      * Start the framework.  This will start all the framework threads
      * and attempt to connect to configured OpFlex peers.
      */
