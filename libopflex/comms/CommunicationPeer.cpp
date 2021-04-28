@@ -77,13 +77,13 @@ namespace yajr {
 void CommunicationPeer::startKeepAlive(
         uint64_t begin,
         uint64_t repeat,
-        uint64_t interval) {
-    LOG(DEBUG) << this << " interval=" << interval << " begin=" << begin << " repeat=" << repeat;
+        uint64_t timeoutAfter) {
+    LOG(DEBUG) << this << " timeoutAfter=" << timeoutAfter << " begin=" << begin << " repeat=" << repeat;
 
     sendEchoReq();
     bumpLastHeard();
 
-    keepAliveInterval_ = interval;
+    keepAliveInterval_ = timeoutAfter;
     uv_timer_start(&keepAliveTimer_, on_timeout, begin, repeat);
 }
 
@@ -339,11 +339,7 @@ void CommunicationPeer::timeout() {
         return;
     }
 
-    if (rtt <= (keepAliveInterval_ >> 3u) ) {
-        return;
-    }
-
-    if (rtt > (keepAliveInterval_ << 3u) ) {
+    if (rtt > keepAliveInterval_) {
         LOG(WARNING) << this << " tearing down the connection upon timeout";
         /* close the connection and hope for the best */
         this->onDisconnect();

@@ -222,12 +222,12 @@ class Peer {
      *
      * @param begin delay before starting
      * @param repeat repeat
-     * @param interval interval
+     * @param timeoutAfter timeoutAfter
      */
     virtual void startKeepAlive(
             uint64_t                begin             = 100,
             uint64_t                repeat            = 1250,
-            uint64_t                interval          = 9000
+            uint64_t                timeoutAfter      = 9000
     ) = 0;
 
     /**
