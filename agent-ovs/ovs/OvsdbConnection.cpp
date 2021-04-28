@@ -77,7 +77,7 @@ void OvsdbConnection::on_state_change(yajr::Peer * p, void * data,
     switch (stateChange) {
         case yajr::StateChange::CONNECT: {
             conn->setConnected(true);
-            p->startKeepAlive(0, 5000, 60000);
+            p->startKeepAlive(0, 5000, 180000);
             // OVSDB monitor call
             conn->sendMonitorRequests();
         }

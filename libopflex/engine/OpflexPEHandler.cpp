@@ -125,6 +125,7 @@ private:
 OpflexPEHandler::OpflexPEHandler(OpflexConnection* conn, Processor* processor_)
     : OpflexHandler(conn), processor(processor_) {
     conn->setHandshakeTimeout(processor_->getHandshakeTimeout());
+    conn->setKeepaliveTimeout(processor_->getKeepaliveTimeout());
 }
 
 void OpflexPEHandler::connected() {

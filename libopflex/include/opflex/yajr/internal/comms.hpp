@@ -571,12 +571,12 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
      * Start TCP keepalive to peer
      * @param begin delay before starting
      * @param repeat repeat
-     * @param interval interval
+     * @param timeoutAfter timeout after
      */
     virtual void startKeepAlive(
-            uint64_t begin    =  100,
-            uint64_t repeat   = 1250,
-            uint64_t interval = 9000);
+            uint64_t begin        =  100,
+            uint64_t repeat       = 1250,
+            uint64_t timeoutAfter = 9000);
 
     /**
      * Stop TCP keepalive

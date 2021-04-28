@@ -125,6 +125,22 @@ public:
         handshakeTimeout = timeout;
     }
 
+    /**
+     * Get the keepalive timeout (in ms)
+     * @return timeout
+     */
+    uint32_t getKeepaliveTimeout() const {
+        return keepaliveTimeout;
+    }
+
+    /**
+     * Set the keepalive timeout (in ms)
+     * @param timeout timeout
+     */
+    void setKeepaliveTimeout(uint32_t timeout) {
+        keepaliveTimeout = timeout;
+    }
+
 protected:
     /**
      * The handler for the connection
@@ -133,6 +149,7 @@ protected:
 
 private:
     uint32_t handshakeTimeout;
+    uint32_t keepaliveTimeout;
 
     virtual void notifyReady();
     virtual void notifyFailed() {}

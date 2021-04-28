@@ -330,6 +330,8 @@ private:
     boost::uint_t<64>::fast prr_timer = 7200;  /* seconds */
     /* handshake timeout */
     uint32_t peerHandshakeTimeout = 45000;
+    /* keepalive timeout */
+    uint32_t keepaliveTimeout = 120000;
 
     std::set<std::string> endpointSourceFSPaths;
     std::set<std::string> disabledFeaturesSet;

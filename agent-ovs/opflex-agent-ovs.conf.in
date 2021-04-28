@@ -99,7 +99,11 @@
            //
            // How long to wait for the initial peer
            // handshake to complete (in ms)
-           // "handshake-timeout" : 45000
+           // "handshake-timeout" : 45000,
+           //
+           // How long to wait (in ms) for keepalive echo to
+           // be ack'd before timing out connection
+           // "keepalive-timeout" : 120000
        },
        // Statistics. Counters for various artifacts.
        // mode: can be either
