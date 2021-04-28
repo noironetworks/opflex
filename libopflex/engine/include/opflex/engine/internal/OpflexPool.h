@@ -198,7 +198,7 @@ public:
      */
     OpflexClientConnection* getPeer(const std::string& hostname, int port);
 
-    void resetAllPeers();
+    void resetAllUnconfiguredPeers();
           
     /**
      * A map of hostname and pending unresolved policies 

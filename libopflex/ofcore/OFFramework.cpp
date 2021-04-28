@@ -254,11 +254,11 @@ modb::ObjectStore& OFFramework::getStore() {
     return pimpl->db;
 }
 
-void OFFramework::resetAllPeers() {
+void OFFramework::resetAllUnconfiguredPeers() {
     engine::internal::OpflexPool& pool = pimpl->processor.getPool();
     string location;
     pool.setLocation(location);
-    pool.resetAllPeers();
+    pool.resetAllUnconfiguredPeers();
     pool.addConfiguredPeers();
 }
 
