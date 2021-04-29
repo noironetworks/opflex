@@ -10,6 +10,7 @@
  */
 #include "DnsManager.h"
 #include "Packets.h"
+#include <fstream>
 #include <opflexagent/logging.h>
 #include <modelgbp/epdr/DnsDiscovered.hpp>
 #include <modelgbp/epdr/DnsAsk.hpp>
@@ -17,10 +18,16 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <boost/asio/deadline_timer.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/placeholders.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include "ovs-shim.h"
 #include "ovs-ofputil.h"
 #include "eth.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 namespace opflexagent {
 
@@ -33,8 +40,25 @@ namespace opflexagent {
 
     void DnsManager::start() {
         using boost::uuids::basic_random_generator;
+        namespace fs = boost::filesystem;
+        boost::system::error_code ec;
         if(started)
             return;
+
+        bool storeExists = fs::exists(fs::path(cacheDir),ec);
+        if(ec || !storeExists ) {
+            LOG(ERROR) << "Cache storage directory dns-cache-dir(renderer config) " << cacheDir
+                       << " missing/non-existent, not starting " << ec;
+            return;
+        }
+        bool storeIsDir = fs::is_directory(fs::path(cacheDir), ec);
+        if(ec || !storeIsDir ) {
+            LOG(ERROR) << "Cache storage path dns-cache-dir(renderer config) " << cacheDir
+                       << " is not a directory, not starting " << ec;
+            return;
+        }
+        restoreFromStore();
+
         uuidGen.reset(new basic_random_generator<boost::mt19937>(&randomSeed));
         modelgbp::epdr::DnsAsk::registerListener(agent.getFramework(),this);
         work.reset(new boost::asio::io_service::work(io_ctxt));
@@ -58,8 +82,10 @@ namespace opflexagent {
         auto learntItr = learntMappings.find(cName);
         while(learntItr != learntMappings.end()) {
             learntItr->second.aNames.erase(entry.domainName);
+            commitToStore(learntItr->second);
             learntItr = learntMappings.find(learntItr->second.getCName());
         }
+        /*Current entry is committed to store in the caller*/
         entry.setCName(std::string(""));
     }
 
@@ -170,7 +196,11 @@ namespace opflexagent {
         if(Ips.empty() && getCName().empty() && !aNames.empty()) {
             isHolder = true;
         }
-        return canExpire();
+        if(!canExpire()) {
+            mgr.commitToStore(*this);
+            return false;
+        }
+        return true;
     }
 
     void DnsManager::onExpiryTimer(const boost::system::error_code &e) {
@@ -178,7 +208,9 @@ namespace opflexagent {
         using namespace boost::gregorian;
         using modelgbp::epdr::DnsAnswer;
         using modelgbp::epdr::DnsEntry;
-        if(e == boost::asio::error::operation_aborted) {
+        if(e) {
+            lock_guard<recursive_mutex> guard(timerMutex);
+            expiryTimer.reset();
             return;
         }
         {
@@ -186,15 +218,18 @@ namespace opflexagent {
             for(auto itr = learntMappings.begin();
                 itr != learntMappings.end();) {
                 if (itr->second.age(*this)) {
+                    commitToStore(itr->second,true);
                     itr = learntMappings.erase(itr);
                 } else {
                     itr++;
                 }
             }
         }
-        lock_guard<recursive_mutex> lk(timerMutex);
-        expiryTimer->expires_from_now(seconds(1));
-        expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::arg<1>()));
+        if(started) {
+            lock_guard<recursive_mutex> lk(timerMutex);
+            expiryTimer->expires_from_now(seconds(1));
+            expiryTimer->async_wait(boost::bind(&DnsManager::onExpiryTimer,this,boost::arg<1>()));
+        }
     }
 
     bool DnsCacheEntry::update(DnsRR &dnsRR) {
@@ -226,10 +261,13 @@ namespace opflexagent {
         return false;
     }
 
-    void DnsManager::handlePacketIn(void *qElem) {
+    void DnsManager::handlePacketIn(void *pkt) {
+        if(!started)
+            return;
+        struct dp_packet *copiedPkt = dp_packet_clone((struct dp_packet *)pkt);
         {
             std::unique_lock<std::mutex> lk(packetQMutex);
-            packetInQ.push(qElem);
+            packetInQ.push((void *)copiedPkt);
         }
         io_ctxt.post([=]() {this->processPacket();});
     }
@@ -702,11 +740,125 @@ namespace opflexagent {
                 }
             }
             (void)entry2.addAlias(*this, dnsRR.domainName);
+            commitToStore(entry2);
         }
         if(existingEntry != NULL) {
             existingEntry->setCName(dnsRR.getCName());
         }
         return true;
+    }
+
+    void DnsManager::restoreFromStore() {
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        using namespace boost::filesystem;
+        using boost::property_tree::ptree;
+        using boost::property_tree::json_parser::read_json;
+        using boost::optional;
+        path cacheRoot(cacheDir);
+        for(directory_entry& cacheFile :directory_iterator(cacheDir)) {
+            if(is_directory(cacheFile) ||
+               !boost::algorithm::ends_with(cacheFile.path().filename().string(), ".dns")) {
+                continue;
+            }
+            LOG(DEBUG) << "Restoring " << cacheFile.path().filename().string();
+            ptree properties;
+            static const std::string DOMAIN_NAME("DomainName");
+            static const std::string HOLDER("isHolder");
+            static const std::string CNAME("cName");
+            static const std::string EXPIRY("expiryTime");
+            static const std::string ALIASES("Aliases");
+            static const std::string ADDRESSES("Addresses");
+            static const std::string ADDRESS("addr");
+            read_json(cacheFile.path().string(),properties);
+            if(!properties.get_optional<string>(std::string("DomainName"))) {
+                continue;
+            }
+            DnsCacheEntry entry(properties.get<string>(std::string("DomainName")));
+            if(properties.get_optional<string>(HOLDER)) {
+                if(properties.get<string>(HOLDER) == "0") {
+                    entry.isHolder = false;
+                }
+            }
+            if(properties.get_optional<string>(CNAME) &&
+                   properties.get_optional<string>(EXPIRY)) {
+                entry.cachedCName.cName = properties.get<string>(CNAME);
+                entry.cachedCName.expiryTime = time_from_string(properties.get<string>(EXPIRY));
+            }
+            if(properties.get_optional<string>(ALIASES)) {
+                for(auto &v : properties.get_child(ALIASES)) {
+                    entry.aNames.insert(v.second.data());
+                }
+            }
+            if(properties.get_optional<string>(ADDRESSES)) {
+                for (auto &child:
+                        properties.get_child(ADDRESSES)) {
+                    DnsCachedAddress cA(child.second.get<string>(ADDRESS));
+                    cA.expiryTime = time_from_string(child.second.get<string>(EXPIRY));
+                    LOG(DEBUG) << to_simple_string(cA.expiryTime);
+                    entry.Ips.insert(cA);
+                }
+            }
+            {
+                std::unique_lock<std::mutex> lk(stateMutex);
+                learntMappings.insert(std::make_pair(entry.domainName, entry));
+                updateMOs(entry, true);
+            }
+        }
+    }
+
+    void DnsManager::commitToStore(const DnsCacheEntry &entry, bool erase) {
+        using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        using namespace boost::filesystem;
+        using rapidjson::Writer;
+        using rapidjson::StringBuffer;
+        namespace fs = boost::filesystem;
+        if(erase) {
+            boost::system::error_code ec;
+            if(!fs::remove(fs::path(getStorePath(entry)), ec)){
+                LOG(ERROR) << "Failed to remove " << entry.domainName << " " << ec;
+            }
+            return;
+        }
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        writer.StartObject();
+        writer.String("DomainName");
+        writer.String(entry.domainName.c_str());
+        writer.String("isHolder");
+        writer.String((entry.isHolder?"1":"0"));
+        if(entry.isCName()) {
+            writer.String("cName");
+            writer.String(entry.cachedCName.cName.c_str());
+            writer.String("expiryTime");
+            writer.String(to_simple_string(entry.cachedCName.expiryTime).c_str());
+        }
+        writer.String("Aliases");
+        writer.StartArray();
+        for(auto &aName: entry.aNames) {
+            writer.String(aName.c_str());
+        }
+        writer.EndArray();
+        writer.String("Addresses");
+        writer.StartArray();
+        for(auto& cA:entry.Ips) {
+            writer.StartObject();
+            writer.String("addr");
+            writer.String(cA.addr.to_string().c_str());
+            writer.String("expiryTime");
+            writer.String(to_simple_string(cA.expiryTime).c_str());
+            writer.EndObject();
+        }
+        writer.EndArray();
+        writer.EndObject();
+        std::fstream dnsFile(getStorePath(entry), dnsFile.out);
+        if(!dnsFile.is_open()) {
+            LOG(ERROR) << "Failed to open storeFile for " << entry.domainName;
+            return;
+        }
+        dnsFile << buffer.GetString();
+        dnsFile.flush();
     }
 
     void DnsManager::updateCache(DnsParsingContext &ctxt) {
@@ -731,6 +883,7 @@ namespace opflexagent {
                 learntMappings.emplace(std::make_pair(itr->domainName,entry));
                 changed = true;
             }
+            commitToStore(learntMappings[itr->domainName]);
             updateMOs(learntMappings[itr->domainName], changed);
         }
     }
@@ -1003,13 +1156,26 @@ namespace opflexagent {
     void DnsManager::stop() {
         if(!started)
             return;
-        boost::system::error_code ec;
+        started = false;
+        modelgbp::epdr::DnsAsk::unregisterListener(agent.getFramework(),this);
         {
             lock_guard<recursive_mutex> lk(timerMutex);
-            expiryTimer->cancel(ec);
+            boost::system::error_code ec;
+            if(expiryTimer) {
+                expiryTimer->cancel(ec);
+            }
         }
         work.reset();
         parserThread->join();
+        {
+            lock_guard<std::mutex> lk(stateMutex);
+            learntMappings.clear();
+            demandMappings.clear();
+        }
+        {
+            lock_guard<std::mutex> lk(listenerMutex);
+            dnsListeners.clear();
+        }
     }
 
     bool operator==(const DnsCachedAddress& lhs, const DnsCachedAddress& rhs) {

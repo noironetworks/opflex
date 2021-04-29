@@ -224,6 +224,7 @@ getent group opflexep >/dev/null || groupadd -r opflexep
 %dir %{_localstatedir}/lib/opflex-agent-ovs/ids
 %dir %{_localstatedir}/lib/opflex-agent-ovs/droplog
 %dir %{_localstatedir}/lib/opflex-agent-ovs/faults
+%dir %{_localstatedir}/lib/opflex-agent-ovs/dns
 
 %files -n agent-ovs
 

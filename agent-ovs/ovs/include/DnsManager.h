@@ -261,13 +261,13 @@ public:
     void setCName(const std::string &_cName) {
         cachedCName.cName = _cName;
     }
-    std::string getCName() {
+    std::string getCName() const {
         return cachedCName.cName;
     }
-    bool isCName() {
+    bool isCName() const {
         return !cachedCName.cName.empty();
     }
-    bool canExpire() {
+    bool canExpire() const {
         if(isCName()) {
             return (!isHolder && aNames.empty());
         } else {
@@ -332,7 +332,16 @@ public:
      */
     virtual void objectUpdated (opflex::modb::class_id_t class_id,
                                     const opflex::modb::URI& uri);
-
+    /* *
+     * Set the path to store learnt dns cache entries.
+     * On restart, used to restore cache.
+     */
+    void setCacheDir(const std::string &_cacheDir) {
+        cacheDir = _cacheDir;
+    };
+    bool isStarted() const {
+        return started;
+    }
     friend DnsCacheEntry;
 private:
     boost::asio::io_service io_ctxt;
@@ -352,6 +361,7 @@ private:
     std::unique_ptr<boost::uuids::basic_random_generator<boost::mt19937>> uuidGen;
     std::atomic<bool> started;
     boost::mt19937 randomSeed;
+    std::string cacheDir;
     void notifyListeners(class_id_t cid, const URI& notifyURI);
     void updateMOs(DnsCacheEntry &entry, bool updated);
     void updateMOs(const std::string &alias);
@@ -365,6 +375,11 @@ private:
     bool handlePacket(const struct dp_packet *pkt);
     void processPacket();
     void onExpiryTimer(const boost::system::error_code &e);
+    std::string getStorePath(const DnsCacheEntry &entry) {
+        return (cacheDir + "/" + entry.domainName + ".dns");
+    }
+    void commitToStore(const DnsCacheEntry &entry, bool erase=false);
+    void restoreFromStore();
 };
 
 /**

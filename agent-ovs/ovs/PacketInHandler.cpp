@@ -898,8 +898,7 @@ static void handleICMPEchoPktIn(bool v4,
 void PacketInHandler::handleDNSPktIn(struct ofputil_packet_in& pi,
                                 ofputil_protocol& proto,
                                 struct dp_packet* pkt) {
-    struct dp_packet *copiedPkt = dp_packet_clone(pkt);
-    dnsManager.handlePacketIn(copiedPkt);
+    dnsManager.handlePacketIn(pkt);
 }
 
 /**

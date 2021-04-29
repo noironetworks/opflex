@@ -126,6 +126,7 @@ d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
 BOOST_AUTO_TEST_SUITE(DnsManager_test)
 
 using namespace opflexagent;
+namespace fs = boost::filesystem;
 
 class DnsManagerFixture : public ModbFixture
 {
@@ -138,8 +139,11 @@ public:
           dnsManager(agent),
           pktInHandler(agent, intFlowManager, dnsManager),
           proto(ofputil_protocol_from_ofp_version
-                ((ofp_version)intConn.GetProtocolVersion())) {
+                ((ofp_version)intConn.GetProtocolVersion())),
+          temp(fs::temp_directory_path() / fs::unique_path()) {
         createObjects();
+        fs::create_directory(temp);
+        dnsManager.setCacheDir(temp.string());
         dnsManager.start();
     }
     ~DnsManagerFixture() {
@@ -157,10 +161,11 @@ private:
     MockPortMapper accPortMapper;
     MockSwitchManager switchManager;
     IntFlowManager intFlowManager;
+protected:
     DnsManager dnsManager;
     PacketInHandler pktInHandler;
     ofputil_protocol proto;
-protected:
+    fs::path temp;
     void testHandleDnsResponsePacket(bool is_v4, PacketDesc pd);
     void checkAnswer(std::string &askName, str_set_t& expectedResolved);
     void getResolvedAddressesFromAnswer(std::shared_ptr<modelgbp::epdr::DnsAnswer>&, str_set_t&);
@@ -190,7 +195,7 @@ void DnsManagerFixture::testHandleDnsResponsePacket(bool is_v4, PacketDesc pd) {
     OfpBuf b(ofputil_encode_packet_in_private(&pin,
 					  OFPUTIL_P_OF13_OXM,
 					  OFPUTIL_PACKET_IN_NXT));
-
+    WAIT_FOR(dnsManager.isStarted(),500);
     pktInHandler.Handle(&accConn, OFPTYPE_PACKET_IN, b.get());
 }
 
@@ -330,5 +335,23 @@ BOOST_FIXTURE_TEST_CASE(handleCNameRecord, DnsManagerFixture) {
     checkAnswer(askName, expectedResolved);
     checkAnswer(domainName, expectedResolved);
     checkAnswer(aliasName, expectedResolved);
+}
+
+BOOST_FIXTURE_TEST_CASE(testRestore, DnsManagerFixture) {
+    using namespace modelgbp::epdr;
+    testHandleDnsResponsePacket(true, DNS_RESP_WITH_A4_RECORD);
+    std::string domainName("facebook.com");
+    auto dnsEntry = DnsEntry::resolve(framework, domainName);
+    WAIT_FOR_DO(dnsEntry,
+                500,
+                (dnsEntry = DnsEntry::resolve(framework, domainName)));
+    dnsManager.stop();
+    dnsManager.start();
+    WAIT_FOR(dnsManager.isStarted(),500);
+    auto dnsEntry2 = DnsEntry::resolve(framework, domainName);
+    WAIT_FOR_DO(dnsEntry2,
+                500,
+                (dnsEntry2 = DnsEntry::resolve(framework, domainName)));
+
 }
 BOOST_AUTO_TEST_SUITE_END()
