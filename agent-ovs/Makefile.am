@@ -705,9 +705,11 @@ opflex-agent-ovs.conf: $(top_srcdir)/opflex-agent-ovs.conf.in
 
 flowidcachedir=${localstatedir}/lib/opflex-agent-ovs/ids
 mcastgroupfile=${localstatedir}/lib/opflex-agent-ovs/mcast/opflex-groups.json
+dnscachedir=${localstatedir}/lib/opflex-agent-ovs/dns
 plugin-renderer-openvswitch.conf: $(top_srcdir)/plugin-renderer-openvswitch.conf.in
 	sed -e "s|DEFAULT_FLOWID_CACHE_DIR|${flowidcachedir}|" \
 	    -e "s|DEFAULT_MCAST_GROUP_FILE|${mcastgroupfile}|" \
+	    -e "s|DEFAULT_DNS_CACHE_DIR|${dnscachedir}|" \
 	$< > $@
 
 if HAVE_DOXYGEN

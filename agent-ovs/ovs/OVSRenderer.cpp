@@ -99,6 +99,8 @@ void OVSRenderer::start() {
         LOG(WARNING) << "No flow ID cache directory specified";
     if (mcastGroupFile == "")
         LOG(WARNING) << "No multicast group file specified";
+    if (dnsCacheDir == "")
+        LOG(WARNING) << "No DNS cached directory specified";
 
     started = true;
     LOG(INFO) << "Starting stitched-mode renderer using"
@@ -161,6 +163,7 @@ void OVSRenderer::start() {
     if (accessBridgeName != "") {
         accessFlowManager.start();
     }
+    dnsManager.setCacheDir(dnsCacheDir);
     dnsManager.start();
 
     pktInHandler.registerConnection(intSwitchManager.getConnection(),
@@ -297,6 +300,8 @@ void OVSRenderer::stop() {
     LOCALSTATEDIR"/lib/opflex-agent-ovs/ids"
 #define DEF_MCAST_GROUPFILE \
     LOCALSTATEDIR"/lib/opflex-agent-ovs/mcast/opflex-groups.json"
+#define DEF_DNS_CACHEDIR \
+    LOCALSTATEDIR"/lib/opflex-agent-ovs/dns"
 
 void OVSRenderer::setProperties(const ptree& properties) {
     static const std::string OVS_BRIDGE_NAME("ovs-bridge-name");
@@ -339,6 +344,7 @@ void OVSRenderer::setProperties(const ptree& properties) {
 
     static const std::string FLOWID_CACHE_DIR("flowid-cache-dir");
     static const std::string MCAST_GROUP_FILE("mcast-group-file");
+    static const std::string DNS_CACHE_DIR("dns-cache-dir");
 
     static const std::string CONN_TRACK("forwarding.connection-tracking."
                                         "enabled");
@@ -479,6 +485,9 @@ void OVSRenderer::setProperties(const ptree& properties) {
 
     mcastGroupFile = properties.get<std::string>(MCAST_GROUP_FILE,
                                                  DEF_MCAST_GROUPFILE);
+
+    dnsCacheDir = properties.get<std::string>(DNS_CACHE_DIR,
+                                              DEF_DNS_CACHEDIR);
 
     ovsdbUseLocalTcpPort = properties.get<bool>(OVSDB_USE_LOCAL_TCPPORT, false);
 

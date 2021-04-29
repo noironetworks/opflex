@@ -4,5 +4,6 @@ var/lib/opflex-agent-ovs/ids
 var/lib/opflex-agent-ovs/mcast
 var/lib/opflex-agent-ovs/droplog
 var/lib/opflex-agent-ovs/faults
+var/lib/opflex-agent-ovs/dns
 etc/opflex-agent-ovs/conf.d
 etc/opflex-agent-ovs/plugins.conf.d
