@@ -179,6 +179,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_STATS_SYSTEM_INTERVAL("opflex.statistics.system.interval");
     static const std::string OPFLEX_PRR_INTERVAL("opflex.timers.prr");
     static const std::string OPFLEX_HANDSHAKE("opflex.timers.handshake-timeout");
+    static const std::string OPFLEX_KEEPALIVE("opflex.timers.keepalive-timeout");
     static const std::string DISABLED_FEATURES("feature.disabled");
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
 
@@ -455,6 +456,12 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         LOG(INFO) << "peer handshake timeout set to " << peerHandshakeTimeout << " ms";
     }
 
+    optional<uint32_t> keepaliveOpt = properties.get_optional<uint32_t>(OPFLEX_KEEPALIVE);
+    if (keepaliveOpt) {
+        keepaliveTimeout = keepaliveOpt.get();
+        LOG(INFO) << "keepalive timeout set to " << keepaliveTimeout << " ms";
+    }
+
     LOG(INFO) << "Agent mode set to " <<
        ((this->rendererFwdMode == opflex::ofcore::OFConstants::TRANSPORT_MODE)?
         "transport-mode" : "stitched-mode");
@@ -520,6 +527,7 @@ void Agent::applyProperties() {
      
     framework.setPrrTimerDuration(prr_timer);
     framework.setHandshakeTimeout(peerHandshakeTimeout);
+    framework.setKeepaliveTimeout(keepaliveTimeout);
 }
 
 void Agent::start() {

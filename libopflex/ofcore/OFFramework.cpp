@@ -115,6 +115,10 @@ void OFFramework::setHandshakeTimeout(const uint32_t timeout) {
     pimpl->processor.setHandshakeTimeout(timeout);
 }
 
+void OFFramework::setKeepaliveTimeout(const uint32_t timeout) {
+    pimpl->processor.setKeepaliveTimeout(timeout);
+}
+
 void OFFramework::start() {
     LOG(DEBUG) << "Starting OpFlex Framework";
     pimpl->started = true;

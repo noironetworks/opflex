@@ -64,6 +64,7 @@ BOOST_AUTO_TEST_CASE( test_misc ) {
     BOOST_CHECK_EQUAL(opflex::ofcore::OFConstants::TRANSPORT_MODE, fw.getElementMode());
     fw.setPrrTimerDuration(12345);
     fw.setHandshakeTimeout(54321);
+    fw.setKeepaliveTimeout(123456);
     boost::asio::ip::address_v4 proxy;
     fw.getV4Proxy(proxy);
     fw.getV6Proxy(proxy);
