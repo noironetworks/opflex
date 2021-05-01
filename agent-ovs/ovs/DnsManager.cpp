@@ -756,12 +756,12 @@ namespace opflexagent {
         using boost::property_tree::json_parser::read_json;
         using boost::optional;
         path cacheRoot(cacheDir);
-        for(directory_entry& cacheFile :directory_iterator(cacheDir)) {
-            if(is_directory(cacheFile) ||
-               !boost::algorithm::ends_with(cacheFile.path().filename().string(), ".dns")) {
+        for(directory_iterator cacheFile=directory_iterator(cacheDir); cacheFile != directory_iterator(); cacheFile++) {
+            if(is_directory(*cacheFile) ||
+               !boost::algorithm::ends_with(cacheFile->path().filename().string(), ".dns")) {
                 continue;
             }
-            LOG(DEBUG) << "Restoring " << cacheFile.path().filename().string();
+            LOG(DEBUG) << "Restoring " << cacheFile->path().filename().string();
             ptree properties;
             static const std::string DOMAIN_NAME("DomainName");
             static const std::string HOLDER("isHolder");
@@ -770,7 +770,7 @@ namespace opflexagent {
             static const std::string ALIASES("Aliases");
             static const std::string ADDRESSES("Addresses");
             static const std::string ADDRESS("addr");
-            read_json(cacheFile.path().string(),properties);
+            read_json(cacheFile->path().string(),properties);
             if(!properties.get_optional<string>(std::string("DomainName"))) {
                 continue;
             }
