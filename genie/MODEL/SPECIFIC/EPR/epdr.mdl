@@ -181,6 +181,46 @@ module[epdr]
         }
     }
 
+    class[DnsSrv;
+          super=policy/Definition;
+          concrete]
+    {
+        member[hostName; type=ascii/String]
+        member[port; type=scalar/UInt16]
+        member[expiry; type=ascii/String]
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=hostName]
+                component[prefix=":";member=port]
+            }
+        }
+        contained
+        {
+            parent[class=epdr/DnsEntry]
+        }
+    }
+
+    class[DnsCName;
+          super=policy/Definition;
+          concrete]
+    {
+        member[cname; type=ascii/String]
+        member[expiry; type=ascii/String]
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=cname]
+            }
+        }
+        contained
+        {
+            parent[class=epdr/DnsEntry]
+        }
+    }
+
     class[DnsMappedAddress;
           super=policy/Definition;
           concrete]

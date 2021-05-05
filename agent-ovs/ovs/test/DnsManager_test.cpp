@@ -66,6 +66,8 @@ DNS_RESP_WITH_SINGLE_TYPE_A,
 DNS_RESP_WITH_TWO_TYPE_A,
 DNS_RESP_WITH_A4_RECORD,
 DNS_RESP_WITH_CNAME_RECORD,
+DNS_RESP_WITH_SRV_RECORD,
+DNS_RESP_WITH_SINGLE_TYPE_A_RESOLVING_SRV_RECORD
 };
 static const std::string PacketDef[] = {
 "\
@@ -120,7 +122,37 @@ d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
 2d 77 65 62 73 69 74 65 2d 75 73 2d 65 61 73 74\
 2d 31 09 61 6d 61 7a 6f 6e 61 77 73 c0 23 c0 38\
 00 05 00 01 00 00 00 2f 00 02 c0 53 c0 53 00 01\
-00 01 00 00 00 10 00 04 48 15 d7 52"
+00 01 00 00 00 10 00 04 48 15 d7 52",
+"\
+d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
+01 3f 8e 8d 40 00 38 11 ef 3e d0 43 dc dc c0 a8\
+56 19 00 35 ac 93 01 2b 8c a3 cb b2 81 80 00 01\
+00 05 00 00 00 01 07 5f 6a 61 62 62 65 72 04 5f\
+74 63 70 05 67 6d 61 69 6c 03 63 6f 6d 00 00 21\
+00 01 c0 0c 00 21 00 01 00 00 03 84 00 20 00 05\
+00 00 14 95 0b 78 6d 70 70 2d 73 65 72 76 65 72\
+01 6c 06 67 6f 6f 67 6c 65 03 63 6f 6d 00 c0 0c\
+00 21 00 01 00 00 03 84 00 25 00 14 00 00 14 95\
+04 61 6c 74 31 0b 78 6d 70 70 2d 73 65 72 76 65\
+72 01 6c 06 67 6f 6f 67 6c 65 03 63 6f 6d 00 c0\
+0c 00 21 00 01 00 00 03 84 00 25 00 14 00 00 14\
+95 04 61 6c 74 32 0b 78 6d 70 70 2d 73 65 72 76\
+65 72 01 6c 06 67 6f 6f 67 6c 65 03 63 6f 6d 00\
+c0 0c 00 21 00 01 00 00 03 84 00 25 00 14 00 00\
+14 95 04 61 6c 74 33 0b 78 6d 70 70 2d 73 65 72\
+76 65 72 01 6c 06 67 6f 6f 67 6c 65 03 63 6f 6d\
+00 c0 0c 00 21 00 01 00 00 03 84 00 25 00 14 00\
+00 14 95 04 61 6c 74 34 0b 78 6d 70 70 2d 73 65\
+72 76 65 72 01 6c 06 67 6f 6f 67 6c 65 03 63 6f\
+6d 00 00 00 29 10 00 00 00 00 00 00 00",
+"\
+d8 f2 ca f8 16 b4 60 b7 6e 95 33 7a 08 00 45 00\
+00 5b c3 a7 40 00 38 11 bb 08 d0 43 dc dc c0 a8\
+56 19 00 35 d0 58 00 47 c9 6d 50 34 81 80 00 01\
+00 01 00 00 00 00 04 61 6c 74 31 0b 78 6d 70 70\
+2d 73 65 72 76 65 72 01 6c 06 67 6f 6f 67 6c 65\
+03 63 6f 6d 00 00 01 00 01 c0 0c 00 01 00 01 00\
+00 01 2c 00 04 40 e9 ab 7d"
 };
 
 BOOST_AUTO_TEST_SUITE(DnsManager_test)
@@ -233,8 +265,9 @@ void DnsManagerFixture::checkAnswer(std::string &askName, str_set_t& expectedRes
 	        500,
 	        (dnsAnswer = DnsAnswer::resolve(framework, askName)));
     str_set_t out;
-    getResolvedAddressesFromAnswer(dnsAnswer.get(),out);
-    BOOST_CHECK(expectedResolved==out);
+    WAIT_FOR_DO((expectedResolved==out),
+	        500,
+	        getResolvedAddressesFromAnswer(dnsAnswer.get(),out));
     //Remove demand and ensure answer goes away
     dnsAsk.get()->remove();
     m0.commit();
@@ -295,7 +328,9 @@ BOOST_FIXTURE_TEST_CASE(testExpiryAgeUpdate, DnsManagerFixture) {
 	        500,
 	       (dnsAnswer = DnsAnswer::resolve(framework, askDomainName)));
     str_set_t out;
-    getResolvedAddressesFromAnswer(dnsAnswer.get(),out);
+    WAIT_FOR_DO(out.size()==2,
+	        500,
+	       getResolvedAddressesFromAnswer(dnsAnswer.get(),out));
     std::unordered_set<std::string> expectedResolved = {"104.244.42.129","104.244.42.1"};
     BOOST_CHECK(expectedResolved==out);
     out.clear();
@@ -353,5 +388,18 @@ BOOST_FIXTURE_TEST_CASE(testRestore, DnsManagerFixture) {
                 500,
                 (dnsEntry2 = DnsEntry::resolve(framework, domainName)));
 
+}
+
+BOOST_FIXTURE_TEST_CASE(handleSrvRecord, DnsManagerFixture) {
+    using namespace modelgbp::epdr;
+    testHandleDnsResponsePacket(true, DNS_RESP_WITH_SRV_RECORD);
+    testHandleDnsResponsePacket(true, DNS_RESP_WITH_SINGLE_TYPE_A_RESOLVING_SRV_RECORD);
+    std::string domainName("_jabber._tcp.gmail.com");
+    auto dnsEntry = DnsEntry::resolve(framework, domainName);
+    WAIT_FOR_DO(dnsEntry,
+                500,
+                (dnsEntry = DnsEntry::resolve(framework, domainName)));
+    str_set_t expectedResolved = {"64.233.171.125"};
+    checkAnswer(domainName, expectedResolved);
 }
 BOOST_AUTO_TEST_SUITE_END()

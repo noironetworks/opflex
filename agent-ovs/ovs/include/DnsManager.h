@@ -34,6 +34,7 @@
 
 namespace opflexagent {
     class DnsCachedAddress;
+    class DnsCachedSrv;
 }
 
 namespace std {
@@ -43,6 +44,10 @@ template<> struct hash<opflexagent::DnsCachedAddress>
     std::size_t operator()(const opflexagent::DnsCachedAddress& cA) const;
 };
 
+template<> struct hash<opflexagent::DnsCachedSrv>
+{
+    std::size_t operator()(const opflexagent::DnsCachedSrv& srv) const;
+};
 }
 
 namespace opflexagent {
@@ -83,6 +88,8 @@ enum DnsRRType {
     RRTypeMINFO=14,
     //V6 Host Address
     RRTypeA4=28,
+    //Location of Service
+    RRTypeSrv=33,
     //V6 Host Address
     RRTypeA6=38
 };
@@ -99,11 +106,17 @@ public:
         if(rType == RRTypeCName) {
             new (&rrTypeCNameData.cName) std::string;
         }
+        if(rType == RRTypeSrv) {
+            new (&rrTypeSrvData.hostName) std::string;
+        }
     }
     DnsRR(const DnsRR& dnsRR);
     ~DnsRR() {
         if(rType == RRTypeCName) {
             rrTypeCNameData.cName.~basic_string();
+        }
+        if(rType == RRTypeSrv) {
+            rrTypeSrvData.hostName.~basic_string();
         }
     }
     std::string domainName;
@@ -141,6 +154,13 @@ public:
         struct {
             std::string cName;
         } rrTypeCNameData;
+        //RFC-2782
+        struct {
+            uint16_t priority;
+            uint16_t weight;
+            uint16_t port;
+            std::string hostName;
+        } rrTypeSrvData;
     };
 };
 
@@ -182,33 +202,62 @@ public:
     std::list<std::list<std::string>> labelSet;
     std::list<DnsQuestion> questions;
     std::list<DnsRR> answers;
+    std::list<DnsRR> authorities;
+    std::list<DnsRR> additionalRecords;
 };
 
-class DnsCachedCName {
+class DnsCachedRecordData {
 public:
-    DnsCachedCName(const DnsRR &dnsRR);
-    DnsCachedCName():
+    DnsCachedRecordData(const DnsRR &dnsRR):
+        expiryTime(dnsRR.currTime + boost::posix_time::seconds(dnsRR.ttl)) {
+    }
+    DnsCachedRecordData():
 	expiryTime(boost::posix_time::second_clock::local_time()) {
     }
+    DnsCachedRecordData(const boost::posix_time::ptime &expTime):
+	expiryTime(expTime) {
+    }
     boost::posix_time::ptime expiryTime;
+};
+
+class DnsCachedSrv:public DnsCachedRecordData {
+public:
+    DnsCachedSrv(const DnsRR &dnsRR);
+    DnsCachedSrv(uint16_t _prio, uint16_t _wt, uint16_t _port,
+            const std::string &_hostName,
+            const boost::posix_time::ptime &expTime);
+    uint16_t priority;
+    uint16_t weight;
+    uint16_t port;
+    std::string hostName;
+};
+
+class DnsCachedCName:public DnsCachedRecordData {
+public:
+    DnsCachedCName(){};
+    DnsCachedCName(const DnsRR &dnsRR);
     std::string cName;
 };
 
-class DnsCachedAddress {
+class DnsCachedAddress:public DnsCachedRecordData {
 public:
     DnsCachedAddress(const DnsRR &dnsRR);
-    DnsCachedAddress(const std::string &addrStr):
-	expiryTime(boost::posix_time::second_clock::local_time()) {
+    DnsCachedAddress(const std::string &addrStr):DnsCachedRecordData() {
 	boost::system::error_code ec;
 	addr = boost::asio::ip::address::from_string(addrStr, ec);
     };
-    boost::posix_time::ptime expiryTime;
     boost::asio::ip::address addr;
 };
 
 bool operator==(const DnsCachedAddress& lhs, const DnsCachedAddress& rhs);
 
 class DnsManager;
+
+class DnsDemandState {
+public:
+    std::unordered_set<std::string> resolved;
+    std::unordered_set<std::string> linkedEntries;
+};
 
 /**
  * Class to hold a cached DNS entry
@@ -229,8 +278,10 @@ public:
     std::string domainName;
     DnsCachedCName cachedCName;
     str_set_t aNames;
+    str_set_t parentSrv;
     bool isHolder;
     std::unordered_set<DnsCachedAddress> Ips;
+    std::unordered_set<DnsCachedSrv> Srvs;
     std::unordered_set<opflex::modb::URI> linkedAnswers;
     boost::posix_time::ptime lastUpdated;
     /**
@@ -276,12 +327,8 @@ public:
     }
     bool matchesAliases(const std::string &askName,
             std::string &matchingAlias);
-};
-
-class DnsDemandState {
-public:
-    std::unordered_set<std::string> resolved;
-    std::unordered_set<std::string> linkedEntries;
+    bool matchesSrv(const std::string &askName,
+            std::string &matchingSrv);
 };
 
 class DnsManager : public opflex::modb::ObjectListener, private boost::noncopyable {
@@ -367,11 +414,13 @@ private:
     void updateMOs(const std::string &alias);
     DnsCacheEntry *getTerminalNode(DnsCacheEntry &startNode);
     bool validateCName(DnsRR &ctxt, DnsCacheEntry *existingEntry=NULL);
+    void updateCacheForRR(DnsRR &dnsRR);
     void updateCache(DnsParsingContext &ctxt);
     void handleDnsAsk(URI &askUri, std::unordered_set<URI> &notifySet);
     void processURI(class_id_t class_id,
                     std::mutex &qMutex, std::queue<URI> &uriQ,
                     std::function<void (URI&, std::unordered_set<URI>&)> func);
+    bool parseRR(DnsParsingContext &ctxt, std::list<DnsRR> &result);
     bool handlePacket(const struct dp_packet *pkt);
     void processPacket();
     void onExpiryTimer(const boost::system::error_code &e);
@@ -380,6 +429,13 @@ private:
     }
     void commitToStore(const DnsCacheEntry &entry, bool erase=false);
     void restoreFromStore();
+    void addSrvEndpoints(DnsCacheEntry &entry,
+            std::shared_ptr<modelgbp::epdr::DnsAnswer> &dnsAnswer,
+            DnsDemandState& demandState);
+    void createSrvEntries(DnsCacheEntry &entry);
+    void linkEntryToAnswer(DnsCacheEntry &entry,
+            std::shared_ptr<modelgbp::epdr::DnsAnswer> &dnsAnswer,
+            DnsDemandState &demandState);
 };
 
 /**
@@ -387,7 +443,9 @@ private:
  */
 std::ostream & operator <<(std::ostream &os, const DnsRRType &rType);
 std::ostream & operator <<(std::ostream &os, const DnsRRClass &rClass);
+std::ostream & operator<<(std::ostream &os, const DnsRR& rr);
 std::ostream & operator <<(std::ostream &os, const DnsParsingContext& dnsCtxt);
+std::ostream & operator<<(std::ostream &os, const DnsParsingContext::ParsingSection &section);
 
 }
 #endif /* OPFLEXAGENT_DNSMANAGER_H */
