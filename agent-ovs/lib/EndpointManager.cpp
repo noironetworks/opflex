@@ -16,6 +16,7 @@
 #include <modelgbp/ascii/StringMatchTypeEnumT.hpp>
 #include <modelgbp/gbp/RoutingModeEnumT.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 #include <modelgbp/platform/RemoteInventoryTypeEnumT.hpp>
 
 #include <opflexagent/EndpointManager.h>
