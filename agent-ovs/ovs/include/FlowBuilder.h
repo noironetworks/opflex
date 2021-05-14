@@ -359,6 +359,14 @@ public:
     FlowBuilder& outerIpDst(const boost::asio::ip::address& ip,
                                     uint8_t prefixLen = 32);
 
+    /**
+     * Should be const, but can't carry it to ovs struct
+     * Check whether dst port match is active on this flow
+     * @return has dest port match set
+     */
+    bool isTpDst() {
+        return (match()->flow.tp_dst != 0);
+    }
 private:
     std::unique_ptr<ActionBuilder> action_;
     FlowEntryPtr entry_;

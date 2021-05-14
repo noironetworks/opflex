@@ -64,7 +64,7 @@ public:
                bool redirect_,
                bool log_,
                const boost::optional<opflex::modb::URI>& rDG,
-               const network::subnets_t& dnsResolved_
+               const network::service_ports_t& dnsResolved_
                ) :
         direction(dir), prio(prio_), l24Classifier(c), allow(allow_),
         redirect(redirect_), remoteSubnets(remoteSubnets_), log(log_),
@@ -104,10 +104,10 @@ public:
     }
 
     /**
-     * Get named addresses for this rule
-     * @return the set of dns names
+     * Get named service ports for this rule
+     * @return the set of dnsname port pairs
      */
-    const network::subnets_t& getNamedAddresses() const {
+    const network::service_ports_t& getNamedServicePorts() const {
         return egressDnsResolved;
     }
 
@@ -155,7 +155,7 @@ private:
     network::subnets_t remoteSubnets; 
     bool log;
     boost::optional<opflex::modb::URI> redirDstGrp;
-    network::subnets_t egressDnsResolved;
+    network::service_ports_t egressDnsResolved;
     friend bool operator==(const PolicyRule& lhs, const PolicyRule& rhs);
 };
 
@@ -847,13 +847,13 @@ public:
      */
     typedef std::unordered_set<std::string> named_addr_set_t;
     /**
-     * Get cached Dns resolved addresses for a given domain name.
+     * Get cached Dns resolved addresses:ports for a given domain name.
      * if they exist in the cache. Call with the state mutex held.
      * @param domainName
      * @param egressDnsResolved resolved address set
      */
-    void getDnsResolvedAddresses( const std::string &domainName,
-                                network::subnets_t &egressDnsResolved);
+    void getDnsResolvedNamedServicePorts( const std::string &domainName,
+                                network::service_ports_t &egressDnsResolved);
 private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;
@@ -911,7 +911,7 @@ private:
 
     struct DnsDemandState {
         uri_set_t secGrpSet;
-        network::subnets_t resolved;
+        network::service_ports_t resolved;
     };
 
     route_map_t static_route_map;
