@@ -21,6 +21,8 @@
 
 #include <opflexagent/logging.h>
 #include <opflexagent/PolicyManager.h>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/asio/ip/address.hpp>
 
 namespace opflexagent {
@@ -813,8 +815,8 @@ std::ostream & operator<<(std::ostream &os, const PolicyRule& rule) {
         os << ",remoteSubnets=" << rule.getRemoteSubnets();
     if (rule.getRedirectDestGrpURI())
         os << ",redirectGroup=" << rule.getRedirectDestGrpURI().get();
-    if(!rule.getNamedAddresses().empty()) {
-        os << ",resolved DNS addresses=" << rule.getNamedAddresses();
+    if(!rule.getNamedServicePorts().empty()) {
+        os << ",resolved DNS addresses=" << rule.getNamedServicePorts();
     }
     os << "]";
     return os;
@@ -1068,7 +1070,7 @@ bool resolveNamedAddress(PolicyManager &pMgr,
                          OFFramework& framework,
                          shared_ptr<Rule>& parent,
                          /* out */PolicyManager::named_addr_set_t &newDnsRefs,
-                         /* out */network::subnets_t  &namedAddresses) {
+                         /* out */network::service_ports_t  &namedSvcPorts) {
     return true;
 }
 
@@ -1076,18 +1078,18 @@ template <>
 bool resolveNamedAddress(PolicyManager &pMgr,
                          OFFramework& framework,
                          shared_ptr<modelgbp::gbp::SecGroupRule>& rule,
-                         /* out */ PolicyManager::named_addr_set_t &newDnsRefs,
-                         /* out */ network::subnets_t &namedAddresses) {
+                         /* out */PolicyManager::named_addr_set_t &newDnsRefs,
+                         /* out */network::service_ports_t &namedSvcPorts) {
     using modelgbp::gbp::DnsName;
     vector<shared_ptr<DnsName>> dnsNames;
     rule->resolveGbpDnsName(dnsNames);
     for (const shared_ptr<DnsName>& dnsName : dnsNames) {
         if (dnsName->getName()) {
             newDnsRefs.insert(dnsName->getName().get());
-            pMgr.getDnsResolvedAddresses(dnsName->getName().get(), namedAddresses);
+            pMgr.getDnsResolvedNamedServicePorts(dnsName->getName().get(), namedSvcPorts);
         }
     }
-    return (dnsNames.empty() || !namedAddresses.empty());
+    return (dnsNames.empty() || !namedSvcPorts.empty());
 }
 
 void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
@@ -1127,11 +1129,69 @@ void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& cla
       }
 }
 
+//Given a DNS Name of the format _service._protocol.target
+//Return the protocol
+static uint8_t getProtoFromDnsName(const std::string &srvName) {
+    using namespace boost::algorithm;
+    typedef vector< string > split_vector_type;
+    split_vector_type splitVec;
+    split( splitVec, srvName, is_any_of("."), token_compress_on );
+    if(splitVec.size() < 3){
+        return 0;
+    }
+    if(splitVec[1][0] != '_') {
+        return 0;
+    }
+    std::string protoStr;
+    protoStr.assign(splitVec[1], 1, splitVec[1].length()-1);
+    uint8_t proto = 0;
+    if(protoStr == "tcp") {
+        proto=6;
+    } else if(protoStr == "udp") {
+        proto=17;
+    } else if(protoStr == "sctp") {
+        proto=132;
+    } else {
+        proto=0;
+    }
+    return proto;
+}
+
+static void getDirectResolvedAddresses(std::shared_ptr<modelgbp::epdr::DnsEntry> &dnsEntry,
+        network::service_ports_t &newResolved, uint8_t proto=0, uint16_t dport=0) {
+    using namespace modelgbp::epdr;
+    std::vector<shared_ptr<DnsMappedAddress>> mappedAddresses;
+    dnsEntry.get()->resolveEpdrDnsMappedAddress(mappedAddresses);
+    for(auto &mappedAddress: mappedAddresses) {
+        boost::system::error_code ec;
+        address addr =
+            address::from_string(mappedAddress->getAddress().get(), ec);
+        if(ec) {
+            LOG(ERROR) << "Failed to add mapped address" <<
+                mappedAddress->getAddress().get();
+            continue;
+        }
+        network::service_port_t srvPort;
+        srvPort.address = addr.to_string();
+        srvPort.prefixLen = (addr.is_v4()?32:128);
+        srvPort.port = 0;
+        srvPort.proto = 0;
+        auto itr = newResolved.find(srvPort);
+        if((itr != newResolved.end()) && (dport != 0 )) {
+            newResolved.erase(srvPort);
+            srvPort.proto = proto;
+            srvPort.port = dport;
+        }
+        newResolved.insert(srvPort);
+    }
+}
+
 void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, uri_set_t &notifyContracts) {
     using modelgbp::epdr::DnsAnswer;
     using modelgbp::epdr::DnsAsk;
     using modelgbp::epdr::DnsAnswerToResultRSrc;
     using modelgbp::epdr::DnsEntry;
+    using modelgbp::epdr::DnsSrv;
     using modelgbp::epdr::DnsMappedAddress;
     using network::operator<<;
 
@@ -1161,9 +1221,10 @@ void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, 
     if(itr == dns_demand_map.end()) {
         return;
     }
-    network::subnets_t newResolved;
+    network::service_ports_t newResolved;
     std::vector<std::shared_ptr<DnsAnswerToResultRSrc>> result;
     dnsAnswer.get()->resolveEpdrDnsAnswerToResultRSrc(result);
+    std::unordered_map<std::string, std::shared_ptr<DnsEntry>> resolvedMap;
     for(auto &res :result) {
         if(!res->isTargetSet() ||
            (res->getTargetClass().get() != DnsEntry::CLASS_ID)) {
@@ -1172,22 +1233,40 @@ void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, 
         optional<shared_ptr<DnsEntry> > dnsEntry =
             DnsEntry::resolve(framework, res->getTargetURI().get());
         if(dnsEntry) {
-            std::vector<shared_ptr<DnsMappedAddress>> mappedAddresses;
-            dnsEntry.get()->resolveEpdrDnsMappedAddress(mappedAddresses);
-            for(auto &mappedAddress: mappedAddresses) {
-                boost::system::error_code ec;
-                address addr =
-                    address::from_string(mappedAddress->getAddress().get(), ec);
-                if(ec) {
-                    LOG(ERROR) << "Failed to add mapped address" <<
-                        mappedAddress->getAddress().get();
-                    continue;
+            resolvedMap.insert(std::make_pair(dnsEntry.get()->getName().get(),dnsEntry.get()));
+            getDirectResolvedAddresses(dnsEntry.get(), newResolved);
+        }
+    }
+    auto resolvedItr = resolvedMap.find(dnsAnswer.get()->getName().get());
+    if(resolvedItr != resolvedMap.end()) {
+        optional<shared_ptr<DnsEntry> > dnsEntry =
+            DnsEntry::resolve(framework, resolvedItr->first);
+        if(dnsEntry) {
+            std::vector<shared_ptr<DnsSrv>> mappedSrvs;
+            dnsEntry.get()->resolveEpdrDnsSrv(mappedSrvs);
+            if(!mappedSrvs.empty()){
+                uint8_t proto = getProtoFromDnsName(dnsAnswer.get()->getName().get());
+                if(proto != 0) {
+                    /*Fixup the lookup with service endpoint ports*/
+                    for(auto &mappedSrv: mappedSrvs) {
+                        uint16_t dport = mappedSrv->getPort().get();
+                        auto srvItr = resolvedMap.find(mappedSrv->getHostName().get());
+                        if(srvItr != resolvedMap.end()) {
+                            optional<shared_ptr<DnsEntry> > dnsSrvEntry =
+                                DnsEntry::resolve(framework, srvItr->first);
+                            if(dnsSrvEntry) {
+                                getDirectResolvedAddresses(dnsSrvEntry.get(), newResolved,
+                                        proto, dport);
+                            }
+                        }
+                    }
+                } else {
+                    newResolved.clear();
                 }
-                newResolved.insert(std::make_pair(addr.to_string(),
-                                  (addr.is_v4()?32:128)));
             }
         }
     }
+
     if(itr->second.resolved != newResolved) {
         itr->second.resolved = newResolved;
         notifyContracts = itr->second.secGrpSet;
@@ -1200,14 +1279,14 @@ void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, 
 }
 
 /*Call this while holding the stateMutex*/
-void PolicyManager::getDnsResolvedAddresses(
+void PolicyManager::getDnsResolvedNamedServicePorts(
         const std::string &domainName,
-        network::subnets_t &egressDnsResolved)
+        network::service_ports_t &egressDnsResolved)
 {
     auto itr = dns_demand_map.find(domainName);
     if(itr != dns_demand_map.end()) {
-        boost::optional<const network::subnets_t &> res(itr->second.resolved);
-        network::append(egressDnsResolved, res);
+        boost::optional<const network::service_ports_t &> res(itr->second.resolved);
+        network::append(egressDnsResolved,res);
     }
 }
 
@@ -1279,9 +1358,10 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
                 continue;       // ignore rules with no direction
             }
             uint8_t dir = rule->getDirection().get();
-            network::subnets_t remoteSubnets, namedAddresses;
+            network::subnets_t remoteSubnets;
+            network::service_ports_t namedSvcPorts;
             resolveRemoteSubnets(framework, rule, remoteSubnets);
-            if(!resolveNamedAddress(pMgr, framework, rule, newDnsRefs, namedAddresses)) {
+            if(!resolveNamedAddress(pMgr, framework, rule, newDnsRefs, namedSvcPorts)) {
                continue;  //ignore policies with DNS names that do not have atleast one name resolved.
             }
             vector<shared_ptr<L24Classifier> > classifiers;
@@ -1363,7 +1443,7 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
                                                     remoteSubnets,
                                                     ruleRedirect, ruleLog,
                                                     destGrpUri,
-                                                    namedAddresses));
+                                                    namedSvcPorts));
                 if (clsPrio < 127)
                     clsPrio += 1;
             }
@@ -1399,7 +1479,7 @@ bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
     using namespace modelgbp::gbp;
     uri_set_t oldRedirGrps, newRedirGrps;
     PolicyManager::named_addr_set_t newDnsRefs;
-    PolicyManager::named_addr_set_t  &oldDnsRefs = secGrpMap[secGrpURI].dnsAsks;
+    PolicyManager::named_addr_set_t &oldDnsRefs = secGrpMap[secGrpURI].dnsAsks;
     bool log = false;
     bool updated =  updatePolicyRules<SecGroup, SecGroupSubject,
                              SecGroupRule>(*this, framework, secGrpURI,

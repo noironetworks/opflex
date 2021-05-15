@@ -94,6 +94,19 @@ compute_eff_sub(boost::optional<const network::subnets_t&> sub) {
     return eff;
 }
 
+static void servicePort(FlowBuilder *fb, const boost::asio::ip::address& ip, uint8_t prefixLen,
+        uint8_t proto, uint16_t dport) {
+    if(prefixLen==0 && !ip.is_unspecified()) {
+        prefixLen = (ip.is_v4()?32:128);
+    }
+    fb->ipDst(ip, prefixLen);
+    if(dport == 0) {
+        return;
+    }
+    fb->proto(proto);
+    fb->tpDst(dport);
+}
+
 typedef std::function<void(FlowBuilder*,
                              boost::asio::ip::address&,
                              uint8_t)> FlowBuilderFunc;
@@ -106,6 +119,20 @@ static bool applyRemoteSub(FlowBuilder& fb, const FlowBuilderFunc& func,
         return false;
 
     func(&fb, addr, prefixLen);
+    return true;
+}
+typedef std::function<void(FlowBuilder*,
+                             boost::asio::ip::address&,
+                             uint8_t, uint8_t, uint16_t)> FlowBuilderFunc2;
+static bool applyServicePort(FlowBuilder& fb, const FlowBuilderFunc2& func,
+                           boost::asio::ip::address addr,
+                           uint8_t prefixLen, uint8_t proto, uint16_t port, uint16_t ethType) {
+    if (addr.is_v4() && ethType != eth::type::ARP && ethType != eth::type::IP)
+        return false;
+    if (addr.is_v6() && ethType != eth::type::IPV6)
+        return false;
+
+    func(&fb, addr, prefixLen, proto, port );
     return true;
 }
 
@@ -121,6 +148,19 @@ static flow_func make_flow_functor(const network::subnet_t& ss,
         boost::asio::ip::address::from_string(ss.first, ec);
     if (ec) return NULL;
     return std::bind(applyRemoteSub, _1, func, addr, ss.second, _2);
+}
+static flow_func make_flow_functor(const network::service_port_t& ss,
+                                   const FlowBuilderFunc2& func) {
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+
+    boost::system::error_code ec;
+    if (ss.address.empty()) return NULL;
+    boost::asio::ip::address addr =
+        boost::asio::ip::address::from_string(ss.address, ec);
+    if (ec) return NULL;
+    return std::bind(applyServicePort, _1, func, addr, ss.prefixLen,
+            ss.proto, ss.port, _2);
 }
 
 void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
@@ -154,7 +194,7 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
-                            boost::optional<const network::subnets_t&> destNamedAddresses,
+                            boost::optional<const network::service_ports_t&> destNamedAddresses,
                             uint8_t nextTable, uint8_t currentTable, uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
@@ -196,13 +236,15 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
 
     network::subnets_t effSourceSub(compute_eff_sub(sourceSub));
     network::subnets_t effDestSub(compute_eff_sub(destSub));
-    network::append(effDestSub, destNamedAddresses);
+    network::service_ports_t effDestSvcPorts;
+    network::append(effDestSvcPorts, effDestSub);
+    network::append(effDestSvcPorts, destNamedAddresses);
 
     for (const network::subnet_t& ss : effSourceSub) {
         flow_func src_func(make_flow_functor(ss, &FlowBuilder::ipSrc));
 
-        for (const network::subnet_t& ds : effDestSub) {
-            flow_func dst_func(make_flow_functor(ds, &FlowBuilder::ipDst));
+        for (const network::service_port_t& ds : effDestSvcPorts) {
+            flow_func dst_func(make_flow_functor(ds, &servicePort));
 
             /*
              * For EtherType IPV4 and IPV6 add related flows based on
@@ -286,8 +328,12 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             if (src_func && !src_func(f, etht)) continue;
                             if (dst_func && !dst_func(f, etht)) continue;
 
-                            f.tpSrc(sm.first, sm.second)
-                                .tpDst(dm.first, dm.second);
+                            f.tpSrc(sm.first, sm.second);
+                            //port resolved from DNS policy overrides
+                            //classifier port match. Possible knob
+                            if(!f.isTpDst()) {
+                                f.tpDst(dm.first, dm.second);
+                            }
                             break;
                         default:
                             // nothing

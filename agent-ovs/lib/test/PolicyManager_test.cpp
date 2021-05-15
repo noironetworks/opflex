@@ -669,7 +669,7 @@ BOOST_FIXTURE_TEST_CASE( egress_dns_policy_add_remove, PolicyFixture ) {
     dnsEntry1.get()->addEpdrDnsMappedAddress(mappedAddress2);
     dnsAns1->setUuid("2");
     m0.commit();
-    WAIT_FOR_DO((rules.front()->getNamedAddresses().size()==2), 500,
+    WAIT_FOR_DO((rules.front()->getNamedServicePorts().size()==2), 500,
         rules.clear();pm.getSecGroupRules(sec1->getURI(), rules));
     dnsAns1->remove();
     m0.commit();

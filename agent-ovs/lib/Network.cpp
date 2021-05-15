@@ -22,6 +22,34 @@ std::size_t hash<opflexagent::network::subnet_t>::
 operator()(const opflexagent::network::subnet_t& u) const {
     return boost::hash_value(u);
 }
+
+std::size_t hash<opflexagent::network::service_port_t>::
+operator()(const opflexagent::network::service_port_t& u) const {
+    std::size_t seed=0;
+    boost::hash_combine(seed, u.address);
+    boost::hash_combine(seed, u.prefixLen);
+    boost::hash_combine(seed, u.proto);
+    boost::hash_combine(seed, u.port);
+    return seed;
+}
+
+bool operator==(const opflexagent::network::service_port_t& u,
+        const opflexagent::network::service_port_t& v) {
+    return ((u.address == v.address) && (u.prefixLen == v.prefixLen)
+        && (u.proto == v.proto) && (u.port == v.port));
+}
+
+bool operator==(const opflexagent::network::service_ports_t& u,
+        const opflexagent::network::service_ports_t& v) {
+    if(u.size() != v.size())
+        return false;
+    for( const auto &sp: u) {
+        if (v.find(sp) == v.end()) {
+            return false;
+        }
+    }
+    return true;
+}
 } /* namespace std */
 
 namespace opflexagent {
@@ -32,15 +60,6 @@ using boost::asio::ip::address_v4;
 using boost::asio::ip::address_v6;
 using boost::algorithm::is_any_of;
 using boost::algorithm::split;
-
-void append(subnets_t &current, boost::optional<const subnets_t &> addendum) {
-    if(!addendum) {
-        return;
-    }
-    for (auto toAdd:addendum.get()) {
-        current.insert(toAdd);
-    }
-}
 
 std::ostream & operator<<(std::ostream &os, const subnet_t& subnet) {
     os << subnet.first << "/" << (int)subnet.second;
@@ -221,6 +240,57 @@ bool prefix_match(const boost::asio::ip::address& addr,
         }
     }
     return false;
+}
+
+void append(service_ports_t &current, boost::optional<const service_ports_t &>addendum) {
+    if(!addendum) return;
+    for (const auto &toAdd:addendum.get()) {
+        current.insert(toAdd);
+    }
+}
+
+void append(service_ports_t &current, subnets_t &addendum) {
+    for (auto &toAdd:addendum) {
+        service_port_t toAddSvc;
+        toAddSvc.address = toAdd.first;
+        toAddSvc.prefixLen = toAdd.second;
+        toAddSvc.port = 0;
+        current.insert(toAddSvc);
+    }
+}
+
+std::ostream & operator<<(std::ostream &os, const service_port_t& servicePort) {
+    std::stringstream proto;
+    switch(servicePort.proto) {
+        case 6:
+            proto << "tcp";
+            break;
+        case 17:
+            proto << "udp";
+            break;
+        case 132:
+            proto << "sctp";
+            break;
+        default:
+            proto << (uint32_t)servicePort.proto;
+            break;
+    }
+    if(servicePort.port == 0) {
+        os << servicePort.address;
+    } else {
+        os << servicePort.address << ":" << proto.str() << "/" << (int)servicePort.port;
+    }
+    return os;
+}
+
+std::ostream & operator<<(std::ostream &os, const service_ports_t& servicePorts) {
+    bool first = true;
+    for (const service_port_t& s : servicePorts) {
+        if (first) first = false;
+        else os << ",";
+        os << s;
+    }
+    return os;
 }
 
 } /* namespace packets */

@@ -33,6 +33,15 @@ namespace network {
  */
 typedef std::pair<std::string, uint8_t> subnet_t;
 
+/**
+ * Type representing a IP address string and port number
+ */
+struct service_port_t {
+    std::string address;
+    uint8_t prefixLen;
+    uint8_t proto;
+    uint16_t port;
+};
 } // namespace network
 } // namespace opflexagent
 
@@ -49,6 +58,19 @@ template<> struct hash<opflexagent::network::subnet_t> {
     std::size_t operator()(const opflexagent::network::subnet_t& u) const;
 };
 
+/**
+ * Template specialization for std::hash<serviceport_t>, making
+ * it suitable as a key in a std::unordered_map
+ */
+template<> struct hash<opflexagent::network::service_port_t> {
+    /**
+     * Hash the data
+     */
+    std::size_t operator()(const opflexagent::network::service_port_t& u) const;
+};
+
+bool operator==(const opflexagent::network::service_port_t& u,
+        const opflexagent::network::service_port_t& v);
 } /* namespace std */
 
 namespace opflexagent {
@@ -59,7 +81,6 @@ namespace network {
  */
 typedef std::unordered_set<subnet_t> subnets_t;
 
-void append(subnets_t &current, boost::optional<const subnets_t &> addendum);
 /**
  * subnet_t stream insertion
  */
@@ -206,4 +227,36 @@ bool prefix_match(const boost::asio::ip::address& addr,
 } /* namespace packets */
 } /* namespace opflexagent */
 
+
+namespace opflexagent {
+namespace network {
+
+/**
+ * A set of serviceports
+ */
+typedef std::unordered_set<service_port_t> service_ports_t;
+
+/**
+ * Append utilities
+ */
+void append(service_ports_t & current, subnets_t &addendum);
+void append(service_ports_t & current, boost::optional<const service_ports_t &>addendum);
+
+/**
+ * service_port_t stream insertion
+ */
+std::ostream& operator<<(std::ostream &os, const service_port_t& service_port);
+
+/**
+ * service_ports_t stream insertion
+ */
+std::ostream& operator<<(std::ostream &os, const service_ports_t& service_ports);
+} /* namespace network */
+} /* namespace opflexagent */
+
+namespace std {
+
+bool operator==(const opflexagent::network::service_ports_t& u,
+        const opflexagent::network::service_ports_t& v);
+}
 #endif /* OPFLEXAGENT_NETWORK_H */

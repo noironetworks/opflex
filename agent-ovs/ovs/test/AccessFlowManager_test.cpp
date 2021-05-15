@@ -64,7 +64,8 @@ public:
     void initExpSecGrpSet1();
     void initExpSecGrpSet12(bool second = true, int remoteAddress = 0);
     uint16_t initExpSecGrp3(int remoteAddress);
-    void initExpSecGrp4(std::vector<std::string>& namedAddressSet);
+    void initExpSecGrp4(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet);
+    void initExpSecGrp5(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet);
 
     /** Initialize dscp flow entries */
     void addDscpFlows(shared_ptr<Endpoint>& ep);
@@ -518,10 +519,47 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
 
     clearExpFlowTables();
     initExpStatic();
-    std::vector<std::string> namedAddressSet = {"151.101.1.67","151.101.193.67",
-        "2a03:2880:f14b:82:face:b00c:0:25de"};
-    initExpSecGrp4(namedAddressSet);
+    std::vector<std::pair<std::string,uint16_t>> namedSvcPorts = {
+        std::make_pair("151.101.1.67",0),std::make_pair("151.101.193.67",0),
+        std::make_pair("2a03:2880:f14b:82:face:b00c:0:25de",0)};
+    initExpSecGrp4(namedSvcPorts);
+
     WAIT_FOR_TABLES("egress-dns-rule", 500);
+    shared_ptr<modelgbp::gbp::SecGroup> sec5;
+    Mutator mutator2(framework, "policyreg");
+    //secgrp 5
+    sec5 = space->addGbpSecGroup("sec5");
+    sec5->addGbpSecGroupSubject("sec5_sub1")->addGbpSecGroupRule("sec5_sub1_rule1")
+        ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
+        .addGbpRuleToClassifierRSrc(classifier100->getURI().toString());
+    sec5->addGbpSecGroupSubject("sec5_sub1")->addGbpSecGroupRule("sec5_sub1_rule1")
+        ->addGbpDnsName(std::string("_jabber._tcp.gmail.com"));
+    mutator2.commit();
+    Mutator mutator3(framework, "policyelement");
+    auto dDU = DnsDiscovered::resolve(framework);
+    auto dnsEntry3 = dDU.get()->addEpdrDnsEntry(std::string("_jabber._tcp.gmail.com"));
+    dnsEntry3->addEpdrDnsSrv("xmpp-server.l.google.com",5269);
+    dnsEntry3->addEpdrDnsSrv("alt1.xmpp-server.l.google.com",5269);
+    dnsEntry3->addEpdrDnsSrv("alt2.xmpp-server.l.google.com",5269);
+    auto dnsEntry4 = dDU.get()->addEpdrDnsEntry(std::string("xmpp-server.l.google.com"));
+    dnsEntry4->addEpdrDnsMappedAddress(std::string("64.233.171.125"));
+    auto dnsEntry5 = dDU.get()->addEpdrDnsEntry(std::string("alt1.xmpp-server.l.google.com"));
+    dnsEntry5->addEpdrDnsMappedAddress(std::string("64.233.171.126"));
+    auto dnsAnswer3 = dDU.get()->addEpdrDnsAnswer(std::string("_jabber._tcp.gmail.com"));
+    dnsAnswer3->addEpdrDnsAnswerToResultRSrc(dnsEntry3->getURI().toString());
+    dnsAnswer3->addEpdrDnsAnswerToResultRSrc(dnsEntry4->getURI().toString());
+    dnsAnswer3->addEpdrDnsAnswerToResultRSrc(dnsEntry5->getURI().toString());
+    mutator3.commit();
+    ep1.reset(new Endpoint("0-0-0-1"));
+    epSrc.updateEndpoint(*ep1);
+
+    ep1->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
+                                            "/tenant0/GbpSecGroup/sec5/"));
+    epSrc.updateEndpoint(*ep1);
+    std::vector<std::pair<std::string,uint16_t>> namedSvcPorts2 = {
+        std::make_pair("64.233.171.125",5269), std::make_pair("64.233.171.126",5269)};
+    initExpSecGrp5(namedSvcPorts2);
+    WAIT_FOR_TABLES("egress-dns-rule-srv", 500);
 }
 
 void AccessFlowManagerFixture::addDscpFlows(shared_ptr<Endpoint>& ep) {
@@ -883,21 +921,36 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     return 512;
 }
 
-void AccessFlowManagerFixture::initExpSecGrp4(std::vector<std::string>& namedAddressSet) {
+void AccessFlowManagerFixture::initExpSecGrp4(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet) {
     using boost::asio::ip::address;
     uint32_t setId = 2;
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     uint64_t ruleId = idGen.getId("l24classifierRule", classifier100->getURI().toString());
     uint64_t rule6Id = idGen.getId("l24classifierRule", classifier101->getURI().toString());
-    for( auto& addr : namedAddressSet) {
-        auto destAddr = address::from_string(addr);
+    for( auto& pr : namedAddressSet) {
+        auto destAddr = address::from_string(pr.first);
         if(destAddr.is_v4()) {
             ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
-             .ip().reg(SEPG, setId).isIpDst(addr).actions()
+             .ip().reg(SEPG, setId).isIpDst(pr.first).actions()
              .go(TAP).done());
         } else {
             ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-128).cookie(rule6Id)
-             .ipv6().reg(SEPG, setId).isIpv6Dst(addr).actions()
+             .ipv6().reg(SEPG, setId).isIpv6Dst(pr.first).actions()
+             .go(TAP).done());
+        }
+    }
+}
+
+void AccessFlowManagerFixture::initExpSecGrp5(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet) {
+    using boost::asio::ip::address;
+    uint32_t setId = 3;
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    uint64_t ruleId = idGen.getId("l24classifierRule", classifier100->getURI().toString());
+    for( auto& pr : namedAddressSet) {
+        auto destAddr = address::from_string(pr.first);
+        if(destAddr.is_v4()) {
+            ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
+             .tcp().reg(SEPG, setId).isIpDst(pr.first).isTpDst(pr.second).actions()
              .go(TAP).done());
         }
     }
