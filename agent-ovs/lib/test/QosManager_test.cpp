@@ -14,7 +14,6 @@
 
 #include <opflexagent/logging.h>
 #include <opflexagent/test/BaseFixture.h>
-#include "Policies.h"
 #include <boost/filesystem/fstream.hpp>
 #include <opflexagent/FSEndpointSource.h>
 
@@ -78,37 +77,6 @@ class QosFixture : public BaseFixture {
         fs::path temp;
 };
 BOOST_AUTO_TEST_SUITE(QosManager_test)
-
-static bool checkQos(boost::optional<shared_ptr<QosConfigState>> pQos,
-                                const URI& qosUri) {
-    if (!pQos)
-        return false;
-    LOG(DEBUG) << "checkBandwidthLimit " << pQos.get()->getUri();
-    return qosUri == pQos.get()->getUri();
-}
-
-static bool checkQosRate(boost::optional<shared_ptr<QosConfigState>> pQos,
-                                shared_ptr<qos::BandwidthLimit>& pQosCfg) {
-    if (!pQos)
-        return false;
-    LOG(DEBUG) << "checkQosRate " << pQos.get()->getRate();
-    return pQos.get()->getRate() == pQosCfg->getRate();
-}
-static bool checkQosBurst(boost::optional<shared_ptr<QosConfigState>> pQos,
-                                   shared_ptr<qos::BandwidthLimit>& pQosCfg) {
-    if (!pQos)
-        return false;
-    LOG(DEBUG) << "checkQosBurst " << pQos.get()->getBurst();
-    return pQos.get()->getBurst() == pQosCfg->getBurst();
-}
-static bool checkQosDscpMarking(uint8_t dscpMarking,
-                                   shared_ptr<qos::DscpMarking>& pQosDscpMarking) {
-    if (!pQosDscpMarking)
-        return false;
-
-    LOG(DEBUG) << "checkQosDscpMarking " << dscpMarking;
-    return dscpMarking == pQosDscpMarking->getMark().get();
-}
 
 static bool checkInterfaceCache(QosManager &qosmanager) {
     std::lock_guard<std::recursive_mutex> guard1(opflexagent::QosManager::qos_mutex);
@@ -234,12 +202,7 @@ BOOST_FIXTURE_TEST_CASE( verify_artifacts, QosFixture ) {
     string interface ("veth0-acc");
     const URI& dscpUri = dscpCfg->getURI();
 
-    WAIT_FOR(checkQos(agent.getQosManager().getQosConfigState(qosCfg->getURI()),
-                qosCfg->getURI()), 500);
-    WAIT_FOR(checkQosRate(agent.getQosManager().getQosConfigState(qosCfg->getURI()), qosCfg), 500);
-    WAIT_FOR(checkQosBurst(agent.getQosManager().getQosConfigState(qosCfg->getURI()), qosCfg), 500);
     WAIT_FOR(checkInterfaceCache(agent.getQosManager()), 500);
-    WAIT_FOR(checkQosDscpMarking(agent.getQosManager().getDscpMarking(interface), dscpCfg), 2500);
 
     Mutator mutator2(framework, "framework");
     dscpCfg->remove();
