@@ -229,8 +229,12 @@ string Bldr::strpad(int i) {
     return buf;
 }
 
-Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie) {
-    a("move", "NXM_NX_REG0[]->NXM_NX_TUN_METADATA0[0..31]");
+Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie, bool beingCloned) {
+    if(beingCloned) {
+        a("clone(move", "NXM_NX_REG0[]->NXM_NX_TUN_METADATA0[0..31]");
+    } else {
+        a("move", "NXM_NX_REG0[]->NXM_NX_TUN_METADATA0[0..31]");
+    }
     a("move", "NXM_NX_REG1[]->NXM_NX_TUN_METADATA1[0..31]");
     a("move", "NXM_NX_REG2[]->NXM_NX_TUN_METADATA2[0..31]");
     a("move", "NXM_NX_REG3[]->NXM_NX_TUN_METADATA3[0..31]");
@@ -262,9 +266,19 @@ Bldr& Bldr::dropLog(uint32_t table_id, uint32_t reason, uint64_t cookie) {
        std::snprintf(buf3, 64,"0x%lu00000000->NXM_NX_TUN_METADATA14[928..991]", cookie);
        string s3(buf3);
        a("load", s3 );
-       a("write_metadata","0x800/0x800");
+       if(beingCloned) {
+           a("load","0x800->OXM_OF_METADATA[]");
+       } else {
+           a("write_metadata","0x800/0x800");
+       }
     }
     return *this;
 }
 
+Bldr& Bldr::permitLog(uint32_t table_id, uint32_t logTable, uint64_t cookie) {
+    dropLog(table_id, POLICY_PERMIT, cookie, true);
+    resubmit(logTable);
+    _action.back()<<")";
+    return *this;
+}
 } // namespace opflexagent

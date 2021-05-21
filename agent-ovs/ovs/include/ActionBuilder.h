@@ -411,6 +411,15 @@ public:
      * @param reason reason for the capture - miss,deny,permit.
      */
     ActionBuilder& dropLog(uint32_t table_id, CaptureReason reason = CaptureReason::NO_MATCH, uint64_t cookie=0);
+
+    /**
+     * Fill tunnel metadata with current openflow state
+     *
+     * @param table_id the table in which the drop/log occured.
+     * @param logTable the table where packet is logged.
+     */
+    ActionBuilder& permitLog(uint32_t table_id, uint32_t logTable, uint64_t cookie=0);
+
     /**
      * Load the given four bytes into the given tunnel metadata register
      * @param regId the tunnel metadata register to load

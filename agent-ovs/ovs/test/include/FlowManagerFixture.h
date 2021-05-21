@@ -302,8 +302,8 @@ public:
     Bldr& resubmit(uint8_t p, uint8_t t) {
         a() << "resubmit("<< str(p) << "," << str(t) << ")"; return *this;
     }
-    Bldr& dropLog(uint32_t table_id , uint32_t reason = NO_MATCH, uint64_t cookie = 0);
-
+    Bldr& dropLog(uint32_t table_id , uint32_t reason = NO_MATCH, uint64_t cookie = 0, bool beingCloned=false);
+    Bldr& permitLog(uint32_t table_id, uint32_t logTable, uint64_t cookie=0);
 private:
     std::stringstream& m();
     std::stringstream& a();

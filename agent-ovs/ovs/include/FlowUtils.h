@@ -104,6 +104,8 @@ enum ClassAction {
  * @param destSub A set of dest networks to which the rule should apply
  * @param destNamedSvcPorts A set of resolved domain names to which the rule should apply
  * @param nextTable the table to send to if the traffic is allowed
+ * @param currentTable the table where this classifier is being programmed
+ * @param dropTable the table to send to if the packet has to be logged
  * @param priority Priority of the entry created
  * @param cookie Cookie of the entry created
  * @param svnid VNID of the source endpoint group for the entry
@@ -115,7 +117,8 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
                             boost::optional<const network::service_ports_t&> destNamedSvcPorts,
-                            uint8_t nextTable, uint8_t currentTable, uint16_t priority,
+                            uint8_t nextTable, uint8_t currentTable, uint8_t dropTable,
+                            uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
                             /* out */ FlowEntryList& entries);
@@ -127,6 +130,8 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
  * @param classifier Classifier object to get matching rules from
  * @param act an action to take for the flows
  * @param nextTable the table to send to if the traffic is allowed
+ * @param currentTable the table where this classifier is being programmed
+ * @param dropTable the table to send to if the packet has to be logged
  * @param priority Priority of the entry created
  * @param flags the flow flags to use
  * @param cookie Cookie of the entry created
@@ -136,7 +141,8 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
  */
 void add_l2classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                               ClassAction act, bool log,
-                              uint8_t nextTable, uint8_t currentTable, uint16_t priority,
+                              uint8_t nextTable, uint8_t currentTable, uint8_t dropTable,
+                              uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
                               /* out */ FlowEntryList& entries);

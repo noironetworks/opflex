@@ -368,8 +368,9 @@ public:
      * extract drop reason from parsedInfo
      * @param p Parsing context
      * @param dropReason extracted drop reason
+     * @return true if this is a permit log
      */
-    void getDropReason(ParseInfo &p, std::string &dropReason);
+    bool getDropReason(ParseInfo &p, std::string &dropReason);
     /**
      * Call packet decoder as an async callback
      * @param buf packet buffer

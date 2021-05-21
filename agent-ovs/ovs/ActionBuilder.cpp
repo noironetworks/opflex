@@ -301,10 +301,21 @@ ActionBuilder& ActionBuilder::dropLog(uint32_t table_id, CaptureReason reason, u
     //Force packet logging for deny/permit logging
     if( reason != CaptureReason::NO_MATCH){
        this->tunMetadata(MFF_TUN_METADATA14,cookie);
-       this->metadata(flow::meta::DROP_LOG,
-       flow::meta::DROP_LOG);
-      
+       if(reason != CaptureReason::POLICY_PERMIT) {
+	   this->metadata(flow::meta::DROP_LOG, flow::meta::DROP_LOG);
+       } else {
+          this->reg64(MFF_METADATA, (uint64_t)(flow::meta::DROP_LOG)); 
+       }
     }
+    return *this;
+}
+
+ActionBuilder& ActionBuilder::permitLog(uint32_t table_id, uint32_t logTable, uint64_t cookie) {
+    ActionBuilder nestedAct;
+    nestedAct.dropLog(table_id, CaptureReason::POLICY_PERMIT, cookie);
+    /*Passing OFPP_IN_PORT=0xfff8 makes it omit the resubmit port, which is what is required here*/
+    act_resubmit(nestedAct.buf, OFPP_IN_PORT, logTable);
+    act_clone(buf, nestedAct.buf);
     return *this;
 }
 

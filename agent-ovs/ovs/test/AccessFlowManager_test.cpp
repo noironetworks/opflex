@@ -66,6 +66,7 @@ public:
     uint16_t initExpSecGrp3(int remoteAddress);
     void initExpSecGrp4(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet);
     void initExpSecGrp5(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet);
+    void initExpSecGrp6();
 
     /** Initialize dscp flow entries */
     void addDscpFlows(shared_ptr<Endpoint>& ep);
@@ -562,6 +563,53 @@ BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("egress-dns-rule-srv", 500);
 }
 
+BOOST_FIXTURE_TEST_CASE(permitLog, AccessFlowManagerFixture) {
+    createObjects();
+    createPolicyObjects();
+    shared_ptr<modelgbp::gbp::Subnets> subnets1;
+    {
+       Mutator mutator(framework, "policyreg");
+       subnets1 = space->addGbpSubnets("subnets1");
+       subnets1->addGbpSubnet("subnets1")
+          ->setAddress("10.0.0.0")
+          .setPrefixLen(16);
+
+        //secgrp 6
+       auto secGrp6 = space->addGbpSecGroup("secgrp6");
+        //actions
+       action1 = space->addGbpAllowDenyAction("action1");
+       action1->setAllow(1).setOrder(10);
+       action2 =  space->addGbpLogAction("action2");
+       //security group rule
+       auto r1 = secGrp6->addGbpSecGroupSubject("1_subject1")
+                   ->addGbpSecGroupRule("1_rule1");
+       r1->setDirection(DirectionEnumT::CONST_OUT).setOrder(100)
+          .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());
+       r1->addGbpSecGroupRuleToRemoteAddressRSrc(subnets1->getURI().toString());
+       r1->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
+         ->setTargetAllowDenyAction(action1->getURI());
+       r1->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
+         ->setTargetLogAction(action2->getURI());
+       mutator.commit();
+     }
+
+    ep0.reset(new Endpoint("0-0-0-0"));
+    epSrc.updateEndpoint(*ep0);
+
+    initExpStatic();
+    WAIT_FOR_TABLES("empty-secgrp", 500);
+
+    ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
+                                            "/tenant0/GbpSecGroup/secgrp6/"));
+    epSrc.updateEndpoint(*ep0);
+
+    clearExpFlowTables();
+    initExpStatic();
+
+    initExpSecGrp6();
+    WAIT_FOR_TABLES("permitLog", 500);
+}
+
 void AccessFlowManagerFixture::addDscpFlows(shared_ptr<Endpoint>& ep) {
     uint32_t access = portmapper.FindPort(ep->getAccessInterface().get());
     if (access == OFPP_NONE) return;
@@ -954,5 +1002,14 @@ void AccessFlowManagerFixture::initExpSecGrp5(std::vector<std::pair<std::string,
              .go(TAP).done());
         }
     }
+}
+void AccessFlowManagerFixture::initExpSecGrp6() {
+    uint32_t setId = 2;
+    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
+    uint64_t ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());
+    ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
+             .tcp().reg(SEPG, setId).isIpDst("10.0.0.0/16").isTpDst(80).actions()
+             .permitLog(OUT_POL,EXP_DROP,ruleId).go(TAP).done());
+        
 }
 BOOST_AUTO_TEST_SUITE_END()

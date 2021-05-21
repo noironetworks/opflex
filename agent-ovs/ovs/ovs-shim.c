@@ -459,3 +459,13 @@ void act_tun_metadata_load_64(struct ofpbuf* buf,
     memcpy(ofpact_set_field_mask(sf),mask,8);
 }
 
+void act_clone(struct ofpbuf* buf, struct ofpbuf* nestedBuf) {
+    size_t ofs = buf->size;
+    ofpact_put_CLONE(buf);
+    if(nestedBuf && nestedBuf->size>0) {
+	ofpbuf_put(buf, nestedBuf->data, nestedBuf->size);
+    }
+    struct ofpact_nest *clone;
+    clone = ofpbuf_at(buf, ofs, sizeof *clone);
+    ofpact_finish_CLONE(buf, &clone);
+}
