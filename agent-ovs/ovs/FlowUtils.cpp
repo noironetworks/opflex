@@ -164,7 +164,8 @@ static flow_func make_flow_functor(const network::service_port_t& ss,
 }
 
 void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
-                              uint8_t nextTable, uint8_t currentTable, uint16_t priority,
+                              uint8_t nextTable, uint8_t currentTable, uint8_t dropTable,
+                              uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
                               /* out */ FlowEntryList& entries) {
@@ -178,14 +179,17 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
      .flags(flags);
     flowutils::match_group(f, priority, svnid, dvnid);
     match_protocol(f, clsfr);
-    if (act != flowutils::CA_DENY)
-        f.action().go(nextTable);
-    if (act == flowutils::CA_DENY) {
-       if (log) {
-          f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY, cookie).go(nextTable);
-        }
-       else {
-          f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable);
+    if (log) {
+       if(act == flowutils::CA_DENY) {
+           f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY, cookie).go(nextTable);
+       } else {
+           f.action().permitLog(currentTable, dropTable, cookie).go(nextTable);
+       }
+    } else {
+       if(act == flowutils::CA_DENY) {
+           f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable);
+       } else {
+           f.action().go(nextTable);
        }
     }
     entries.push_back(f.build());
@@ -195,7 +199,8 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             boost::optional<const network::subnets_t&> sourceSub,
                             boost::optional<const network::subnets_t&> destSub,
                             boost::optional<const network::service_ports_t&> destNamedAddresses,
-                            uint8_t nextTable, uint8_t currentTable, uint16_t priority,
+                            uint8_t nextTable, uint8_t currentTable, uint8_t dropTable,
+                            uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
                             /* out */ FlowEntryList& entries) {
@@ -339,7 +344,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             // nothing
                             break;
                         }
-
                         switch (act) {
                         case flowutils::CA_REFLEX_FWD_TRACK:
                         case flowutils::CA_REFLEX_REV_TRACK:
@@ -351,17 +355,27 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                                              FlowBuilder::CT_TRACKED |
                                              FlowBuilder::CT_NEW);
                             f.action().conntrack(ActionBuilder::CT_COMMIT,
-                                                 MFF_REG6).go(nextTable);
+                                                 MFF_REG6);
+			    if(log) {
+				f.action().permitLog(currentTable, dropTable, cookie);
+			    }
+                            f.action().go(nextTable);
                             break;
                         case CA_REFLEX_FWD_EST:
                             f.conntrackState(FlowBuilder::CT_TRACKED |
                                              FlowBuilder::CT_ESTABLISHED,
                                              FlowBuilder::CT_TRACKED |
                                              FlowBuilder::CT_ESTABLISHED);
+			    if(log) {
+				f.action().permitLog(currentTable, dropTable, cookie);
+			    }
                             f.action().go(nextTable);
                             break;
                         case flowutils::CA_REFLEX_REV_ALLOW:
                         case flowutils::CA_ALLOW:
+			    if(log) {
+				f.action().permitLog(currentTable, dropTable, cookie);
+			    }
                             f.action().go(nextTable);
                             break;
                         case flowutils::CA_DENY:

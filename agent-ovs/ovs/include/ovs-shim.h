@@ -256,6 +256,11 @@ extern "C" {
             int regId, const void* regValue, const void* mask);
     
     /**
+     * clone a packet with a nested action list
+     */
+    void act_clone(struct ofpbuf* buf, struct ofpbuf* nestedBuf);
+
+    /**
      * malloc a dp_packet
      */
     struct dp_packet* alloc_dpp();

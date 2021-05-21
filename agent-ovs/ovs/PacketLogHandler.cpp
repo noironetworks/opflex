@@ -156,7 +156,8 @@ void UdpServer::handleReceive(const boost::system::error_code& error,
     }
 }
 
-void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
+bool PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
+    bool isPermit=false;
     std::string bridge = ((p.meta[0] ==1)? "Int-" :
             ((p.meta[0] ==2)? "Acc-" :""));
     if((p.meta[0] == 1) &&
@@ -181,6 +182,7 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
         case 2:
         {
             dropReason += " PERMIT";
+            isPermit = true;
             break;
         }
     }
@@ -191,6 +193,7 @@ void PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
             dropReason += " "+ruleUri.get();
         }
     }
+    return isPermit;
 }
 
 void PacketLogHandler::updatePruneFilter(const std::string &filterName, std::shared_ptr<PacketFilterSpec> &pruneSpec) {
@@ -250,10 +253,10 @@ void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
         if(p.pruneLog)
             return;
         std::string dropReason;
-        getDropReason(p, dropReason);
+        bool isPermit = getDropReason(p, dropReason);
         p.packetTuple.setField(0, dropReason);
         LOG(INFO)<< dropReason << " " << p.parsedString;
-        if(!packetEventNotifSock.empty())
+        if(!packetEventNotifSock.empty() && !isPermit )
         {
             {
                 std::lock_guard<std::mutex> lk(qMutex);
