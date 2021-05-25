@@ -43,7 +43,7 @@ sudo make install
 set +e
 make check
 result=$?
-find . -name test-suite.log|xargs cat
+find . -name test-suite.log|xargs cat | grep -A 20 -B 20 -i failed
 
 # Dump gprof output:
 # Note:

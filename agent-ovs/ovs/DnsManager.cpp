@@ -61,6 +61,10 @@ namespace opflexagent {
 
         uuidGen.reset(new basic_random_generator<boost::mt19937>(&randomSeed));
         modelgbp::epdr::DnsAsk::registerListener(agent.getFramework(),this);
+        /*Needed for restart test cases*/
+        if(io_ctxt.stopped()) {
+            io_ctxt.reset();
+        }
         work.reset(new boost::asio::io_service::work(io_ctxt));
         {
             lock_guard<recursive_mutex> lk(timerMutex);
@@ -152,6 +156,8 @@ namespace opflexagent {
         }
         if(isCName()) {
             if(currTime >= cachedCName.expiryTime) {
+                LOG(DEBUG) << domainName << "->" << cachedCName.cName << " expired " <<
+                to_simple_string(cachedCName.expiryTime);
                 cNameAged=true;
             }
         }
@@ -747,7 +753,7 @@ namespace opflexagent {
                     linkEntryToAnswer(*terminalNode, dnsAnswer, demandItr.second);
                 }
                 if(!matchingAlias.empty()) {
-                    auto learntItr = learntMappings.find(matchingAlias);
+                    auto learntItr = learntMappings.find(entry.domainName);
                     linkEntryToAnswer(learntItr->second, dnsAnswer, demandItr.second);
                 }
                 if(!matchingSrv.empty()) {
@@ -929,15 +935,15 @@ namespace opflexagent {
             }
         } else {
             DnsCacheEntry entry2(dnsRR.getCName());
-            learntMappings.emplace(
-                    std::make_pair(dnsRR.getCName(),entry2));
+            auto p = learntMappings.emplace(
+                         std::make_pair(dnsRR.getCName(),entry2));
             if(existingEntry != NULL) {
                 for(const auto &aName: existingEntry->aNames) {
-                    (void)entry2.addAlias(*this, aName);
+                    (void)p.first->second.addAlias(*this, aName);
                 }
             }
-            (void)entry2.addAlias(*this, dnsRR.domainName);
-            commitToStore(entry2);
+            (void)p.first->second.addAlias(*this, dnsRR.domainName);
+            commitToStore(p.first->second);
         }
         if(existingEntry != NULL) {
             existingEntry->setCName(dnsRR.getCName());
@@ -953,74 +959,80 @@ namespace opflexagent {
         using boost::property_tree::json_parser::read_json;
         using boost::optional;
         path cacheRoot(cacheDir);
-        for(directory_iterator cacheFile=directory_iterator(cacheDir); cacheFile != directory_iterator(); cacheFile++) {
+        for(directory_iterator cacheFile=directory_iterator(cacheDir);
+                cacheFile != directory_iterator(); cacheFile++) {
             if(is_directory(*cacheFile) ||
                !boost::algorithm::ends_with(cacheFile->path().filename().string(), ".dns")) {
                 continue;
             }
             LOG(DEBUG) << "Restoring " << cacheFile->path().filename().string();
-            ptree properties;
-            static const std::string DOMAIN_NAME("DomainName");
-            static const std::string HOLDER("isHolder");
-            static const std::string CNAME("cName");
-            static const std::string EXPIRY("expiryTime");
-            static const std::string ALIASES("Aliases");
-            static const std::string ADDRESSES("Addresses");
-            static const std::string ADDRESS("addr");
-            static const std::string SERVICES("Srvs");
-            static const std::string PRIO("prio");
-            static const std::string WEIGHT("weight");
-            static const std::string PORT("port");
-            static const std::string HOSTNAME("hostName");
-            static const std::string PARENTSRV("ParentSrv");
-            read_json(cacheFile->path().string(),properties);
-            if(!properties.get_optional<string>(std::string("DomainName"))) {
-                continue;
-            }
-            DnsCacheEntry entry(properties.get<string>(std::string("DomainName")));
-            if(properties.get_optional<string>(HOLDER)) {
-                if(properties.get<string>(HOLDER) == "0") {
-                    entry.isHolder = false;
+            try {
+                ptree properties;
+                static const std::string DOMAIN_NAME("DomainName");
+                static const std::string HOLDER("isHolder");
+                static const std::string CNAME("cName");
+                static const std::string EXPIRY("expiryTime");
+                static const std::string ALIASES("Aliases");
+                static const std::string ADDRESSES("Addresses");
+                static const std::string ADDRESS("addr");
+                static const std::string SERVICES("Srvs");
+                static const std::string PRIO("prio");
+                static const std::string WEIGHT("weight");
+                static const std::string PORT("port");
+                static const std::string HOSTNAME("hostName");
+                static const std::string PARENTSRV("ParentSrv");
+                read_json(cacheFile->path().string(),properties);
+                if(!properties.get_optional<string>(std::string("DomainName"))) {
+                    continue;
                 }
-            }
-            if(properties.get_optional<string>(CNAME) &&
-                   properties.get_optional<string>(EXPIRY)) {
-                entry.cachedCName.cName = properties.get<string>(CNAME);
-                entry.cachedCName.expiryTime = time_from_string(properties.get<string>(EXPIRY));
-            }
-            if(properties.get_optional<string>(ALIASES)) {
-                for(auto &v : properties.get_child(ALIASES)) {
-                    entry.aNames.insert(v.second.data());
+                DnsCacheEntry entry(properties.get<string>(std::string("DomainName")));
+                if(properties.get_optional<string>(HOLDER)) {
+                    if(properties.get<string>(HOLDER) == "0") {
+                        entry.isHolder = false;
+                    }
                 }
-            }
-            if(properties.get_optional<string>(PARENTSRV)) {
-                for(auto &v : properties.get_child(PARENTSRV)) {
-                    entry.parentSrv.insert(v.second.data());
+                if(properties.get_optional<string>(CNAME) &&
+                       properties.get_optional<string>(EXPIRY)) {
+                    entry.cachedCName.cName = properties.get<string>(CNAME);
+                    entry.cachedCName.expiryTime = time_from_string(properties.get<string>(EXPIRY));
                 }
-            }
-            if(properties.get_optional<string>(SERVICES)) {
-                for(auto &child : properties.get_child(SERVICES)) {
-                    uint16_t _prio = child.second.get<uint16_t>(PRIO);
-                    uint16_t _weight = child.second.get<uint16_t>(WEIGHT);
-                    uint16_t _port = child.second.get<uint16_t>(PORT);
-                    std::string _hostName = child.second.get<string>(HOSTNAME);
-                    ptime _expTime = time_from_string(child.second.get<string>(EXPIRY));
-                    DnsCachedSrv cS(_prio, _weight, _port, _hostName, _expTime);
-                    entry.Srvs.insert(cS);
+                if(properties.get_optional<string>(ALIASES)) {
+                    for(auto &v : properties.get_child(ALIASES)) {
+                        entry.aNames.insert(v.second.data());
+                    }
                 }
-            }
-            if(properties.get_optional<string>(ADDRESSES)) {
-                for (auto &child:
-                        properties.get_child(ADDRESSES)) {
-                    DnsCachedAddress cA(child.second.get<string>(ADDRESS));
-                    cA.expiryTime = time_from_string(child.second.get<string>(EXPIRY));
-                    entry.Ips.insert(cA);
+                if(properties.get_optional<string>(PARENTSRV)) {
+                    for(auto &v : properties.get_child(PARENTSRV)) {
+                        entry.parentSrv.insert(v.second.data());
+                    }
                 }
-            }
-            {
-                std::unique_lock<std::mutex> lk(stateMutex);
-                learntMappings.insert(std::make_pair(entry.domainName, entry));
-                updateMOs(entry, true);
+                if(properties.get_optional<string>(SERVICES)) {
+                    for(auto &child : properties.get_child(SERVICES)) {
+                        uint16_t _prio = child.second.get<uint16_t>(PRIO);
+                        uint16_t _weight = child.second.get<uint16_t>(WEIGHT);
+                        uint16_t _port = child.second.get<uint16_t>(PORT);
+                        std::string _hostName = child.second.get<string>(HOSTNAME);
+                        ptime _expTime = time_from_string(child.second.get<string>(EXPIRY));
+                        DnsCachedSrv cS(_prio, _weight, _port, _hostName, _expTime);
+                        entry.Srvs.insert(cS);
+                    }
+                }
+                if(properties.get_optional<string>(ADDRESSES)) {
+                    for (auto &child:
+                            properties.get_child(ADDRESSES)) {
+                        DnsCachedAddress cA(child.second.get<string>(ADDRESS));
+                        cA.expiryTime = time_from_string(child.second.get<string>(EXPIRY));
+                        entry.Ips.insert(cA);
+                    }
+                }
+                {
+                    std::unique_lock<std::mutex> lk(stateMutex);
+                    learntMappings.insert(std::make_pair(entry.domainName, entry));
+                    updateMOs(entry, true);
+                }
+            } catch (const std::exception& ex) {
+                LOG(ERROR) << "Could not load dns entry: "
+                           << ex.what();
             }
         }
     }
@@ -1067,6 +1079,7 @@ namespace opflexagent {
         writer.String("Srvs");
         writer.StartArray();
         for(auto &srv: entry.Srvs) {
+            writer.StartObject();
             writer.String("prio");
             writer.Uint(srv.priority);
             writer.String("weight");
@@ -1077,6 +1090,7 @@ namespace opflexagent {
             writer.String(srv.hostName.c_str());
             writer.String("expiryTime");
             writer.String(to_simple_string(srv.expiryTime).c_str());
+            writer.EndObject();
         }
         writer.EndArray();
         writer.String("Addresses");
@@ -1321,6 +1335,7 @@ namespace opflexagent {
     }
 
     void DnsManager::handleDnsAsk(URI &askUri, std::unordered_set<URI> &notifySet) {
+       LOG(DEBUG) << "Handling Dns Ask " << askUri;
        auto ask = modelgbp::epdr::DnsAsk::resolve(agent.getFramework(),askUri);
        auto buildDnsAnswerUri = [](const std::string &name){
            return opflex::modb::URIBuilder().addElement("EpdrDnsDiscovered")
@@ -1472,6 +1487,7 @@ namespace opflexagent {
         }
         work.reset();
         parserThread->join();
+        io_ctxt.stop();
         {
             lock_guard<std::mutex> lk(stateMutex);
             learntMappings.clear();
