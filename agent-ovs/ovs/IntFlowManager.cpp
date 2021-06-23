@@ -5125,7 +5125,14 @@ void IntFlowManager::createStaticFlows() {
             flowsRevNatICMP(outFlows, true, 11); // time exceeded
             flowsRevNatICMP(outFlows, true, 12); // param
         }
-
+            // Drop all flooded packets from service interface
+            // since we don't build flood lists for the service vlan
+            // and ARP with local target should be consumed in bridge table
+            FlowBuilder().priority(1)
+                .ethDst(packets::MAC_ADDR_BROADCAST)
+                .metadata(flow::meta::FROM_SERVICE_INTERFACE,
+                          flow::meta::FROM_SERVICE_INTERFACE)
+                .build(outFlows);
         switchManager.writeFlow("static", OUT_TABLE_ID, outFlows);
     }
     {
