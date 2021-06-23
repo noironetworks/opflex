@@ -2034,6 +2034,13 @@ void BaseIntFlowManagerFixture::initExpStatic(uint8_t remoteInventoryType) {
                 .done());
         }
     }
+    string bmac("ff:ff:ff:ff:ff:ff");
+    ADDF(Bldr().table(OUT).priority(1)
+         .isMdAct(opflexagent::flow::meta::FROM_SERVICE_INTERFACE,
+               opflexagent::flow::meta::FROM_SERVICE_INTERFACE)
+         .isEthDst(bmac)
+         .drop()
+         .done());
 
     for(int i=SEC; i<=OUT; i++) {
         ADDF(Bldr().table(i)
