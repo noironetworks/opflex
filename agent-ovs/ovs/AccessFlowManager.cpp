@@ -20,6 +20,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/algorithm/string/finder.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include "ovs-ofputil.h"
 #include <modelgbp/gbp/DirectionEnumT.hpp>
@@ -46,6 +47,7 @@ using boost::optional;
 static const char* ID_NAMESPACES[] =
     {"secGroup", "secGroupSet"};
 
+static const int VMM_DOMAIN_DN_PARTS = 4;
 static const char* ID_NMSPC_SECGROUP     = ID_NAMESPACES[0];
 static const char* ID_NMSPC_SECGROUP_SET = ID_NAMESPACES[1];
 
@@ -59,8 +61,12 @@ void AccessFlowManager::populateTableDescriptionMap(
     TABLE_DESC(SERVICE_BYPASS_TABLE_ID, "SERVICE_BYPASS_TABLE",
                "Skip security-group checks for Service loopback traffic")
     TABLE_DESC(GROUP_MAP_TABLE_ID, "GROUP_MAP_TABLE", "Access port incorrect")
+    TABLE_DESC(SYS_SEC_GRP_IN_TABLE_ID, "SYS_SEC_GRP_IN_TABLE_ID",
+            "Ingress System Security group derivation missing/incorrect")
     TABLE_DESC(SEC_GROUP_IN_TABLE_ID, "SEC_GROUP_IN_TABLE",
             "Ingress Security group derivation missing/incorrect")
+    TABLE_DESC(SYS_SEC_GRP_OUT_TABLE_ID, "SYS_SEC_GRP_OUT_TABLE_ID",
+            "Egress System Security group derivation missing/incorrect")
     TABLE_DESC(SEC_GROUP_OUT_TABLE_ID, "SEC_GROUP_OUT_TABLE",
             "Egress security group missing/incorrect")
     TABLE_DESC(TAP_TABLE_ID, "TAP_TABLE",
@@ -472,6 +478,23 @@ void AccessFlowManager::createStaticFlows() {
             .parent().build(tapFlows);
         switchManager.writeFlow("static", TAP_TABLE_ID, tapFlows);
     }
+    {
+        FlowEntryList defaultSysIngressFlow;
+        FlowBuilder().priority(1)
+            .action().go(SEC_GROUP_IN_TABLE_ID)
+            .parent().build(defaultSysIngressFlow);
+        switchManager.writeFlow("static", SYS_SEC_GRP_IN_TABLE_ID, defaultSysIngressFlow);
+
+    }
+    {
+        FlowEntryList defaultSysEgressFlow;
+        FlowBuilder().priority(1)
+            .action().go(SEC_GROUP_OUT_TABLE_ID)
+            .parent().build(defaultSysEgressFlow);
+        switchManager.writeFlow("static", SYS_SEC_GRP_OUT_TABLE_ID, defaultSysEgressFlow);
+
+    }
+
     // everything is allowed for endpoints with no security group set
     uint32_t emptySecGrpSetId = idGen.getId(ID_NMSPC_SECGROUP_SET, "");
     switchManager.writeFlow("static", SEC_GROUP_OUT_TABLE_ID,
@@ -533,6 +556,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
 
     FlowEntryList el;
     FlowEntryList skipServiceFlows;
+
     if (accessPort != OFPP_NONE && uplinkPort != OFPP_NONE) {
         {
             FlowBuilder in;
@@ -558,7 +582,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
                             flow::meta::access_meta::MASK);
             }
 
-            in.action().go(SEC_GROUP_OUT_TABLE_ID);
+            in.action().go(SYS_SEC_GRP_OUT_TABLE_ID);
             in.build(el);
 
         }
@@ -588,7 +612,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
                 .reg(MFF_REG7, uplinkPort)
                 .metadata(flow::meta::access_meta::EGRESS_DIR,
                           flow::meta::access_meta::MASK)
-                .go(SEC_GROUP_OUT_TABLE_ID);
+                .go(SYS_SEC_GRP_OUT_TABLE_ID);
             inSkipVlan.build(el);
         }
 
@@ -636,7 +660,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
                    .metadata(flow::meta::access_meta::INGRESS_DIR,
                              flow::meta::access_meta::MASK);
             }
-            out.action().go(SEC_GROUP_IN_TABLE_ID);
+            out.action().go(SYS_SEC_GRP_IN_TABLE_ID);
             out.build(el);
         }
 
@@ -774,6 +798,30 @@ void AccessFlowManager::handleSecGrpUpdate(const opflex::modb::URI& uri) {
         secGroupSetUpdated(secGrpSet);
 }
 
+bool AccessFlowManager::checkIfSystemSecurityGroup(const string& uri){
+    const string& opflex_domain = agent.getPolicyManager().getOpflexDomain();
+    std::vector<std::string> parts;
+    std::string domain_name;
+
+    std::string systemSgName = "_SystemSecurityGroup";
+
+    split(parts, opflex_domain, boost::is_any_of("/"));
+    if (parts.size() == VMM_DOMAIN_DN_PARTS){
+        const string& ctrlr = parts[2];
+        std::vector<std::string> ctrlr_parts;
+        split(ctrlr_parts, ctrlr, boost::is_any_of("-"));
+        if (ctrlr_parts.size() == 3){
+            domain_name  = ctrlr_parts[2];
+            // eg: SG010197146194_SystemSecurityGroup
+            systemSgName = domain_name + "_SystemSecurityGroup";
+        }
+    }
+    if (uri.find(systemSgName) != std::string::npos){
+        return true;
+    }
+    return false;
+}
+
 void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                               const string& secGrpsIdStr) {
     using modelgbp::gbpe::L24Classifier;
@@ -792,6 +840,8 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
     if (agent.getEndpointManager().secGrpSetEmpty(secGrps)) {
         switchManager.clearFlows(secGrpsIdStr, SEC_GROUP_IN_TABLE_ID);
         switchManager.clearFlows(secGrpsIdStr, SEC_GROUP_OUT_TABLE_ID);
+        switchManager.clearFlows(secGrpsIdStr, SYS_SEC_GRP_IN_TABLE_ID);
+        switchManager.clearFlows(secGrpsIdStr, SYS_SEC_GRP_OUT_TABLE_ID);
         return;
     }
 
@@ -799,12 +849,46 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
 
     FlowEntryList secGrpIn;
     FlowEntryList secGrpOut;
+    FlowEntryList sysSecGrpIn;
+    FlowEntryList sysSecGrpOut;
+
+    bool any_system_sec_rule_configured = false;
 
     for (const opflex::modb::URI& secGrp : secGrps) {
         PolicyManager::rule_list_t rules;
         agent.getPolicyManager().getSecGroupRules(secGrp, rules);
 
+        bool isSystemRule = false;
+        int ingress_table = SEC_GROUP_IN_TABLE_ID;
+        int egress_table = SEC_GROUP_OUT_TABLE_ID;
+        int after_ingress_table = TAP_TABLE_ID;
+        int after_egress_table = TAP_TABLE_ID;
+        
+        FlowEntryList *secGrpInRef = &secGrpIn;
+        FlowEntryList *secGrpOutRef = &secGrpOut;
+
+        bool system_sec_group = false;
+        std::string uri (secGrp.toString());
+
+        if (checkIfSystemSecurityGroup(secGrp.toString())){
+            system_sec_group = true;
+
+            ingress_table = SYS_SEC_GRP_IN_TABLE_ID;
+            egress_table = SYS_SEC_GRP_OUT_TABLE_ID;
+
+            after_ingress_table = SEC_GROUP_IN_TABLE_ID;
+            after_egress_table = SEC_GROUP_OUT_TABLE_ID;
+        
+            secGrpInRef = &sysSecGrpIn;
+            secGrpOutRef = &sysSecGrpOut;
+        }
+
         for (shared_ptr<PolicyRule>& pc : rules) {
+            if (system_sec_group){
+                any_system_sec_rule_configured = true;
+                isSystemRule = true;
+            }
+
             uint8_t dir = pc->getDirection();
             bool skipL34 = false;
             const shared_ptr<L24Classifier>& cls = pc->getL24Classifier();
@@ -821,10 +905,10 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                 LOG(DEBUG) << "skipL34 flows: " << skipL34
                            << " for rule: " << ruleURI;
             }
-           
+
             bool log = false;
             flowutils::ClassAction act = flowutils::CA_DENY;
- 
+
             if (pc->getAllow()) {
                 if (cls->getConnectionTracking(ConnTrackEnumT::CONST_NORMAL) ==
                     ConnTrackEnumT::CONST_REFLEXIVE) {
@@ -847,44 +931,49 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                     dir == DirectionEnumT::CONST_IN) {
                     if (act == flowutils::CA_DENY) {
                          flowutils::add_l2classifier_entries(*cls, act, log,
-                                                            EXP_DROP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                            EXP_DROP_TABLE_ID, ingress_table,
                                                             EXP_DROP_TABLE_ID,
                                                             pc->getPriority(),
                                                             OFPUTIL_FF_SEND_FLOW_REM,
                                                             secGrpCookie,
                                                             secGrpSetId, 0,
-                                                            secGrpIn); 
-                    } else { 
+                                                            isSystemRule,
+                                                            *secGrpInRef);
+                    } else {
                          flowutils::add_l2classifier_entries(*cls, act, log,
-                                                             TAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                             after_ingress_table, ingress_table,
                                                              EXP_DROP_TABLE_ID,
                                                              pc->getPriority(),
                                                              OFPUTIL_FF_SEND_FLOW_REM,
                                                              secGrpCookie,
                                                              secGrpSetId, 0,
-                                                             secGrpIn);
+                                                             isSystemRule,
+                                                             *secGrpInRef);
                     }
                 }
                 if (dir == DirectionEnumT::CONST_BIDIRECTIONAL ||
                     dir == DirectionEnumT::CONST_OUT) {
                     if (act == flowutils::CA_DENY) {
                          flowutils::add_l2classifier_entries(*cls, act, log,
-                                                            EXP_DROP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                            EXP_DROP_TABLE_ID, egress_table,
                                                             EXP_DROP_TABLE_ID,
                                                             pc->getPriority(),
                                                             OFPUTIL_FF_SEND_FLOW_REM,
                                                             secGrpCookie,
                                                             secGrpSetId, 0,
-                                                            secGrpOut);
+                                                            isSystemRule,
+                                                            *secGrpOutRef);
                     } else {
                          flowutils::add_l2classifier_entries(*cls, act, log,
-                                                             TAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                             after_egress_table, egress_table,
                                                              EXP_DROP_TABLE_ID,
                                                              pc->getPriority(),
                                                              OFPUTIL_FF_SEND_FLOW_REM,
                                                              secGrpCookie,
-                                                             secGrpSetId, 0, secGrpOut);
-                      }                     
+                                                             secGrpSetId, 0, 
+                                                             isSystemRule,
+                                                             *secGrpOutRef);
+                      }
                 }
                 continue;
             }
@@ -896,83 +985,90 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                           remoteSubs,
                                                           boost::none,
                                                           boost::none,
-                                                          EXP_DROP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                          EXP_DROP_TABLE_ID, ingress_table,
                                                           EXP_DROP_TABLE_ID,
                                                           pc->getPriority(),
                                                           OFPUTIL_FF_SEND_FLOW_REM,
                                                           secGrpCookie,
                                                           secGrpSetId, 0,
-                                                          secGrpIn);
+                                                          isSystemRule,
+                                                          *secGrpInRef);
                 }  else {
                          flowutils::add_classifier_entries(*cls, act, log,
                                                            remoteSubs,
                                                            boost::none,
                                                            boost::none,
-                                                           TAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                           after_ingress_table, ingress_table,
                                                            EXP_DROP_TABLE_ID,
                                                            pc->getPriority(),
                                                            OFPUTIL_FF_SEND_FLOW_REM,
                                                            secGrpCookie,
                                                            secGrpSetId, 0,
-                                                           secGrpIn);
+                                                           isSystemRule,
+                                                           *secGrpInRef);
                    }
                 if (act == CA_REFLEX_FWD) {
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK, log,
                                                       remoteSubs,
                                                       boost::none,
                                                       boost::none,
-                                                      GROUP_MAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, ingress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpIn);
+                                                      isSystemRule,
+                                                      *secGrpInRef);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST, log,
                                                       remoteSubs,
                                                       boost::none,
                                                       boost::none,
-                                                      TAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                      after_ingress_table, ingress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpIn);
+                                                      isSystemRule,
+                                                      *secGrpInRef);
                     // add reverse entries for reflexive classifier
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK, log,
                                                       boost::none,
                                                       remoteSubs,
                                                       namedSvcPorts,
-                                                      GROUP_MAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, egress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       0,
                                                       secGrpSetId, 0,
-                                                      secGrpOut);
+                                                      isSystemRule,
+                                                      *secGrpOutRef);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW, log,
                                                       boost::none,
                                                       remoteSubs,
                                                       namedSvcPorts,
-                                                      TAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                      after_egress_table, egress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpOut);
+                                                      isSystemRule,
+                                                      *secGrpOutRef);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED, log,
                                                       boost::none,
                                                       remoteSubs,
                                                       namedSvcPorts,
-                                                      TAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                      after_egress_table, egress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpOut);
+                                                      isSystemRule,
+                                                      *secGrpOutRef);
                 }
             }
             if (dir == DirectionEnumT::CONST_BIDIRECTIONAL ||
@@ -982,83 +1078,90 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
                                                       boost::none,
                                                       remoteSubs,
                                                       namedSvcPorts,
-                                                      EXP_DROP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                      EXP_DROP_TABLE_ID, egress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpOut);
+                                                      isSystemRule,
+                                                      *secGrpOutRef);
                 } else {
                       flowutils::add_classifier_entries(*cls, act, log,
                                                         boost::none,
                                                         remoteSubs,
                                                         namedSvcPorts,
-                                                        TAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                        after_egress_table, egress_table,
                                                         EXP_DROP_TABLE_ID,
                                                         pc->getPriority(),
                                                         OFPUTIL_FF_SEND_FLOW_REM,
                                                         secGrpCookie,
                                                         secGrpSetId, 0,
-                                                        secGrpOut);
+                                                        isSystemRule,
+                                                        *secGrpOutRef);
                   }
                 if (act == CA_REFLEX_FWD) {
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_TRACK, log,
                                                       boost::none,
                                                       remoteSubs,
                                                       namedSvcPorts,
-                                                      GROUP_MAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, egress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpOut);
+                                                      isSystemRule,
+                                                      *secGrpOutRef);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_FWD_EST, log,
                                                       boost::none,
                                                       remoteSubs,
                                                       namedSvcPorts,
-                                                      TAP_TABLE_ID, SEC_GROUP_OUT_TABLE_ID,
+                                                      after_egress_table, egress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpOut);
+                                                      isSystemRule,
+                                                      *secGrpOutRef);
                     // add reverse entries for reflexive classifier
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_TRACK, log,
                                                       remoteSubs,
                                                       boost::none,
                                                       boost::none,
-                                                      GROUP_MAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                      GROUP_MAP_TABLE_ID, ingress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       0,
                                                       secGrpSetId, 0,
-                                                      secGrpIn);
+                                                      isSystemRule,
+                                                      *secGrpInRef);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_ALLOW, log,
                                                       remoteSubs,
                                                       boost::none,
                                                       boost::none,
-                                                      TAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                      after_ingress_table, ingress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpIn);
+                                                      isSystemRule,
+                                                      *secGrpInRef);
                     flowutils::add_classifier_entries(*cls, CA_REFLEX_REV_RELATED, log,
                                                       remoteSubs,
                                                       boost::none,
                                                       boost::none,
-                                                      TAP_TABLE_ID, SEC_GROUP_IN_TABLE_ID,
+                                                      after_ingress_table, ingress_table,
                                                       EXP_DROP_TABLE_ID,
                                                       pc->getPriority(),
                                                       OFPUTIL_FF_SEND_FLOW_REM,
                                                       secGrpCookie,
                                                       secGrpSetId, 0,
-                                                      secGrpIn);
+                                                      isSystemRule,
+                                                      *secGrpInRef);
                 }
             }
         }
@@ -1066,6 +1169,44 @@ void AccessFlowManager::handleSecGrpSetUpdate(const uri_set_t& secGrps,
 
     switchManager.writeFlow(secGrpsIdStr, SEC_GROUP_IN_TABLE_ID, secGrpIn);
     switchManager.writeFlow(secGrpsIdStr, SEC_GROUP_OUT_TABLE_ID, secGrpOut);
+
+    if (any_system_sec_rule_configured){
+        /*
+         * Configure drop flows to drop packets not matching any system
+         * security group rules.
+         * */
+        FlowEntryList dropLogFlowIn;
+        FlowBuilder().priority(2).cookie(flow::cookie::TABLE_DROP_FLOW)
+            .flags(OFPUTIL_FF_SEND_FLOW_REM)
+            .action().dropLog(SYS_SEC_GRP_IN_TABLE_ID)
+            .go(EXP_DROP_TABLE_ID)
+            .parent().build(dropLogFlowIn);
+        switchManager.writeFlow("SystemDropLogFlow", SYS_SEC_GRP_IN_TABLE_ID, dropLogFlowIn);
+
+        FlowEntryList dropLogFlowOut;
+        FlowBuilder().priority(2).cookie(flow::cookie::TABLE_DROP_FLOW)
+            .flags(OFPUTIL_FF_SEND_FLOW_REM)
+            .action().dropLog(SYS_SEC_GRP_OUT_TABLE_ID)
+            .go(EXP_DROP_TABLE_ID)
+            .parent().build(dropLogFlowOut);
+        switchManager.writeFlow("SystemDropLogFlow", SYS_SEC_GRP_OUT_TABLE_ID, dropLogFlowOut);
+
+        /*
+         * Configure system security group rules.
+         * */
+        switchManager.writeFlow(secGrpsIdStr, SYS_SEC_GRP_IN_TABLE_ID, sysSecGrpIn);
+        switchManager.writeFlow(secGrpsIdStr, SYS_SEC_GRP_OUT_TABLE_ID, sysSecGrpOut);
+    } else{
+
+        /* Delete all flows in System security  group tables except static flows.
+         * Static flows will simply forward packets to usual security group tables.
+         * */
+        switchManager.clearFlows(secGrpsIdStr, SYS_SEC_GRP_IN_TABLE_ID);
+        switchManager.clearFlows(secGrpsIdStr, SYS_SEC_GRP_OUT_TABLE_ID);
+
+        switchManager.clearFlows("SystemDropLogFlow", SYS_SEC_GRP_IN_TABLE_ID);
+        switchManager.clearFlows("SystemDropLogFlow", SYS_SEC_GRP_OUT_TABLE_ID);
+    }
 }
 
 void AccessFlowManager::lbIfaceUpdated(const std::string& uuid) {

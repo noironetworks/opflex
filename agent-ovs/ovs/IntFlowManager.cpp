@@ -5938,6 +5938,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
                                                   OFPUTIL_FF_SEND_FLOW_REM,
                                                   cookie,
                                                   cvnid, pvnid,
+                                                  false,
                                                   entryList);
             } else {
                 flowutils::add_classifier_entries(*cls, act, log,
@@ -5950,6 +5951,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
                                                   OFPUTIL_FF_SEND_FLOW_REM,
                                                   cookie,
                                                   cvnid, pvnid,
+                                                  false,
                                                   entryList);
               }
         }
@@ -5966,6 +5968,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
                                                     OFPUTIL_FF_SEND_FLOW_REM,
                                                     cookie,
                                                     pvnid, cvnid,
+                                                    false,
                                                     entryList);
               } else {
                   flowutils::add_classifier_entries(*cls, act, log,
@@ -5978,6 +5981,7 @@ void IntFlowManager::addContractRules(FlowEntryList& entryList,
                                                     OFPUTIL_FF_SEND_FLOW_REM,
                                                     cookie,
                                                     pvnid, cvnid,
+                                                    false,
                                                     entryList);
              }
         }

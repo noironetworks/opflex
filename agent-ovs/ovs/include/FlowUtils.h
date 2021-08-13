@@ -121,6 +121,7 @@ void add_classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                             uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
+                            bool isSystemRule,
                             /* out */ FlowEntryList& entries);
 
 /**
@@ -145,6 +146,7 @@ void add_l2classifier_entries(modelgbp::gbpe::L24Classifier& clsfr,
                               uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
+                              bool isSystemRule,
                               /* out */ FlowEntryList& entries);
 /**
  * Add a match entry for the DHCP v4 and v6 request
