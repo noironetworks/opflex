@@ -290,6 +290,7 @@ void TableDropStatsManagerFixture::testOneStaticDropFlow (
 {
     uint64_t expected_pkt_count = INITIAL_PACKET_COUNT,
             expected_byte_count = INITIAL_PACKET_COUNT * PACKET_SIZE;
+    int ctr = 1;
     FlowEntryList dropLogFlows;
     if(portConn.getSwitchName()=="int_conn") {
         createIntBridgeDropFlowList(table_id,
@@ -299,10 +300,10 @@ void TableDropStatsManagerFixture::testOneStaticDropFlow (
             expected_byte_count *=4;
         }
     } else {
+        ctr = 2;
         createAccBridgeDropFlowList(table_id,
                         dropLogFlows);
     }
-    int ctr = 1;
     if(refresh_aged_flow) {
         ctr++;
     }

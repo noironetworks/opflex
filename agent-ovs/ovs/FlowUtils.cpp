@@ -168,13 +168,17 @@ void add_l2classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                               uint16_t priority,
                               uint32_t flags, uint64_t cookie,
                               uint32_t svnid, uint32_t dvnid,
+                              bool isSystemRule,
                               /* out */ FlowEntryList& entries) {
     if (clsfr.isProtSet())
         return;
 
     ovs_be64 ckbe = ovs_htonll(cookie);
+    if (isSystemRule){
+        svnid = 0;
+        dvnid = 0;
+    }
     FlowBuilder f;
-
     f.cookie(ckbe)
      .flags(flags);
     flowutils::match_group(f, priority, svnid, dvnid);
@@ -203,12 +207,18 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                             uint16_t priority,
                             uint32_t flags, uint64_t cookie,
                             uint32_t svnid, uint32_t dvnid,
+                            bool isSystemRule,
                             /* out */ FlowEntryList& entries) {
     using modelgbp::l2::EtherTypeEnumT;
     using modelgbp::l4::TcpFlagsEnumT;
     ovs_be64 ckbe = ovs_htonll(cookie);
     MaskList srcPorts;
     MaskList dstPorts;
+
+    if (isSystemRule){
+        svnid = 0;
+        dvnid = 0;
+    }
     if (clsfr.getProt(0) == 1 &&
         (clsfr.isIcmpTypeSet() || clsfr.isIcmpCodeSet())) {
         if (clsfr.isIcmpTypeSet()) {
@@ -287,6 +297,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                 for (const Mask& dm : dstPorts) {
                     for (uint32_t flagMask : tcpFlagsVec) {
                         FlowBuilder f;
+
                         f.cookie(ckbe);
                         f.flags(flags);
 
@@ -320,7 +331,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                                  f.action().dropLog(currentTable,ActionBuilder::CaptureReason::POLICY_DENY,cookie).go(nextTable);
                              }
                              else {
-                                 f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable); 
+                                 f.action().metadata(0, flow::meta::DROP_LOG).go(nextTable);
                              }
                              break;
                         case flowutils::CA_ALLOW:
@@ -354,11 +365,13 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                                              FlowBuilder::CT_NEW,
                                              FlowBuilder::CT_TRACKED |
                                              FlowBuilder::CT_NEW);
-                            f.action().conntrack(ActionBuilder::CT_COMMIT,
-                                                 MFF_REG6);
-			    if(log) {
-				f.action().permitLog(currentTable, dropTable, cookie);
-			    }
+                            if (!isSystemRule) {
+                                f.action().conntrack(ActionBuilder::CT_COMMIT,
+                                                     MFF_REG6);
+                                if(log) {
+                                    f.action().permitLog(currentTable, dropTable, cookie);
+			                    }
+                            }
                             f.action().go(nextTable);
                             break;
                         case CA_REFLEX_FWD_EST:

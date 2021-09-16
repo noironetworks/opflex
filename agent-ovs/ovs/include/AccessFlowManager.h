@@ -140,10 +140,20 @@ public:
          */
         GROUP_MAP_TABLE_ID,
         /**
+         * Enforece system security group policy on packets coming into
+         * the endpoint from switch.
+         */
+        SYS_SEC_GRP_IN_TABLE_ID,
+        /**
          * Enforce security group policy on packets coming in to the
          * endpoint from the switch
          */
         SEC_GROUP_IN_TABLE_ID,
+        /**
+         * Enforce system security group policy on packets coming out of
+         * the endpoints to the switch.
+         */
+        SYS_SEC_GRP_OUT_TABLE_ID,
         /**
          * Enforce security group policy on packets coming out from
          * the endpoint to the switch
@@ -177,7 +187,8 @@ private:
     void handleSecGrpSetUpdate(const EndpointListener::uri_set_t& secGrps,
                                const std::string& secGrpsId);
     void handleDscpQosUpdate(const string& interface, uint8_t dscp);
-
+    bool checkIfSystemSecurityGroup(const string& uri);
+    
     Agent& agent;
     SwitchManager& switchManager;
     IdGenerator& idGen;
