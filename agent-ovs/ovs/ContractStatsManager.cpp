@@ -288,8 +288,7 @@ void ContractStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
                  i++) {
                 RoutingDomainDropCounter::
                     remove(agent->getFramework(),getAgentUUID(),
-                           dropCounterList_[rdName]->
-                           uidList[dropCounterList_[rdName]->count],
+                           dropCounterList_[rdName]->uidList[i],
                            rdName);
             }
             if (dropCounterList_.count(rdName))
