@@ -182,7 +182,7 @@ extern const uint64_t REMOTE_TUNNEL_BOUNCE_TO_NODE;
 
 namespace access_meta {
 
-const uint64_t MASK =0xff00;
+const uint64_t MASK =0x0300;
 /**
  * Ingress to ep
  */
