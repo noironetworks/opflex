@@ -4,11 +4,6 @@ compiler:
 os: linux
 dist: focal
 
-#default cache timeout is 3 minutes, if need be we can increase timeout
-cache:
-  directories:
-    - ../grpc
-
 addons:
   apt:
     packages:
