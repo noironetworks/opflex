@@ -12,9 +12,8 @@ sudo dpkg -i prometheus-cpp_0.12.1_amd64.deb
 mkdir -p ../grpc
 pushd ../grpc
 if ! [ "$(ls -A .)" ]; then
-    git clone -b v1.31.0 https://github.com/grpc/grpc --config submodule.third_party/re2.url=https://github.com/google/re2.git --config submodule.third_party/re2.active=true
+    git clone --recurse-submodules -b v1.31.0 https://github.com/grpc/grpc
     pushd grpc
-    git submodule update --init
     mkdir -p cmake/build
     pushd cmake/build
     cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local \
