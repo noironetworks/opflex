@@ -252,10 +252,15 @@ void PacketLogHandler::parseLog(unsigned char *buf , std::size_t length) {
         pruneLog(p);
         if(p.pruneLog)
             return;
-        std::string dropReason;
+        std::string dropReason,dropLogMsg;
         bool isPermit = getDropReason(p, dropReason);
         p.packetTuple.setField(0, dropReason);
-        LOG(INFO)<< dropReason << " " << p.parsedString;
+        dropLogMsg = dropReason + " " + p.parsedString;
+        if(!opflexagent::isDropLogConsoleSink()) {
+            DROPLOG(dropLogMsg);
+        } else {
+            LOG(INFO)<< dropLogMsg;
+        }
         if(!packetEventNotifSock.empty() && !isPermit )
         {
             {

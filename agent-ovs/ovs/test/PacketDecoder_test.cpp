@@ -168,7 +168,7 @@ BOOST_FIXTURE_TEST_CASE(arp_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Int-PORT_SECURITY_TABLE DENY", "9e:72:a6:94:18:af", "ff:ff:ff:ff:ff:ff", "ARP", "13.0.0.3", "13.0.0.5" ,"", "", "");
-    std::string expected(" MAC=ff:ff:ff:ff:ff:ff:9e:72:a6:94:18:af:ARP ARP_SPA=13.0.0.3 ARP_TPA=13.0.0.5 ARP_OP=1");
+    std::string expected(" SMAC=9e:72:a6:94:18:af DMAC=ff:ff:ff:ff:ff:ff ETYP=ARP ARP_SPA=13.0.0.3 ARP_TPA=13.0.0.5 ARP_OP=1");
     int ret = pktDecoder.decode(arp_buf, 74, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;
@@ -182,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(icmp_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Acc-GROUP_MAP_TABLE MISS", "9e:72:a6:94:18:af", "5a:08:66:ce:0b:49", "IPv4", "14.0.0.2", "100.0.0.1" ,"ICMP", "", "");
-    std::string expected(" MAC=5a:08:66:ce:0b:49:9e:72:a6:94:18:af:IPv4 SRC=14.0.0.2 DST=100.0.0.1 LEN=28 DSCP=0 TTL=255 ID=0 FLAGS=0 FRAG=0 PROTO=ICMP TYPE=8 CODE=0 ID=0 SEQ=0");
+    std::string expected(" SMAC=9e:72:a6:94:18:af DMAC=5a:08:66:ce:0b:49 ETYP=IPv4 SRC=14.0.0.2 DST=100.0.0.1 LEN=28 DSCP=0 TTL=255 ID=0 FLAGS=0 FRAG=0 PROTO=ICMP TYPE=8 CODE=0 ID=0 SEQ=0");
     int ret = pktDecoder.decode(icmp_buf, 74, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;
@@ -196,7 +196,7 @@ BOOST_FIXTURE_TEST_CASE(tcp_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Int-SOURCE_TABLE PERMIT", "9e:72:a6:94:18:af", "5a:08:66:ce:0b:49", "IPv4", "14.0.0.2", "100.0.0.1" ,"TCP", "41634", "179");
-    std::string expected(" MAC=5a:08:66:ce:0b:49:9e:72:a6:94:18:af:IPv4 SRC=14.0.0.2 DST=100.0.0.1 LEN=28 DSCP=0 TTL=255 ID=0 FLAGS=0 FRAG=0 PROTO=TCP SPT=41634 DPT=179 SEQ=2939917199 ACK=0 LEN=10 WINDOWS=29200 SYN  URGP=0");
+    std::string expected(" SMAC=9e:72:a6:94:18:af DMAC=5a:08:66:ce:0b:49 ETYP=IPv4 SRC=14.0.0.2 DST=100.0.0.1 LEN=28 DSCP=0 TTL=255 ID=0 FLAGS=0 FRAG=0 PROTO=TCP SPT=41634 DPT=179 SEQ=2939917199 ACK=0 LEN=10 WINDOWS=29200 SYN  URGP=0");
     int ret = pktDecoder.decode(tcp_buf, 106, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;
@@ -210,7 +210,7 @@ BOOST_FIXTURE_TEST_CASE(udp_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Acc-SEC_GROUP_OUT_TABLE MISS", "9e:72:a6:94:18:af", "5a:08:66:ce:0b:49", "IPv4", "14.0.0.2", "100.0.0.1" ,"UDP", "60376", "161");
-    std::string expected(" MAC=5a:08:66:ce:0b:49:9e:72:a6:94:18:af:IPv4 SRC=14.0.0.2 DST=100.0.0.1 LEN=28 DSCP=0 TTL=255 ID=0 FLAGS=0 FRAG=0 PROTO=UDP SPT=60376 DPT=161 LEN=74");
+    std::string expected(" SMAC=9e:72:a6:94:18:af DMAC=5a:08:66:ce:0b:49 ETYP=IPv4 SRC=14.0.0.2 DST=100.0.0.1 LEN=28 DSCP=0 TTL=255 ID=0 FLAGS=0 FRAG=0 PROTO=UDP SPT=60376 DPT=161 LEN=74");
     int ret = pktDecoder.decode(udp_buf, 66, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;
@@ -224,7 +224,7 @@ BOOST_FIXTURE_TEST_CASE(udp_over_v6_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Int-SERVICE_REV_TABLE MISS", "9e:72:a6:94:18:af", "5a:08:66:ce:0b:49", "IPv6", "fe80::a00:27ff:fefe:8f95", "ff02::1:2" ,"UDP", "546", "547");
-    std::string expected(" MAC=5a:08:66:ce:0b:49:9e:72:a6:94:18:af:IPv6 SRC=fe80::a00:27ff:fefe:8f95 DST=ff02::1:2 LEN=60 TC=0 HL=1 FL=0 PROTO=UDP SPT=546 DPT=547 LEN=60");
+    std::string expected(" SMAC=9e:72:a6:94:18:af DMAC=5a:08:66:ce:0b:49 ETYP=IPv6 SRC=fe80::a00:27ff:fefe:8f95 DST=ff02::1:2 LEN=60 TC=0 HL=1 FL=0 PROTO=UDP SPT=546 DPT=547 LEN=60");
     int ret = pktDecoder.decode(udpv6_buf, 86, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;
@@ -238,7 +238,7 @@ BOOST_FIXTURE_TEST_CASE(tcp_over_v6_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Int-BRIDGE_TABLE MISS", "9e:72:a6:94:18:af", "5a:08:66:ce:0b:49", "IPv6", "fe80::a00:27ff:fefe:8f95", "ff02::1:2" ,"TCP", "41634", "179");
-    std::string expected(" MAC=5a:08:66:ce:0b:49:9e:72:a6:94:18:af:IPv6 SRC=fe80::a00:27ff:fefe:8f95 DST=ff02::1:2 LEN=60 TC=0 HL=1 FL=0 PROTO=TCP SPT=41634 DPT=179 SEQ=2939917199 ACK=0 LEN=10 WINDOWS=29200 SYN  URGP=0");
+    std::string expected(" SMAC=9e:72:a6:94:18:af DMAC=5a:08:66:ce:0b:49 ETYP=IPv6 SRC=fe80::a00:27ff:fefe:8f95 DST=ff02::1:2 LEN=60 TC=0 HL=1 FL=0 PROTO=TCP SPT=41634 DPT=179 SEQ=2939917199 ACK=0 LEN=10 WINDOWS=29200 SYN  URGP=0");
     int ret = pktDecoder.decode(tcpv6_buf, 118, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;
@@ -252,7 +252,7 @@ BOOST_FIXTURE_TEST_CASE(ip_options_unrecognized_test, PacketDecoderFixture) {
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     PacketTuple expectedTuple("", "Int-PORT_SECURITY_TABLE MISS", "fa:16:3e:d3:f3:0b", "01:00:5e:00:00:16", "IPv4", "192.168.210.8", "224.0.0.22" ,"2_unrecognized", "", "");
-    std::string expected(" MAC=01:00:5e:00:00:16:fa:16:3e:d3:f3:0b:Qtag QTAG=4094 IPv4 SRC=192.168.210.8 DST=224.0.0.22 LEN=40 DSCP=48 TTL=1 ID=0 FLAGS=2 FRAG=0 PROTO=2_unrecognized");
+    std::string expected(" SMAC=fa:16:3e:d3:f3:0b DMAC=01:00:5e:00:00:16 ETYP=Qtag QTAG=4094 IPv4 SRC=192.168.210.8 DST=224.0.0.22 LEN=40 DSCP=48 TTL=1 ID=0 FLAGS=2 FRAG=0 PROTO=2_unrecognized");
     int ret = pktDecoder.decode(igmp_buf, 178, p);
     BOOST_CHECK(ret == 0);
     std::string dropReason;

@@ -221,10 +221,13 @@ int main(int argc, char** argv) {
             ("watch,w", "Watch configuration directories for changes")
             ("log", po::value<string>()->default_value(""),
              "Log to the specified file (default standard out)")
+            ("drop_log", po::value<string>()->default_value(""),
+             "Log drops to the specified file (default standard out)")
             ("level", po::value<string>()->default_value("info"),
              "Use the specified log level (default info). "
              "Overridden by log level in configuration file")
             ("syslog", "Log to syslog instead of file or standard out")
+            ("drop_log_syslog", "Log drops to syslog instead of file or standard out")
             ("daemon", "Run the agent as a daemon");
     } catch (const boost::bad_lexical_cast& e) {
         std::cerr << e.what() << std::endl;
@@ -233,8 +236,8 @@ int main(int argc, char** argv) {
 
     bool daemon = false;
     bool watch = false;
-    bool logToSyslog = false;
-    std::string log_file;
+    bool logToSyslog = false,dropLogSyslog = false;
+    std::string log_file, dropLogFile;
     std::string level_str;
 
     po::variables_map vm;
@@ -260,7 +263,11 @@ int main(int argc, char** argv) {
             watch = true;
         }
         log_file = vm["log"].as<string>();
+        dropLogFile = vm["drop_log"].as<string>();
         level_str = vm["level"].as<string>();
+        if (vm.count("drop_log_syslog")) {
+            dropLogSyslog = true;
+        }
         if (vm.count("syslog")) {
             logToSyslog = true;
         }
@@ -273,6 +280,7 @@ int main(int argc, char** argv) {
         daemonize();
 
     initLogging(level_str, logToSyslog, log_file);
+    initDropLogging(dropLogSyslog, dropLogFile);
 
     // Initialize agent and configuration
     std::vector<string> configFiles;
