@@ -15,6 +15,7 @@
 #include <opflex/yajr/yajr.hpp>
 #include <opflex/yajr/rpc/rpc.hpp>
 #include <opflex/yajr/transport/PlainText.hpp>
+#include <opflex/yajr/async_doc_parser.hpp>
 
 #include <opflex/logging/OFLogHandler.h>
 
@@ -507,7 +508,8 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
                 nextId_(0),
                 keepAliveInterval_(0),
                 lastHeard_(0),
-                transport_(transport::PlainText::getPlainTextTransport())
+                transport_(transport::PlainText::getPlainTextTransport()),
+                asyncDocParser_([this](Document& d) -> int { return asyncDocParserCb(d); })
             {
                 req_.data = this;
                 getHandle()->loop = uvLoopSelector_(getData());
@@ -834,6 +836,10 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
         chunk_size += ssIn_.tellp();
         return chunk_size;
     }
+
+    int asyncDocParserCb(rapidjson::Document &d);
+
+    mutable AsyncDocumentParser<> asyncDocParser_;
 };
 static_assert (sizeof(CommunicationPeer) <= 4096, "CommunicationPeer won't fit on one page");
 

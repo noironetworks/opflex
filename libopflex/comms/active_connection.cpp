@@ -161,13 +161,6 @@ void on_active_connection(uv_connect_t *req, int status) {
         return;
     }
 
-    if(peer->_.ai) { /* we succeeded connecting before the last attempt */
-        uv_freeaddrinfo(peer->_.ai);
-    }
-#ifdef OVERZEALOUS_ABOUT_CLEANNESS
-    peer->ai_next = NULL;
-#endif
-
     if (peer->unchoke()) {
         retry_later(peer);
         return;

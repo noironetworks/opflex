@@ -102,7 +102,8 @@ util_include_HEADERS = \
 	include/opflex/util/ThreadManager.h
 yajr_includedir = $(includedir)/opflex/yajr
 yajr_include_HEADERS = \
-    include/opflex/yajr/yajr.hpp
+    include/opflex/yajr/yajr.hpp \
+    include/opflex/yajr/async_doc_parser.hpp
 yajr_internal_includedir = $(includedir)/opflex/yajr/internal
 yajr_internal_include_HEADERS = \
     include/opflex/yajr/internal/comms.hpp
