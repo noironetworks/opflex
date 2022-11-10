@@ -11,11 +11,15 @@
 #  include <config.h>
 #endif
 
+#include <cstdlib>
 #include <yajr/rpc/gen/echo.hpp>
 #include <yajr/rpc/internal/json_stream_wrappers.hpp>
 #include <yajr/rpc/methods.hpp>
 
 #include <rapidjson/error/en.h>
+
+template<>
+int yajr::AsyncDocumentParser<>::instance_count_ = 0;
 
 namespace yajr {
     namespace internal {
@@ -185,8 +189,72 @@ int CommunicationPeer::tcpInit() {
     return 0;
 }
 
+int CommunicationPeer::asyncDocParserCb(rapidjson::Document &d) {
+    if (d.HasParseError()) {
+        rapidjson::ParseErrorCode e = d.GetParseError();
+        size_t o = d.GetErrorOffset();
+        LOG(ERROR)
+            << "Error: " << rapidjson::GetParseError_En(e) << " at offset "
+            << o << " of message (" << asyncDocParser_.Getbuf() << ")";
+        LOG(ERROR)
+            << "unprocessed part (" << asyncDocParser_.GetUnparsedbuf() << ")"
+            << ", count " << asyncDocParser_.Tell()
+            << ", instance " << asyncDocParser_.GetInstance()
+            << ", allocs " << asyncDocParser_.GetAllocs();
+        onError(UV_EPROTO);
+        onDisconnect();
+        return -1;
+    } else {
+        LOG(DEBUG) << "Success Parsing, count " <<  asyncDocParser_.Tell()
+                   << "(" << asyncDocParser_.Getbuf() << ")"
+                   << ", instance " << asyncDocParser_.GetInstance()
+                   << ", allocs " << asyncDocParser_.GetAllocs();
+        auto inb = yajr::rpc::MessageFactory::getInboundMessage(*this, d);
+        if (!inb) {
+            LOG(ERROR)
+                << "Error: in getInboundMessage for document ("
+                << asyncDocParser_.Getbuf() << ")"
+                << ", count " << asyncDocParser_.Tell()
+                << ", instance " << asyncDocParser_.GetInstance()
+                << ", allocs " << asyncDocParser_.GetAllocs();
+            onError(UV_EPROTO);
+            onDisconnect();
+        }
+        std::unique_ptr<yajr::rpc::InboundMessage> msg(inb);
+        if (!msg) {
+            LOG(ERROR)
+                << "Error: in composing message for document ("
+                << asyncDocParser_.Getbuf() << ")"
+                << ", count " << asyncDocParser_.Tell()
+                << ", instance " << asyncDocParser_.GetInstance()
+                << ", allocs " << asyncDocParser_.GetAllocs();
+            LOG(ERROR) << "Skipping inbound message";
+            return 0;
+        }
+        msg->process();
+        return 0;
+    }
+}
+
 void CommunicationPeer::readBufNoNull(char* buffer, size_t nread) {
     if (!nread) {
+        return;
+    }
+
+    if (std::getenv("OVS_USE_ASYNC_JSON")) {
+        bumpLastHeard();
+        int ret = asyncDocParser_.ParsePart(buffer, nread);
+        if (ret < 0) {
+            LOG(ERROR) << "Error ParsePart for message ("
+                       << buffer << ") Length " << nread
+                       << ", instance " << asyncDocParser_.GetInstance()
+                       << ", allocs " << asyncDocParser_.GetAllocs();
+        } else {
+            LOG(DEBUG) << "ParsePart of length " << nread
+                       << "(" << buffer << ")"
+                       << ", instance " << asyncDocParser_.GetInstance()
+                       << ", allocs " << asyncDocParser_.GetAllocs();
+        }
         return;
     }
 
@@ -257,6 +325,29 @@ void CommunicationPeer::readBufferZ(char const * buffer, size_t nread) {
     if (!connected_) {
         LOG(WARNING) << "skipping read as not connected";
     }
+
+    if (std::getenv("OPFLEX_USE_ASYNC_JSON")) {
+        if (!nread) {
+            return;
+        }
+
+        bumpLastHeard();
+        int ret = asyncDocParser_.ParsePart(buffer, nread);
+        if (ret < 0) {
+            LOG(ERROR) << "Error ParsePart for message ("
+                       << buffer
+                       << "), length " << nread
+                       << ", instance " << asyncDocParser_.GetInstance()
+                       << ", allocs " << asyncDocParser_.GetAllocs();
+        } else {
+            LOG(DEBUG) << "ParsePart of length " << nread
+                       << "(" << buffer << ")"
+                       << ", instance " << asyncDocParser_.GetInstance()
+                       << ", allocs " << asyncDocParser_.GetAllocs();
+        }
+        return;
+    }
+
     while ((--nread > 0) && connected_) {
         size_t chunk_size = readChunk(buffer);
         nread -= chunk_size++;
