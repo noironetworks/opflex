@@ -42,6 +42,7 @@
 #include <random>
 
 #include <dlfcn.h>
+#include <cstdlib>
 
 namespace opflexagent {
 
@@ -182,6 +183,8 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_KEEPALIVE("opflex.timers.keepalive-timeout");
     static const std::string DISABLED_FEATURES("feature.disabled");
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
+    static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
+    static const std::string OVS_ASYNC_JSON("ovs.asyncjson.enabled");
 
     // set feature flags to true
     clearFeatureFlags();
@@ -471,6 +474,19 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         featureFlag[FeatureList::ERSPAN] = false;
     }
 
+    optional<bool> opflexAsyncJsonEnabled =
+        properties.get_optional<bool>(OPFLEX_ASYC_JSON);
+    if (opflexAsyncJsonEnabled) {
+        if (opflexAsyncJsonEnabled.get() == true)
+            setenv("OPFLEX_USE_ASYNC_JSON", "", true);
+    }
+
+    optional<bool> ovsAsyncJsonEnabled =
+        properties.get_optional<bool>(OVS_ASYNC_JSON);
+    if (ovsAsyncJsonEnabled) {
+        if (ovsAsyncJsonEnabled.get() == true)
+            setenv("OVS_USE_ASYNC_JSON", "", true);
+    }
 }
 
 void Agent::applyProperties() {
