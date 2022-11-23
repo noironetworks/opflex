@@ -196,8 +196,18 @@ public:
      * */
     static bool compareIps(const std::string &ip1, const std::string &ip2, const std::string &prefixLen) {
         using boost::asio::ip::address;
-        address addr1 = address::from_string(ip1);
-        address addr2 = address::from_string(ip2);
+        if (ip1.empty() || ip2.empty()) {
+            return false;
+        }
+        boost::system::error_code ec;
+        address addr1 = address::from_string(ip1,ec);
+        if (ec){
+                return false;
+        }
+        address addr2 = address::from_string(ip2,ec);
+        if (ec){
+                return false;
+        }
         if(addr1.is_v4() != addr2.is_v4()) {
             return false;
         }
