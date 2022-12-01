@@ -392,6 +392,8 @@ int CommunicationPeer::writeIOV(std::vector<iovec>& iov) const {
                     iov.size(),
                     on_write))) {
         LOG(ERROR) << this << "uv_write: [" << uv_err_name(rc) << "] " << uv_strerror(rc);
+        // When this happens we do not recover until restart, until we figure out why restart opflex
+        assert(0);
         onError(rc);
         const_cast<CommunicationPeer *>(this)->onDisconnect();
     } else {
