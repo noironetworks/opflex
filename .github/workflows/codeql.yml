@@ -1,0 +1,110 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "master", "indus_xenial", "indus", "jefferson", "jordan", "judith", "kwai" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: "38 0 * * 4"
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ cpp ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libboost-all-dev libuv1-dev doxygen openssl libssl-dev rapidjson-dev autoconf openjdk-8-jdk-headless maven texlive-font-utils python-six
+
+      - name: Configure
+        run: |
+          mkdir -p $RUNNER_TEMP/lib/pkgconfig
+          mkdir -p $RUNNER_TEMP/bin
+          mkdir -p $RUNNER_TEMP/sbin
+          mkdir -p $RUNNER_TEMP/include
+          mkdir -p $RUNNER_TEMP/run
+          mkdir -p $RUNNER_TEMP/var
+          mkdir -p $RUNNER_TEMP/etc
+          ROOT=$RUNNER_TEMP
+          export PATH=$PATH:$RUNNER_TEMP/bin
+          git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth 1
+          pushd ovs
+          ./boot.sh
+          ./configure --prefix=$ROOT --enable-shared
+          make -j4
+          rm -rf $ROOT/include/openvswitch
+          make install
+          mkdir -p $ROOT/include/openvswitch/openvswitch
+          mv $ROOT/include/openvswitch/*.h $ROOT/include/openvswitch/openvswitch
+          mv $ROOT/include/openflow $ROOT/include/openvswitch
+          cp -t "$ROOT/include/openvswitch/" include/*.h
+          find lib -name "*.h" -exec cp --parents -t "$ROOT/include/openvswitch/" {} \;
+          popd
+          git clone https://github.com/noironetworks/3rdparty-debian.git
+          git clone https://github.com/jupp0r/prometheus-cpp.git
+          pushd prometheus-cpp
+          git checkout v0.12.1
+          git submodule init
+          git submodule update
+          git apply ../3rdparty-debian/prometheus/prometheus-cpp.patch
+          mkdir _build && cd _build
+          cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PUSH=OFF -DCMAKE_INSTALL_PREFIX=$ROOT
+          make -j4
+          make install
+          popd
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql.yml
+          queries: +security-and-quality
+
+      - name: Build cpp
+        run: |
+          ROOT=$RUNNER_TEMP
+          export PATH=$PATH:$RUNNER_TEMP/bin
+          export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$RUNNER_TEMP/lib/pkgconfig
+          cd $GITHUB_WORKSPACE
+          pushd libopflex
+          ./autogen.sh
+          ./configure --prefix=$ROOT
+          make -j2
+          make install
+          popd
+          pushd genie
+          mvn compile exec:java
+          pushd target/libmodelgbp
+          bash autogen.sh
+          ./configure --prefix=$ROOT
+          make
+          make install
+          popd
+          popd
+          pushd agent-ovs
+          ./autogen.sh
+          export CPPFLAGS=-I$ROOT/include
+          export LDFLAGS=-L$ROOT/lib
+          ./configure --prefix=$ROOT
+          make -j2
+          popd
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
