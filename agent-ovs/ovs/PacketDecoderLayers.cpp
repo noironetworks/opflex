@@ -23,7 +23,7 @@ int EthernetLayer::configure() {
 
 void EthernetLayer::getFormatString(boost::format &fmtStr) {
     //Format string to print the layer goes here
-    fmtStr = boost::format(" MAC=%1%:%2%:%3%");
+    fmtStr = boost::format(" SMAC=%2% DMAC=%1% ETYP=%3%");
 }
 
 int QtagLayer::configure() {

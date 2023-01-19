@@ -61,6 +61,27 @@ void initLogging(const std::string& level, bool toSyslog,
                  const std::string& syslog_name = "opflex-agent");
 
 /**
+ * Initialize droplogging
+ *
+ * @param toSyslog if true, log messages are written to syslog; parameter
+ * "log_file" is ignored in that case
+ * @param log_file the file to log to, or empty for console
+ * @param level the log level to log at
+ * @param syslog_name the name to use when logging to syslog
+ */
+void initDropLogging(bool toSyslog,
+                     const std::string &log_file,
+                     const std::string& level="info",
+                     const std::string& syslog_name = "opflex-agent-drop-log");
+
+/**
+ * Check whether droplogs are to be managed or as opflex-agent logs
+ * True means that they are treated as opflex-agent logs.
+ * False means they go to a separate file/syslog as configured
+ */
+bool isDropLogConsoleSink();
+
+/**
  * Change the logging level of the agent.
  *
  * @param level the log level to log at. If this is not a valid string,
@@ -80,6 +101,12 @@ const std::string & getLogLevelString();
  * NULL.
  */
 LogSink * getLogSink();
+
+/**
+ * Get the currently configured drop-log destination. The return pointer is never
+ * NULL.
+ */
+LogSink * getDropLogSink();
 
 /**
  * Logger used to construct and write a log message to the current log
@@ -141,6 +168,10 @@ private:
     if (lvl <= opflexagent::logLevel)                                      \
         opflexagent::getLogSink()->write(lvl, filename, lineNo,            \
                                       functionName, message);
+
+#define DROPLOG(message)              \
+        opflexagent::getDropLogSink()->write(LogLevel::INFO,"",-1,"", \
+                                       message);
 } /* namespace opflexagent */
 
 #endif /* AGENT_LOGGING_H */

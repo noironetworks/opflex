@@ -21,6 +21,7 @@
 
 #include <fstream>
 #include <mutex>
+#include <atomic>
 
 #include <syslog.h>
 
@@ -29,6 +30,7 @@ using opflex::logging::OFLogHandler;
 namespace opflexagent {
 
 AgentLogHandler logHandler(OFLogHandler::NO_LOGGING);
+AgentLogHandler dropLogHandler(OFLogHandler::NO_LOGGING);
 
 LogLevel logLevel = DEBUG;
 
@@ -75,9 +77,14 @@ public:
         case FATAL:   levelStr = LEVEL_STR_FATAL; break;
         }
         std::lock_guard<std::mutex> lock(logMtx);
-        (*out) << "[" << boost::posix_time::microsec_clock::local_time()
-            << "] [" << levelStr << "] [" << filename << ":" << lineno << ":"
-            << functionName << "] " << message << std::endl;
+        if( lineno != -1) {
+            (*out) << "[" << boost::posix_time::microsec_clock::local_time()
+                << "] [" << levelStr << "] [" << filename << ":" << lineno << ":"
+                << functionName << "] " << message << std::endl;
+        } else {
+            (*out) << "[" << boost::posix_time::microsec_clock::local_time()
+                << "] " << message << std::endl;
+        }
     }
 
 private:
@@ -123,9 +130,13 @@ public:
         case ERROR:   priority = LOG_ERR; break;
         case FATAL:   priority = LOG_CRIT; break;
         }
-        syslog(priority,
-               "[%s:%d:%s] %s",
-               filename, lineno, functionName, message.c_str());
+        if(lineno != -1) {
+            syslog(priority,
+                   "[%s:%d:%s] %s",
+                   filename, lineno, functionName, message.c_str());
+        } else {
+            syslog(priority," %s",message.c_str());
+        }
     }
 
 private:
@@ -134,9 +145,19 @@ private:
 
 static OStreamLogSink consoleLogSink(std::cout);
 static LogSink * currentLogSink = &consoleLogSink;
+static LogSink * currentDropLogSink = &consoleLogSink;
+static std::atomic<bool> dropLogConsoleSink;
 
 LogSink * getLogSink() {
     return currentLogSink;
+}
+
+LogSink * getDropLogSink() {
+    return currentDropLogSink;
+}
+
+bool isDropLogConsoleSink() {
+    return dropLogConsoleSink;
 }
 
 void initLogging(const std::string& levelstr,
@@ -150,6 +171,20 @@ void initLogging(const std::string& levelstr,
     }
     OFLogHandler::registerHandler(logHandler);
 
+    setLoggingLevel(levelstr);
+}
+
+void initDropLogging(bool toSyslog,
+                     const std::string& log_file,
+                     const std::string &levelstr,
+                     const std::string& syslog_name) {
+    if (toSyslog) {
+        currentDropLogSink = new SyslogLogSink(syslog_name);
+    } else if (!log_file.empty()) {
+        currentDropLogSink = new OStreamLogSink(log_file);
+    } else {
+        dropLogConsoleSink = true;
+    }
     setLoggingLevel(levelstr);
 }
 
