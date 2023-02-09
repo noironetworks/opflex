@@ -1221,14 +1221,15 @@ void AgentPrometheusManager::createDynamicGaugeSvcTarget (SVC_TARGET_METRICS met
 
     auto const &label_map = createLabelMapFromSvcTargetAttr(uuid, nhip, svc_attr_map,
                                                             ep_attr_map, isNodePort);
-    auto hash_new = hash_labels(label_map);
+    LabelHasher hasher;
+    auto hash_new = hasher(label_map);
 
     if (mgauge) {
         /**
          * Detect attribute change by comparing hashes of cached label map
          * with new label map
          */
-        if (hash_new == hash_labels(mgauge.get().first))
+        if (hash_new == hasher(mgauge.get().first))
             return;
         else {
             LOG(DEBUG) << "addNupdate svctargetcounter key " << key
@@ -1277,7 +1278,8 @@ void AgentPrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
         return;
 
     auto const &label_map = createLabelMapFromSvcAttr(uuid, svc_attr_map, isNodePort);
-    auto hash_new = hash_labels(label_map);
+    LabelHasher hasher;
+    auto hash_new = hasher(label_map);
 
     // Retrieve the Gauge if its already created
     auto const &mgauge = getDynamicGaugeSvc(metric, uuid);
@@ -1286,7 +1288,7 @@ void AgentPrometheusManager::createDynamicGaugeSvc (SVC_METRICS metric,
          * Detect attribute change by comparing hashes of cached label map
          * with new label map
          */
-        if (hash_new == hash_labels(mgauge.get().first))
+        if (hash_new == hasher(mgauge.get().first))
             return;
         else {
             LOG(DEBUG) << "addNupdate svccounter uuid " << uuid
@@ -1333,7 +1335,8 @@ void AgentPrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
         return;
 
     auto const &label_map = createLabelMapFromPodSvcAttr(ep_attr_map, svc_attr_map);
-    auto hash_new = hash_labels(label_map);
+    LabelHasher hasher;
+    auto hash_new = hasher(label_map);
 
     // Retrieve the Gauge if its already created
     auto const &mgauge = getDynamicGaugePodSvc(metric, uuid);
@@ -1342,7 +1345,7 @@ void AgentPrometheusManager::createDynamicGaugePodSvc (PODSVC_METRICS metric,
          * Detect attribute change by comparing hashes of cached label map
          * with new label map
          */
-        if (hash_new == hash_labels(mgauge.get().first))
+        if (hash_new == hasher(mgauge.get().first))
             return;
         else {
             LOG(DEBUG) << "addNupdate podsvccounter uuid " << uuid
@@ -1423,7 +1426,8 @@ bool AgentPrometheusManager::createDynamicGaugeEp (EP_METRICS metric,
                                               annotate_ep_name,
                                               attr_map,
                                               agent.getPrometheusEpAttributes());
-    auto hash = hash_labels(label_map);
+    LabelHasher hasher;
+    auto hash = hasher(label_map);
     auto& gauge = gauge_ep_family_ptr[metric]->Add(label_map);
     if (gauge_check.is_dup(&gauge)) {
         // Suppressing below log for all the other metrics of this EP
@@ -2376,7 +2380,8 @@ size_t AgentPrometheusManager::calcHashEpAttributes (const string& ep_name,
                                               annotate_ep_name,
                                               attr_map,
                                               allowed_set);
-    auto hash = hash_labels(label_map);
+    LabelHasher hasher;
+    auto hash = hasher(label_map);
     LOG(DEBUG) << ep_name << ":calculated label hash = " << hash;
     return hash;
 }
