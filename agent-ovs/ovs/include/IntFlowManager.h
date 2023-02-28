@@ -424,6 +424,15 @@ public:
          * appropriate destination IP address.
          */
         SERVICE_NEXTHOP_TABLE_ID,
+
+        /**
+         * For flows that require routing, maps the destination L3
+         * address to an endpoint group if an endpoint has specific
+         * ip address mapping with mapped ip and corresponding endpoint
+         * group.
+         */
+        PREROUTE_TABLE_ID,
+
         /**
          * For flows that require routing, maps the destination L3
          * address to an endpoint group or external network and next

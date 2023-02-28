@@ -115,6 +115,7 @@ void IntFlowManager::populateTableDescriptionMap(
     TABLE_DESC(BRIDGE_TABLE_ID, "BRIDGE_TABLE", "MAC lookup failed")
     TABLE_DESC(SERVICE_NEXTHOP_TABLE_ID, "SERVICE_NEXTHOP_TABLE",
             "Service destination policy missing/incorrect")
+    TABLE_DESC(PREROUTE_TABLE_ID, "PREROUTE_TABLE", "NAT EPG mapping")
     TABLE_DESC(ROUTE_TABLE_ID, "ROUTE_TABLE", "Route lookup failed")
     TABLE_DESC(SNAT_TABLE_ID, "SNAT_TABLE", "SNAT policy missing/incorrect")
     TABLE_DESC(NAT_IN_TABLE_ID, "NAT_IN_TABLE",
@@ -967,7 +968,8 @@ static void flowsProxyICMP(FlowEntryList& el,
 
 static void flowsIpm(IntFlowManager& flowMgr,
                      FlowEntryList& elSrc, FlowEntryList& elBridgeDst,
-                     FlowEntryList& elRouteDst,FlowEntryList& elOutput,
+                     FlowEntryList& elPreRoute, FlowEntryList& elRouteDst,
+                     FlowEntryList& elOutput,
                      const uint8_t* macAddr, uint32_t ofPort,
                      uint32_t epgVnid, uint32_t rdId,
                      uint32_t bdId, uint32_t fgrpId,
@@ -993,6 +995,15 @@ static void flowsIpm(IntFlowManager& flowMgr,
             actionRevNatDest(ipmRoute, epgVnid, bdId,
                              fgrpId, rdId, ofPort);
             ipmRoute.build(elRouteDst);
+        }
+        {
+            FlowBuilder preRouting;
+            matchDestDom(preRouting.priority(10)
+                         .ipSrc(mappedIp), 0, frdId);
+            preRouting.action()
+                .reg(MFF_REG7, fepgVnid)
+                .go(IntFlowManager::ROUTE_TABLE_ID);
+            preRouting.build(elPreRoute);
         }
         {
             // Floating IP destination across EPGs
@@ -1938,6 +1949,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
         switchManager.clearFlows(uuid, SEC_TABLE_ID);
         switchManager.clearFlows(uuid, SRC_TABLE_ID);
         switchManager.clearFlows(uuid, BRIDGE_TABLE_ID);
+        switchManager.clearFlows(uuid, PREROUTE_TABLE_ID);
         switchManager.clearFlows(uuid, ROUTE_TABLE_ID);
         switchManager.clearFlows(uuid, SNAT_TABLE_ID);
         switchManager.clearFlows(uuid, SNAT_REV_TABLE_ID);
@@ -1983,6 +1995,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
     FlowEntryList elPortSec;
     FlowEntryList elSrc;
     FlowEntryList elBridgeDst;
+    FlowEntryList elPreRoute;
     FlowEntryList elRouteDst;
     FlowEntryList elSnat;
     FlowEntryList elRevSnat;
@@ -2250,8 +2263,8 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         nextHopMacp = nextHopMac;
                     }
 
-                    flowsIpm(*this, elSrc, elBridgeDst, elRouteDst,
-                             elOutput, macAddr, ofPort,
+                    flowsIpm(*this, elSrc, elBridgeDst, elPreRoute,
+                             elRouteDst, elOutput, macAddr, ofPort,
                              epgVnid, rdId, bdId, fgrpId,
                              fepgVnid, frdId, fbdId, ffdId,
                              mappedIp, floatingIp, nextHop,
@@ -2353,6 +2366,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
     switchManager.writeFlow(uuid, SEC_TABLE_ID, elPortSec);
     switchManager.writeFlow(uuid, SRC_TABLE_ID, elSrc);
     switchManager.writeFlow(uuid, BRIDGE_TABLE_ID, elBridgeDst);
+    switchManager.writeFlow(uuid, PREROUTE_TABLE_ID, elPreRoute);
     switchManager.writeFlow(uuid, ROUTE_TABLE_ID, elRouteDst);
     switchManager.writeFlow(uuid, SNAT_TABLE_ID, elSnat);
     switchManager.writeFlow(uuid, SNAT_REV_TABLE_ID, elRevSnat);
@@ -4267,7 +4281,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
 
                         ipMap.action()
                             .metadata(flow::meta::ROUTED, flow::meta::ROUTED)
-                            .go(ROUTE_TABLE_ID);
+                            .go(PREROUTE_TABLE_ID);
                     } else if (as.getServiceMode() == Service::LOCAL_ANYCAST &&
                                ofPort != OFPP_NONE) {
                         ipMap.action().output(ofPort);
@@ -5091,6 +5105,13 @@ void IntFlowManager::createStaticFlows() {
         switchManager.writeFlow("static", ROUTE_TABLE_ID, unknownTunnelRt);
     }
     {
+        FlowEntryList preRouteFlows;
+        FlowBuilder().priority(1)
+                     .action().go(IntFlowManager::ROUTE_TABLE_ID)
+                     .parent().build(preRouteFlows);
+        switchManager.writeFlow("static", PREROUTE_TABLE_ID, preRouteFlows);
+    }
+    {
         FlowEntryList statsFlows;
         FlowBuilder().priority(10)
             .action().go(IntFlowManager::OUT_TABLE_ID)
@@ -5247,7 +5268,7 @@ void IntFlowManager::handleEndpointGroupDomainUpdate(const URI& epgURI) {
             FlowBuilder().priority(2)
                 .reg(4, bdId)
                 .action()
-                .go(ROUTE_TABLE_ID)
+                .go(PREROUTE_TABLE_ID)
                 .parent().build(bridgel);
 
             if (routerAdv) {
@@ -5653,8 +5674,10 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                 if (ec) continue;
 
                 {
-                    FlowBuilder snr;
+                    FlowBuilder snr, snrepg;
                     matchSubnet(snr, rdId, 40, addr,
+                                extsub->getPrefixLen(0), false);
+                    matchSubnet(snrepg, rdId, 40, addr,
                                 extsub->getPrefixLen(0), false);
 
                     if (natRef) {
@@ -5669,6 +5692,16 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                                 .metadata(flow::meta::out::NAT,
                                           flow::meta::out::MASK)
                                 .go(POL_TABLE_ID);
+                            // If an endpoint has a NAT EPG associated with it in its
+                            // ipm use that instead. The epg would be set in prerouting
+                            snrepg.priority(41 + natprio + extsub->getPrefixLen(0))
+                                  .reg(7, natEpgVnid.get())
+                                  .action()
+                                  .reg(MFF_REG2, netVnid)
+                                  .metadata(flow::meta::out::NAT,
+                                            flow::meta::out::MASK)
+                                  .go(POL_TABLE_ID);
+                            snrepg.build(rdRouteFlows);
                         }
                         // else drop until resolved
                     } else if (tunPort != OFPP_NONE &&
