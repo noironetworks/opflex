@@ -21,6 +21,7 @@
 #include <cmath>
 #include <random>
 
+#include <boost/generator_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 #include "opflex/engine/internal/OpflexPEHandler.h"
 #include "opflex/engine/internal/ProcessorMessage.h"
@@ -49,7 +50,6 @@ using util::ThreadManager;
 using namespace internal;
 
 static const uint64_t DEFAULT_PROC_DELAY = 250;
-static const uint64_t DEFAULT_RETRY_DELAY = 1000*60*2;
 static const uint64_t FIRST_XID = (uint64_t)1 << 63;
 static const uint32_t MAX_PROCESS = 1024;
 
@@ -71,6 +71,8 @@ Processor::Processor(ObjectStore* store_, ThreadManager& threadManager_)
     proc_async = {};
     connect_async = {};
     proc_timer = {};
+    // Invoke the generator once to spread entropy
+    prng_manager.getRandDelta(10);
 }
 
 Processor::~Processor() {
@@ -84,6 +86,13 @@ inline uint64_t now(uv_loop_t* loop) {
 
 Processor::change_expiration::change_expiration(uint64_t new_exp_)
     : new_exp(new_exp_) {}
+
+Processor::PrngManager::PrngManager(void) {
+    // Set the seed using time. This normally isn't a great
+    // seed, but the entropy is quickly spread across the
+    // bits with a few iterations.
+    generator.seed(static_cast<unsigned int>(std::time(0)));
+}
 
 void Processor::change_expiration::operator()(Processor::item& i) {
     i.expiration = new_exp;
@@ -100,6 +109,7 @@ void Processor::setPrrTimerDuration(uint64_t duration) {
     prrTimerDuration = duration;
     policyRefTimerDuration = 1000*prrTimerDuration/2;
 }
+
 // check whether the object state index has work for us
 bool Processor::hasWork(/* out */ obj_state_by_exp::iterator& it) {
     if (obj_state.empty()) return false;
@@ -237,6 +247,9 @@ void Processor::sendToRole(const item& i, uint64_t& newexp,
     if (pending > 0) {
         uint64_t nextRetryDelay =
             (uint64_t)std::pow(2, i.details->retry_count) * retryDelay;
+
+	// Randomize the backoff by plus or minus ten percent
+	nextRetryDelay += ditherBackoff(nextRetryDelay, 10);
 
         if (nextRetryDelay > policyRefTimerDuration)
             nextRetryDelay = policyRefTimerDuration;
@@ -765,6 +778,16 @@ void Processor::responseReceived(uint64_t reqId) {
                                                uit->details->refresh_rate));
         }
     }
+}
+
+int Processor::PrngManager::getRandDelta(int delta) {
+    gen_type die_gen(generator, distribution_type(-delta, delta));
+    boost::generator_iterator<gen_type> die(&die_gen);
+    return *die;
+}
+
+int Processor::ditherBackoff(int backoff, int ditherPercent) {
+    return backoff + prng_manager.getRandDelta((backoff*ditherPercent)/100);
 }
 
 } /* namespace engine */

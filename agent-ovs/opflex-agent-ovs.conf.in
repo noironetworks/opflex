@@ -97,6 +97,11 @@
            // default 7200 secs, min 15 secs
            // "prr": 7200,
            //
+           // How long to wait for initial re-request, either
+           // due to a backoff, or for no response, in seconds.
+           // default 10 secs, min 1 second
+           // "policy-retry-delay": 10
+           //
            // How long to wait for the initial peer
            // handshake to complete (in ms)
            // "handshake-timeout" : 45000,
