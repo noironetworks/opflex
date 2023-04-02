@@ -111,6 +111,10 @@ void OFFramework::setPrrTimerDuration(const uint64_t duration) {
     pimpl->processor.setPrrTimerDuration(duration);
 }
 
+void OFFramework::setPolicyRetryDelayTimerDuration(const uint64_t duration) {
+    pimpl->processor.setRetryDelay(duration);
+}
+
 void OFFramework::setHandshakeTimeout(const uint32_t timeout) {
     pimpl->processor.setHandshakeTimeout(timeout);
 }
