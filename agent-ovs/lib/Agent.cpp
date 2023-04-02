@@ -181,6 +181,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_PRR_INTERVAL("opflex.timers.prr");
     static const std::string OPFLEX_HANDSHAKE("opflex.timers.handshake-timeout");
     static const std::string OPFLEX_KEEPALIVE("opflex.timers.keepalive-timeout");
+    static const std::string OPFLEX_POLICY_RETRY_DELAY("opflex.timers.policy-retry-delay");
     static const std::string DISABLED_FEATURES("feature.disabled");
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
     static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
@@ -453,6 +454,16 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         LOG(INFO) << "prr timer set to " << prr_timer << " secs";
     }
 
+    optional<boost::uint_t<64>::fast> policy_retry_delay_present =
+        properties.get_optional<boost::uint_t<64>::fast>(OPFLEX_POLICY_RETRY_DELAY);
+    if (policy_retry_delay_present) {
+        policy_retry_delay_timer = policy_retry_delay_present.get();
+        if (policy_retry_delay_timer < 1) {
+           policy_retry_delay_timer = 1;  /* min is 1 second */
+        }
+        LOG(INFO) << "policy retry delay timer set to " << policy_retry_delay_timer << " secs";
+    }
+
     optional<uint32_t> handshakeOpt = properties.get_optional<uint32_t>(OPFLEX_HANDSHAKE);
     if (handshakeOpt) {
         peerHandshakeTimeout = handshakeOpt.get();
@@ -542,6 +553,7 @@ void Agent::applyProperties() {
     }
      
     framework.setPrrTimerDuration(prr_timer);
+    framework.setPolicyRetryDelayTimerDuration(policy_retry_delay_timer*1000);
     framework.setHandshakeTimeout(peerHandshakeTimeout);
     framework.setKeepaliveTimeout(keepaliveTimeout);
 }

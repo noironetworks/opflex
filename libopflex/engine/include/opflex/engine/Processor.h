@@ -24,6 +24,9 @@
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/random/linear_congruential.hpp>
+#include <boost/random/uniform_int.hpp>
+#include <boost/random/variate_generator.hpp>
 #include <uv.h>
 
 #include "opflex/modb/internal/ObjectStore.h"
@@ -515,6 +518,25 @@ private:
         uint64_t new_last_xid;
     };
 
+    class PrngManager {
+        // Change typedef for different generator type
+        typedef boost::minstd_rand base_generator_type;
+        typedef boost::uniform_int<> distribution_type;
+        typedef boost::variate_generator<base_generator_type&, distribution_type> gen_type;
+    public:
+        PrngManager();
+        // Define a uniform random number distribution of integer values between
+        // -delta and delta inclusive.
+        int getRandDelta(int delta);
+    private:
+        base_generator_type generator;
+    } prng_manager;
+
+    /**
+     * Return a dithered version of a backoff value
+     */
+    int ditherBackoff(int backoff, int ditherPercent);
+
     /**
      * Store and index the state of managed objects
      */
@@ -527,9 +549,11 @@ private:
     uint64_t processingDelay;
 
     /**
-     * Amount of time to wait before retrying message sends
+     * Amount of time to wait before retrying policy
+     * requests, in milliseconds
      */
-    uint64_t retryDelay;
+    static const uint64_t DEFAULT_RETRY_DELAY = 1000*10;
+    uint64_t retryDelay = DEFAULT_RETRY_DELAY;
 
     /**
      * prr timer duration in secs

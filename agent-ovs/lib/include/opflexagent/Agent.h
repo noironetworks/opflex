@@ -328,6 +328,8 @@ private:
     // timers
     // prr timer - policy resolve request timer
     boost::uint_t<64>::fast prr_timer = 7200;  /* seconds */
+    // initial policy retry delay
+    boost::uint_t<64>::fast policy_retry_delay_timer = 10;  /* seconds */
     /* handshake timeout */
     uint32_t peerHandshakeTimeout = 45000;
     /* keepalive timeout */

@@ -736,6 +736,12 @@ public:
     void setPrrTimerDuration(const uint64_t duration);
 
     /**
+     * set the policy resolve retry delay (prrd) timer durarion.
+     * @param duration timer duration in milliseconds
+     */
+    void setPolicyRetryDelayTimerDuration(const uint64_t duration);
+
+    /**
      * Set the peer handshake timeout
      * @param timeout peer handshake timeout in milliseconds
      */
