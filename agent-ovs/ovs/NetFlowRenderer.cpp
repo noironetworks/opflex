@@ -207,9 +207,6 @@ namespace opflexagent {
         values.clear();
         static const string disabled("false");
         values.emplace_back("enable-tunnel-sampling", disabled);
-        values.emplace_back("enable-output-sampling", disabled);
-        static const string enabled("true");
-        values.emplace_back("enable-input-sampling", enabled);
         OvsdbValues tdSet3("map", values);
         msg1.rowData.emplace("other_config", tdSet3);
         const string uuid_name = "ipfix1";
