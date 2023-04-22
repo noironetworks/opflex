@@ -1,0 +1,78 @@
+name: "Code scanning - action"
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 2 * * 5'
+
+jobs:
+  CodeQL-Build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+
+    # If this run was triggered by a pull request event, then checkout
+    # the head of the pull request instead of the merge commit.
+    - run: git checkout HEAD^2
+      if: ${{ github.event_name == 'pull_request' }}
+      
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      # Override language selection by uncommenting this and choosing your languages
+      with:
+        queries: security-and-quality
+        languages: cpp
+
+    # ℹ️ Command-line programs to run using the OS shell.
+    # 📚 https://git.io/JvXDl
+
+    - name: Install Needed Packages
+      run: |
+        sudo apt-get install libboost-all-dev libuv1-dev openssl libssl-dev rapidjson-dev autoconf openjdk-8-jdk-headless maven texlive-font-utils python-six cmake
+
+    - name: Setup Dependencies
+      run: |
+        wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
+        tar -xvzf artifacts.tgz
+        sudo dpkg -i libnoiro-openvswitch_2.12.0-1_amd64.deb
+        sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
+        sudo dpkg -i prometheus-cpp_1.0.1_amd64.deb
+
+    - name: Build
+      run: |
+        export PATH=$PATH:./bin
+        export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$LGTM_WORKSPACE/lib/pkgconfig
+        pushd libopflex
+        ./autogen.sh
+        ./configure --prefix=$ROOT
+        make -j2
+        sudo make install
+        popd
+        pushd genie
+        mvn compile exec:java
+        pushd target/libmodelgbp
+        bash autogen.sh
+        ./configure --prefix=$ROOT
+        make
+        sudo make install
+        popd
+        popd
+        pushd agent-ovs
+        ./autogen.sh
+        export CPPFLAGS=-I$ROOT/include
+        export LDFLAGS=-L$ROOT/lib
+        ./configure --prefix=$ROOT
+        make -j2
+        popd
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
