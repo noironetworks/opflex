@@ -9,7 +9,7 @@
  */
 
 #include <netinet/ip.h>
-#include <linux/icmp.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
 #include <openvswitch/ofp-msgs.h>
