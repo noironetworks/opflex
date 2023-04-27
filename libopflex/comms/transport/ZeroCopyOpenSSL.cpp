@@ -440,10 +440,10 @@ int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
     }
     SSL_library_init();
     SSL_load_error_strings();
+    ERR_load_SSL_strings();
 #else
    OPENSSL_init_ssl(0, NULL);
 #endif
-    ERR_load_SSL_strings();
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
     OpenSSL_add_all_algorithms();
     if (forMultipleThreads) {

@@ -150,7 +150,7 @@ private:
          * true if lhs.first < rhs.first
          */
         constexpr bool operator()(const vlan_range_t& lhs,
-                                  const vlan_range_t& rhs) {
+                                  const vlan_range_t& rhs) const {
             return lhs.first < rhs.first;
         }
     };

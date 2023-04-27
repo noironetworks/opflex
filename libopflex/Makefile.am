@@ -12,7 +12,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -Wall -Werror -std=c++11
+AM_CPPFLAGS = -Wall -Wno-sign-compare --Werror -std=c++11
 
 if ENABLE_TSAN
   AM_CPPFLAGS += -fsanitize=thread
