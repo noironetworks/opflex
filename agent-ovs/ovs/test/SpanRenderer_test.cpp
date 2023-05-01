@@ -33,7 +33,8 @@ public:
         spr = make_shared<SpanRenderer>(agent);
         initLogging("debug", false, "");
         conn.reset(new MockRpcConnection());
-        spr->start("br-int", conn.get());
+        vector<std::string&> swNames{"br-int"};
+        spr->start(swNames, conn.get());
         spr->connect();
 
         // simulate results of monitor

@@ -9,6 +9,8 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#include <vector>
+
 #include "OVSRenderer.h"
 #include <opflexagent/logging.h>
 #include <sstream>
@@ -246,9 +248,9 @@ void OVSRenderer::start() {
     getAgent().getExtraConfigManager().registerListener(this);
 
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
-        spanRenderer.start(accessBridgeName, ovsdbConnection.get());
-    netflowRenderer.start(intBridgeName, ovsdbConnection.get());
-    qosRenderer.start(intBridgeName, ovsdbConnection.get());
+        spanRenderer.start({accessBridgeName}, ovsdbConnection.get());
+    netflowRenderer.start({intBridgeName, accessBridgeName}, ovsdbConnection.get());
+    qosRenderer.start({intBridgeName}, ovsdbConnection.get());
 
 }
 

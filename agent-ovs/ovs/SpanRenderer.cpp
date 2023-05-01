@@ -20,9 +20,9 @@ namespace opflexagent {
 
     SpanRenderer::SpanRenderer(Agent& agent_) : JsonRpcRenderer(agent_) {}
 
-    void SpanRenderer::start(const std::string& swName, OvsdbConnection* conn) {
+    void SpanRenderer::start(const vector<std::string&> swNames, OvsdbConnection* conn) {
         LOG(DEBUG) << "starting span renderer";
-        JsonRpcRenderer::start(swName, conn);
+        JsonRpcRenderer::start(swNames, conn);
         agent.getSpanManager().registerListener(this);
     }
 
@@ -244,25 +244,27 @@ namespace opflexagent {
             return;
         }
 
-        OvsdbTransactMessage msg(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
-        set<tuple<string, OvsdbFunction, string>> condSet;
-        condSet.emplace("name", OvsdbFunction::EQ, switchName);
-        msg.conditions = condSet;
-
         vector<OvsdbValue> values;
         values.emplace_back("uuid", sessionUuid);
         OvsdbValues tdSet = OvsdbValues(values);
-        msg.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::DELETE, tdSet));
 
-        const list<OvsdbTransactMessage> requests = {msg};
+        const list<OvsdbTransactMessage> requests;
+
+        for (std::string& switchName : switchNames) {
+            OvsdbTransactMessage msg(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
+            set<tuple<string, OvsdbFunction, string>> condSet;
+            condSet.emplace("name", OvsdbFunction::EQ, switchName);
+            msg.conditions = condSet;
+
+            msg.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::DELETE, tdSet));
+
+            requests.push_back(msg);
+        }
         sendAsyncTransactRequests(requests);
     }
 
     void SpanRenderer::createMirrorAndOutputPort(
         const shared_ptr<SessionState>& sess, const set<string>& srcPorts, const set<string>& dstPorts) {
-        string brUuid;
-        conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
-        LOG(DEBUG) << "bridge uuid " << brUuid;
 
         list<OvsdbTransactMessage> requests;
 
@@ -389,25 +391,32 @@ namespace opflexagent {
         if (!sessionExists) {
             const string mirrorUuidName = "mirror1";
             msg1.externalKey = make_pair("uuid-name", mirrorUuidName);
+            requests.push_back(msg1);
 
-            OvsdbTransactMessage msg2(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
-            set<tuple<string, OvsdbFunction, string>> condSet;
-            condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
-            msg2.conditions = condSet;
             values.clear();
             values.emplace_back("named-uuid", mirrorUuidName);
             OvsdbValues tdSet5(values);
-            msg2.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::INSERT, tdSet5));
-            // only if we're adding the port now as well
-            if (outputPortUuid.empty()) {
-                values.clear();
-                values.emplace_back("named-uuid", portNamedUuid);
-                OvsdbValues tdSet6(values);
-                msg2.mutateRowData.emplace("ports", std::make_pair(OvsdbOperation::INSERT, tdSet6));
+
+            for (std::string& switchName : switchNames) {
+                string brUuid;
+                conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
+                LOG(DEBUG) << "bridge uuid " << brUuid;
+
+                OvsdbTransactMessage msg2(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
+                set<tuple<string, OvsdbFunction, string>> condSet;
+                condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
+                msg2.conditions = condSet;
+                msg2.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::INSERT, tdSet5));
+                // only if we're adding the port now as well
+                if (outputPortUuid.empty()) {
+                    values.clear();
+                    values.emplace_back("named-uuid", portNamedUuid);
+                    OvsdbValues tdSet6(values);
+                    msg2.mutateRowData.emplace("ports", std::make_pair(OvsdbOperation::INSERT, tdSet6));
+                }
+                requests.push_back(msg2);
             }
 
-            requests.push_back(msg1);
-            requests.push_back(msg2);
         } else {
             set<tuple<string, OvsdbFunction, string>> condSet;
             condSet.emplace("_uuid", OvsdbFunction::EQ, sessionUuid);

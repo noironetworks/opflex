@@ -13,6 +13,8 @@
 #ifndef OPFLEX_QOSRENDERER_H
 #define OPFLEX_QOSRENDERER_H
 
+#include <vector>
+
 #include <boost/noncopyable.hpp>
 #include <opflexagent/QosListener.h>
 #include "JsonRpcRenderer.h"
@@ -36,10 +38,10 @@ public:
 
     /**
      * Start the renderer
-     * @param swName Switch to connect to
+     * @param swName Switches to connect to
      * @param conn OVSDB connection
      */
-    virtual void start(const std::string& swName, OvsdbConnection* conn);
+    virtual void start(const vector<std::string&> swNames, OvsdbConnection* conn);
 
     /**
      * Module stop

@@ -19,9 +19,9 @@ namespace opflexagent {
     NetFlowRenderer::NetFlowRenderer(Agent& agent_) : JsonRpcRenderer(agent_) {
     }
 
-    void NetFlowRenderer::start(const std::string& swName, OvsdbConnection* conn) {
+    void NetFlowRenderer::start(const vector<std::string&> swNames, OvsdbConnection* conn) {
         LOG(DEBUG) << "starting NetFlow renderer";
-        JsonRpcRenderer::start(swName, conn);
+        JsonRpcRenderer::start(swNames conn);
         agent.getNetFlowManager().registerListener(this);
     }
 
@@ -97,38 +97,44 @@ namespace opflexagent {
 
     void NetFlowRenderer::deleteNetFlow() {
         LOG(DEBUG) << "deleting netflow";
-        OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
-        set<tuple<string, OvsdbFunction, string>> condSet;
-        condSet.emplace("name", OvsdbFunction::EQ, switchName);
-        msg.conditions = condSet;
 
         vector<OvsdbValue> values;
         OvsdbValues tdSet("set", values);
-        msg.rowData.emplace("netflow", tdSet);
 
-        list<OvsdbTransactMessage> msgs = {msg};
+        list<OvsdbTransactMessage> msgs;
+
+        for (std::string& switchName : switchNames) {
+            OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+            set<tuple<string, OvsdbFunction, string>> condSet;
+            condSet.emplace("name", OvsdbFunction::EQ, switchName);
+            msg.conditions = condSet;
+            msg.rowData.emplace("netflow", tdSet);
+            msgs.push_back(msg);
+        }
         sendAsyncTransactRequests(msgs);
     }
 
     void NetFlowRenderer::deleteIpfix() {
         LOG(DEBUG) << "deleting IPFIX";
-        OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
-        set<tuple<string, OvsdbFunction, string>> condSet;
-        condSet.emplace("name", OvsdbFunction::EQ, switchName);
-        msg.conditions = condSet;
 
         vector<OvsdbValue> values;
         OvsdbValues tdSet("set", values);
-        msg.rowData.emplace("ipfix", tdSet);
 
-        const list<OvsdbTransactMessage> requests = {msg};
+        const list<OvsdbTransactMessage> requests;
+
+        for (std::string& switchName : switchNames) {
+            OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+            set<tuple<string, OvsdbFunction, string>> condSet;
+            condSet.emplace("name", OvsdbFunction::EQ, switchName);
+            msg.conditions = condSet;
+            msg.rowData.emplace("ipfix", tdSet);
+
+            requests.push_back(msg);
+        }
         sendAsyncTransactRequests(requests);
     }
 
     void NetFlowRenderer::createNetFlow(const string& targets, int timeout) {
-        string brUuid;
-        conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
-        LOG(DEBUG) << "bridge uuid " << brUuid;
         vector<OvsdbValue> values;
         values.emplace_back(targets);
         OvsdbValues tdSet(values);
@@ -148,29 +154,34 @@ namespace opflexagent {
         const string uuid_name = "netflow1";
         msg1.externalKey = make_pair("uuid-name", uuid_name);
 
-        OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
-        set<tuple<string, OvsdbFunction, string>> condSet;
-        condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
-        msg2.conditions = condSet;
+        const list<OvsdbTransactMessage> requests = {msg1};
 
         values.clear();
         values.emplace_back("named-uuid", uuid_name);
         OvsdbValues tdSet4(values);
-        msg2.rowData.emplace("netflow", tdSet4);
-        // make sure there is no ipfix config
-        values.clear();
-        OvsdbValues emptySet("set", values);
-        msg2.rowData.emplace("ipfix", emptySet);
 
-        const list<OvsdbTransactMessage> requests = {msg1, msg2};
+        for (std::string& switchName : switchNames) {
+            string brUuid;
+            conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
+            LOG(DEBUG) << "bridge uuid " << brUuid;
+
+            OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+            set<tuple<string, OvsdbFunction, string>> condSet;
+            condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
+            msg2.conditions = condSet;
+
+            msg2.rowData.emplace("netflow", tdSet4);
+            // make sure there is no ipfix config
+            values.clear();
+            OvsdbValues emptySet("set", values);
+            msg2.rowData.emplace("ipfix", emptySet);
+
+           requests.push_back(msg2);
+        }
         sendAsyncTransactRequests(requests);
     }
 
     void NetFlowRenderer::createIpfix(const string& targets, int sampling, int activeTimeout) {
-        string brUuid;
-        conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
-        LOG(DEBUG) << "bridge uuid " << brUuid << " sampling rate is " << sampling
-            << "active flow timeout " << activeTimeout;
         vector<OvsdbValue> values;
         values.emplace_back(targets);
         OvsdbValues tdSet(values);
@@ -207,26 +218,38 @@ namespace opflexagent {
         values.clear();
         static const string disabled("false");
         values.emplace_back("enable-tunnel-sampling", disabled);
+        //values.emplace_back("enable-output-sampling", disabled);
+        //static const string enabled("true");
+        //values.emplace_back("enable-input-sampling", enabled);
         OvsdbValues tdSet3("map", values);
         msg1.rowData.emplace("other_config", tdSet3);
         const string uuid_name = "ipfix1";
         msg1.externalKey = make_pair("uuid-name", uuid_name);
 
-        OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
-        set<tuple<string, OvsdbFunction, string>> condSet;
-        condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
-        msg2.conditions = condSet;
-
         values.clear();
         values.emplace_back("named-uuid", uuid_name);
         OvsdbValues tdSet4(values);
-        msg2.rowData.emplace("ipfix", tdSet4);
-        // make sure there is no netflow config
-        values.clear();
-        OvsdbValues emptySet("set", values);
-        msg2.rowData.emplace("netflow", emptySet);
 
-        const list<OvsdbTransactMessage> requests = {msg1, msg2};
+        const list<OvsdbTransactMessage> requests = {msg1};
+
+        for (std::string& switchName : switchNames) {
+            string brUuid;
+            conn->getOvsdbState().getBridgeUuid(switchName, brUuid);
+            LOG(DEBUG) << "bridge uuid " << brUuid << " sampling rate is " << sampling
+                << "active flow timeout " << activeTimeout;
+
+            OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
+            set<tuple<string, OvsdbFunction, string>> condSet;
+            condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
+            msg2.conditions = condSet;
+
+            msg2.rowData.emplace("ipfix", tdSet4);
+            // make sure there is no netflow config
+            values.clear();
+            OvsdbValues emptySet("set", values);
+            msg2.rowData.emplace("netflow", emptySet);
+            requests.push_back(msg2);
+        }
         sendAsyncTransactRequests(requests);
     }
 

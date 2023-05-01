@@ -16,9 +16,9 @@ namespace opflexagent {
     QosRenderer::QosRenderer(Agent& agent_) : JsonRpcRenderer(agent_) {
     }
 
-    void QosRenderer::start(const string& swName, OvsdbConnection* conn) {
+    void QosRenderer::start(const vector<string&> swNames, OvsdbConnection* conn) {
         LOG(DEBUG) << "starting QosRenderer";
-        JsonRpcRenderer::start(swName, conn);
+        JsonRpcRenderer::start(swNames, conn);
         agent.getQosManager().registerListener(this);
     }
 

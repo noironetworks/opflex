@@ -13,6 +13,8 @@
 #ifndef OPFLEX_JSONRPCRENDERER_H
 #define OPFLEX_JSONRPCRENDERER_H
 
+#include <vector>
+
 #include <atomic>
 #include <mutex>
 #include <boost/asio.hpp>
@@ -37,10 +39,10 @@ public:
 
     /**
      * Start the renderer
-     * @param swName Switch to connect to
+     * @param swNames Switches to connect to
      * @param conn OVSDB connection
      */
-    virtual void start(const std::string& swName, OvsdbConnection* conn);
+    virtual void start(const vector<std::string&> swNames, OvsdbConnection* conn);
 
     /**
      * Stop the renderer
@@ -85,9 +87,9 @@ protected:
      */
     std::atomic_bool timerStarted;
     /**
-     * switch name
+     * switch names
      */
-     std::string switchName;
+     list<std::string> switchNames;
     /**
      * OVSDB connection
      */

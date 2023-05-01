@@ -28,7 +28,8 @@ public:
         qosRenderer = make_shared<QosRenderer>(agent);
         initLogging("debug", false, "");
         conn.reset(new MockRpcConnection());
-        qosRenderer->start("br-int", conn.get());
+        vector<std::string&> swNames{"br-int"};
+        qosRenderer->start(swNames, conn.get());
         qosRenderer->connect();
 
         // simulate results of monitor

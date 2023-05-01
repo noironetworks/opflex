@@ -16,8 +16,8 @@ namespace opflexagent {
         agent(agent_), timerStarted(false), conn(nullptr) {
     }
 
-    void JsonRpcRenderer::start(const std::string& swName, OvsdbConnection* conn_) {
-        switchName = swName;
+    void JsonRpcRenderer::start(const vector<std::string&> swNames, OvsdbConnection* conn_) {
+        switchNames = swNames;
         conn = conn_;
     }
 

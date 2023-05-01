@@ -30,7 +30,8 @@ public:
         nfr = make_shared<NetFlowRenderer>(agent);
         initLogging("debug", false, "");
         conn.reset(new MockRpcConnection());
-        nfr->start("br-int", conn.get());
+        vector<std::string&> swNames{"br-int", "br-fab"};
+        nfr->start(swNames, conn.get());
         nfr->connect();
 
         // simulate results of monitor
