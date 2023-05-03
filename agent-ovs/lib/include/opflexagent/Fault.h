@@ -159,15 +159,25 @@ public:
         return egURI;
     }
 
+
+    void setAffectedObject(const std::string& affectedObject) {
+        this->affectedobject = affectedObject;
+    }
+
+
+    const std::string& getAffectedObject() const {
+        return affectedobject;
+    }
+
    private:
       std::string ep_uuid;
       std::string fs_uuid;
       uint64_t faultcode;
       uint8_t severity;
       std::string description;
+      std::string affectedobject;
       boost::optional<opflex::modb::MAC>  mac;	
       boost::optional<opflex::modb::URI> egURI;
-
 };
 
   /**

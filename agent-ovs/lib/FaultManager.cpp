@@ -111,6 +111,7 @@ void FaultManager::removeFault(const std::string& uuid){
     Mutator mutator_policyelem(agent.getFramework(), "policyelement");
     auto fu = modelgbp::fault::Instance::resolve(agent.getFramework(),uuid);
     if (fu){
+        LOG(INFO) << "Removing the fault instance using the uuid = "<<uuid;
         fu.get()->remove(agent.getFramework(), uuid);
         mutator_policyelem.commit();
     }
