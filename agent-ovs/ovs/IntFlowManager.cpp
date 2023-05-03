@@ -39,6 +39,8 @@
 #include <opflexagent/Endpoint.h>
 #include <opflexagent/EndpointManager.h>
 #include <opflexagent/Faults.h>
+#include <opflexagent/FSFaultSource.h>
+#include <opflexagent/FaultManager.h>
 
 #include "SwitchConnection.h"
 #include "IntFlowManager.h"
@@ -143,6 +145,7 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     conntrackEnabled(false), dhcpMac{}, dropLogRemotePort(0),
     serviceStatsFlowDisabled(false),
     advertManager(agent, *this), isSyncing(false), stopping(false),
+    faultmanager(agent.getFaultManager()),
     svcStatsTaskQueue(svcStatsIOService) {
     // set up flow tables
     switchManager.setMaxFlowTables(NUM_FLOW_TABLES);
@@ -537,20 +540,26 @@ void IntFlowManager::configUpdated(const URI& configURI) {
     if (config_opt) {
         optional<const uint8_t> configEncapType =
             config_opt.get()->getEncapType();
+        string fsuuid = "8encapmismatchconfig"; 
+
         if (configEncapType && configEncapType.get() != encapType) {
             LOG(INFO) << "fault raised for encapType from fabric doesn't match "
                          "agent config";
-            auto fu = modelgbp::fault::Universe::resolve(agent.getFramework());
-            opflex::modb::Mutator mutator(agent.getFramework(),
-                                          "policyelement");
-            auto fi = fu.get()->addFaultInstance(to_string(uuidGen()));
-            fi->setDescription(
-                "encapType from fabric doesn't match agent config");
-            fi->setSeverity(modelgbp::fault::SeverityEnumT::CONST_CRITICAL);
-            fi->setAffectedObject(configURI.toString());
-            fi->setFaultCode(opflexagent::FaultCodes::ENCAP_MISMATCH);
-            mutator.commit();
-        }
+
+            Fault newfs;
+            newfs.setFSUUID(fsuuid);
+            newfs.setSeverity(modelgbp::fault::SeverityEnumT::CONST_CRITICAL);
+            newfs.setDescription("encapType from fabric doesn't match agent config");
+            newfs.setFaultcode(opflexagent::FaultCodes::ENCAP_MISMATCH);
+            newfs.setAffectedObject(configURI.toString());
+            faultmanager.createPlatformFault(newfs);           
+        } else if (configEncapType && configEncapType.get() == encapType) {
+             Mutator mutator_policyelem(agent.getFramework(), "policyelement");
+             auto fu = modelgbp::fault::Instance::resolve(agent.getFramework(),fsuuid);
+              if (fu) {
+                     faultmanager.removeFault(fsuuid);
+              } 
+         }
     }
     switchManager.enableSync();
     agent.getAgentIOService()

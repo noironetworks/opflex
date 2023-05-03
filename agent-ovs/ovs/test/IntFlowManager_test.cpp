@@ -4601,6 +4601,16 @@ BOOST_FIXTURE_TEST_CASE(testencapfault, BaseIntFlowManagerFixture) {
     WAIT_FOR(modelgbp::platform::Config::resolve(framework, platformCfg->getURI()), 500);
 
     intFlowManager.configUpdated(platformCfg->getURI());
+
+    Mutator mutator_ex(framework, "policyreg");
+    auto polUni2 =
+        modelgbp::policy::Universe::resolve(framework).get();
+    auto platformCfg2 = polUni2->addPlatformConfig("dummy");
+    platformCfg2->setEncapType(EncapTypeEnumT::CONST_VLAN);
+    mutator_ex.commit();
+    WAIT_FOR(modelgbp::platform::Config::resolve(framework, platformCfg2->getURI()), 500);
+    intFlowManager.configUpdated(platformCfg2->getURI());
+
     stop();
 }
 
