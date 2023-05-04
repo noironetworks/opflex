@@ -36,6 +36,7 @@
 #include <functional>
 #include <sys/types.h>
 #include <unistd.h>
+#include <atomic>
 
 namespace yajr {
 
@@ -44,7 +45,7 @@ using namespace rapidjson;
 template<unsigned parseFlags = kParseStopWhenDoneFlag>
 class AsyncDocumentParser {
 public:
-    static int instance_count_;
+    static std::atomic<int> instance_count_;
     explicit AsyncDocumentParser(std::function<int(Document& d)> cb)
         : stream_(*this)
         , d_()
@@ -54,7 +55,7 @@ public:
         , notEmpty_()
         , finish_()
         , stop_()
-        , id_(instance_count_)
+        , id_(instance_count_.load(std::memory_order_relaxed))
     {
         // Create and execute thread after all member variables are initialized.
         parseThread_ = std::thread(&AsyncDocumentParser::Parse, this);
@@ -71,6 +72,7 @@ public:
             std::unique_lock<std::mutex> lock(mutex_);
 
             stop_ = true;
+            instance_count_--;
             notEmpty_.notify_one();
         }
 

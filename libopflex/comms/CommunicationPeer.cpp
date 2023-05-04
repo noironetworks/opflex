@@ -19,7 +19,7 @@
 #include <rapidjson/error/en.h>
 
 template<>
-int yajr::AsyncDocumentParser<>::instance_count_ = 0;
+std::atomic<int> yajr::AsyncDocumentParser<>::instance_count_(0);
 
 namespace yajr {
     namespace internal {
