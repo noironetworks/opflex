@@ -117,6 +117,8 @@ cp $DOCKER_DIR/launch-mcastdaemon.sh build/opflex/dist/bin/
 cp $DOCKER_DIR/launch-opflexserver.sh build/opflex/dist/bin/
 cp $DOCKER_DIR/Dockerfile-opflex build/opflex/dist/
 cp $DOCKER_DIR/Dockerfile-opflexserver build/opflex/dist/
+mkdir build/opflex/dist/licenses
+cp $DOCKER_DIR/../licenses/* build/opflex/dist/licenses
 
 #######################################################################################
 docker build -t quay.io/noirolabs/opflex:sumit-kmr2-test -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist
