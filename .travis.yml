@@ -1,38 +1,51 @@
 language: c++
 compiler:
   - gcc
+services: docker
 os: linux
-dist: focal
+dist: jammy
 
-addons:
-  apt:
-    packages:
-      - libuv1-dev
-      - libboost-all-dev
-      - libssl-dev
-      - rapidjson-dev
-      - autoconf
-      - openjdk-11-jdk-headless
-      - maven
-      - lcov
-      - cmake
+jobs:
+  include:
+    - stage: check
+      if: tag IS NOT present
+      addons:
+        apt:
+          packages:
+          - libuv1-dev
+          - libboost-all-dev
+          - libssl-dev
+          - rapidjson-dev
+          - autoconf
+          - openjdk-11-jdk-headless
+          - maven
+          - lcov
+          - cmake
+      # In case we need to run perf, install the below in bionic:
+      # linux-tools-common
+      # linux-tools-4.15.0-72-generic
+      before_install:
+        - pip install --user cpp-coveralls
+      install: bash ./.travis/install-dependencies.sh
+      before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
+      env:
+        - TEST_SUITE=travis-build.sh
+      script: bash ./.travis/$TEST_SUITE
+      after_success:
+        - bash ./.travis/coveralls-deploy.sh
 
-# In case we need to run perf, install the below in bionic:
-# linux-tools-common
-# linux-tools-4.15.0-72-generic
-
-before_install:
-  - pip install --user cpp-coveralls
-
-install: bash ./.travis/install-dependencies.sh
-
-before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
-
-env:
-  - TEST_SUITE=travis-build.sh
-
-script: bash ./.travis/$TEST_SUITE
-
-after_success:
-  - bash ./.travis/coveralls-deploy.sh
+    - stage: build-images
+      if: tag IS present
+      before_script:
+        - export DOCKER_BUILDKIT=1
+      script:
+      - git show --summary
+      - docker login -u=$QUAY_SUMIT_NOIROLABS_ROBO_USER -p=$QUAY_SUMIT_NOIROLABS_ROBO_PSWD quay.io
+      - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /tmp
+      - curl -sSfL https://raw.githubusercontent.com/docker/sbom-cli-plugin/main/install.sh | sh -s --
+      - docker/centos/build-opflex-travis.sh
+      - docker images
+      - docker push quay.io/noirolabs/opflex:sumit-kmr2-test
+      - docker sbom --format spdx-json quay.io/noirolabs/opflex:sumit-kmr2-test | /tmp/grype
+      - docker sbom quay.io/noirolabs/opflex:sumit-kmr2-test
 
