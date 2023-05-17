@@ -46,7 +46,7 @@ tar cvfz opflex.tgz opflex
 cp opflex.tgz opflex/
 popd
 
-docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
+docker build $BUILDARG --build-arg DOCKER_HUB_ID=$DOCKER_HUB_ID --build-arg DOCKER_TAG=$DOCKER_TAG $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
 #docker build $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR
 ##docker push $DOCKER_HUB_ID/opflex-build$DOCKER_TAG
 while [ ! -f  /tmp/opflex-build.log ]; do sleep 10; done
