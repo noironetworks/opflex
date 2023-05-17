@@ -26,6 +26,7 @@
 #include "SwitchStateHandler.h"
 
 #include <opflex/ofcore/PeerStatusListener.h>
+#include <opflexagent/FaultManager.h>
 
 #include <boost/asio/ip/address.hpp>
 #include <boost/optional.hpp>
@@ -979,6 +980,7 @@ private:
     std::unique_ptr<std::thread> svcStatsThread;
     boost::asio::io_service svcStatsIOService;
     std::unique_ptr<boost::asio::io_service::work> svcStatsIOWork;
+    FaultManager& faultmanager;
     TaskQueue svcStatsTaskQueue;
 };
 
