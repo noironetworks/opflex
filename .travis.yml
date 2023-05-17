@@ -43,7 +43,7 @@ jobs:
       - docker login -u=$QUAY_SUMIT_NOIROLABS_ROBO_USER -p=$QUAY_SUMIT_NOIROLABS_ROBO_PSWD quay.io
       - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /tmp
       - curl -sSfL https://raw.githubusercontent.com/docker/sbom-cli-plugin/main/install.sh | sh -s --
-      - docker/centos/build-opflex-travis.sh
+      - docker/travis/build-opflex-travis.sh
       - docker images
       - docker push quay.io/noirolabs/opflex:sumit-kmr2-test
       - docker sbom --format spdx-json quay.io/noirolabs/opflex:sumit-kmr2-test | /tmp/grype
