@@ -1,4 +1,6 @@
-FROM quay.io/noirolabs/opflex-build-base:sumit-kmr2-test
+ARG DOCKER_TAG
+ARG DOCKER_HUB_ID=quay.io/noirolabs
+FROM ${DOCKER_HUB_ID}/opflex-build-base:${DOCKER_TAG}
 ARG BUILDOPTS="--enable-grpc"
 ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/share/pkgconfig
 WORKDIR /opflex
