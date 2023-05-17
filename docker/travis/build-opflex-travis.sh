@@ -1,28 +1,32 @@
 #!/bin/bash
+# usage: ./build_opflex.sh <docker-reg> <docker-tag> <docker-build-args>
 set -x
 
 OPFLEX_BRANCH=centos
-DOCKER_HUB_ID=quay.io/noirolabs
-DOCKER_TAG=sumit-kmr2-test
+DOCKER_HUB_ID=$1
+DOCKER_TAG=$2
+BUILDARG=$3
+[ -z "$DOCKER_HUB_ID" ] && DOCKER_HUB_ID=quay.io/noirolabs
+[ -z "$DOCKER_TAG" ] && DOCKER_TAG=sumit-kmr2-test
+[ -z "$BUILDARG" ] && BUILDARG=
+export DOCKER_HUB_ID
+export DOCKER_TAG
+export BUILDARG
 
 SECOPT=
 export SECOPT
 
-DOCKER_DIR=docker/centos
+DOCKER_DIR=docker/travis
 
 OPFLEX_DIR=/tmp/opflex
 export OPFLEX_DIR
 git clone https://github.com/noironetworks/opflex.git -b $OPFLEX_BRANCH $OPFLEX_DIR
 
-[ -z "$DOCKER_TAG" ] && DOCKER_TAG=
-export DOCKER_HUB_ID
-export DOCKER_TAG
-
 set -Eeuxo pipefail
 
 echo "starting opflex build"
 
-docker build $SECOPT -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base . &> /tmp/opflex-build-base.log &
+docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base . &> /tmp/opflex-build-base.log &
 while [ ! -f  /tmp/opflex-build-base.log ]; do sleep 10; done
 tail -f /tmp/opflex-build-base.log | awk 'NR%100-1==0' &
 
@@ -42,7 +46,7 @@ tar cvfz opflex.tgz opflex
 cp opflex.tgz opflex/
 popd
 
-docker build $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
+docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
 #docker build $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR
 ##docker push $DOCKER_HUB_ID/opflex-build$DOCKER_TAG
 while [ ! -f  /tmp/opflex-build.log ]; do sleep 10; done
@@ -121,4 +125,4 @@ mkdir build/opflex/dist/licenses
 cp $DOCKER_DIR/../licenses/* build/opflex/dist/licenses
 
 #######################################################################################
-docker build -t quay.io/noirolabs/opflex:sumit-kmr2-test -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist
+docker build $BUILDARG -t quay.io/noirolabs/opflex:$DOCKER_TAG -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist
