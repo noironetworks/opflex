@@ -35,7 +35,8 @@ jobs:
 
     - name: Install Needed Packages
       run: |
-        sudo apt-get install libboost-all-dev libuv1-dev openssl libssl-dev rapidjson-dev autoconf openjdk-8-jdk-headless maven texlive-font-utils python-six cmake
+        sudo apt-get update --fix-missing
+        sudo apt-get install libboost-all-dev libuv1-dev openssl libssl-dev rapidjson-dev autoconf openjdk-11-jdk-headless maven texlive-font-utils python-six cmake
 
     - name: Setup Dependencies
       run: |
