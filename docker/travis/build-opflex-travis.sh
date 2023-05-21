@@ -2,12 +2,12 @@
 # usage: ./build_opflex.sh <docker-reg> <docker-tag> <docker-build-args>
 set -x
 
-OPFLEX_BRANCH=centos
+OPFLEX_BRANCH=kmr2-5.2.7
 DOCKER_HUB_ID=$1
 DOCKER_TAG=$2
 BUILDARG=$3
-[ -z "$DOCKER_HUB_ID" ] && DOCKER_HUB_ID=quay.io/noirolabs
-[ -z "$DOCKER_TAG" ] && DOCKER_TAG=sumit-kmr2-test
+[ -z "$DOCKER_HUB_ID" ] && DOCKER_HUB_ID=
+[ -z "$DOCKER_TAG" ] && DOCKER_TAG=
 [ -z "$BUILDARG" ] && BUILDARG=
 export DOCKER_HUB_ID
 export DOCKER_TAG
@@ -18,9 +18,8 @@ export SECOPT
 
 DOCKER_DIR=docker/travis
 
-OPFLEX_DIR=/tmp/opflex
+OPFLEX_DIR=.
 export OPFLEX_DIR
-git clone https://github.com/noironetworks/opflex.git -b $OPFLEX_BRANCH $OPFLEX_DIR
 
 set -Eeuxo pipefail
 
@@ -125,4 +124,4 @@ mkdir build/opflex/dist/licenses
 cp $DOCKER_DIR/../licenses/* build/opflex/dist/licenses
 
 #######################################################################################
-docker build $BUILDARG -t quay.io/noirolabs/opflex:$DOCKER_TAG -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist
+docker build $BUILDARG -t $DOCKER_HUB_ID/opflex:$DOCKER_TAG -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist
