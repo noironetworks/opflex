@@ -92,13 +92,13 @@ public:
     }
 
     std::shared_ptr<GbpOpflexServerImpl> opflexServer;
+    opflex::util::ThreadManager threadManager;
 
 private:
     int peerStatus;
     int poolHealth;
     boost::mutex fixtureMutex;
     opflex::modb::ObjectStore db;
-    opflex::util::ThreadManager threadManager;
 };
 
 void handler(const char* file, int line, 

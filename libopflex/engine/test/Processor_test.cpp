@@ -183,7 +183,6 @@ public:
 
     std::shared_ptr<GbpOpflexServerImpl> opflexServer;
     opflex::modb::ObjectStore db;
-    opflex::util::ThreadManager threadManager;
 };
 
 static bool itemPresent(StoreClient* client,
