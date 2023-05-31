@@ -1475,6 +1475,13 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
         switchManager.clearFlows(uuid, ROUTE_TABLE_ID);
         switchManager.clearFlows(uuid, POL_TABLE_ID);
         switchManager.clearFlows(uuid, OUT_TABLE_ID);
+        // If a local ep exists with same name redo the local ep flows
+        EndpointManager& epMgr = agent.getEndpointManager();
+        shared_ptr<const Endpoint> epWrapper = epMgr.getEndpoint(uuid);
+        if (epWrapper) {
+            LOG(DEBUG) << "Redo local endpoint update " << uuid;
+            endpointUpdated(uuid);
+        }
         return;
     }
 
@@ -1946,6 +1953,13 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
         removeEndpointFromFloodGroup(uuid);
         agent.getSnatManager().delEndpoint(uuid);
         updateSvcStatsFlows(uuid, false, false);
+        // If a remote ep exists with same name redo the remote ep flows
+        optional<shared_ptr<modelgbp::inv::RemoteInventoryEp>> ep =
+            modelgbp::inv::RemoteInventoryEp::resolve(agent.getFramework(), uuid);
+        if (ep) {
+            LOG(DEBUG) << "Redo remote endpoint update " << uuid;
+            remoteEndpointUpdated(uuid);
+        }
         return;
     }
     const Endpoint& endPoint = *epWrapper.get();
