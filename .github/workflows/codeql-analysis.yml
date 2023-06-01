@@ -20,7 +20,7 @@ jobs:
       with:
         queries: security-and-quality
         languages: cpp
-        config-file: ./.github/workflows/codeql-filters.yml
+        config-file: ./.github/codeql-filters.yml
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl

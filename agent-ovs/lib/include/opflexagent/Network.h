@@ -41,6 +41,11 @@ struct service_port_t {
     uint8_t prefixLen;
     uint8_t proto;
     uint16_t port;
+
+    bool operator==(const opflexagent::network::service_port_t& v) const {
+        return ((this->address == v.address) && (this->prefixLen == v.prefixLen) &&
+                (this->proto == v.proto) && (this->port == v.port));
+    }
 };
 } // namespace network
 } // namespace opflexagent
@@ -68,9 +73,6 @@ template<> struct hash<opflexagent::network::service_port_t> {
      */
     std::size_t operator()(const opflexagent::network::service_port_t& u) const;
 };
-
-bool operator==(const opflexagent::network::service_port_t& u,
-        const opflexagent::network::service_port_t& v);
 } /* namespace std */
 
 namespace opflexagent {
