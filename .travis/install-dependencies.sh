@@ -12,7 +12,7 @@ sudo dpkg -i prometheus-cpp_1.0.1_amd64.deb
 mkdir -p ../grpc
 pushd ../grpc
 if ! [ "$(ls -A .)" ]; then
-    git clone -b v1.31.0 https://github.com/grpc/grpc --config submodule.third_party/re2.url=https://github.com/google/re2.git --config submodule.third_party/re2.active=true
+    git clone -b v1.52.2 https://github.com/grpc/grpc
     pushd grpc
     git submodule update --init
     mkdir -p cmake/build
@@ -29,5 +29,6 @@ else
 fi
 pushd grpc/cmake/build
 sudo make install
+sudo cp ../../third_party/re2/re2.pc /usr/local/share/pkgconfig/
 popd
 popd
