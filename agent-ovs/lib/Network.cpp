@@ -33,12 +33,6 @@ operator()(const opflexagent::network::service_port_t& u) const {
     return seed;
 }
 
-bool operator==(const opflexagent::network::service_port_t& u,
-        const opflexagent::network::service_port_t& v) {
-    return ((u.address == v.address) && (u.prefixLen == v.prefixLen)
-        && (u.proto == v.proto) && (u.port == v.port));
-}
-
 bool operator==(const opflexagent::network::service_ports_t& u,
         const opflexagent::network::service_ports_t& v) {
     if(u.size() != v.size())

@@ -4,6 +4,8 @@ query-filters:
   - exclude:
       id: cpp/commented-out-code
   - exclude:
+      id: cpp/integer-used-for-enum
+  - exclude:
       id: cpp/member-const-no-effect
   - exclude:
       id: cpp/poorly-documented-function
