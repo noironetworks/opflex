@@ -36,6 +36,7 @@ using grpc::ServerWriter;
 using grpc::Status;
 using gbpserver::GBP;
 using gbpserver::GBPOperation;
+using gbpserver::GBPOperation_OpCode;
 using gbpserver::Version;
 using gbpserver::GBPObject;
 using gbpserver::Property;
@@ -47,11 +48,12 @@ using rapidjson::Value;
 
 class GbpServerImpl final : public GBP::Service {
 public:
-    GbpServerImpl(int objectsInMsg_, int sleepDuration_,
+    GbpServerImpl(int oper_, int objectsInMsg_, int sleepDuration_,
                   const std::string& filename) :
         objectsInMsg(objectsInMsg_), sleepDuration(sleepDuration_) {
         FILE* pfile = fopen(filename.c_str(), "r");
         char buffer[1024];
+        oper.set_opcode(static_cast<GBPOperation_OpCode>(oper_));
         rapidjson::FileReadStream f(pfile, buffer, sizeof(buffer));
         doc.ParseStream<0, rapidjson::UTF8<>, rapidjson::FileReadStream>(f);
         JsonDump(doc);
@@ -61,8 +63,6 @@ public:
                        const Version* version,
                        ServerWriter<GBPOperation>* writer) override {
         Value::ConstValueIterator moit;
-        GBPOperation oper;
-        oper.set_opcode(GBPOperation::REPLACE);
         size_t i = 0;
         for (moit = doc.Begin(); moit != doc.End(); ++ moit) {
             const Value& mo = *moit;
@@ -165,13 +165,14 @@ public:
 
 private:
     Document doc;
+    GBPOperation oper;
     int objectsInMsg;
     int sleepDuration;
 };
 
-void Run(int objectsInMsg, int sleepDuration, const std::string& filename) {
+void Run(int oper, int objectsInMsg, int sleepDuration, const std::string& filename) {
     std::string server_address("0.0.0.0:19999");
-    GbpServerImpl service(objectsInMsg, sleepDuration, filename);
+    GbpServerImpl service(oper, objectsInMsg, sleepDuration, filename);
 
     ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
@@ -182,13 +183,13 @@ void Run(int objectsInMsg, int sleepDuration, const std::string& filename) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 4) {
+    if (argc < 5) {
         std::cerr << "Usage: "  << argv[0]
-                  << " <object-count-per-msg> <wait-internval-between-msgs>"
+                  << " <oper> <object-count-per-msg> <wait-internval-between-msgs>"
                   << " <policy.json>"
                   << std::endl;
         return 1;
     }
-    Run(atoi(argv[1]), atoi(argv[2]), std::string(argv[3]));
+    Run(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]), std::string(argv[4]));
     return 0;
 }
