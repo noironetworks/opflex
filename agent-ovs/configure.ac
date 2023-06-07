@@ -95,7 +95,7 @@ AM_COND_IF([RENDERER_OVS],
            [AC_MSG_NOTICE([Open vSwitch renderer is disabled])])
 
 # Enable grpc support, disabled by default
-AC_ARG_ENABLE(grpc,
+AC_ARG_ENABLE(grpc++,
               AC_HELP_STRING([--enable-grpc], [Enable Grpc support]))
 AM_CONDITIONAL(ENABLE_GRPC, [test x$enable_grpc = 'xyes'])
 AM_COND_IF([ENABLE_GRPC],
