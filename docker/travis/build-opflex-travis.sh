@@ -32,7 +32,7 @@ tail -f /tmp/opflex-build-base.log | awk 'NR%100-1==0' &
 #while [[ "$(docker images -q $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG 2> /dev/null)" == ""]] && [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
 while [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
 
-docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
+#docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
 #docker pull quay.io/noirolabs/opflex-build-base:sumit-kmr2-test
 
 pushd $OPFLEX_DIR/genie
