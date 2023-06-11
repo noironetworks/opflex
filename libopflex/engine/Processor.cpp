@@ -733,14 +733,20 @@ OpflexHandler* Processor::newHandler(OpflexConnection* conn) {
 
 void Processor::handleNewConnections() {
     const std::lock_guard<std::mutex> lock(item_mutex);
+    obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
+
     for (const item& i : obj_state) {
-        uint64_t newexp = 0;
+        uint64_t newexp = i.expiration;
         const ClassInfo& ci = store->getClassInfo(i.details->class_id);
+	obj_state_by_uri::iterator uit = uri_index.find(i.uri);
         if (i.details->state == IN_SYNC) {
             declareObj(ci.getType(), i, newexp);
         }
         if (i.details->state == RESOLVED) {
             resolveObj(ci.getType(), i, newexp, false);
+        }
+	if (newexp != i.expiration) {
+            uri_index.modify(uit, Processor::change_expiration(newexp));
         }
     }
 }
