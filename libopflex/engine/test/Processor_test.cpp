@@ -733,6 +733,23 @@ BOOST_FIXTURE_TEST_CASE( policy_resolve_flaky, PolicyFixture ) {
     WAIT_FOR(opflexServer->getListener().applyConnPred(resolutions_pred, NULL), 1000);
 }
 
+// test policy resolve retry after connection ready
+BOOST_FIXTURE_TEST_CASE( policy_resolve_retry, PolicyFixture ) {
+    opflexServer->getListener().applyConnPred(make_flaky_pred, NULL);
+    setup();
+    WAIT_FOR(processor.getRefCount(c4u) > 0, 1000);
+    WAIT_FOR(!processor.isObjNew(c5u), 1000);
+    startClient();
+    WAIT_FOR(connReady(processor.getPool(), LOCALHOST, 8009), 1000);
+
+    WAIT_FOR(itemPresent(client2, 4, c4u), 1000);
+    WAIT_FOR(itemPresent(client2, 6, c6u), 1000);
+    BOOST_CHECK_EQUAL("test", client2->get(4, c4u)->getString(9));
+    BOOST_CHECK_EQUAL("test2", client2->get(6, c6u)->getString(13));
+
+    WAIT_FOR(opflexServer->getListener().applyConnPred(resolutions_pred, NULL), 1000);
+}
+
 class StateFixture : public ServerFixture {
 public:
     StateFixture()
