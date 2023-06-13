@@ -24,7 +24,7 @@ dnl 2. the libtool version in VERSION_INFO
 m4_define([sdk_pversion], 2)
 m4_define([sdk_sversion], 5)
 m4_define([sdk_iversion], 0)
-AC_INIT([libopflex], [sdk_pversion.sdk_sversion.sdk_iversion])
+AC_INIT([libopflex],[sdk_pversion.sdk_sversion.sdk_iversion])
 AC_SUBST(SDK_MARKETNAME, ["OpFlex Framework"])
 AC_DEFINE(SDK_MARKETNAME, ["OpFlex Framework"], [Marketing name for SDK])
 
@@ -55,7 +55,7 @@ dnl Initialization
 
 dnl initialize automake and libtool
 AM_INIT_AUTOMAKE([subdir-objects silent-rules foreign])
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_MACRO_DIR([m4])
 LT_INIT()
 
@@ -71,8 +71,7 @@ dnl Configure options
 
 dnl Modify the release/build version
 AC_ARG_WITH(buildversion,
-            AC_HELP_STRING([--with-buildversion], 
-                           [Version number of build]),
+            AS_HELP_STRING([--with-buildversion],[Version number of build]),
             [sdk_bversion=${withval}],
             [sdk_bversion='private'])
 
@@ -80,35 +79,35 @@ dnl allow to create final builds with assert()s disabled
 AC_HEADER_ASSERT
 
 dnl Create an option to build with TSAN enabled
-AC_ARG_ENABLE(tsan, AC_HELP_STRING([--enable-tsan], [Enable TSAN]))
+AC_ARG_ENABLE(tsan, AS_HELP_STRING([--enable-tsan],[Enable TSAN]))
 AM_CONDITIONAL(ENABLE_TSAN, [test x$enable_tsan = 'xyes'])
 AM_COND_IF([ENABLE_TSAN],
           [AC_MSG_NOTICE([TSAN is enabled])],
           [AC_MSG_NOTICE([TSAN is disabled])])
 
 dnl Create an option to build with ASAN enabled
-AC_ARG_ENABLE(asan, AC_HELP_STRING([--enable-asan], [Enable ASAN]))
+AC_ARG_ENABLE(asan, AS_HELP_STRING([--enable-asan],[Enable ASAN]))
 AM_CONDITIONAL(ENABLE_ASAN, [test x$enable_asan = 'xyes'])
 AM_COND_IF([ENABLE_ASAN],
           [AC_MSG_NOTICE([ASAN is enabled])],
           [AC_MSG_NOTICE([ASAN is disabled])])
 
 dnl Create an option to build with UBSAN enabled
-    AC_ARG_ENABLE(ubsan, AC_HELP_STRING([--enable-ubsan], [Enable UBSAN]))
+    AC_ARG_ENABLE(ubsan, AS_HELP_STRING([--enable-ubsan],[Enable UBSAN]))
 AM_CONDITIONAL(ENABLE_UBSAN, [test x$enable_ubsan = 'xyes'])
 AM_COND_IF([ENABLE_UBSAN],
 [AC_MSG_NOTICE([UBSAN is enabled])],
 [AC_MSG_NOTICE([UBSAN is disabled])])
 
 dnl Create an option to build with code coverage enabled
-AC_ARG_ENABLE(coverage, AC_HELP_STRING([--enable-coverage], [Enable coverage]))
+AC_ARG_ENABLE(coverage, AS_HELP_STRING([--enable-coverage],[Enable coverage]))
 AM_CONDITIONAL(ENABLE_COVERAGE, [test x$enable_coverage = 'xyes'])
 AM_COND_IF([ENABLE_COVERAGE],
           [AC_MSG_NOTICE([Code coverage is enabled])],
           [AC_MSG_NOTICE([Code coverage is disabled])])
 
 dnl Create an option to build with gprof enabled
-AC_ARG_ENABLE(gprof, AC_HELP_STRING([--enable-gprof], [Enable gprof]))
+AC_ARG_ENABLE(gprof, AS_HELP_STRING([--enable-gprof],[Enable gprof]))
 AM_CONDITIONAL(ENABLE_GPROF, [test x$enable_gprof = 'xyes'])
 AM_COND_IF([ENABLE_GPROF],
           [AC_MSG_NOTICE([gprof is enabled])],
@@ -116,8 +115,7 @@ AM_COND_IF([ENABLE_GPROF],
 
 dnl Create an option to build unit tests only with make check
 AC_ARG_ENABLE(tests-make-all,
-              AC_HELP_STRING([--disable-tests-make-all],
-                             [Disable building tests with make all]))
+              AS_HELP_STRING([--disable-tests-make-all],[Disable building tests with make all]))
 AM_CONDITIONAL(MAKE_ALL_TESTS, [test x$enable_tests_make_all != 'xno'])
 
 dnl ---------------------------------------------------------------
@@ -157,9 +155,6 @@ AM_CONDITIONAL(HAVE_DOXYGEN, [test x$DOXYGEN != 'xnone'])
 
 dnl ---------------------------------------------------------------
 dnl Dependency checks
-
-dnl Checks for header files
-AC_STDC_HEADERS
 
 dnl Boost dependencies
 AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))
