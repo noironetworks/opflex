@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------
 # Initialization
 
-AC_INIT([opflex-agent], [2.5.0])
+AC_INIT([opflex-agent],[2.5.0])
 AC_SUBST(MODULE_NAME, ["Group-based Policy Agent"])
 
 dnl For more information on libtool versioning, see:
@@ -39,9 +39,9 @@ AC_SUBST(VERSION_INFO, [17:0:17])
 
 # initialize automake and libtool
 AM_INIT_AUTOMAKE([subdir-objects])
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS(config.h)
 LT_INIT([disable-static])
-AC_PROG_LIBTOOL
+LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
 AC_DEFINE_UNQUOTED(GITHASH,["$m4_esyscmd([./configure.commit])"],[Git hash])
 
@@ -60,8 +60,7 @@ dnl Configure options
 
 dnl Modify the release/build version
 AC_ARG_WITH(buildversion,
-            AC_HELP_STRING([--with-buildversion],
-                           [Version number of build]),
+            AS_HELP_STRING([--with-buildversion],[Version number of build]),
             [bversion=${withval}],
             [bversion='private'])
 AC_SUBST(BVERSION, [${bversion}])
@@ -73,7 +72,6 @@ AC_HEADER_ASSERT
 # Environment introspection
 
 # check for compiler
-AC_PROG_CC_STDC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
@@ -87,8 +85,7 @@ AM_CONDITIONAL(HAVE_DOXYGEN, [test x$DOXYGEN != 'xnone'])
 
 # switch to enable OVS renderer plugin
 AC_ARG_ENABLE(renderer-ovs,
-              AC_HELP_STRING([--renderer-ovs],
-                             [Build the OVS renderer]))
+              AS_HELP_STRING([--renderer-ovs],[Build the OVS renderer]))
 AM_CONDITIONAL([RENDERER_OVS], [test x$enable_renderer_ovs != 'xno'])
 AM_COND_IF([RENDERER_OVS],
            [AC_MSG_NOTICE([Open vSwitch renderer is enabled])],
@@ -96,42 +93,42 @@ AM_COND_IF([RENDERER_OVS],
 
 # Enable grpc support, disabled by default
 AC_ARG_ENABLE(grpc++,
-              AC_HELP_STRING([--enable-grpc], [Enable Grpc support]))
+              AS_HELP_STRING([--enable-grpc],[Enable Grpc support]))
 AM_CONDITIONAL(ENABLE_GRPC, [test x$enable_grpc = 'xyes'])
 AM_COND_IF([ENABLE_GRPC],
           [AC_MSG_NOTICE([GRPC is enabled])],
           [AC_MSG_NOTICE([GRPC is disabled])])
 
 dnl Create an option to build with TSAN enabled
-AC_ARG_ENABLE(tsan, AC_HELP_STRING([--enable-tsan], [Enable TSAN]))
+AC_ARG_ENABLE(tsan, AS_HELP_STRING([--enable-tsan],[Enable TSAN]))
 AM_CONDITIONAL(ENABLE_TSAN, [test x$enable_tsan = 'xyes'])
 AM_COND_IF([ENABLE_TSAN],
           [AC_MSG_NOTICE([TSAN is enabled])],
           [AC_MSG_NOTICE([TSAN is disabled])])
 
 dnl Create an option to build with ASAN enabled
-AC_ARG_ENABLE(asan, AC_HELP_STRING([--enable-asan], [Enable ASAN]))
+AC_ARG_ENABLE(asan, AS_HELP_STRING([--enable-asan],[Enable ASAN]))
 AM_CONDITIONAL(ENABLE_ASAN, [test x$enable_asan = 'xyes'])
 AM_COND_IF([ENABLE_ASAN],
           [AC_MSG_NOTICE([ASAN is enabled])],
           [AC_MSG_NOTICE([ASAN is disabled])])
 
 dnl Create an option to build with UBSAN enabled
-    AC_ARG_ENABLE(ubsan, AC_HELP_STRING([--enable-ubsan], [Enable UBSAN]))
+    AC_ARG_ENABLE(ubsan, AS_HELP_STRING([--enable-ubsan],[Enable UBSAN]))
 AM_CONDITIONAL(ENABLE_UBSAN, [test x$enable_ubsan = 'xyes'])
 AM_COND_IF([ENABLE_UBSAN],
 [AC_MSG_NOTICE([UBSAN is enabled])],
 [AC_MSG_NOTICE([UBSAN is disabled])])
 
 dnl Create an option to build with code coverage enabled
-AC_ARG_ENABLE(coverage, AC_HELP_STRING([--enable-coverage], [Enable coverage]))
+AC_ARG_ENABLE(coverage, AS_HELP_STRING([--enable-coverage],[Enable coverage]))
 AM_CONDITIONAL(ENABLE_COVERAGE, [test x$enable_coverage = 'xyes'])
 AM_COND_IF([ENABLE_COVERAGE],
           [AC_MSG_NOTICE([Code coverage is enabled])],
           [AC_MSG_NOTICE([Code coverage is disabled])])
 
 dnl Create an option to build with gprof enabled
-AC_ARG_ENABLE(gprof, AC_HELP_STRING([--enable-gprof], [Enable gprof]))
+AC_ARG_ENABLE(gprof, AS_HELP_STRING([--enable-gprof],[Enable gprof]))
 AM_CONDITIONAL(ENABLE_GPROF, [test x$enable_gprof = 'xyes'])
 AM_COND_IF([ENABLE_GPROF],
           [AC_MSG_NOTICE([gprof is enabled])],
@@ -141,7 +138,6 @@ AM_COND_IF([ENABLE_GPROF],
 # Dependency checks
 
 # Checks for header files
-AC_STDC_HEADERS
 
 AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))
 AX_BOOST_PROGRAM_OPTIONS
