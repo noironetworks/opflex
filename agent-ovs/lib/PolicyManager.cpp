@@ -343,6 +343,24 @@ PolicyManager::findSubnetForEp(const opflex::modb::URI& eg,
     return boost::none;
 }
 
+template<class T>
+inline bool compare_shared_ptr(const boost::optional<std::shared_ptr<T> > &p,
+                               const boost::optional<std::shared_ptr<T> > &q)
+{
+    if ((p == boost::none) || (q == boost::none)) return false;
+    if(p.get() == q.get()) return true;
+    if(p.get() && q.get()) return *p.get() == *q.get();
+    return false;
+}
+
+template<typename K, typename V>
+void print_map(std::unordered_map<K, V> const &m)
+{
+    for (auto const &pair: m) {
+        LOG(DEBUG) << "{" << pair.first << ": " << pair.second << "}";
+    }
+}
+
 bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
     using namespace modelgbp;
     using namespace modelgbp::gbp;
@@ -397,8 +415,14 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
         if (sns) {
             vector<shared_ptr<Subnet> > csns;
             sns.get()->resolveGbpSubnet(csns);
-            for (shared_ptr<Subnet>& csn : csns)
-                newsmap[csn->getURI()] = csn;
+            for (shared_ptr<Subnet>& csn : csns) {
+                if (gs.subnet_map[csn->getURI()] &&
+                    (*gs.subnet_map[csn->getURI()] == *csn)) {
+                    newsmap[csn->getURI()] = gs.subnet_map[csn->getURI()];
+                } else {
+                    newsmap[csn->getURI()] = csn;
+                }
+            }
         }
     }
 
@@ -488,8 +512,14 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
             if (sns) {
                 vector<shared_ptr<Subnet> > csns;
                 sns.get()->resolveGbpSubnet(csns);
-                for (shared_ptr<Subnet>& csn : csns)
-                    newsmap[csn->getURI()] = csn;
+                for (shared_ptr<Subnet>& csn : csns) {
+                    if (gs.subnet_map[csn->getURI()] &&
+                        (*gs.subnet_map[csn->getURI()] == *csn)) {
+                        newsmap[csn->getURI()] = gs.subnet_map[csn->getURI()];
+                    } else {
+                        newsmap[csn->getURI()] = csn;
+                    }
+                }
             }
         }
 
@@ -498,30 +528,34 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
     }
 
     bool updated = false;
-    if (epg != gs.epGroup ||
-        newInstCtx != gs.instContext ||
-        newfd != gs.floodDomain ||
-        newfdctx != gs.floodContext ||
-        newbd != gs.bridgeDomain ||
-        newrd != gs.routingDomain ||
-        newsmap != gs.subnet_map ||
-        newBDInstCtx != gs.instBDContext ||
-        newRDInstCtx != gs.instRDContext ||
-        newl2epretpolicy != gs.l2EpRetPolicy ||
-        newl3epretpolicy != gs.l3EpRetPolicy)
+
+    if (!compare_shared_ptr(epg, gs.epGroup) ||
+        !compare_shared_ptr(newInstCtx, gs.instContext) ||
+        !compare_shared_ptr(newfd, gs.floodDomain) ||
+        !compare_shared_ptr(newfdctx, gs.floodContext) ||
+        !compare_shared_ptr(newbd, gs.bridgeDomain) ||
+        !compare_shared_ptr(newrd, gs.routingDomain) ||
+        !compare_shared_ptr(newBDInstCtx, gs.instBDContext) ||
+        !compare_shared_ptr(newRDInstCtx, gs.instRDContext) ||
+        !compare_shared_ptr(newl2epretpolicy, gs.l2EpRetPolicy) ||
+        !compare_shared_ptr(newl3epretpolicy, gs.l3EpRetPolicy) ||
+        (newsmap != gs.subnet_map)) {
+
+        LOG(DEBUG) << "updateEPGDomains: " << egURI << " true";
+        gs.epGroup = epg;
+        gs.instContext = newInstCtx;
+        gs.floodDomain = newfd;
+        gs.floodContext = newfdctx;
+        gs.bridgeDomain = newbd;
+        gs.routingDomain = newrd;
+        gs.instBDContext = newBDInstCtx;
+        gs.instRDContext = newRDInstCtx;
+        gs.l2EpRetPolicy = newl2epretpolicy;
+        gs.l3EpRetPolicy = newl3epretpolicy;
+        gs.subnet_map = newsmap;
         updated = true;
 
-    gs.epGroup = epg;
-    gs.instContext = newInstCtx;
-    gs.floodDomain = newfd;
-    gs.floodContext = newfdctx;
-    gs.bridgeDomain = newbd;
-    gs.routingDomain = newrd;
-    gs.subnet_map = newsmap;
-    gs.instBDContext = newBDInstCtx;
-    gs.instRDContext = newRDInstCtx;
-    gs.l2EpRetPolicy = newl2epretpolicy;
-    gs.l3EpRetPolicy = newl3epretpolicy;
+    }
 
     return updated;
 }
