@@ -353,14 +353,6 @@ inline bool compare_shared_ptr(const boost::optional<std::shared_ptr<T> > &p,
     return false;
 }
 
-template<typename K, typename V>
-void print_map(std::unordered_map<K, V> const &m)
-{
-    for (auto const &pair: m) {
-        LOG(DEBUG) << "{" << pair.first << ": " << pair.second << "}";
-    }
-}
-
 bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
     using namespace modelgbp;
     using namespace modelgbp::gbp;
@@ -528,33 +520,53 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
     }
 
     bool updated = false;
-
-    if (!compare_shared_ptr(epg, gs.epGroup) ||
-        !compare_shared_ptr(newInstCtx, gs.instContext) ||
-        !compare_shared_ptr(newfd, gs.floodDomain) ||
-        !compare_shared_ptr(newfdctx, gs.floodContext) ||
-        !compare_shared_ptr(newbd, gs.bridgeDomain) ||
-        !compare_shared_ptr(newrd, gs.routingDomain) ||
-        !compare_shared_ptr(newBDInstCtx, gs.instBDContext) ||
-        !compare_shared_ptr(newRDInstCtx, gs.instRDContext) ||
-        !compare_shared_ptr(newl2epretpolicy, gs.l2EpRetPolicy) ||
-        !compare_shared_ptr(newl3epretpolicy, gs.l3EpRetPolicy) ||
-        (newsmap != gs.subnet_map)) {
-
-        LOG(DEBUG) << "updateEPGDomains: " << egURI << " true";
+    if (!compare_shared_ptr(epg, gs.epGroup)) {
         gs.epGroup = epg;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newInstCtx, gs.instContext)) {
         gs.instContext = newInstCtx;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newfd, gs.floodDomain)) {
         gs.floodDomain = newfd;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newfdctx, gs.floodContext)) {
         gs.floodContext = newfdctx;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newbd, gs.bridgeDomain)) {
         gs.bridgeDomain = newbd;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newrd, gs.routingDomain)) {
         gs.routingDomain = newrd;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newBDInstCtx, gs.instBDContext)) {
         gs.instBDContext = newBDInstCtx;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newRDInstCtx, gs.instRDContext)) {
         gs.instRDContext = newRDInstCtx;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newl2epretpolicy, gs.l2EpRetPolicy)) {
         gs.l2EpRetPolicy = newl2epretpolicy;
+        updated = true;
+    }
+    if (!compare_shared_ptr(newl3epretpolicy, gs.l3EpRetPolicy)) {
         gs.l3EpRetPolicy = newl3epretpolicy;
+        updated = true;
+    }
+    if (newsmap != gs.subnet_map) {
         gs.subnet_map = newsmap;
         updated = true;
+    }
 
+    if (updated) {
+        LOG(DEBUG) << "updateEPGDomains: " << egURI << " true";
     }
 
     return updated;
