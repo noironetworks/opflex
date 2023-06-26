@@ -279,8 +279,7 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                 f.cookie(ckbe);
                 f.flags(flags);
                 f.conntrackState(FlowBuilder::CT_TRACKED |
-                                 FlowBuilder::CT_RELATED |
-                                 FlowBuilder::CT_REPLY,
+                                 FlowBuilder::CT_RELATED,
                                  FlowBuilder::CT_TRACKED |
                                  FlowBuilder::CT_RELATED |
                                  FlowBuilder::CT_REPLY |
