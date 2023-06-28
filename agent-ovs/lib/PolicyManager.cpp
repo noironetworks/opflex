@@ -378,14 +378,20 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
                                        egURI));
     }
 
-    optional<shared_ptr<RoutingDomain> > newrd;
-    optional<shared_ptr<BridgeDomain> > newbd;
-    optional<shared_ptr<FloodDomain> > newfd;
-    optional<shared_ptr<FloodContext> > newfdctx;
+    optional<shared_ptr<RoutingDomain> > newrd =
+        boost::make_optional<shared_ptr<RoutingDomain>>(false, nullptr);
+    optional<shared_ptr<BridgeDomain> > newbd =
+        boost::make_optional<shared_ptr<BridgeDomain>>(false, nullptr);
+    optional<shared_ptr<FloodDomain> > newfd =
+        boost::make_optional<shared_ptr<FloodDomain>>(false, nullptr);
+    optional<shared_ptr<FloodContext> > newfdctx =
+        boost::make_optional<shared_ptr<FloodContext>>(false, nullptr);
+    optional<shared_ptr<EndpointRetention> > newl2epretpolicy =
+        boost::make_optional<shared_ptr<EndpointRetention>>(false, nullptr);
+    optional<shared_ptr<EndpointRetention> > newl3epretpolicy =
+        boost::make_optional<shared_ptr<EndpointRetention>>(false, nullptr);
+    optional<URI> nEpRetURI = boost::none;
     subnet_map_t newsmap;
-    optional<shared_ptr<EndpointRetention> > newl2epretpolicy;
-    optional<shared_ptr<EndpointRetention> > newl3epretpolicy;
-    optional<URI> nEpRetURI;
 
     optional<opflex::modb::class_id_t> domainClass = boost::none;
     optional<URI> domainURI = boost::none;
