@@ -130,7 +130,8 @@ private:
 
     std::unique_ptr<OvsdbConnection> ovsdbConnection;
     SpanRenderer spanRenderer;
-    NetFlowRenderer netflowRenderer;
+    NetFlowRenderer netflowRendererIntBridge;
+    NetFlowRenderer netflowRendererAccessBridge;
     QosRenderer qosRenderer;
 
     bool started;
