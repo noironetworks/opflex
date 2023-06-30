@@ -249,7 +249,7 @@ void Processor::sendToRole(const item& i, uint64_t& newexp,
             (uint64_t)std::pow(2, i.details->retry_count) * retryDelay;
 
 	// Randomize the backoff by plus or minus ten percent
-	nextRetryDelay += ditherBackoff(nextRetryDelay, 10);
+	nextRetryDelay = ditherBackoff(nextRetryDelay, 10);
 
         if (nextRetryDelay > policyRefTimerDuration)
             nextRetryDelay = policyRefTimerDuration;
