@@ -9,7 +9,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
 #if defined(HAVE_SYS_INOTIFY_H) && defined(HAVE_SYS_EVENTFD_H)
 #define USE_INOTIFY
 #endif
@@ -17,7 +19,6 @@
 #include <stdexcept>
 #include <sstream>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <opflex/modb/URIBuilder.h>
@@ -109,7 +110,7 @@ static int validateMacMask(const std::string& arg,
         return 0;
     }
     std::string address_string=arg,mask_string;
-    if(arg.find("/") != std::string::npos) {
+    if(arg.find('/') != std::string::npos) {
         std::vector<std::string> splitVec;
         split(splitVec,arg, is_any_of("/"), token_compress_on);
         address_string = splitVec[0];
@@ -137,7 +138,7 @@ static int validatePrefix(int filter_idx, const std::string & arg,
         return ret;
     }
     std::string address_string = arg;
-    if(arg.find("/") != std::string::npos) {
+    if(arg.find('/') != std::string::npos) {
         std::vector<std::string> splitVec;
         split(splitVec,arg, is_any_of("/"), token_compress_on);
         address_string = splitVec[0];
@@ -246,7 +247,7 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
             }
             /*Notify removed*/
             if(dropPruneCfgSet) {
-                for(auto itr: *dropPruneCfgSet) {
+                for(auto& itr: *dropPruneCfgSet) {
                     manager->packetDropPruneConfigDeleted(itr);
                 }
             }
@@ -337,7 +338,7 @@ void FSPacketDropLogConfigSource::deleted(const fs::path& filePath) {
             dropCfg.dropLogEnable = false;
             dropCfg.dropLogMode = DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG;
             manager->packetDropLogConfigUpdated(dropCfg);
-            for(auto itr: *dropPruneCfgSet) {
+            for(auto& itr: *dropPruneCfgSet) {
                 manager->packetDropPruneConfigDeleted(itr);
             }
             dropPruneCfgSet->clear();

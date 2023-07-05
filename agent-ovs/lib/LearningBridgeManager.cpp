@@ -75,7 +75,7 @@ void LearningBridgeManager::removeVlans(const LearningBridgeIface& iface,
                                         range_set_t& notify) {
     const std::string& uuid = iface.getUUID();
 
-    for (auto r : iface.getTrunkVlans()) {
+    for (auto& r : iface.getTrunkVlans()) {
         auto it = range_lbi_map.find(r);
 
         while (it != range_lbi_map.end()) {
@@ -342,7 +342,7 @@ getVlanRangesByIface(const std::string& uuid,
     if (it == lbi_map.end()) return;
 
     LOG(DEBUG) << "getVlanRangesByIface for " << uuid;
-    for (auto r : it->second.iface->getTrunkVlans()) {
+    for (auto& r : it->second.iface->getTrunkVlans()) {
         auto it = range_lbi_map.find(r);
 
         while (it != range_lbi_map.end()) {

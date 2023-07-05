@@ -49,7 +49,7 @@ public:
     explicit AsyncDocumentParser(std::function<int(Document& d)> cb)
         : stream_(*this)
         , d_()
-        , cb_(cb)
+        , cb_(std::move(cb))
         , parseThread_()
         , mutex_()
         , notEmpty_()

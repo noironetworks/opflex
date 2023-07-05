@@ -729,7 +729,7 @@ namespace opflexagent {
          * Allow for returning all matching entries regardless of whether they
          * contain direct addresses.This simplifies logic.
          * */
-        for(auto demandItr : demandMappings) {
+        for(auto& demandItr : demandMappings) {
             DnsCacheEntry *terminalNode=NULL;
             std::string matchingAlias, matchingSrv;
             bool regularMatch = DomainNameMatch(entry.domainName, demandItr.first);
@@ -1384,7 +1384,7 @@ namespace opflexagent {
            std::unique_lock<std::mutex> lk(stateMutex);
            auto p = demandMappings.insert(std::make_pair(askName,emptySet));
            if(askName.data()[0] =='*') {
-               for(auto lm: learntMappings) {
+               for(auto& lm: learntMappings) {
                    if(DomainNameMatch(lm.first,askName)) {
                        addCacheEntryToAnswer(askName, askUri,
                         lm.second, p.first->second, cacheSet, notifySet);

@@ -42,7 +42,7 @@ void writeValue(yajr::rpc::SendHandler& writer, const OvsdbValue& value) {
         ss >> intQId;
         writer.Int(intQId);
 
-        for(auto it : valueMap){
+        for(const auto& it : valueMap){
             writer.StartArray();
             writer.String(it.first.c_str());
             writer.String(it.second.c_str());
@@ -61,7 +61,7 @@ bool OvsdbTransactMessage::operator()(yajr::rpc::SendHandler& writer) const {
         writer.String("where");
         writer.StartArray();
         if (!conditions.empty()) {
-            for (auto elem : conditions) {
+            for (const auto& elem : conditions) {
                 writer.StartArray();
                 const string& lhs = get<0>(elem);
                 writer.String(lhs.c_str());
