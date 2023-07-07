@@ -120,9 +120,7 @@ class CommsFixture {
 
         internal::Peer::LoopData::getLoopData(CommsFixture::current_loop)->up();
 
-#ifdef YAJR_HAS_OPENSSL
         ZeroCopyOpenSSL::initOpenSSL(false); // false because we don't use multiple threads
-#endif
 
         eventCounter = 0;
     }
@@ -139,7 +137,6 @@ class CommsFixture {
         uv_close((uv_handle_t *)&timer_, down_on_close);
         uv_close((uv_handle_t *)&prepare_, down_on_close);
 
-#ifdef YAJR_HAS_OPENSSL
 #if (OPENSSL_VERSION_NUMBER > 0x10000000L && OPENSSL_VERSION_NUMBER < 0x10100000L)
         ERR_remove_thread_state(NULL);
 #endif
@@ -149,7 +146,6 @@ class CommsFixture {
         EVP_cleanup();
 #endif
         ZeroCopyOpenSSL::finiOpenSSL();
-#endif
 
         ::yajr::finiLoop(CommsFixture::current_loop);
 
@@ -1317,8 +1313,6 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_disconnect_client_for_non_existent_service,
     loop_until_final(range_t(1,1), pc_retrying_client);
 }
 
-#ifdef YAJR_HAS_OPENSSL
-
 void AttachPassiveSslTransportOnConnect(
         ::yajr::Peer * p,
         void * data,
@@ -1762,7 +1756,6 @@ BOOST_FIXTURE_TEST_CASE( STABLE_test_several_SSL_peers, CommsFixture ) {
     loop_until_final(range_t(401,401), pc_successful_connect200, range_t(0,0), true, 800); // 401 is to cause a timeout
 
 }
-#endif
 
 
 BOOST_AUTO_TEST_SUITE_END()
