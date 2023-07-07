@@ -426,8 +426,7 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
         if (i < (ready.size() - 1)) {
             m_copy = message->clone();
         } else {
-            m_copy = message;
-            messagep.release();
+            m_copy = messagep.release();
         }
         incrementMsgCounter(conn, m_copy);
         conn->sendMessage(m_copy, sync);

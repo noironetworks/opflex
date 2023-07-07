@@ -1254,18 +1254,18 @@ void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, 
     if(!dnsAnswer) {
         vector<string> elements;
         uri.getElements(elements);
-	if(elements.size() < 1) {
+        if(elements.empty()) {
             return;
         }
-	LOG(DEBUG) << "Clear DNS cache for " << elements.back();
+        LOG(DEBUG) << "Clear DNS cache for " << elements.back();
         auto itr = dns_demand_map.find(elements.back());
         if(itr != dns_demand_map.end()) {
-	    itr->second.resolved.clear();
+            itr->second.resolved.clear();
             notifyContracts = itr->second.secGrpSet;
-	    for(auto &secGrp: notifyContracts) {
-		bool notFound;
-		updateSecGrpRules(secGrp, notFound);
-	    }
+            for(auto &secGrp: notifyContracts) {
+                bool notFound;
+                updateSecGrpRules(secGrp, notFound);
+            }
         }
         return;
     }
@@ -1538,7 +1538,7 @@ bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
                                            notFound, secGrpMap[secGrpURI].rules,
                                            oldRedirGrps, log, newRedirGrps,
                                            newDnsRefs);
-    for (auto s : oldDnsRefs) {
+    for (const auto& s : oldDnsRefs) {
         /*lost Dns Ref*/
         if(dns_demand_map.find(s) != dns_demand_map.end() && (newDnsRefs.find(s) == newDnsRefs.end())) {
             deleteDnsAsk(secGrpURI, s);
@@ -2094,7 +2094,7 @@ void PolicyManager::getBestRemoteRoute(
     }
     uint32_t bestLen=0;
     RoutingDomainState &rs = rd_map[rdURI];
-    for(auto remoteRt : rs.remote_routes) {
+    for(auto& remoteRt : rs.remote_routes) {
         auto route_iter = remote_route_map.find(remoteRt);
         if(route_iter == remote_route_map.end()) {
             LOG(ERROR) << "No cached policy route for " << remoteRt;

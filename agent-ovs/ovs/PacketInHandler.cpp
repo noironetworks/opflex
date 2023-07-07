@@ -889,7 +889,7 @@ static void handleICMPEchoPktIn(bool v4,
                         pushVlanActions(vlan));
     } else {
         send_packet_out(agent, intConn, accConn, intFlowManager,
-                        intPortMapper, accPortMapper, egUri,
+                        intPortMapper, accPortMapper, std::move(egUri),
                         b, proto, pi.flow_metadata.flow.regs[7],
                         OFPP_IN_PORT);
     }

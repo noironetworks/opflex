@@ -95,7 +95,7 @@ public:
     Query(const string& subject_,
           optional<URI> uri_,
           bool recursive_ = true)
-        : subject(subject_), uri(uri_), recursive(recursive_) { }
+        : subject(subject_), uri(std::move(uri_)), recursive(recursive_) { }
     virtual ~Query() {}
 
     virtual int execute(InspectorClientImpl& client);

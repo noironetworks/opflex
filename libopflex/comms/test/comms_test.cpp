@@ -359,8 +359,8 @@ class CommsFixture {
             size_t num_events = 0
             ) {
 
-        required_final_peers = final_peers;
-        required_transient_peers = transient_peers;
+        required_final_peers = std::move(final_peers);
+        required_transient_peers = std::move(transient_peers);
         required_post_conditions = post_conditions;
         required_event_counter = num_events;
         expect_timeout = should_timeout;
