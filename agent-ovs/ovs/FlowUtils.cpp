@@ -282,8 +282,6 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
                                  FlowBuilder::CT_RELATED,
                                  FlowBuilder::CT_TRACKED |
                                  FlowBuilder::CT_RELATED |
-                                 FlowBuilder::CT_REPLY |
-                                 FlowBuilder::CT_ESTABLISHED |
                                  FlowBuilder::CT_INVALID |
                                  FlowBuilder::CT_NEW);
                  flowutils::match_group(f, priority, svnid, dvnid);
