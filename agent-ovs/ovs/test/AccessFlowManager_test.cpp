@@ -903,7 +903,7 @@ void AccessFlowManagerFixture::initExpSysSecGrpSet1(){
          .isCtState("-new+est-rel+rpl-inv+trk").tcp()
          .actions().go(IN_POL).done());
     ADDF(Bldr(SEND_FLOW_REM).table(SYS_IN_POL).priority(prio - 128).cookie(ruleId)
-         .isCtState("-new-est+rel-rpl-inv+trk").ip()
+         .isCtState("-new+rel-inv+trk").ip()
          .actions().go(IN_POL).done());
     ADDF(Bldr(SEND_FLOW_REM).table(SYS_IN_POL).priority(prio - 128)
          .isCtState("-trk").tcp()
@@ -1018,7 +1018,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
          .isCtState("-new+est-rel+rpl-inv+trk").tcp().reg(SEPG, setId)
          .actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128).cookie(ruleId)
-         .isCtState("-new-est+rel-rpl-inv+trk").ip().reg(SEPG, setId)
+         .isCtState("-new+rel-inv+trk").ip().reg(SEPG, setId)
          .actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128)
          .isCtState("-trk").tcp().reg(SEPG, setId)
