@@ -38,7 +38,7 @@ jobs:
       if: tag IS present
       before_script:
         - export DOCKER_BUILDKIT=1
-        - export RELEASE_TAG=5.2.7.1
+        - export RELEASE_TAG=6.0.3.1
         - export UPSTREAM_ID=81c2369
         - export EXPECTED_TAG_PREFIX=${RELEASE_TAG}
       script:
