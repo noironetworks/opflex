@@ -5,8 +5,8 @@ set -x
 
 wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
 tar -xvzf artifacts.tgz
-sudo dpkg -i libnoiro-openvswitch_2.12.0-1_amd64.deb
-sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
+#sudo dpkg -i libnoiro-openvswitch_2.12.0-1_amd64.deb
+#sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
 sudo dpkg -i prometheus-cpp_1.0.1_amd64.deb
 
 mkdir -p ../grpc
@@ -30,5 +30,8 @@ fi
 pushd grpc/cmake/build
 sudo make install
 sudo cp ../../third_party/re2/re2.pc /usr/local/share/pkgconfig/
+sudo cp ../../cmake/build/libs/opt/pkgconfig/*.pc /usr/local/share/pkgconfig/
+sudo cp ../../cmake/build/third_party/zlib/zlib.pc /usr/local/share/pkgconfig/
+sudo cp ../../cmake/build/third_party/protobuf/*.pc /usr/local/share/pkgconfig/
 popd
 popd
