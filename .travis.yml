@@ -36,6 +36,8 @@ jobs:
 
     - stage: build-images
       if: tag IS present
+      install:
+        - pip install pyyaml pytz
       before_script:
         - export DOCKER_BUILDKIT=1
         - export RELEASE_TAG=6.0.3.1
