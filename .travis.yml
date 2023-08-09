@@ -3,7 +3,7 @@ compiler:
   - gcc
 services: docker
 os: linux
-dist: focal
+dist: jammy
 
 jobs:
   include:
@@ -14,7 +14,6 @@ jobs:
           packages:
           - libuv1-dev
           - libboost-all-dev
-          - libssl-dev
           - rapidjson-dev
           - autoconf
           - openjdk-11-jdk-headless
