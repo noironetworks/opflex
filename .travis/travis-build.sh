@@ -51,11 +51,50 @@ find . -name test-suite.log|xargs cat | grep -A 20 -B 20 -i failed
 # - https://ftp.gnu.org/old-gnu/Manuals/gprof-2.9.1/html_mono/gprof.html
 printf '\n\n'
 echo "Gprof - top methods consuming cpu cycles:"
-gprof -b -p .libs/agent_test gmon.out | head -n 20
+# Run gprof in the background
+gprof -b -p .libs/agent_test gmon.out | head -n 20 &
+
+# Start a parallel process to write to stdout every minute
+(
+    while true; do
+        echo "Parallel process: Still running..."
+        sleep 60
+    done
+) &
+
+# Capture the process IDs of the background tasks
+gprof_pid=$!
+parallel_pid=$!
+
+# Wait for the gprof command to finish
+wait $gprof_pid  
+
+# Kill the parallel process
+kill $parallel_pid
 
 printf '\n\n'
 echo "Gprof - call graphs of first few top methods:"
-gprof -b -P .libs/agent_test gmon.out | head -n 100
+# Run gprof in the background
+gprof -b -P .libs/agent_test gmon.out | head -n 100 &
+
+# Start a parallel process to write to stdout every minute
+(
+    while true; do
+        echo "Parallel process: Still running..."
+        sleep 60
+    done
+) &
+
+# Capture the process IDs of the background tasks
+gprof_pid=$!
+parallel_pid=$!
+
+# Wait for the gprof command to finish
+wait $gprof_pid 
+
+# Kill the parallel process
+kill $parallel_pid
+
 popd
 
 printf '\n\n'
