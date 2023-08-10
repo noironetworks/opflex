@@ -29,12 +29,49 @@ find . -name test-suite.log|xargs cat | grep -A 20 -B 20 -i failed
 printf '\n\n'
 echo "Gprof - top methods consuming cpu cycles:"
 # Run gprof in the background
-gprof -b -p .libs/agent_test gmon.out | head -n 20
+gprof -b -p .libs/agent_test gmon.out | head -n 20 &
+gprof_pid=$!
+# Start a parallel process to write to stdout every minute
+(
+    i=1
+    while true; do
+        echo "process $gprof_pid running: $i minutes"
+        sleep 60
+        i=$((i+1))
+    done
+) &
+
+parallel_pid=$!
+
+# Wait for the gprof command to finish
+wait $gprof_pid  
+
+# Kill the parallel process
+kill $parallel_pid
 
 printf '\n\n'
 echo "Gprof - call graphs of first few top methods:"
 # Run gprof in the background
-gprof -b -P .libs/agent_test gmon.out | head -n 100 
+gprof -b -P .libs/agent_test gmon.out | head -n 100 &
+gprof_pid=$!
+
+# Start a parallel process to write to stdout every minute
+(
+    i=1
+    while true; do
+        echo "process $gprof_pid running: $i minutes"
+        sleep 60
+        i=$((i+1))
+    done
+) &
+parallel_pid=$!
+
+# Wait for the gprof command to finish
+wait $gprof_pid 
+
+# Kill the parallel process
+kill $parallel_pid
+
 popd
 
 printf '\n\n'

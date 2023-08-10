@@ -32,7 +32,7 @@ jobs:
         - TEST_SUITE_1=travis-build-gprof.sh
       script: 
         - bash ./.travis/$TEST_SUITE
-        - travis_wait 30 bash ./.travis/$TEST_SUITE_1
+        - bash ./.travis/$TEST_SUITE_1
       after_success:
         - bash ./.travis/coveralls-deploy.sh
 
