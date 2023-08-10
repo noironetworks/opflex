@@ -29,7 +29,10 @@ jobs:
       before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
       env:
         - TEST_SUITE=travis-build.sh
-      script: bash ./.travis/$TEST_SUITE
+        - TEST_SUITE_1=travis-build-gprof.sh
+      script: 
+        - bash ./.travis/$TEST_SUITE
+        - travis_wait 30 bash ./.travis/$TEST_SUITE_1
       after_success:
         - bash ./.travis/coveralls-deploy.sh
 
