@@ -51,11 +51,10 @@ find . -name test-suite.log|xargs cat | grep -A 20 -B 20 -i failed
 # - https://ftp.gnu.org/old-gnu/Manuals/gprof-2.9.1/html_mono/gprof.html
 printf '\n\n'
 echo "Gprof - top methods consuming cpu cycles:"
-gprof -b -p .libs/agent_test gmon.out | head -n 20
-
+time gprof -b -p .libs/agent_test gmon.out | head -n 20
 printf '\n\n'
 echo "Gprof - call graphs of first few top methods:"
-gprof -b -P .libs/agent_test gmon.out | head -n 100
+time gprof -b -P .libs/agent_test gmon.out | head -n 100
 popd
 
 printf '\n\n'
