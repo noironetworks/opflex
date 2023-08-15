@@ -26,6 +26,8 @@ jobs:
       before_install:
         - pip install --user cpp-coveralls
         - df -h
+        - cat /proc/cpuinfo
+        - cat /proc/meminfo
       install: bash ./.travis/install-dependencies.sh
       before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
       env:
