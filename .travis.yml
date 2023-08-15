@@ -25,6 +25,7 @@ jobs:
       # linux-tools-4.15.0-72-generic
       before_install:
         - pip install --user cpp-coveralls
+        - df -h
       install: bash ./.travis/install-dependencies.sh
       before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
       env:
