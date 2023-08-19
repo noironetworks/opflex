@@ -49,16 +49,16 @@ find . -name test-suite.log|xargs cat | grep -A 20 -B 20 -i failed
 # Note:
 # - https://linux.die.net/man/1/gprof
 # - https://ftp.gnu.org/old-gnu/Manuals/gprof-2.9.1/html_mono/gprof.html
-printf '\n\n'
-echo "Gprof - top methods consuming cpu cycles:"
-gprof -b -p .libs/agent_test gmon.out | head -n 20
+#printf '\n\n'
+#echo "Gprof - top methods consuming cpu cycles:"
+#gprof -b -p .libs/agent_test gmon.out | head -n 20
 
-printf '\n\n'
-echo "Gprof - call graphs of first few top methods:"
-gprof -b -P .libs/agent_test gmon.out | head -n 100
-popd
+#printf '\n\n'
+#echo "Gprof - call graphs of first few top methods:"
+#gprof -b -P .libs/agent_test gmon.out | head -n 100
+#popd
 
-printf '\n\n'
+#printf '\n\n'
 echo "Sorted time taken per unit test:"
 find . -name *_test.log | xargs grep "Leaving test case" | \
     awk '{gsub(/\"|\;/,"")}1' | sed 's/..$//; s/\// /g; s/\:/ /g' | \
