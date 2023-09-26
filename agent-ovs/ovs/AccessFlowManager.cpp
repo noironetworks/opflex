@@ -301,6 +301,9 @@ static void flowBypassServiceIP(FlowEntryList& el,
 
     for (const string& epipStr : ep->getIPs()) {
         network::cidr_t cidr;
+        boost::system::error_code ec;
+        address addr = address::from_string(epipStr, ec);
+        if (ec) continue;
         if (!network::cidr_from_string(epipStr, cidr, false))
             continue;
         for (const string& svcipStr : ep->getServiceIPs()) {
@@ -308,10 +311,14 @@ static void flowBypassServiceIP(FlowEntryList& el,
             address serviceAddr =
                 address::from_string(svcipStr, ec);
             if (ec) continue;
+            if (addr.is_v4() != serviceAddr.is_v4())
+                continue;
 
             FlowBuilder ingress, egress;
+            uint16_t ethT = addr.is_v4() ? eth::type::IP
+                                         : eth::type::IPV6;
             ingress.priority(10)
-                   .ethType(eth::type::IP)
+                   .ethType(ethT)
                    .inPort(uplinkPort)
                    .ipSrc(serviceAddr)
                    .ipDst(cidr.first, cidr.second)
@@ -332,7 +339,7 @@ static void flowBypassServiceIP(FlowEntryList& el,
             ingress.build(el);
 
             egress.priority(10)
-                  .ethType(eth::type::IP)
+                  .ethType(ethT)
                   .inPort(accessPort)
                   .ipSrc(cidr.first, cidr.second)
                   .ipDst(serviceAddr)
