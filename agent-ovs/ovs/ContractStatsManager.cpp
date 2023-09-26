@@ -68,6 +68,7 @@ void ContractStatsManager::start() {
     {
         std::lock_guard<std::mutex> lock(timer_mutex);
         if (timer)
+             LOG(DEBUG) << "contract stats on timer------bhavana";
             timer->async_wait(bind(&ContractStatsManager::on_timer, this, error));
     }
 }
@@ -90,9 +91,11 @@ void ContractStatsManager::on_timer(const error_code& ec) {
     }
 
     TableState::cookie_callback_t cb_func;
+    LOG(DEBUG) << "Cb_func for contracy stats------bhavana";
     cb_func = [this](uint64_t cookie, uint16_t priority,
                      const struct match& match) {
         const std::lock_guard<std::mutex> lock(pstatMtx);
+     LOG(DEBUG) << "calling updateFlowEntryMap for contracts------bhavana";
         updateFlowEntryMap(contractState, cookie, priority, match);
     };
 

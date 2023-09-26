@@ -67,6 +67,8 @@ void ServiceStatsManager::update_state (const error_code& ec)
         cb_func = [this](uint64_t cookie, uint16_t priority,
                          const struct match& match) {
             const std::lock_guard<std::mutex> lock(pstatMtx);
+	    LOG(DEBUG) << "cookie ---------bhavana" << cookie;
+            LOG(DEBUG) << "priority ---------bhavana" << priority;
             updateFlowEntryMap(statsState, cookie, priority, match);
         };
 

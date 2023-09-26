@@ -55,13 +55,20 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       pktInHandler(agent_, intFlowManager, dnsManager),
       interfaceStatsManager(&agent_, intSwitchManager.getPortMapper(),
                             accessSwitchManager.getPortMapper()),
+
       contractStatsManager(&agent_, idGen, intSwitchManager),
+
       serviceStatsManager(&agent_, idGen, intSwitchManager,
                            intFlowManager),
+
       secGrpStatsManager(&agent_, idGen, accessSwitchManager),
+
       tableDropStatsManager(&agent_, idGen, intSwitchManager,
               accessSwitchManager),
       dnsManager(agent_),
+
+      natStatsManager(&agent_, idGen, intSwitchManager, intFlowManager),
+
       encapType(IntFlowManager::ENCAP_NONE),
       tunnelRemotePort(0), uplinkVlan(0),
       virtualRouter(true), routerAdv(true),
@@ -77,6 +84,9 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       spanRenderer(agent_), netflowRendererIntBridge(agent_), netflowRendererAccessBridge(agent_),
       qosRenderer(agent_), started(false), dropLogRemotePort(6081), dropLogLocalPort(50000),
       pktLogger(pktLoggerIO, exporterIO, idGen)
+
+
+
 {
 
 }
@@ -178,6 +188,7 @@ void OVSRenderer::start() {
     pktInHandler.setFlowReader(&intSwitchManager.getFlowReader());
     pktInHandler.start();
 
+    ifaceStatsEnabled=false;
     if (ifaceStatsEnabled) {
         interfaceStatsManager.setTimerInterval(ifaceStatsInterval);
         interfaceStatsManager.
@@ -187,6 +198,7 @@ void OVSRenderer::start() {
                                : NULL);
         interfaceStatsManager.start();
     }
+    contractStatsEnabled=false;
     if (contractStatsEnabled) {
         contractStatsManager.setTimerInterval(contractStatsInterval);
         contractStatsManager.setAgentUUID(getAgent().getUuid());
@@ -194,6 +206,7 @@ void OVSRenderer::start() {
             registerConnection(intSwitchManager.getConnection());
         contractStatsManager.start();
     }
+    serviceStatsEnabled=false;
     if (serviceStatsEnabled) {
         serviceStatsManager.setTimerInterval(serviceStatsInterval);
         serviceStatsManager.setAgentUUID(getAgent().getUuid());
@@ -201,6 +214,7 @@ void OVSRenderer::start() {
             registerConnection(intSwitchManager.getConnection());
         serviceStatsManager.start();
     }
+    secGroupStatsEnabled=false;
     if (secGroupStatsEnabled && accessBridgeName != "") {
         secGrpStatsManager.setTimerInterval(secGroupStatsInterval);
         secGrpStatsManager.setAgentUUID(getAgent().getUuid());
@@ -208,6 +222,7 @@ void OVSRenderer::start() {
             registerConnection(accessSwitchManager.getConnection());
         secGrpStatsManager.start();
     }
+    tableDropStatsEnabled=false;
     if (tableDropStatsEnabled) {
         tableDropStatsManager.setTimerInterval(tableDropStatsInterval);
         tableDropStatsManager.setAgentUUID(getAgent().getUuid());
@@ -219,6 +234,11 @@ void OVSRenderer::start() {
                                : NULL);
         tableDropStatsManager.start();
     }
+    natStatsManager.setTimerInterval(natStatsInterval);
+    natStatsManager.setAgentUUID(getAgent().getUuid());
+    natStatsManager.registerConnection(intSwitchManager.getConnection());
+    natStatsManager.start();
+    
     //Create any threads after starting the packet logger.
     //This is necessary so that fork works correctly. Fork
     //requires that no threads be active because files in the parent
@@ -277,7 +297,7 @@ void OVSRenderer::stop() {
         secGrpStatsManager.stop();
     if(tableDropStatsEnabled)
         tableDropStatsManager.stop();
-
+    natStatsManager.stop();
     pktInHandler.stop();
     dnsManager.stop();
     intFlowManager.stop();
@@ -510,6 +530,8 @@ void OVSRenderer::setProperties(const ptree& properties) {
         properties.get<long>(STATS_SECGROUP_INTERVAL, 10000);
     tableDropStatsInterval =
         properties.get<long>(TABLE_DROP_STATS_INTERVAL, 30000);
+    natStatsInterval = 5000;
+    LOG(DEBUG) <<  "natStatsInterval --bhavana " << natStatsInterval;
     if (ifaceStatsInterval <= 0) {
         ifaceStatsEnabled = false;
     }

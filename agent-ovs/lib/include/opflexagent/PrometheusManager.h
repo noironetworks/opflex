@@ -622,6 +622,18 @@ public:
                                          const string& dstEpg,
                                          const string& classifier);
 
+    
+
+    void addNUpdateNatStats(const string& uuid,
+			    const string& dir,
+ 			    uint64_t pktes,
+			    uint64_t bytes,
+                            const string& mappedIp,
+			    const string& floatingIp);
+
+    void removeNatCounter(const string& uuid);
+
+    
 
 private:
     // opflex agent handle
@@ -1242,6 +1254,53 @@ private:
      */
     std::atomic<bool> exposeEpSvcNan;
     /* TODO: Other Counter related apis and state */
+
+    // Lock to safe guard NAT Counter related state
+    mutex nat_counter_mutex;
+    enum NAT_METRICS {
+        NAT_METRICS_MIN,
+	NAT_VM2EXT_MIN = NAT_METRICS_MIN,
+        NAT_VM2EXT_BYTES = NAT_VM2EXT_MIN,
+        NAT_VM2EXT_PKTS,
+        NAT_VM2EXT_MAX = NAT_VM2EXT_PKTS,
+	NAT_EXT2VM_MIN,
+	NAT_EXT2VM_BYTES = NAT_EXT2VM_MIN,
+	NAT_EXT2VM_PKTS,
+	NAT_EXT2VM_MAX = NAT_EXT2VM_PKTS,
+	NAT_METRICS_MAX = NAT_EXT2VM_MAX
+    };
+
+
+    // metric families to track all VM2EXT metrics
+    Family<Gauge>      *gauge_nat_counter_family_ptr[NAT_METRICS_MAX+1];
+
+
+    // create any gauge metric families during start
+    void createStaticGaugeFamiliesNatCounter(void);
+
+    // remove any nat counter gauge metric families during stop
+    void removeStaticGaugeFamiliesNatCounter(void);
+
+    bool createDynamicGaugeNatStats (NAT_METRICS metric,
+                                     const string& uuid,
+                                     const string& mappedIp,
+			             const string& FIp,
+			             const string& dir);
+
+    // func to get label map and Gauge for Vm2ExtCounter given metric type, uuid
+    hgauge_pair_t getDynamicGaugeNatCounter(NAT_METRICS metric, const string& uuid);
+   
+    bool removeDynamicGaugeNatStats (NAT_METRICS metric,
+                                const string& uuid);
+
+    void removeDynamicGaugeNatStats (NAT_METRICS metric);
+
+    void removeDynamicGaugeNatStats (void);
+
+    static const map<string,string> createLabelMapNatCounter(const string& uuid, const string& mappedIp,const string& FIp);
+
+    unordered_map<string, hgauge_pair_t> nat_gauge_map[NAT_METRICS_MAX+1];
+
 };
 
 } /* namespace opflexagent */

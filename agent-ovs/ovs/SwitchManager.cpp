@@ -97,8 +97,10 @@ void SwitchManager::getForwardingTableList(
 void SwitchManager::enableSync() {
     if (stopping) return;
 
+    LOG(INFO) << "Enabling sync------      bhavana";
     if (!syncEnabled) {
         syncEnabled = true;
+         LOG(INFO) << "True--------bhavana";
         LOG(INFO)
             << "[" << (connection ? connection->getSwitchName() : "(none)")
             << "] Switch state synchronization enabled";
@@ -267,6 +269,7 @@ void SwitchManager::diffTableState(int tableId, const FlowEntryList& el,
 void SwitchManager::forEachCookieMatch(int tableId,
                                        TableState::cookie_callback_t& cb) {
     const lock_guard<recursive_mutex> lock(sm_mutex);
+    LOG(DEBUG) << "Inside tableStae forEachCookieMatch------bhavana";
     const TableState& tab = flowTables[tableId];
     tab.forEachCookieMatch(cb);
 }

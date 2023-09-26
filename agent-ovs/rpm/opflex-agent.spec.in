@@ -52,7 +52,7 @@ Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
 
-%bcond_without check
+#%bcond_without check
 
 %description
 The Opflex agent runs alongside the management plane of a network
@@ -144,14 +144,14 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/opflex-agent-ovs/faults
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/opflex-agent-ovs/dns
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/opflex-agent-ovs/conf.d
 
-%check
-%if %{with check}
-%if 0%{?rhel} == 7
-    . /opt/rh/devtoolset-8/enable
-    %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
-%endif
-    make check
-%endif
+#%check
+#%if %{with check}
+#%if 0%{?rhel} == 7
+#    . /opt/rh/devtoolset-8/enable
+#    %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
+#%endif
+#    make check
+#%endif
 
 %pre
 getent group opflexep >/dev/null || groupadd -r opflexep

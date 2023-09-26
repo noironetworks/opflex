@@ -62,15 +62,15 @@ void PolicyStatsManager::start(bool register_listener,
                                optional<boost::asio::io_service&> io_service) {
     stopping = false;
 
-    LOG(DEBUG) << "Starting policy stats manager " << this;
     if(connection) {
         connection->RegisterMessageHandler(OFPTYPE_FLOW_STATS_REPLY, this);
         connection->RegisterMessageHandler(OFPTYPE_FLOW_REMOVED, this);
         {
             std::lock_guard<std::mutex> lock(timer_mutex);
-            if (io_service)
+            if (io_service) {
                 timer.reset(new deadline_timer(io_service.get(),
                                                milliseconds(timer_interval)));
+            }
             else
                 timer.reset(new deadline_timer(agent->getAgentIOService(),
                                                milliseconds(timer_interval)));
@@ -108,7 +108,7 @@ void PolicyStatsManager::updateFlowEntryMap(flowCounterState_t& counterState,
                                             uint64_t cookie, uint16_t priority,
                                             const struct match& match) {
     FlowEntryMatchKey_t flowEntryKey(cookie, priority, match);
-
+     
     /* check if Stats Manager has it in its oldFlowCounterMap */
     if (counterState.oldFlowCounterMap.find(flowEntryKey) !=
         counterState.oldFlowCounterMap.end())
@@ -286,7 +286,6 @@ void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,
                                                flowCounterState_t& counterState,
                                                bool flowRemoved) {
     FlowEntryMatchKey_t flowEntryKey(cookie, priority, match);
-
     // look in existing oldFlowCounterMap
     auto it = counterState.oldFlowCounterMap.find(flowEntryKey);
     if (it != counterState.oldFlowCounterMap.end()) {
@@ -306,6 +305,7 @@ void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,
         }
         if (flowRemoved) {
             // Move the entry to removedFlowCounterMap
+	    LOG(INFO)<< "if flow removed, move the entry to removedFlowCounterMap ---- bhavana ";
             FlowCounters_t & newFlowCounters =
                 counterState.removedFlowCounterMap[flowEntryKey];
             newFlowCounters.diff_byte_count = oldFlowCounters.diff_byte_count;
@@ -322,6 +322,7 @@ void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,
             // the flow entry probably got removed even before Policy Stats
             // manager could process its FLOW_STATS_REPLY
             if (flowRemoved) {
+		 LOG(INFO)<< "Inside newFlowCounterMap and flow removed flag is set";
                 FlowCounters_t & remFlowCounters =
                     counterState.removedFlowCounterMap[flowEntryKey];
                 remFlowCounters.diff_byte_count =
@@ -339,10 +340,11 @@ void PolicyStatsManager::updateNewFlowCounters(uint32_t cookie,
                 // the counters reported as is until delta is computed
                 // as entry may have existed long before it.
 
-                if (flow_packet_count != 0) {
+                  if (flow_packet_count != 0) {
                     /* store the counters in oldFlowCounterMap for it and
                      * remove from newFlowCounterMap as it is no more new
                      */
+		    LOG(INFO)<< "*******copy the packet count in oldFlowCounterMap";
                     FlowCounters_t & newFlowCounters =
                         counterState.oldFlowCounterMap[flowEntryKey];
                     newFlowCounters.last_packet_count =
@@ -391,6 +393,7 @@ void PolicyStatsManager::handleMessage(int msgType,
         flowCounterState_t* counterState = tableMap(fentry->table_id);
         if (!counterState)
             return;
+        LOG(INFO) << "******* Handle message of type Flow removed ";
         updateNewFlowCounters((uint32_t)ovs_ntohll(fentry->cookie),
                               fentry->priority,
                               (fentry->match),
@@ -460,7 +463,7 @@ bool PolicyStatsManager::handleFlowStats(ofpbuf *msg, const table_map_t& tableMa
              * --> match_set_default_packet_type(match) <-- This is getting set for
              *                    dl_type, dl_src, dl_dst and some cases of dl_vlan
              */
-            if (fentry) {
+	    if (fentry) {
                 fentry->match.flow.packet_type = 0;
                 fentry->match.wc.masks.packet_type = 0;
             }
@@ -469,32 +472,58 @@ bool PolicyStatsManager::handleFlowStats(ofpbuf *msg, const table_map_t& tableMa
             if (!counterState)
                 return true;
 
-            if ((fentry->flags & OFPUTIL_FF_SEND_FLOW_REM) == 0) {
-                // skip those flow entries that don't have flag set
-                continue;
-            }
+             if ((fentry->flags & OFPUTIL_FF_SEND_FLOW_REM)==0) 
+	   	  continue;
+             // skip those flow entries that don't have flag set
+           
 
             // Does flow stats entry qualify to be a drop entry?
             // if yes, then process it and continue with next flow
             // stats entry.
             if ((fentry->cookie & flow::cookie::RD_POL_DROP_FLOW) ==
                     flow::cookie::RD_POL_DROP_FLOW) {
-                handleDropStats(fentry);
-                handleTableDropStats(fentry);
+                    handleDropStats(fentry);
+                    handleTableDropStats(fentry);
             } else if ((fentry->cookie & flow::cookie::TABLE_DROP_FLOW) ==
                     flow::cookie::TABLE_DROP_FLOW) {
-                handleTableDropStats(fentry);
-            } else {
+                    handleTableDropStats(fentry);
+	    }
+	    if((fentry->cookie & flow::cookie::NAT_FLOW) == flow::cookie::NAT_FLOW){
+
                 // Handle flow stats entries for packets that are matched
                 // and are forwarded
-                updateNewFlowCounters((uint32_t)ovs_ntohll(fentry->cookie),
-                                      fentry->priority,
-                                      (fentry->match),
-                                      fentry->packet_count,
-                                      fentry->byte_count,
-                                      *counterState, false);
-            }
-        }
+              //}else{
+                if(fentry->table_id==IntFlowManager::SRC_TABLE_ID){
+		//	LOG(INFO) << "For src table, priority " << fentry->priority << " and cookie " << fentry->cookie 
+		//		  << " and packet count " << fentry->packet_count;
+                           updateNewFlowCounters((uint32_t)ovs_ntohll(fentry->cookie),
+                                                  fentry->priority,
+                                                  (fentry->match),
+                                                  fentry->packet_count,
+                                                  fentry->byte_count,
+                                                  *counterState, false);
+                        
+                  }else if(fentry->table_id==IntFlowManager::ROUTE_TABLE_ID){
+		//	   LOG(INFO) << "For route table, priority " << fentry->priority << " and cookie " << fentry->cookie
+                //                  << " and packet count " << fentry->packet_count;
+                           updateNewFlowCounters((uint32_t)ovs_ntohll(fentry->cookie),
+                                                  fentry->priority,
+                                                  (fentry->match),
+                                                  fentry->packet_count,
+                                                  fentry->byte_count,
+                                                  *counterState, false);
+		    }else if(fentry->table_id==IntFlowManager::OUT_TABLE_ID){
+		//	   LOG(INFO) << "For out table, priority " << fentry->priority << " and cookie " << fentry->cookie
+                //                  << " and packet count " << fentry->packet_count;
+                           updateNewFlowCounters((uint32_t)ovs_ntohll(fentry->cookie),
+                                                  fentry->priority,
+                                                  (fentry->match),
+                                                  fentry->packet_count,
+                                                  fentry->byte_count,
+                                                  *counterState, false);
+		    }
+	}
+    }        
     } while (true);
 
 }
@@ -518,7 +547,6 @@ void PolicyStatsManager::sendRequest(uint32_t table_id, uint64_t _cookie,
     fsr.out_group = OFPG_ANY;
     fsr.cookie = (uint64_t)_cookie;
     fsr.cookie_mask = (uint64_t) _cookie_mask;
-
     OfpBuf req(ofputil_encode_flow_stats_request(&fsr, proto));
     ofpmsg_update_length(req.get());
     ovs_be32 reqXid = ((ofp_header *)req->data)->xid;
@@ -561,6 +589,7 @@ generatePolicyStatsObjects(PolicyCounterMap_t *newCountersMap1,
                 newCounters2 = it->second ;
             }
         } else {
+	// do all the checks here for nat stats manager 
             if (isExtNet(flowKey.reg0) || isExtNet(flowKey.reg2)) {
                 // ignore contracts with external networks
                 continue;

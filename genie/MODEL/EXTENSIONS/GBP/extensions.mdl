@@ -644,3 +644,49 @@ module[gbpe]
         member[bytes; type=scalar/UInt64]
 
     }
+
+    class[NatStatCounter;
+          super=observer/Observable;
+          concrete;
+          ]
+    {
+        contained
+        {
+            parent[class=observer/PolicyStatUniverse]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+                component[member=auuid]
+                component[member=epUuid]
+            }
+        }
+
+        # A unique identifer for the agent incarnation
+        member[auuid; type=reference/UUID]
+
+        # A unique vm/ep identifer
+        member[epUuid; type=reference/UUID]
+
+        # A mapped IP of the VM
+        member[mappedIp; type=address/IP]
+   
+        # A floating IP of the VM
+        member[floatingIp; type=address/IP]
+
+        # number of packets received
+        member[rxPackets; type=scalar/UInt64]
+
+        # number of packets sent
+        member[txPackets; type=scalar/UInt64]
+ 
+        # the number of bytes received
+        member[rxBytes; type=scalar/UInt64]
+
+        # the number of bytes sent
+        member[txBytes; type=scalar/UInt64]
+  
+ 
+   }
+

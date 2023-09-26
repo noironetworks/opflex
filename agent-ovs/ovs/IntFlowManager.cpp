@@ -87,7 +87,7 @@ namespace opflexagent {
 static const char* ID_NAMESPACES[] =
     {"floodDomain", "bridgeDomain", "routingDomain",
      "externalNetwork", "l24classifierRule",
-     "svcstats", "service"};
+     "svcstats", "service", "natstats"};
 
 static const char* ID_NMSPC_FD            = ID_NAMESPACES[0];
 static const char* ID_NMSPC_BD            = ID_NAMESPACES[1];
@@ -96,7 +96,7 @@ static const char* ID_NMSPC_EXTNET        = ID_NAMESPACES[3];
 static const char* ID_NMSPC_L24CLASS_RULE = ID_NAMESPACES[4];
 static const char* ID_NMSPC_SVCSTATS      = ID_NAMESPACES[5];
 static const char* ID_NMSPC_SERVICE       = ID_NAMESPACES[6];
-
+//static const char* ID_NMSPC_NATSTATS       = ID_NAMESPACES[7];
 
 
 void IntFlowManager::populateTableDescriptionMap(
@@ -561,6 +561,7 @@ void IntFlowManager::configUpdated(const URI& configURI) {
               } 
          }
     }
+    LOG(INFO)<< "Calling syn enabled ------    bhavana";
     switchManager.enableSync();
     agent.getAgentIOService()
         .dispatch([=]() { handleConfigUpdate(configURI); });
@@ -987,14 +988,18 @@ static void flowsIpm(IntFlowManager& flowMgr,
     const uint8_t* effNextHopMac =
         nextHopMac ? nextHopMac : flowMgr.getRouterMacAddr();
 
+    LOG(DEBUG) << "inside flowsIpm;;;;---;;;;;;;;;;;;;;;;;;;;;;;;;;;;";
     if (!floatingIp.is_unspecified()) {
         {
             // floating IP destination within the same EPG
             // Set up reverse DNAT
+            LOG(DEBUG) << "Priority --------542";
             FlowBuilder ipmRoute;
             matchDestDom(ipmRoute.priority(452)
                          .ipDst(floatingIp).reg(0, fepgVnid),
                          0, frdId)
+                .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                .cookie(flow::cookie::NAT_FLOW)
                 .action()
                 .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
                 .ipDst(mappedIp).decTtl();
@@ -1002,6 +1007,7 @@ static void flowsIpm(IntFlowManager& flowMgr,
             actionRevNatDest(ipmRoute, epgVnid, bdId,
                              fgrpId, rdId, ofPort);
             ipmRoute.build(elRouteDst);
+            
         }
         {
             // Floating IP destination across EPGs
@@ -1009,9 +1015,10 @@ static void flowsIpm(IntFlowManager& flowMgr,
             // then resubmit with source EPG set to floating
             // IP EPG
             FlowBuilder ipmResub;
+            LOG(DEBUG) << "Priority --------450";
             matchDestDom(ipmResub.priority(450).ipDst(floatingIp),
                          0, frdId);
-            ipmResub.action()
+            ipmResub.flags(OFPUTIL_FF_SEND_FLOW_REM).cookie(flow::cookie::NAT_FLOW).action()
                 .reg(MFF_REG2, fepgVnid)
                 .reg(MFF_REG7, fepgVnid)
                 .metadata(flow::meta::out::RESUBMIT_DST,
@@ -1027,11 +1034,12 @@ static void flowsIpm(IntFlowManager& flowMgr,
     {
         // Apply NAT action in output table
         FlowBuilder ipmNatOut;
+        LOG(DEBUG) << "Priority --------10";
         ipmNatOut.priority(10)
             .metadata(flow::meta::out::NAT, flow::meta::out::MASK)
             .reg(6, rdId)
             .reg(7, fepgVnid)
-            .ipSrc(mappedIp);
+            .ipSrc(mappedIp).flags(OFPUTIL_FF_SEND_FLOW_REM).cookie(flow::cookie::NAT_FLOW);
         ActionBuilder& ab = ipmNatOut.action();
         ab.ethSrc(macAddr).ethDst(effNextHopMac);
         if (!floatingIp.is_unspecified()) {
@@ -1061,9 +1069,11 @@ static void flowsIpm(IntFlowManager& flowMgr,
             // delivered with a DNAT to a floating IP.  We assume that
             // the destination IP is unique for a given next hop
             // interface.
+            LOG(DEBUG) << "Priority --------201";
             FlowBuilder ipmNextHopRev;
             ipmNextHopRev.priority(201).inPort(nextHopPort)
                 .ethSrc(effNextHopMac).ipDst(floatingIp)
+		.cookie(flow::cookie::NAT_FLOW)
                 .action()
                 .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
                 .ipDst(mappedIp).decTtl();
@@ -1078,10 +1088,11 @@ static void flowsIpm(IntFlowManager& flowMgr,
             // to the routing domain for the mapped destination IP
             // address
             FlowBuilder ipmNextHopRevMark;
+            LOG(DEBUG) << "Priority --------200";
             ipmNextHopRevMark.priority(200).inPort(nextHopPort)
                 .ethSrc(effNextHopMac).mark(rdId).ipDst(mappedIp);
             if (nextHopMac)
-                ipmNextHopRevMark.action().ethSrc(flowMgr.getRouterMacAddr());
+                ipmNextHopRevMark.cookie(flow::cookie::NAT_FLOW).action().ethSrc(flowMgr.getRouterMacAddr());
             actionRevNatDest(ipmNextHopRevMark, epgVnid, bdId,
                              fgrpId, rdId, ofPort);
             ipmNextHopRevMark.build(elSrc);
@@ -1944,6 +1955,41 @@ static void flowsEndpointSNAT(SnatManager& snatMgr,
     }
 }
 
+bool IntFlowManager::checkFlowMap(uint32_t reg, const string& ipAddr){
+
+    LOG(INFO) << "check for Ip address "<< ipAddr << " reg "<< reg;
+    FlowKey key(ipAddr,reg);
+    
+    if(umap.find(key)!=umap.end()) {
+	return true;
+    }
+    return false;
+}
+
+
+void  IntFlowManager::updateNatStatsLabels( const std::string& fip, const std::string& mip, uint32_t fepgVnid,
+                                uint32_t epgVnid, const string& mapping, const std::string& uuid)
+{
+    if(mapping == "snat"){
+        FlowKey key(fip,epgVnid);	
+	MatchLabels& matchLabels = umap[key];
+        matchLabels.mappedIp = mip;
+	matchLabels.floatingIp = fip;
+	uuidToIpMap[uuid+"tovm"] = make_pair(fip,epgVnid);    
+    }else if(mapping == "oneToone"){
+        FlowKey key(fip,fepgVnid);
+	MatchLabels& matchLabels = umap[key];
+        matchLabels.mappedIp = mip;
+        matchLabels.floatingIp = fip;
+	uuidToIpMap[uuid+"tovm"] = make_pair(fip,fepgVnid);
+    }
+    FlowKey key(mip, fepgVnid);
+    MatchLabels& matchLabels = umap[key];
+    matchLabels.mappedIp = mip;
+    matchLabels.floatingIp = fip;
+    uuidToIpMap[uuid+"fromvm"] = make_pair(mip,fepgVnid);
+}
+
 void IntFlowManager::handleEndpointUpdate(const string& uuid) {
     LOG(DEBUG) << "Updating endpoint " << uuid;
 
@@ -1969,6 +2015,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
             LOG(DEBUG) << "Redo remote endpoint update " << uuid;
             remoteEndpointUpdated(uuid);
         }
+	updateNatSatsFlows(uuid);
         return;
     }
     const Endpoint& endPoint = *epWrapper.get();
@@ -2273,14 +2320,107 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         nextHopMacp = nextHopMac;
                     }
 
+                    //const string& ipmapStr = ":"+uuid;
+                    //uint64_t cookieId = (uint64_t)idGen.getId(ID_NMSPC_NATSTATS, ipmapStr);
+                    //natFlowMatchKey umap;
                     flowsIpm(*this, elSrc, elBridgeDst, elRouteDst,
                              elOutput, macAddr, ofPort,
                              epgVnid, rdId, bdId, fgrpId,
                              fepgVnid, frdId, fbdId, ffdId,
                              mappedIp, floatingIp, nextHop,
                              nextHopMacp);
-                }
 
+                    optional<URI> egUri = agent.getPolicyManager().getGroupForVnid(epgVnid);
+                    optional<URI> fegUri = agent.getPolicyManager().getGroupForVnid(fepgVnid);
+
+		    if ((!floatingIp.is_unspecified()) && (!mappedIp.is_unspecified())) {
+			if(nextHop != OFPP_NONE) {
+			    const string& mapping= "snat";
+                            updateNatStatsLabels(floatingIp.to_string(), mappedIp.to_string(), 
+					         fepgVnid, epgVnid, mapping, uuid);
+			}else {
+			    const string& mapping= "oneToone";
+			    updateNatStatsLabels(floatingIp.to_string(), mappedIp.to_string(), 
+                                                 fepgVnid, epgVnid, mapping, uuid);
+			}
+		     }
+
+
+	//	    if(nextHop != OFPP_NONE) {
+	//		if (!floatingIp.is_unspecified()){
+	//		FlowKey key(floatingIp.to_string(),epgVnid);
+	//		auto it = umap.find(key);
+	//		if(it == umap.end()){
+	//			epIdentifier uid(uuid);
+	//		        FlowIdentifier& flowIden = natMap[uid];
+	//		        flowIden.ipAddr = floatingIp.to_string();
+	//			flowIden.epgStr = epgVnid; 
+	//			LOG(INFO) << "SNAT epgVnid "<< epgVnid;
+	//	        	LOG(INFO) << "SNAT floatingIp "<< floatingIp.to_string();
+	//			MatchLabels& matchLabels = umap[key];
+	//			matchLabels.mappedIp= mappedIp.to_string();
+        //                	matchLabels.floatingIp= floatingIp.to_string();
+        //                	matchLabels.src_epg = fegUri.get().toString();
+        //                	matchLabels.dst_epg = egUri.get().toString();;
+        //                	matchLabels.uuid = uuid;
+	//	       }}
+	//	       if(!mappedIp.is_unspecified()) {
+	//		  FlowKey key(mappedIp.to_string(),fepgVnid);
+	//		  auto it = umap.find(key);
+	//	          if(it == umap.end()){
+	//			epIdentifier uid(uuid);
+        //                        FlowIdentifier& flowIden = natMap[uid];
+        //                        flowIden.ipAddr = mappedIp.to_string();
+        //                        flowIden.epgStr = fepgVnid;
+        //                  	LOG(INFO) << "SNAT fepgVnid "<< fepgVnid;
+        //                 	LOG(INFO) << "SNAT mappedIp "<< mappedIp.to_string();
+        //                  	MatchLabels& matchLabels = umap[key];
+        //                  	matchLabels.mappedIp= mappedIp.to_string();
+        //                  	matchLabels.floatingIp= floatingIp.to_string();
+        //                  	matchLabels.src_epg = egUri.get().toString();
+        //                  	matchLabels.dst_epg = fegUri.get().toString();
+        //                  	matchLabels.uuid = uuid;
+        //            	}}
+	//	    }else {
+	//	      if(!floatingIp.is_unspecified()){
+	//		FlowKey key(floatingIp.to_string(),fepgVnid);
+	//		auto it = umap.find(key);
+	//		if(it == umap.end()){
+	//			epIdentifier uid(uuid);
+        //                        FlowIdentifier& flowIden = natMap[uid];
+        //                        flowIden.ipAddr = floatingIp.to_string();
+	//			flowIden.epgStr = fepgVnid;
+	//			MatchLabels& matchLabels = umap[key];
+	//			LOG(INFO) << "1:1 fepgVnid "<< fepgVnid;
+	//			LOG(INFO) << "1:1 floating IP "<< matchLabels.floatingIp;
+        //                	matchLabels.mappedIp = mappedIp.to_string();
+        //                	matchLabels.floatingIp= floatingIp.to_string();
+        //                	matchLabels.src_epg = fegUri.get().toString();
+        //                	matchLabels.dst_epg = egUri.get().toString();
+        //                	matchLabels.uuid = uuid;
+	//		}
+	//	     } if(!mappedIp.is_unspecified()) {
+	//		 FlowKey key(mappedIp.to_string(),fepgVnid);
+	//		 auto it = umap.find(key);
+	//		 if(it == umap.end()){
+	//			epIdentifier uid(uuid);
+        //                        FlowIdentifier& flowIden = natMap[uid];
+        //                        flowIden.ipAddr = mappedIp.to_string();
+        //                        flowIden.epgStr = fepgVnid;
+	//			MatchLabels& matchLabels = umap[key];
+        //                	LOG(INFO) << "1:1 fepgVnid "<< fepgVnid;
+	//		        LOG(INFO) << "1:1 mapped IP "<< matchLabels.mappedIp;
+        //                	matchLabels.mappedIp= mappedIp.to_string();
+        //                	matchLabels.floatingIp= floatingIp.to_string();
+        //                	matchLabels.src_epg = egUri.get().toString();
+        //                	matchLabels.dst_epg = fegUri.get().toString();
+        //                	matchLabels.uuid = uuid;
+	//		}
+        //                }
+		        
+		   
+		
+                }
                 const vector<string>& snatUuids = endPoint.getSnatUuids();
                 int count = 0;
                 for (const auto& snatUuid: snatUuids) {
@@ -2999,6 +3139,103 @@ void IntFlowManager::clearSvcStatsCounters (const string& uuid,
     }
     mutator.commit();
 }
+
+void IntFlowManager::updateNatStatsCounters(const string &direction, 
+				            const uint32_t &reg,
+					    const string &ip,
+					    const uint64_t &newPktCount,
+  					    const uint64_t &newByteCount)
+{
+
+
+     FlowKey key(ip,reg);
+     LOG(INFO)<< "ip -- intflow "<< ip;
+     LOG(INFO)<< "ip -- intflow "<< reg;
+     auto it = umap.find(key); 
+     if(it==umap.end()){
+	LOG(INFO)<< "key not found -- intflow";
+         return;
+     } 
+     MatchLabels& flowLabel = it->second; 
+     auto epUuid= flowLabel.uuid;
+     LOG(INFO) << "flowLabel.src_epg -- " << flowLabel.src_epg;
+     LOG(INFO) << "flowLabel.dst_epg -- " << flowLabel.dst_epg;    
+
+     Mutator mutator(agent.getFramework(), "policyelement");
+     
+     EndpointManager& epMgr = agent.getEndpointManager();
+     shared_ptr<const Endpoint> epWrapper = epMgr.getEndpoint(epUuid);
+     if (!epWrapper) {
+         LOG(DEBUG) << "endpoint not found for uuid: " << epUuid;
+         return;
+     }
+  //   const Endpoint& endPoint = *epWrapper.get();
+  //   const attr_map &epAttr = endPoint.getAttributes();
+     optional<shared_ptr<PolicyStatUniverse> > su = PolicyStatUniverse::resolve(agent.getFramework()); 
+     if (su) {
+         auto natStat = su.get()->resolveGbpeNatStatCounter(agent.getUuid(),epUuid);
+         if(!natStat){
+	     natStat = su.get()->addGbpeNatStatCounter(agent.getUuid(),epUuid);
+             auto mappedIp = flowLabel.mappedIp;
+//	     LOG(INFO) << "****  "<< mappedIp;
+//             if (mappedIp != epAttr.end()){
+//                 LOG(INFO) << mappedIp->second;
+             natStat.get()->setMappedIp(mappedIp);
+//	     }	
+             auto floatingIp =  flowLabel.floatingIp;
+//             LOG(INFO) << "***** "<<floatingIp;
+//             if (floatingIp != epAttr.end()){
+//		LOG(INFO) << floatingIp->second;
+             natStat.get()->setFloatingIp(floatingIp);
+//	     }
+          }
+           if (natStat) {
+               if(direction=="egress"){
+       	           auto oldPktCount = natStat.get()->getRxPackets(0);
+                   auto oldByteCount = natStat.get()->getRxBytes(0);
+                   auto updPktCount = oldPktCount + newPktCount;
+                   auto updByteCount = oldByteCount + newByteCount;
+    	           natStat.get()->setRxPackets(updPktCount).setRxBytes(updByteCount);
+		   LOG(INFO) << "*****************From VM******************************************";
+                   LOG(INFO) << "Packet count "<< natStat.get()->getRxPackets(0);
+		   LOG(INFO) << "epuuid " << epUuid;
+	   	   LOG(INFO) << "direction " << direction;
+		   LOG(INFO) << "mappedIp " << natStat.get()->getMappedIp("");
+                   LOG(INFO) << "floatingIp" << natStat.get()->getFloatingIp("");
+        //           prometheusManager.addNUpdateNatStats(epUuid,
+       	//					  direction,
+    	//					  natStat.get()->getRxBytes(0),
+    	//					  natStat.get()->getRxPackets(0),
+    	//					  natStat.get()->getMappedIp(""),
+    	//					  natStat.get()->getFloatingIp(""));
+            	}else{
+		if(direction=="ingress"){
+               	auto oldPktCount = natStat.get()->getTxPackets(0);
+               	auto oldByteCount = natStat.get()->getTxBytes(0);
+               	auto updPktCount = oldPktCount + newPktCount;
+               	auto updByteCount = oldByteCount + newByteCount;		
+    	       	natStat.get()->setTxPackets(updPktCount).setTxBytes(updByteCount);
+		LOG(INFO) << "*****************To VM******************************************";
+                LOG(INFO) << "Packet count "<< natStat.get()->getTxPackets(0);
+                LOG(INFO) << "epuuid " << epUuid;
+                LOG(INFO) << "direction " << direction;
+                LOG(INFO) << "mappedIp " << natStat.get()->getMappedIp("");
+                LOG(INFO) << "floatingIp" << natStat.get()->getFloatingIp("");
+           //     prometheusManager.addNUpdateNatStats(epUuid,
+           //        				      direction,
+           //                                           natStat.get()->getTxBytes(0),
+           //                   			      natStat.get()->getTxPackets(0),
+           //                                           natStat.get()->getMappedIp(""),
+           //                                           natStat.get()->getFloatingIp(""));
+         
+                }}
+            }
+       }
+       mutator.commit();
+}
+ 
+
+
 
 void IntFlowManager::handleUpdateSvcStatsFlows (const string& task_id)
 {
@@ -6516,4 +6753,54 @@ void IntFlowManager::completeSync() {
     advertManager.start();
 }
 
+void IntFlowManager::updateNatSatsFlows (const string& uuid){
+   if(uuidToIpMap.find(uuid+"tovm") != uuidToIpMap.end()){
+       auto ip = uuidToIpMap[uuid+"tovm"].first;
+       auto vnid = uuidToIpMap[uuid+"tovm"].second;
+       FlowKey key(ip,vnid);
+       umap.erase(key);
+       uuidToIpMap.erase(uuid+"tovm");
+   }
+	
+   if(uuidToIpMap.find(uuid+"fromvm") != uuidToIpMap.end()){
+       auto ip = uuidToIpMap[uuid+"fromvm"].first;
+       auto vnid = uuidToIpMap[uuid+"fromvm"].second;
+       FlowKey key(ip,vnid);
+       umap.erase(key);
+       uuidToIpMap.erase(uuid+"fromvm");
+   }
+   prometheusManager.removeNatCounter(uuid); 
+
+}
+bool IntFlowManager::FlowKey::
+operator==(const FlowKey &other) const {
+    return (Ip == other.Ip
+            && reg == other.reg);
+}
+
+size_t IntFlowManager::natFlowKeyHasher::
+operator()(const IntFlowManager::FlowKey& k) const noexcept {
+    using boost::hash_value;
+    using boost::hash_combine;
+
+    std::size_t seed = 0;
+    hash_combine(seed, hash_value(k.Ip));
+    hash_combine(seed, hash_value(k.reg));
+
+    return (seed);
+}
+
+bool IntFlowManager::epIdentifier::
+operator==(const epIdentifier &other) const {
+	return (epId == other.epId);
+}
+
+size_t IntFlowManager::epHasher::
+operator()(const IntFlowManager::epIdentifier& k) const noexcept {
+	using boost::hash_value;
+        using boost::hash_combine;
+	std::size_t seed = 0;
+	hash_combine(seed, hash_value(k.epId));
+	return (seed);
+}
 } // namespace opflexagent

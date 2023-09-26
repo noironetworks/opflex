@@ -417,6 +417,8 @@ void EndpointManager::removeEndpoint(const string& uuid) {
 
         for (const Endpoint::IPAddressMapping& ipm :
                  es.endpoint->getIPAddressMappings()) {
+	    
+	    prometheusManager.removeNatCounter(uuid);
             if (!ipm.getNextHopIf()) continue;
             unordered_set<string>& eps =
                 ipm_nexthop_if_ep_map[ipm.getNextHopIf().get()];

@@ -191,7 +191,7 @@ public:
      * Enable or disable the virtual DHCP server
      *
      * @param dhcpEnabled true to enable the server
-     * @param mac the MAC address to use as the dhcp MAC formatted as
+     * @param opflex::modb::MAC mac the MAC address to use as the dhcp MAC formatted as
      * a colon-separated string of 6 hex-encoded bytes.
      */
     void setVirtualDHCP(bool dhcpEnabled,
@@ -389,29 +389,29 @@ public:
         /**
          * Handles drop log policy
          */
-        DROP_LOG_TABLE_ID,
+        DROP_LOG_TABLE_ID=0,
         /**
          * Handles port security/ingress policy
          */
-        SEC_TABLE_ID,
+        SEC_TABLE_ID=1,
         /**
          * Maps source addresses to endpoint groups and sets this
          * mapping into registers for use by later tables
          */
-        SRC_TABLE_ID,
+        SRC_TABLE_ID=2,
         /**
          * External World to SNAT IP
          * UN-SNAT traffic using connection tracking. Changes
          * network destination using state in connection
          * tracker and forwards traffic to the endpoint.
          */
-        SNAT_REV_TABLE_ID,
+        SNAT_REV_TABLE_ID=3,
         /**
          * For traffic returning from load-balanced service IP
          * addresses, restore the source address to the service
          * address
          */
-        SERVICE_REV_TABLE_ID,
+        SERVICE_REV_TABLE_ID=4,
         /**
          * For flows that can be forwarded by bridging, maps the
          * destination L2 address to an endpoint group and next hop
@@ -419,19 +419,19 @@ public:
          * later tables.  Also handles replies to protocols handled by
          * the agent or switch, such as ARP and NDP.
          */
-        BRIDGE_TABLE_ID,
+        BRIDGE_TABLE_ID=5,
         /**
          * For load-balanced service IPs, map from a bucket ID to the
          * appropriate destination IP address.
          */
-        SERVICE_NEXTHOP_TABLE_ID,
+        SERVICE_NEXTHOP_TABLE_ID=6,
         /**
          * For flows that require routing, maps the destination L3
          * address to an endpoint group or external network and next
          * hop action and sets this information into registers for use
          * by later tables.
          */
-        ROUTE_TABLE_ID,
+        ROUTE_TABLE_ID=7,
         /**
          * Endpoint -> External World
          * Traffic that needs SNAT is determined after routing
@@ -439,46 +439,46 @@ public:
          * source port based on configuration in the endpoint
          * file.
          */
-        SNAT_TABLE_ID,
+        SNAT_TABLE_ID=8,
         /**
          * For flows destined for a NAT IP address, determine the
          * source external network for the mapped IP address and set
          * this in the source registers to allow applying policy to
          * NATed flows.
          */
-        NAT_IN_TABLE_ID,
+        NAT_IN_TABLE_ID=9,
         /**
          * Source for flows installed by OVS learn action
          */
-        LEARN_TABLE_ID,
+        LEARN_TABLE_ID=10,
         /**
          * Map traffic returning from a service interface to the
          * appropriate endpoint interface.
          */
-        SERVICE_DST_TABLE_ID,
+        SERVICE_DST_TABLE_ID=11,
         /**
          * Allow policy for the flow based on the source and
          * destination groups and the contracts that are configured.
          */
-        POL_TABLE_ID,
+        POL_TABLE_ID=12,
         /**
          * Flow stats computation
          */
-        STATS_TABLE_ID,
+        STATS_TABLE_ID=13,
         /**
          * Apply a destination action based on the action set in the
          * metadata field.
          */
-        OUT_TABLE_ID,
+        OUT_TABLE_ID=14,
         /*
          * Handle explicitly dropped packets here based on the
          * drop-log config
          */
-        EXP_DROP_TABLE_ID,
+        EXP_DROP_TABLE_ID=15,
         /**
          * The total number of flow tables
          */
-        NUM_FLOW_TABLES
+        NUM_FLOW_TABLES=16
     };
     /**
      * Get registered Tunnel EpManager instance
@@ -533,6 +533,25 @@ public:
     boost::asio::io_service& getSvcStatsIOService() {
         return svcStatsIOService;
     }
+
+    /**
+     * Calls by PolicyStatsManager to update stats
+     *
+     * @param string representing ingress or egress
+     * @param cookie flow.cookie formed by "natstat" idgen 
+     * @param pkts   aggregated packets per combination
+     * @param bytes  aggregated bytes per combination
+     */
+    void updateNatStatsCounters(const string &direction, 
+		                const uint32_t &reg,
+			        const string &ip,
+                                const uint64_t &pkts,
+                                const uint64_t &bytes);
+
+    bool checkFlowMap(uint32_t reg, const std::string& nw_dst);
+
+    void  updateNatStatsLabels( const std::string& fip, const std::string& mip, uint32_t fepgVnid, 
+				uint32_t epgVnid, const string& mapping, const std::string& uuid);
 private:
     /**
      * Write flows that are fixed and not related to any policy or
@@ -977,11 +996,61 @@ private:
      */
     void handleDropLogPortUpdate();
 
+    void updateNatSatsFlows(const std::string &uuid);
+
     std::unique_ptr<std::thread> svcStatsThread;
     boost::asio::io_service svcStatsIOService;
     std::unique_ptr<boost::asio::io_service::work> svcStatsIOWork;
     FaultManager& faultmanager;
     TaskQueue svcStatsTaskQueue;
+
+    struct  MatchLabels {
+       std::string mappedIp;
+       std::string floatingIp;
+       std::string src_epg;
+       std::string dst_epg;
+       std::string uuid;
+    };
+
+    struct FlowKey {
+        FlowKey(std::string k1, uint32_t k2) {
+	    Ip=k1;
+            reg=k2;
+	}
+	std::string Ip;
+        uint32_t reg;
+        bool operator==(const FlowKey &other) const;        
+    };
+
+    struct natFlowKeyHasher {
+        size_t operator()(const FlowKey& k) const noexcept;
+    };
+
+    typedef std::unordered_map<FlowKey, MatchLabels, natFlowKeyHasher> natFlowMatchKey;
+    natFlowMatchKey umap;
+
+    struct FlowIdentifier {
+	string ipAddr;
+	uint32_t epgStr;
+    };
+
+   struct epIdentifier {
+	epIdentifier(std::string uuid){
+		epId=uuid;
+	}
+	std::string epId;
+	bool operator==(const epIdentifier &other) const;
+   };	
+
+    struct epHasher {
+        size_t operator()(const epIdentifier &other) const noexcept;;
+    };
+
+    typedef std::unordered_map<epIdentifier, FlowIdentifier, epHasher> uuidToEp;
+
+    uuidToEp  natMap;
+      
+    unordered_map<std::string, pair<std::string, uint64_t>> uuidToIpMap;
 };
 
 } // namespace opflexagent
