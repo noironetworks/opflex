@@ -55,6 +55,7 @@ void FSSnatSource::updated(const fs::path& filePath) {
     static const std::string INTERFACE_NAME("interface-name");
     static const std::string INTERFACE_MAC("interface-mac");
     static const std::string INTERFACE_VLAN("interface-vlan");
+    static const std::string BOUNCE_VLAN("bounce-vlan");
     static const std::string DEST("dest");
     static const std::string ZONE("zone");
     static const std::string PORT_RANGE("port-range");
@@ -81,6 +82,11 @@ void FSSnatSource::updated(const fs::path& filePath) {
             properties.get_optional<uint16_t>(INTERFACE_VLAN);
         if (ifaceVlan)
             newsnat.setIfaceVlan(ifaceVlan.get());
+
+        optional<uint16_t> bounceVlan =
+            properties.get_optional<uint16_t>(BOUNCE_VLAN);
+        if (bounceVlan)
+            newsnat.setBounceVlan(bounceVlan.get());
 
         // Local configuration
         optional<bool> local =

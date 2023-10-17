@@ -30,6 +30,8 @@ std::ostream & operator<<(std::ostream &os, const Snat& s) {
         os << ",interface-mac=" << s.getInterfaceMAC().get();
     if (s.getIfaceVlan())
         os << ",interface-vlan=" << s.getIfaceVlan().get();
+    if (s.getBounceVlan())
+        os << ",bounce-vlan=" << s.getBounceVlan().get();
 
     Snat::PortRangeMap portRangeMap = s.getPortRangeMap();
     bool firstpr = true;

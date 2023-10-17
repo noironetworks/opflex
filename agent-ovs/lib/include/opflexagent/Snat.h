@@ -149,6 +149,24 @@ public:
     }
 
     /**
+     * Set the VLAN trunk tag for use on the interface for bounced packets
+     *
+     * @param ifaceVlan the vlan tag
+     */
+    void setBounceVlan(uint16_t bounceVlan) {
+        this->bounceVlan = bounceVlan;
+    }
+
+    /**
+     * VLAN trunk tag for use on the local interface for bounced packets
+     *
+     * @return the vlan tag or boost::none if no vlan tag is set
+     */
+    const boost::optional<uint16_t>& getBounceVlan() const {
+        return bounceVlan;
+    }
+
+    /**
      * Get destination network that should be SNATTED
      *
      * @return the destination networks for which SNAT
@@ -253,6 +271,7 @@ private:
     bool local;
     boost::optional<opflex::modb::MAC> interfaceMac;
     boost::optional<uint16_t> ifaceVlan;
+    boost::optional<uint16_t> bounceVlan;
     std::vector<std::string> dest;
     boost::optional<uint16_t> zone;
     PortRangeMap portRangeMap;

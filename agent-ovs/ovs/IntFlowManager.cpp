@@ -4880,6 +4880,7 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
                 for (const Mask& m : snatMasks) {
                     for (auto protocol : protoVec) {
                         FlowBuilder maskedFlow;
+                        FlowBuilder bounceFlow;
                         if (local)
                             maskedFlow.priority(200);
                         else
@@ -4895,12 +4896,33 @@ void IntFlowManager::handleSnatUpdate(const string& snatUuid) {
                             if (as.getIfaceVlan())
                                 maskedFlow.action().popVlan();
                             maskedFlow.action().go(SNAT_REV_TABLE_ID);
+                            if (as.getBounceVlan()) {
+                                bounceFlow.priority(200)
+                                          .inPort(snatPort)
+                                          .ethDst(ifcMac)
+                                          .ipDst(addr)
+                                          .proto(protocol)
+                                          .tpDst(m.first, m.second)
+                                          .vlan(as.getBounceVlan().get())
+                                          .action()
+                                              .popVlan()
+                                              .go(SNAT_REV_TABLE_ID);
+                            }
                         } else {
-                            maskedFlow.action().ethDst(dmac)
+                            if (as.getBounceVlan()) {
+                                if (as.getIfaceVlan())
+                                    maskedFlow.action().popVlan();
+                                maskedFlow.action()
+                                          .pushVlan()
+                                          .setVlanVid(as.getBounceVlan().get());
+                            }
+                            maskedFlow.action().decTtl().ethDst(dmac)
                                                .ethSrc(ifcMac)
                                                .output(OFPP_IN_PORT);
                         }
                         maskedFlow.build(toSnatFlows);
+                        if (as.getBounceVlan() && local)
+                            bounceFlow.build(toSnatFlows);
                     }
                 }
             }
