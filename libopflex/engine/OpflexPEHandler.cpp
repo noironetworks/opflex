@@ -155,7 +155,7 @@ void OpflexPEHandler::ready() {
               << "Handshake succeeded";
 
     setState(READY);
-    getProcessor()->connectionReady(getConnection());
+    getProcessor()->connectionReady(dynamic_cast<OpflexConnection*>(getConnection()));
 }
 
 static bool validateProxyAddress(const Value &val,
