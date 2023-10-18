@@ -68,7 +68,6 @@ public:
     /**
      * deletes mirror session
      * @param[in] sessionName name of session
-     * @return true if success, false otherwise.
      */
     void deleteMirror(const string& sessionName);
 

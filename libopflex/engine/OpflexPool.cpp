@@ -408,7 +408,6 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
                            bool sync, const std::string& uri) {
     std::unique_ptr<OpflexMessage> messagep(message);
     if (!active) return 0;
-    std::vector<OpflexClientConnection*> conns;
 
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     auto it = roles.find(role);

@@ -16,6 +16,7 @@
 #ifndef RPC_JSONRPCCONNECTION_H
 #define RPC_JSONRPCCONNECTION_H
 
+#include <list>
 #include <mutex>
 #include <boost/noncopyable.hpp>
 

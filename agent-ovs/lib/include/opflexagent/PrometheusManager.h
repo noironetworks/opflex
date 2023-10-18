@@ -510,7 +510,7 @@ public:
      * Create MoDBCounts metric family if its not present.
      * Update MoDBCounts metric family if its already present
      *
-     * @param counts     contains total number of object counts
+     * @param pCounts    contains total number of object counts
      *                   in MoDB per object type
      */
     void addNUpdateMoDBCounts(shared_ptr<ModbCounts> pCounts);

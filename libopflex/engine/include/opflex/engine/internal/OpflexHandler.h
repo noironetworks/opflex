@@ -46,8 +46,6 @@ public:
      */
     virtual ~OpflexHandler() {}
 
-    virtual OpflexConnection* getConnection() const { return (OpflexConnection*)conn; }
-
     // *************************
     // Protocol Message Handlers
     // *************************
