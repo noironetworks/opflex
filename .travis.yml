@@ -20,6 +20,8 @@ jobs:
           - maven
           - lcov
           - cmake
+          - libunbound8
+          - libunbound-dev
       # In case we need to run perf, install the below in bionic:
       # linux-tools-common
       # linux-tools-4.15.0-72-generic
