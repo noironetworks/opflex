@@ -79,7 +79,8 @@ bool isConfigPath(const fs::path& file) {
 bool isRebootConfigPath(const fs::path& file) {
     const string fstr = file.filename().string();
     if (boost::algorithm::ends_with(fstr, ".conf") &&
-        boost::algorithm::starts_with(fstr, "reboot")) {
+        (boost::algorithm::starts_with(fstr, "reboot") ||
+         boost::algorithm::starts_with(fstr, "reset"))) {
         LOG(INFO) << "Config filename: " << fstr;
         return true;
     }
@@ -91,7 +92,7 @@ public:
     AgentLauncher(bool watch_, std::vector<string>& configFiles_,
     LogParams &logParams_)
         : watch(watch_), configFiles(configFiles_),
-          stopped(false), need_reload(false), logParams(logParams_){}
+          stopped(false), need_reload(false), need_reset(false), logParams(logParams_){}
 
     int run() {
         try {
@@ -109,10 +110,20 @@ public:
                 configure(agent);
                 agent.start();
 
-                cond.wait(lock, [this]{ return stopped || need_reload; });
-                if (!stopped && need_reload) {
-                    LOG(INFO) << "Reloading agent because of " <<
-                        "configuration update";
+                while (true) {
+                    cond.wait(lock, [this]{ return stopped || need_reload || need_reset; });
+                    if (!stopped && need_reload) {
+                        LOG(INFO) << "Reloading agent because of " <<
+                            "configuration update";
+                        break;
+                    }
+                    if (!stopped && need_reset) {
+                        LOG(INFO) << "Disconnect from existing peers and " <<
+                            "fallback to configured list because of configuration update";
+                        framework.resetAllUnconfiguredPeers();
+                        need_reset = false;
+                        continue;
+                    }
                 }
 
                 agent.stop();
@@ -139,7 +150,11 @@ public:
         if (!isConfigPath(filePath))
             return;
 
-        {
+        if (filePath.filename() == "reset.conf") {
+            LOG(INFO) << "Triggering peer reset because of change to " << filePath;
+            std::unique_lock<std::mutex> lock(mutex);
+            need_reset = true;
+        } else {
             LOG(INFO) << "Triggering reload because of change to " << filePath;
             std::unique_lock<std::mutex> lock(mutex);
             need_reload = true;
@@ -164,6 +179,7 @@ private:
     std::vector<string>& configFiles;
     bool stopped;
     bool need_reload;
+    bool need_reset;
     LogParams logParams;
     std::mutex mutex;
     std::condition_variable cond;
