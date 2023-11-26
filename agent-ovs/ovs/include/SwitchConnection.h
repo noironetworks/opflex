@@ -17,6 +17,7 @@
 #include <mutex>
 #include <chrono>
 #include <atomic>
+#include <string>
 
 
 struct vconn;
