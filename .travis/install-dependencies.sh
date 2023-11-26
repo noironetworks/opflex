@@ -3,19 +3,10 @@
 set -o errtrace
 set -x
 
-# Force openssl 1.1 on 22.04 systems, default is 3.0
-wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl_1.1.1f-1ubuntu2.20_amd64.deb
-wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.20_amd64.deb
-wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
-
-sudo dpkg -i libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
-sudo dpkg -i libssl-dev_1.1.1f-1ubuntu2.20_amd64.deb
-sudo dpkg -i openssl_1.1.1f-1ubuntu2.20_amd64.deb
-
 wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
 tar -xvzf artifacts.tgz
-sudo dpkg -i libnoiro-openvswitch_2.12.0-1_amd64.deb
-sudo dpkg -i libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
+sudo dpkg -i jammy/libnoiro-openvswitch_2.12.0-1_amd64.deb
+sudo dpkg -i jammy/libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
 sudo dpkg -i prometheus-cpp_1.0.1_amd64.deb
 
 mkdir -p ../grpc
@@ -43,3 +34,4 @@ sudo cp third_party/protobuf/*.pc /usr/local/share/pkgconfig/
 sudo cp libs/opt/pkgconfig/*.pc /usr/local/share/pkgconfig/
 popd
 popd
+
