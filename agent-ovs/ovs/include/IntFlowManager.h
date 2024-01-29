@@ -17,6 +17,7 @@
 #include <opflexagent/Agent.h>
 #include "SwitchManager.h"
 #include <opflexagent/IdGenerator.h>
+#include <opflexagent/EndpointTenantMapper.h>
 #include "ActionBuilder.h"
 #include "AdvertManager.h"
 #include <opflexagent/TunnelEpManager.h>
@@ -72,7 +73,8 @@ public:
                    SwitchManager& switchManager,
                    IdGenerator& idGen,
                    CtZoneManager& ctZoneManager,
-                   TunnelEpManager& tnlEpManager);
+                   TunnelEpManager& tnlEpManager,
+                   EndpointTenantMapper& endpointTenantMapper);
     ~IntFlowManager() {}
 
     /**
@@ -982,6 +984,7 @@ private:
     std::unique_ptr<boost::asio::io_service::work> svcStatsIOWork;
     FaultManager& faultmanager;
     TaskQueue svcStatsTaskQueue;
+    EndpointTenantMapper& endpointTenantMapper;
 };
 
 } // namespace opflexagent

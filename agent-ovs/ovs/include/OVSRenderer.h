@@ -21,6 +21,7 @@
 #include "SecGrpStatsManager.h"
 #include "TableDropStatsManager.h"
 #include <opflexagent/TunnelEpManager.h>
+#include <opflexagent/EndpointTenantMapper.h>
 #include "PacketInHandler.h"
 #include "CtZoneManager.h"
 #include "SpanRenderer.h"
@@ -67,6 +68,7 @@ public:
 
 private:
     IdGenerator idGen;
+    EndpointTenantMapper endpointTenantMapper;
     CtZoneManager ctZoneManager;
 
     FlowExecutor intFlowExecutor;

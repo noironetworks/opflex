@@ -84,13 +84,16 @@ BOOST_FIXTURE_TEST_CASE( droplogconfigsource, FSConfigFixture ) {
     WAIT_FOR(DropLogConfig::resolve(agent.getFramework(), uri), 500);
     boost::optional<shared_ptr<DropLogConfig>> dropLogCfg = DropLogConfig::resolve(agent.getFramework(), uri);
     BOOST_CHECK(dropLogCfg.get()->getDropLogMode().get()== DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
+    BOOST_CHECK(dropLogCfg.get()->getDropLogPrintTenant().get()== 0);
     BOOST_CHECK(dropLogCfg.get()->getDropLogEnable().get());
     fs::ofstream os2(path);
     os2 << "{"
-       << "\"drop-log-enable\": false"
+       << "\"drop-log-enable\": false,"
+       << "\"drop-log-print-tenant\": true"
        << "}" << std::endl;
     os2.close();
     WAIT_FOR((DropLogConfig::resolve(agent.getFramework(), uri).get()->getDropLogEnable().get()==0), 500);
+    WAIT_FOR((DropLogConfig::resolve(agent.getFramework(), uri).get()->getDropLogPrintTenant().get()==1), 500);
     fs::remove(path);
     WAIT_FOR(!(DropLogConfig::resolve(agent.getFramework(), uri)), 500);
     watcher.stop();
@@ -104,6 +107,7 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     fs::ofstream os(path);
     os << "{"
        << "\"drop-log-enable\": true,\n"
+       << "\"drop-log-print-tenant\": true,\n"
        << "\"drop-log-pruning\": {\n"
        << "\"flt1\":{"
        << "\"name\":\"flt1\",\"sip\":\"1.2.3.4\",\"dip\":\"5.6.7.0/24\",\"smac\":\"00:01:02:03:04:05/FF:FF:00:00:00:00\",\"dmac\":\"06:07:08:09:0A:0B/FF:FF:FF:FF:FF:FF\",\"ip_proto\":6, \"sport\":12000,\"dport\":13000"
@@ -124,6 +128,7 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     WAIT_FOR(DropLogConfig::resolve(agent.getFramework(), uri), 500);
     boost::optional<shared_ptr<DropLogConfig>> dropLogCfg = DropLogConfig::resolve(agent.getFramework(), uri);
     BOOST_CHECK(dropLogCfg.get()->getDropLogMode().get()== DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG);
+    BOOST_CHECK(dropLogCfg.get()->getDropLogPrintTenant().get() == 1);
     BOOST_CHECK(dropLogCfg.get()->getDropLogEnable().get());
     /*Test create prune filter*/
     WAIT_FOR(DropPruneConfig::resolve(agent.getFramework(), dropPruneUri), 500);

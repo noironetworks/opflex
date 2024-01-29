@@ -113,6 +113,30 @@ public:
 };
 
 /**
+ * Variant implementing source EPG
+ */
+class GeneveOptSourceEPGLayerVariant: public PacketDecoderLayerVariant {
+public:
+    GeneveOptSourceEPGLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "sEPG", 5, 4){};
+    virtual ~GeneveOptSourceEPGLayerVariant() {};
+    virtual int configure();
+    virtual void getFormatString(boost::format &fmtStr);
+    virtual void reParse(ParseInfo &p);
+};
+
+/**
+ * Variant implementing destination EPG
+ */
+class GeneveOptDestinationEPGLayerVariant: public PacketDecoderLayerVariant {
+public:
+    GeneveOptDestinationEPGLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "dEPG", 5, 5){};
+    virtual ~GeneveOptDestinationEPGLayerVariant() {};
+    virtual int configure();
+    virtual void getFormatString(boost::format &fmtStr);
+    virtual void reParse(ParseInfo &p);
+};
+
+/**
  * Layer implementing ARP
  */
 class ARPLayer: public PacketDecoderLayer {
