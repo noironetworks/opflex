@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>
 #include "MockPacketLogHandler.h"
 #include <opflexagent/IdGenerator.h>
+#include <opflexagent/EndpointTenantMapper.h>
 BOOST_AUTO_TEST_SUITE(PacketDecoder_test)
 
 using namespace std;
@@ -19,11 +20,13 @@ using namespace opflexagent;
 static boost::asio::io_service io_1,io_2;
 class PacketDecoderFixture {
 public:
-    PacketDecoderFixture():pktLogger(io_1,io_2,idGen){
+    PacketDecoderFixture():pktLogger(io_1,io_2,idGen,endpointTenantMapper){
      pktLogger.startListener();
+     endpointTenantMapper.shouldPrintTenant = false;
     };
     MockPacketLogHandler pktLogger;
     opflexagent::IdGenerator idGen;
+    opflexagent::EndpointTenantMapper endpointTenantMapper;
 };
 
 static const uint8_t arp_buf[] = {
@@ -263,6 +266,7 @@ BOOST_FIXTURE_TEST_CASE(ip_options_unrecognized_test, PacketDecoderFixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(enhanceDropReason_test, PacketDecoderFixture) {
+    endpointTenantMapper.shouldPrintTenant = true;
     string dir(".");
     string nmspc("l24classifierRule");
     string u1("/PolicyUniverse/PolicySpace/test/GbpeL24Classifier/classifier7/");
@@ -272,7 +276,30 @@ BOOST_FIXTURE_TEST_CASE(enhanceDropReason_test, PacketDecoderFixture) {
     u1_id = idGen.getId(nmspc, u1);
     BOOST_CHECK(u1_id != 0);
     BOOST_CHECK(u1_id == idGen.getId(nmspc, u1));
-    std::string expected("Int-POL_TABLE DENY /PolicyUniverse/PolicySpace/test/GbpeL24Classifier/classifier7/");
+    std::string expected("Int-POL_TABLE DENY /PolicyUniverse/PolicySpace/test/GbpeL24Classifier/classifier7/ N/A N/A");
+    auto pktDecoder = pktLogger.getDecoder();
+    ParseInfo p(&pktDecoder);
+    int ret = pktDecoder.decode(arp_stream, 186, p);
+    BOOST_CHECK(ret == 0);
+    std::string dropReason;
+    pktLogger.getDropReason(p, dropReason);
+    BOOST_CHECK(dropReason == expected);
+}
+
+BOOST_FIXTURE_TEST_CASE(printSourceTenant_test, PacketDecoderFixture) {
+    endpointTenantMapper.shouldPrintTenant = true;
+    string dir(".");
+    string nmspc("l24classifierRule");
+    string u1("/PolicyUniverse/PolicySpace/test/GbpeL24Classifier/classifier7/");
+    uint32_t u1_id;
+    endpointTenantMapper.UpdateMapping(4660, "tenantA");
+    endpointTenantMapper.UpdateMapping(12288, "tenantB");
+    idGen.setPersistLocation(dir);
+    idGen.initNamespace(nmspc);
+    u1_id = idGen.getId(nmspc, u1);
+    BOOST_CHECK(u1_id != 0);
+    BOOST_CHECK(u1_id == idGen.getId(nmspc, u1));
+    std::string expected("Int-POL_TABLE DENY /PolicyUniverse/PolicySpace/test/GbpeL24Classifier/classifier7/ tenantA tenantB");
     auto pktDecoder = pktLogger.getDecoder();
     ParseInfo p(&pktDecoder);
     int ret = pktDecoder.decode(arp_stream, 186, p);

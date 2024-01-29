@@ -134,6 +134,16 @@ public:
  */
 bool operator== (const PacketTuple &lhs, const PacketTuple &rhs);
 
+/* Meta index info */
+typedef enum  {
+    SOURCE_BRIDGE,
+    TABLE_ID,
+    CAPTURE_REASON,
+    POLICY_TRIGGERED_DROP,
+    SOURCE_EPG,
+    DESTINATION_EPG
+} ParseInfoMetaType;
+
 /**
  *  Struct to hold parsing context
  */
@@ -147,7 +157,7 @@ struct ParseInfo {
             nextKey(0), optionLayerTypeId(0), parsedLength(0), parsedString(),
             formattedFields(), layerFormatterString(), hasOptBytes(false),
             pendingOptionLength(0), inferredLength(0), inferredDataLength(0),
-            scratchpad{0,0,0,0}, packetTuple(), meta{0,0,0,0}, pruneLog(false) {
+            scratchpad{0,0,0,0}, packetTuple(), meta{0,0,0,0,0,0}, pruneLog(false) {
         time_t rawtime = std::time(nullptr);
         char currTime[256];
         struct tm tp;
@@ -221,9 +231,9 @@ struct ParseInfo {
      */
     PacketTuple packetTuple;
     /**
-     * Source Bridge,TableId,CaptureReason,Policies triggered the drop
+     * Source Bridge,TableId,CaptureReason,Policies triggered the drop,sourceEPG,destinationEPG
      */
-    uint32_t meta[4];
+    uint32_t meta[6];
     /**
      * Prune logs for this packet
      */
