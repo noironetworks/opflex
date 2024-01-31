@@ -148,6 +148,10 @@
        //      "enabled": true,
        //      "interval": 10000
        //   }
+       //   "nat": {
+       //       "enabled": false,
+       //       "interval": 10000
+       //   }
        }
     },
 

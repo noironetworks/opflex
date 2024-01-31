@@ -62,6 +62,8 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       tableDropStatsManager(&agent_, idGen, intSwitchManager,
               accessSwitchManager),
       dnsManager(agent_),
+      natStatsManager(&agent_, idGen, intSwitchManager, intFlowManager),
+
       encapType(IntFlowManager::ENCAP_NONE),
       tunnelRemotePort(0), uplinkVlan(0),
       virtualRouter(true), routerAdv(true),
@@ -158,7 +160,7 @@ void OVSRenderer::start() {
         accessSwitchManager.registerStateHandler(&accessFlowManager);
         accessSwitchManager.start(accessBridgeName);
     }
-    intFlowManager.start(serviceStatsFlowDisabled);
+    intFlowManager.start(serviceStatsFlowDisabled, natStatsEnabled);
     intFlowManager.registerModbListeners();
 
     if (accessBridgeName != "") {
@@ -219,6 +221,12 @@ void OVSRenderer::start() {
                                : NULL);
         tableDropStatsManager.start();
     }
+    if (natStatsEnabled) {
+        natStatsManager.setTimerInterval(natStatsInterval);
+        natStatsManager.setAgentUUID(getAgent().getUuid());
+        natStatsManager.registerConnection(intSwitchManager.getConnection());
+        natStatsManager.start();
+    }
     //Create any threads after starting the packet logger.
     //This is necessary so that fork works correctly. Fork
     //requires that no threads be active because files in the parent
@@ -277,7 +285,8 @@ void OVSRenderer::stop() {
         secGrpStatsManager.stop();
     if(tableDropStatsEnabled)
         tableDropStatsManager.stop();
-
+    if (natStatsEnabled)
+        natStatsManager.stop();
     pktInHandler.stop();
     dnsManager.stop();
     intFlowManager.stop();
@@ -381,6 +390,10 @@ void OVSRenderer::setProperties(const ptree& properties) {
                                                       ".table-drop.enabled");
     static const std::string TABLE_DROP_STATS_INTERVAL("statistics"
                                                        ".table-drop.interval");
+    static const std::string STATS_NAT_ENABLED("statistics"
+                                               ".nat.enabled");
+    static const std::string STATS_NAT_INTERVAL("statistics"
+                                                ".nat.interval");
     static const std::string DROP_LOG_ENCAP_GENEVE("drop-log.geneve");
     static const std::string REMOTE_NAMESPACE("namespace");
     static const std::string OVSDB_USE_LOCAL_TCPPORT("ovsdb-use-local-tcp-port");
@@ -501,6 +514,7 @@ void OVSRenderer::setProperties(const ptree& properties) {
     secGroupStatsEnabled = properties.get<bool>(STATS_SECGROUP_ENABLED, true);
     ifaceStatsInterval = properties.get<long>(STATS_INTERFACE_INTERVAL, 30000);
     tableDropStatsEnabled = properties.get<bool>(TABLE_DROP_STATS_ENABLED, true);
+    natStatsEnabled = properties.get<bool>(STATS_NAT_ENABLED, false);
 
     contractStatsInterval =
         properties.get<long>(STATS_CONTRACT_INTERVAL, 10000);
@@ -510,6 +524,8 @@ void OVSRenderer::setProperties(const ptree& properties) {
         properties.get<long>(STATS_SECGROUP_INTERVAL, 10000);
     tableDropStatsInterval =
         properties.get<long>(TABLE_DROP_STATS_INTERVAL, 30000);
+    natStatsInterval = 
+        properties.get<long>(STATS_NAT_INTERVAL, 10000);
     if (ifaceStatsInterval <= 0) {
         ifaceStatsEnabled = false;
     }
@@ -521,6 +537,9 @@ void OVSRenderer::setProperties(const ptree& properties) {
     }
     if(tableDropStatsInterval <= 0) {
         tableDropStatsEnabled = false;
+    }
+    if (natStatsInterval <= 0) {
+        natStatsEnabled = false;
     }
 }
 

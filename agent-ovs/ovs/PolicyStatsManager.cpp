@@ -120,7 +120,6 @@ void PolicyStatsManager::updateFlowEntryMap(flowCounterState_t& counterState,
         it->second.age += 1;
         return;
     }
-
     /* Add the flow entry to newmap */
     FlowCounters_t& flowCounters =
         counterState.newFlowCounterMap[flowEntryKey];
@@ -494,7 +493,7 @@ bool PolicyStatsManager::handleFlowStats(ofpbuf *msg, const table_map_t& tableMa
                                       fentry->byte_count,
                                       *counterState, false);
             }
-        }
+        }  
     } while (true);
 
 }

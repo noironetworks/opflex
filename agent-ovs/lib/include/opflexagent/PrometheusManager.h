@@ -622,6 +622,35 @@ public:
                                          const string& dstEpg,
                                          const string& classifier);
 
+     /**
+     * Create Nat Counter metric family if its not present.
+     * Update Nat Counter metric family if its already present
+     *
+     * @param uuid        uuid of ep
+     * @param dir         the direction of the packet
+     * @param pktes       packet count
+     * @param bytes       byte count
+     * @param mappedIp    VM's ip address
+     * @param floatingIp  NAT floating address$
+     * @param sepg        src epg
+     * @param depg        dest epg$
+     */
+    void addNUpdateNatStats(const string& uuid,
+                            const string& dir,
+                            uint64_t pktes,
+                            uint64_t bytes,
+                            const string& mappedIp,
+                            const string& floatingIp,
+                            const string& sepg,
+                            const string& degp);
+
+     /**
+     * Remove Nat Counter metrics given it's uuid
+     *
+     * @param uuid          uuid of EP
+     * @param dir           the direction of the packet$
+     */
+    void removeNatCounter(const string& dir, const string& uuid);
 
 private:
     // opflex agent handle
@@ -1242,6 +1271,73 @@ private:
      */
     std::atomic<bool> exposeEpSvcNan;
     /* TODO: Other Counter related apis and state */
+
+    
+    // Lock to safe guard NAT Counter related state
+    mutex nat_counter_mutex;
+
+    enum NAT_METRICS {
+         NAT_METRICS_MIN,
+         NAT_VM2EXT_MIN = NAT_METRICS_MIN,
+         NAT_VM2EXT_BYTES = NAT_VM2EXT_MIN,
+         NAT_VM2EXT_PKTS,
+         NAT_VM2EXT_MAX = NAT_VM2EXT_PKTS,
+         NAT_EXT2VM_MIN,
+         NAT_EXT2VM_BYTES = NAT_EXT2VM_MIN,
+         NAT_EXT2VM_PKTS,
+         NAT_EXT2VM_MAX = NAT_EXT2VM_PKTS,
+         NAT_METRICS_MAX = NAT_EXT2VM_MAX
+    };
+
+    // metric families to track all NAT metrics
+    Family<Gauge>      *gauge_nat_counter_family_ptr[NAT_METRICS_MAX+1];
+
+
+    // create any gauge metric families during start
+    void createStaticGaugeFamiliesNatCounter(void);
+
+    // remove any nat counter gauge metric families during stop
+    void removeStaticGaugeFamiliesNatCounter(void);
+
+    // Dynamic Metric families and metrics
+    // CRUD for every NAT counter metric
+    // func to create gauge for NAT given metric type,
+    // & attributes of the ep
+    bool createDynamicGaugeNatStats (NAT_METRICS metric,
+                                     const string& uuid,
+                                     const string& mappedIp,
+                                     const string& FIp,
+                                     const string& dir,
+                                     const string& sepg,
+                                     const string& depg);
+
+    // func to get label map and Gauge for NAT Counter given metric type, uuid
+    hgauge_pair_t getDynamicGaugeNatCounter(NAT_METRICS metric, const string& uuid);
+
+    // func to remove gauge for NAT Counter given metric type, uuid
+    bool removeDynamicGaugeNatStats (NAT_METRICS metric,
+                                const string& uuid);
+
+    // func to remove gauge for NAT Counter given metric type
+    void removeDynamicGaugeNatStats (NAT_METRICS metric);
+
+    // func to remove all gauges of every NAT Counter
+    void removeDynamicGaugeNatStats (void);
+
+    // Create a label map that can be used for annotation, given the ep attributes
+    static const map<string,string> createLabelMapNatCounter(const string& uuid, 
+                                                             const string& mappedIp,
+                                                             const string& FIp,
+                                                             const string& sepg,
+                                                             const string& depg);
+
+     /**
+     * cache the pair of (label map hash, gauge ptr) for every ep uuid
+     * The hash is created utilizing prometheus lib, which is basically
+     * a rolling hash  of all the key,value pairs of the ep attributes.
+     */
+    unordered_map<string, hgauge_pair_t> nat_gauge_map[NAT_METRICS_MAX+1];
+
 };
 
 } /* namespace opflexagent */

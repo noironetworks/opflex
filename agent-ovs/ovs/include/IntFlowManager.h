@@ -37,6 +37,8 @@
 #include <utility>
 #include <unordered_map>
 
+#include "NatStatsManager.h"
+
 namespace opflexagent {
 
 class CtZoneManager;
@@ -79,7 +81,7 @@ public:
      * Module start
      * @param serviceStatsFlowDisabled toggle service stats flow creation based on agent config
      */
-    void start(bool serviceStatsFlowDisabled=false);
+    void start(bool serviceStatsFlowDisabled=false, bool isNatStatsEnabled_=false);
 
     /**
      * Installs listeners for receiving updates to MODB state.
@@ -533,6 +535,36 @@ public:
     boost::asio::io_service& getSvcStatsIOService() {
         return svcStatsIOService;
     }
+
+    //Update Nat Stat metrics to modb and prometheus counters
+    void updateNatStatsCounters(const string &direction,
+                                const uint64_t &pkts,
+                                const uint64_t &bytes,
+                                const string &fip,
+                                const string &vmIp,
+                                const string &sepg,
+                                const string &depg,
+                                const string &uuid);
+
+    //This function call maintains an Hash Map between Nat Flow entry keys 
+    //and ep attributes such as Vm's Ip, External network floating Ip,
+    //src epg, dst epg, uudi of the Ep
+    void  updateNatHashMapEntry(const std::string& fip, 
+                                const std::string& mip, 
+                                uint32_t fepgVnid,
+                                uint32_t epgVnid, 
+                                const string& mapping, 
+                                const std::string& uuid,
+                                uint32_t rdId);
+
+    //This function call is called from NatStatsManager to update the Ep map if the hash key exists
+    bool updateEpAttributeMap(uint32_t key1,
+                              uint32_t key2, 
+                              const std::string& key3, 
+                              struct NatStatsManager::Nat_attr* att_map);
+
+    //This function call clears the Modb and promethues Nat counters when the Ep get deleted
+    void clearNatStatsCounters(const std::string& epUuid);
 private:
     /**
      * Write flows that are fixed and not related to any policy or
@@ -893,6 +925,8 @@ private:
     boost::asio::ip::address dropLogDst;
     uint16_t dropLogRemotePort;
     std::atomic<bool> serviceStatsFlowDisabled;
+    //enabling/disabling flag for Nat Stats Managaer
+    bool isNatStatsEnabled;
 
     /* Map containing ingress and egress cookie: Flows generated out
      * of same pod<-->svc uuid will use these cookies */
@@ -976,12 +1010,44 @@ private:
      * Handle if the droplog port name is read later
      */
     void handleDropLogPortUpdate();
-
+  
     std::unique_ptr<std::thread> svcStatsThread;
     boost::asio::io_service svcStatsIOService;
     std::unique_ptr<boost::asio::io_service::work> svcStatsIOWork;
     FaultManager& faultmanager;
     TaskQueue svcStatsTaskQueue;
+   
+    // Lock to safe guard natstat related state
+    std::mutex natStatMutex;
+
+    struct  MatchLabels {
+        std::string mappedIp;
+        std::string floatingIp;
+        std::string src_epg;
+        std::string dst_epg;
+        std::string uuid;
+	uint32_t fvnid;
+    };
+    struct FlowKey {
+        FlowKey(std::string k1, uint32_t k2, uint32_t k3) {
+            ip=k1;
+            reg=k2;
+            rd = k3;
+        }
+        std::string ip;
+        uint32_t reg;
+        uint32_t rd;
+        bool operator==(const FlowKey &other) const;
+    };
+
+    struct natFlowKeyHasher {
+        size_t operator()(const FlowKey& k) const noexcept;
+    };
+
+    typedef std::unordered_map<FlowKey, MatchLabels, natFlowKeyHasher> natFlowMatchKey;
+    
+    natFlowMatchKey natEpMap;
+     
 };
 
 } // namespace opflexagent

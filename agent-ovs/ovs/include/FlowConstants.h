@@ -89,6 +89,12 @@ extern const uint64_t DNS_RESPONSE_V4;
  * The cookie used for flows to capture DNS v6 response packets
  */
 extern const uint64_t DNS_RESPONSE_V6;
+
+/**
+ * The cookie used for flows to capture NAT based packets for OpenStack. Both 1:1 mapping and SNAT
+ */
+extern const uint64_t NAT_FLOW;
+
 } // namespace cookie
 
 namespace meta {

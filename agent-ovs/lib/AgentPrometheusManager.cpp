@@ -234,6 +234,22 @@ static string table_drop_family_help[] =
   "opflex table drop packets"
 };
 
+static string nat_family_names[] =
+{
+  "opflex_endpoint_to_extnetwork_bytes",
+  "opflex_endpoint_to_extnetwork_packets",
+  "opflex_extnetwork_to_endpoint_bytes",
+  "opflex_extnetwork_to_endpoint_packets"
+};
+
+static string nat_family_help[] =
+{
+  "endpoint to extnetwork bytes",
+  "endpoint to extnetwork packets",
+  "extnetwork to endpoint bytes",
+  "extnetwork to endpoint packets"
+};
+
 #define RETURN_IF_DISABLED  if (disabled) {return;}
 
 // construct AgentPrometheusManager for opflex agent
@@ -411,6 +427,12 @@ void AgentPrometheusManager::removeDynamicGauges ()
     {
         const lock_guard<mutex> lock(contract_stats_mutex);
         removeDynamicGaugeContractClassifier();
+    }
+    
+    // Remove Nat Stats related gauges
+    {
+       const lock_guard<mutex> lock(nat_counter_mutex); 
+       removeDynamicGaugeNatStats();
     }
 }
 
@@ -720,6 +742,11 @@ void AgentPrometheusManager::createStaticGaugeFamilies (void)
         const lock_guard<mutex> lock(contract_stats_mutex);
         createStaticGaugeFamiliesContractClassifier();
     }
+   
+    {   
+	const lock_guard<mutex> lock(nat_counter_mutex);
+        createStaticGaugeFamiliesNatCounter();
+    }
 }
 
 // remove gauges during stop
@@ -869,6 +896,15 @@ void AgentPrometheusManager::init ()
                 metric <= CONTRACT_METRICS_MAX;
                     metric = CONTRACT_METRICS(metric+1)) {
             gauge_contract_family_ptr[metric] = nullptr;
+        }
+    }
+
+    {
+        const lock_guard<mutex> lock(nat_counter_mutex);
+        for (NAT_METRICS metric=NAT_METRICS_MIN;
+             metric <= NAT_METRICS_MAX;
+             metric = NAT_METRICS(metric+1)) {
+             gauge_nat_counter_family_ptr[metric] = nullptr;
         }
     }
 }
@@ -2309,6 +2345,15 @@ void AgentPrometheusManager::removeStaticGaugeFamiliesTableDrop()
     }
 }
 
+void AgentPrometheusManager::removeStaticGaugeFamiliesNatCounter()
+{
+    for (NAT_METRICS metric=NAT_METRICS_MIN;
+         metric <= NAT_METRICS_MAX;
+         metric =  NAT_METRICS(metric+1)) {
+         gauge_nat_counter_family_ptr[metric] = nullptr;
+    }
+}
+
 // Remove all statically allocated gauge families
 void AgentPrometheusManager::removeStaticGaugeFamilies()
 {
@@ -2367,6 +2412,11 @@ void AgentPrometheusManager::removeStaticGaugeFamilies()
     {
         const lock_guard<mutex> lock(contract_stats_mutex);
         removeStaticGaugeFamiliesContractClassifier();
+    }
+    // Nat Stat counter specific
+    {
+       const lock_guard<mutex> lock(nat_counter_mutex);
+       removeStaticGaugeFamiliesNatCounter();
     }
 }
 
@@ -3278,6 +3328,245 @@ void AgentPrometheusManager::updateTableDropGauge (const string& bridge_name,
                    << " bridge_name: " << bridge_name
                    << " table_name: " << table_name;
         return;
+    }
+}
+
+/* Function called from IntFlowManager to update NAT Stats Counter */
+void AgentPrometheusManager::addNUpdateNatStats (const string& uuid,
+                                                 const string& dir,
+                                                 uint64_t bytes,
+                                                 uint64_t pkts,
+                                                 const string& mappedIp,
+                                                 const string& FIp,
+                                                 const string& sepg,
+                                                 const string& depg)
+{
+    RETURN_IF_DISABLED
+    const lock_guard<mutex> lock(nat_counter_mutex);
+
+     if (dir=="EpToExt") {
+       // Update the metrics for Ep to External network Flow Stats
+        for (NAT_METRICS metric=NAT_METRICS_MIN; 
+             metric <=  NAT_VM2EXT_MAX; metric = NAT_METRICS(metric+1)) { 
+        // Create the gauge counters if they arent present already
+            if (!createDynamicGaugeNatStats(metric, uuid, mappedIp, FIp, dir, sepg, depg)) {
+                break;
+            }
+            hgauge_pair_t hgauge = getDynamicGaugeNatCounter(metric, uuid);
+            optional<uint64_t>   metric_opt;
+            switch (metric) {
+                case NAT_VM2EXT_BYTES:
+                    metric_opt = bytes;
+                    break;
+                case NAT_VM2EXT_PKTS:
+                    metric_opt = pkts;
+                    break;
+                default:
+                    LOG(WARNING) << "Unhandled NAT Stats metric: " << metric;
+            }
+            if (metric_opt && hgauge) {
+                hgauge.get().second->Set(static_cast<double>(metric_opt.get()));
+            }
+            if (!hgauge) {
+                LOG(WARNING) << "NAT Stats invalid update for uuid: " << uuid;
+                break;
+            }
+        }
+    } else if (dir == "ExtToEp") {
+        // Update the metrics for External network to Ep Flow Stats
+        for (NAT_METRICS metric=NAT_EXT2VM_MIN; 
+             metric <= NAT_METRICS_MAX; metric = NAT_METRICS(metric+1)) {
+        // Create the gauge counters if they arent present already
+            if (!createDynamicGaugeNatStats(metric, uuid, mappedIp, FIp, dir, sepg, depg)) {
+                break;
+            }
+            hgauge_pair_t hgauge = getDynamicGaugeNatCounter(metric, uuid);
+            optional<uint64_t>   metric_opt;
+            switch (metric) {
+                case NAT_EXT2VM_BYTES:
+                    metric_opt = bytes;
+                    break;
+                case NAT_EXT2VM_PKTS:
+                    metric_opt = pkts;
+                    break;
+                default:
+                    LOG(WARNING) << "Unhandled NAT Stats metric: " << metric;
+            }
+           if (metric_opt && hgauge) {
+                hgauge.get().second->Set(static_cast<double>(metric_opt.get()));
+           }
+           if (!hgauge) {
+                LOG(WARNING) << "NAT Stats invalid update for uuid: " << uuid;
+                break;
+            }
+       }
+    }
+    return;
+}
+
+// Function called from IntFlowManager to remove NatStats Counter
+void AgentPrometheusManager::removeNatCounter(const string& dir, const string& uuid) {
+    RETURN_IF_DISABLED
+    const lock_guard<mutex> lock(nat_counter_mutex);
+
+    LOG(DEBUG) << "Remove Nat Stat counter uuid: " << uuid;
+    if (dir == "EpToExt") {
+       for (NAT_METRICS metric=NAT_METRICS_MIN; metric <=  
+            NAT_VM2EXT_MAX; metric = NAT_METRICS(metric+1)) {
+            if (!removeDynamicGaugeNatStats(metric, uuid)) {
+                break;
+            }
+        }
+    } else if (dir == "ExtToEp") {
+             for (NAT_METRICS metric=NAT_EXT2VM_MIN; metric <= 
+                  NAT_METRICS_MAX; metric = NAT_METRICS(metric+1)) {
+                  if (!removeDynamicGaugeNatStats(metric, uuid)) {
+                      break;
+                  }
+             }  
+    }
+}
+
+// Create Nat Counter gauge given metric type and an uuid
+bool AgentPrometheusManager::createDynamicGaugeNatStats (NAT_METRICS metric,
+                                                         const string& uuid,
+                                                         const string& mappedIp,
+                                                         const string& FIp,
+                                                         const string& dir,
+                                                         const string& sepg,
+                                                         const string& depg)
+{
+    auto const &label_map = createLabelMapNatCounter(uuid, mappedIp, FIp, sepg, depg);
+    LabelHasher hasher;
+    auto hash_new = hasher(label_map);
+
+    // Retrieve the Gauge if its already created
+    auto hgauge = getDynamicGaugeNatCounter(metric, uuid);
+    if (hgauge) {
+        /**
+         * Detect attribute change by comparing hashes of cached label map
+         * with new label map
+         */
+        if (hash_new == hgauge.get().first) { 
+            return true;
+        } else {
+            LOG(DEBUG) << "addNupdate Nat Stat counter uuid " << uuid
+                       << "existing Nat Stat metric, but deleting: hash modified"
+                       << " metric: " << nat_family_names[metric]
+                       << " hash: " << hgauge.get().first
+                       << "gaugeptr: "<< hgauge.get().second;
+                       removeDynamicGaugeNatStats(metric, uuid);
+
+        }
+    }
+
+   if (!hash_new) {
+       return false;
+   }
+   if (gauge_nat_counter_family_ptr[metric]) {
+       auto& gauge = gauge_nat_counter_family_ptr[metric]->Add(label_map);
+
+       if (gauge_check.is_dup(&gauge)) {
+           LOG(WARNING) << "duplicate Nat Stat counter dyn gauge family"
+                        << " metric: " << metric
+                        << " uuid: " << uuid
+                        << " label hash: " << hash_new;
+           return true;
+       }
+       gauge_check.add(&gauge);
+       nat_gauge_map[metric][uuid] = make_pair(hash_new, &gauge);
+       return true;
+   }
+  return false;
+}
+
+// Create a label map that can be used for annotation, given the ep attributes
+const map<string,string>  AgentPrometheusManager::createLabelMapNatCounter( 
+                                                        const string& uuid,
+                                                        const string& mappedIp,
+                                                        const string& FIp,
+                                                        const string& sepg,
+                                                        const string& depg)
+{
+    map<string,string>  label_map;
+    label_map["ep_uuid"] = uuid;
+    label_map["ep_mapped_ip"] = mappedIp;
+    label_map["ep_floating_ip"] = FIp;
+    label_map["sepg"] = sepg;
+    label_map["depg"] = depg;
+    return label_map;
+}
+
+// Get Nat Counter gauge given the metric, uuid of EP
+hgauge_pair_t AgentPrometheusManager::getDynamicGaugeNatCounter (NAT_METRICS metric,
+                                                                const string& uuid)
+{
+    hgauge_pair_t hgauge = boost::none;
+    auto itr = nat_gauge_map[metric].find(uuid);
+    if (itr == nat_gauge_map[metric].end()) {
+        LOG(INFO) << "Dyn Gauge Nat Stat Counter not found for " << uuid;
+    } else {
+        hgauge = itr->second;
+    }
+
+    return hgauge;
+}
+
+void AgentPrometheusManager::createStaticGaugeFamiliesNatCounter (void)
+{
+    // add a new gauge family to the registry (families combine values with the
+    // same name, but distinct label dimensions)
+    // Note: There is a unique ptr allocated and referencing the below reference
+    // during Register().
+
+    for (NAT_METRICS metric=NAT_METRICS_MIN;
+         metric <= NAT_METRICS_MAX;
+         metric =  NAT_METRICS(metric+1)) {
+         auto& gauge_nat_family = BuildGauge()
+                                 .Name(nat_family_names[metric])
+                                 .Help(nat_family_help[metric])
+                                 .Labels({})
+                                 .Register(*registry_ptr);
+        gauge_nat_counter_family_ptr[metric] = &gauge_nat_family;
+    }
+}
+
+
+// func to remove gauge for NAT Counter given metric type, uuid
+bool AgentPrometheusManager::removeDynamicGaugeNatStats (NAT_METRICS metric,
+                                                       const string& uuid){
+
+     auto hgauge = getDynamicGaugeNatCounter(metric, uuid);
+     if (hgauge) {
+         nat_gauge_map[metric].erase(uuid);
+         gauge_check.remove(hgauge.get().second);
+         gauge_nat_counter_family_ptr[metric]->Remove(hgauge.get().second); 
+         return true;
+     }
+     return false;
+}
+
+// func to remove gauge for NAT Counter given metric type
+void AgentPrometheusManager::removeDynamicGaugeNatStats (NAT_METRICS metric){
+
+    auto itr = nat_gauge_map[metric].begin();
+    while (itr != nat_gauge_map[metric].end()) {
+       LOG(DEBUG) << "Deleting Nat Stat Ep uuid: "<< itr->first
+                  << " hash: " << itr->second.get().first
+                  << " Gauge: " << itr->second.get().second;
+       gauge_check.remove(itr->second.get().second);
+       gauge_nat_counter_family_ptr[metric]->Remove(itr->second.get().second);
+       itr++;
+    }
+}
+
+// func to remove all gauges of every NAT Counter
+void AgentPrometheusManager::removeDynamicGaugeNatStats () {
+
+    for (NAT_METRICS metric=NAT_METRICS_MIN;
+         metric <= NAT_METRICS_MAX;
+         metric =  NAT_METRICS(metric+1)) {
+         removeDynamicGaugeNatStats(metric);
     }
 }
 
