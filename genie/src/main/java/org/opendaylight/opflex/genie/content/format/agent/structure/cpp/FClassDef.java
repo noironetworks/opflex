@@ -172,7 +172,18 @@ public class FClassDef extends ItemFormatterTask
     private void genClass(int aInIndent, MClass aInClass)
     {
         out.println(aInIndent, "/** " + aInClass.getLID().getName() + " */");
-        out.println(aInIndent, "class " + aInClass.getLID().getName() + " : public opflex::modb::mointernal::MO");
+        String lInherit;
+        MClass lSuperclass = aInClass.getSuperclass();
+        if (lSuperclass != null && lSuperclass.isConcrete())
+        {
+            lInherit = " : public " + Config.getProjName() + "::" +
+                getNamespace(lSuperclass, false) + "::" + lSuperclass.getLID().getName();
+        }
+        else
+        {
+            lInherit = " : public opflex::modb::mointernal::MO";
+        }
+        out.println(aInIndent, "class " + aInClass.getLID().getName() + lInherit);
         out.println(aInIndent, "{");
         genPublic(aInIndent + 1, aInClass);
         out.println(aInIndent, "}; // class " + aInClass.getLID().getName());
@@ -274,7 +285,6 @@ public class FClassDef extends ItemFormatterTask
     {
         genRefCheck(aInIndent, aInPropIdx, aInComments);
         genRefAccessors(aInIndent, aInPropIdx, aInComments);
-        genRefDefaultedAccessors(aInIndent, aInComments);
         genRefMutators(aInIndent, aInClass, aInPropIdx, aInComments);
         genRefUnset(aInIndent, aInClass, aInPropIdx, aInComments);
     }
@@ -299,7 +309,7 @@ public class FClassDef extends ItemFormatterTask
         //
         // METHOD DEFINITION
         //
-        out.println(aInIndent,"bool is" + Strings.upFirstLetter(aInCheckName) + "Set()");
+        out.println(aInIndent,"virtual bool is" + Strings.upFirstLetter(aInCheckName) + "Set() const");
 
         //
         // METHOD BODY
@@ -345,7 +355,7 @@ public class FClassDef extends ItemFormatterTask
         }
         lComment[lCommentIdx++] = "@return the value of " + aInName + " or boost::none if not set";
         out.printHeaderComment(aInIndent,lComment);
-        out.println(aInIndent,"boost::optional<" + aInEffSyntax + "> get" + Strings.upFirstLetter(aInName) + "()");
+        out.println(aInIndent,"virtual boost::optional<" + aInEffSyntax + "> get" + Strings.upFirstLetter(aInName) + "() const");
         out.println(aInIndent,"{");
         out.println(aInIndent + 1,"if (is" + Strings.upFirstLetter(aInCheckName) + "Set())");
         out.println(aInIndent + 2,"return " + aInCast + "getObjectInstance().get" + aInPType + "(" + toUnsignedStr(aInPropIdx) + ")" + aInAccessor + ";");
@@ -399,7 +409,7 @@ public class FClassDef extends ItemFormatterTask
         lComment[lCommentIdx++] = "@param defaultValue default value returned if the property is not set";
         lComment[lCommentIdx++] = "@return the value of " + aInName + " if set, otherwise the value of default passed in";
         out.printHeaderComment(aInIndent,lComment);
-        out.println(aInIndent, aInEffSyntax + " get" + Strings.upFirstLetter(aInName) + "(" + aInEffSyntax + " defaultValue)");
+        out.println(aInIndent, "virtual " + aInEffSyntax + " get" + Strings.upFirstLetter(aInName) + "(" + aInEffSyntax + " defaultValue) const");
         //
         // BODY
         //
@@ -416,16 +426,6 @@ public class FClassDef extends ItemFormatterTask
         genPropDefaultedAccessor(aInIndent, aInComments,
                                  aInProp.getLID().getName(),
                                  getPropEffSyntax(aInBaseType));
-    }
-
-    private void genRefDefaultedAccessors(
-        int aInIndent, Collection<String> aInComments)
-    {
-        String lName = "target";
-        genPropDefaultedAccessor(aInIndent, aInComments,
-                                 lName + "Class", "const opflex::modb::class_id_t");
-        genPropDefaultedAccessor(aInIndent, aInComments,
-                                 lName + "URI", "const opflex::modb::URI&");
     }
 
     private void genPropMutator(
@@ -448,7 +448,7 @@ public class FClassDef extends ItemFormatterTask
         //
         // DEF
         //
-        out.println(aInIndent,  getClassName(aInClass, true) + "& set" + Strings.upFirstLetter(aInName) + "(" + aInEffSyntax + " " + aInParamName + ")");
+        out.println(aInIndent, "virtual " + getClassName(aInClass, true) + "& set" + Strings.upFirstLetter(aInName) + "(" + aInEffSyntax + " " + aInParamName + ")");
         //
         // BODY
         //
@@ -588,7 +588,7 @@ public class FClassDef extends ItemFormatterTask
         lComment[lCommentIdx++] = "@see opflex::modb::Mutator";
         out.printHeaderComment(aInIndent,lComment);
 
-        out.println(aInIndent,  getClassName(aInClass, true) + "& unset" + Strings.upFirstLetter(aInName) + "()");
+        out.println(aInIndent,  "virtual " + getClassName(aInClass, true) + "& unset" + Strings.upFirstLetter(aInName) + "()");
         //
         // BODY
         //
@@ -704,7 +704,7 @@ public class FClassDef extends ItemFormatterTask
              "",
              "@throws std::logic_error if no mutator is active"};
         out.printHeaderComment(aInIdent,lComment);
-        out.println(aInIdent, "void remove()");
+        out.println(aInIdent, "virtual void remove()");
         out.println(aInIdent, "{");
         out.println(aInIdent + 1, "getTLMutator().remove(CLASS_ID, getURI());");
         out.println(aInIdent, "}");
@@ -1370,9 +1370,36 @@ public class FClassDef extends ItemFormatterTask
         {
             out.println(aInIdent, aInClass.getLID().getName() + "(");
             out.println(aInIdent + 1, "opflex::ofcore::OFFramework& framework,");
+            out.println(aInIdent + 1, "opflex::modb::class_id_t class_id,");
             out.println(aInIdent + 1, "const opflex::modb::URI& uri,");
             out.println(aInIdent + 1, "const std::shared_ptr<const opflex::modb::mointernal::ObjectInstance>& oi)");
-            out.println(aInIdent + 1, ": MO(framework, CLASS_ID, uri, oi) { }");
+            if (aInClass.getSuperclass() != null && aInClass.getSuperclass().isConcrete())
+            {
+                out.println(aInIdent + 1, ": " + Config.getProjName() + "::" +
+                        getNamespace(aInClass.getSuperclass(), false) + "::" + aInClass.getSuperclass().getLID().getName() +
+                        "(framework, class_id, uri, oi)  { }");
+            }
+            else
+            {
+                out.println(aInIdent + 1, ": MO(framework, class_id, uri, oi) { }");
+            }
+
+            out.println();
+            out.printHeaderComment(aInIdent,lComment);
+            out.println(aInIdent, aInClass.getLID().getName() + "(");
+            out.println(aInIdent + 1, "opflex::ofcore::OFFramework& framework,");
+            out.println(aInIdent + 1, "const opflex::modb::URI& uri,");
+            out.println(aInIdent + 1, "const std::shared_ptr<const opflex::modb::mointernal::ObjectInstance>& oi)");
+            if (aInClass.getSuperclass() != null && aInClass.getSuperclass().isConcrete())
+            {
+                out.println(aInIdent + 1, ": " + Config.getProjName() + "::" +
+                    getNamespace(aInClass.getSuperclass(), false) + "::" + aInClass.getSuperclass().getLID().getName() +
+                    "(framework, CLASS_ID, uri, oi) { }");
+            }
+            else
+            {
+                out.println(aInIdent + 1, ": MO(framework, CLASS_ID, uri, oi) { }");
+            }
         }
         else
         {
