@@ -26,6 +26,14 @@
 #include <modelgbp/dmtree/Root.hpp>
 #include <modelgbp/gbpe/L24Classifier.hpp>
 
+#include <modelgbp/gbpe/LocalL24Classifier.hpp>
+#include <modelgbp/gbp/LocalSecGroup.hpp>
+#include <modelgbp/gbp/LocalSecGroupSubject.hpp>
+#include <modelgbp/gbp/LocalSecGroupRule.hpp>
+#include <modelgbp/gbp/LocalAction.hpp>
+#include <modelgbp/gbp/LocalSubnets.hpp>
+#include <modelgbp/gbp/LocalSubnet.hpp>
+
 #include <string>
 #include <vector>
 #include <list>
@@ -723,6 +731,7 @@ public:
      * @param uri the URI of a modelgbp::gbp::Subnets object
      * @param subnets a result set for the output
      */
+    template <typename Subnets, typename Subnet>
     static void resolveSubnets(opflex::ofcore::OFFramework& framework,
                                const boost::optional<opflex::modb::URI>& uri,
                                /* out */ network::subnets_t& subnets);
@@ -1202,7 +1211,7 @@ private:
             bool& notFound);
 
     bool updateSecGrpRules(const opflex::modb::URI& secGrpURI,
-                           bool& notFound);
+                           bool& notFound, bool local = false);
 
     /**
      * Recompute contract rules and notify listeners as needed
@@ -1212,7 +1221,7 @@ private:
     /**
      * Recompute security group rules and notify listeners as needed
      */
-    void updateSecGrps();
+    void updateSecGrps(bool local = false);
 
     /**
      * Update state for the domain listener

@@ -18,6 +18,11 @@ module[gbp]
         }
     }
 
+    class[LocalSecGroup;
+          super=gbp/SecGroup;
+          concrete]
+    {}
+
     class[SecGroupSubject;
           super=gbp/AccessBehavioralGroup;
           concrete]
@@ -33,6 +38,16 @@ module[gbp]
                 component[prefix=subject;
                           member=name]
             }
+        }
+    }
+
+    class[LocalSecGroupSubject;
+          super=gbp/SecGroupSubject;
+          concrete]
+    {
+        contained
+        {
+            parent[class=gbp/LocalSecGroup]
         }
     }
 
@@ -69,6 +84,41 @@ module[gbp]
                    ]
         {
             to[class=gbp/Subnets;
+                cardinality=many;
+                ]
+        }
+    }
+
+    class[LocalSecGroupRule;
+          super=gbp/SecGroupRule;
+          concrete]
+    {
+        contained
+        {
+            parent[class=gbp/LocalSecGroupSubject]
+        }
+        # Set of remote prefixes to which this rule applies.
+        dependency[remoteAddress;
+                   cardinality=many;
+                   ]
+        {
+            to[class=gbp/LocalSubnets;
+                cardinality=many;
+                ]
+        }
+        dependency[classifier;
+                   cardinality=many;
+                   ]
+        {
+            to[class=gbpe/LocalL24Classifier;
+                cardinality=many;
+                ]
+        }
+        dependency[action;
+                   cardinality=many;
+                   ]
+        {
+            to[class=gbp/LocalAllowDenyAction;
                 cardinality=many;
                 ]
         }
