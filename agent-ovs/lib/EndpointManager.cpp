@@ -883,17 +883,32 @@ bool EndpointManager::updateEndpointLocal(const string& uuid,
             }
             newlocall2eps.insert(l2e->getURI());
 
-            vector<shared_ptr<EndPointToSecGroupRSrc> > oldSecGrps;
-            l2e->resolveEpdrEndPointToSecGroupRSrc(oldSecGrps);
-            const set<URI>& secGrps = es.endpoint->getSecurityGroups();
-            for (const shared_ptr<EndPointToSecGroupRSrc>& og :
-                     oldSecGrps) {
-                optional<URI> targ = og->getTargetURI();
-                if (!targ || secGrps.find(targ.get()) == secGrps.end())
-                    og->remove();
-            }
-            for (const URI& sg : secGrps) {
-                l2e->addEpdrEndPointToSecGroupRSrc(sg.toString());
+            if (policyManager.useLocalNetpol()) {
+                vector<shared_ptr<EndPointToLocalSecGroupRSrc> > oldSecGrps;
+                l2e->resolveEpdrEndPointToLocalSecGroupRSrc(oldSecGrps);
+                const set<URI>& secGrps = es.endpoint->getSecurityGroups();
+                for (const shared_ptr<EndPointToLocalSecGroupRSrc>& og :
+                         oldSecGrps) {
+                    optional<URI> targ = og->getTargetURI();
+                    if (!targ || secGrps.find(targ.get()) == secGrps.end())
+                        og->remove();
+                }
+                for (const URI& sg : secGrps) {
+                    l2e->addEpdrEndPointToLocalSecGroupRSrc(sg.toString());
+                }
+            } else {
+                vector<shared_ptr<EndPointToSecGroupRSrc> > oldSecGrps;
+                l2e->resolveEpdrEndPointToSecGroupRSrc(oldSecGrps);
+                const set<URI>& secGrps = es.endpoint->getSecurityGroups();
+                for (const shared_ptr<EndPointToSecGroupRSrc>& og :
+                         oldSecGrps) {
+                    optional<URI> targ = og->getTargetURI();
+                    if (!targ || secGrps.find(targ.get()) == secGrps.end())
+                        og->remove();
+                }
+                for (const URI& sg : secGrps) {
+                    l2e->addEpdrEndPointToSecGroupRSrc(sg.toString());
+                }
             }
 
             const optional<URI>& qosPol =
@@ -1007,13 +1022,33 @@ static URI formSecGroupURI (SecurityGroupContext& sgc) {
                .build();
 }
 
+/* Form the URI of local secGroup from the given security group.
+ * This is needed since we want to generate URI without the EPR prefixes of the EP */
+static URI formLocalSecGroupURI (SecurityGroupContext& sgc) {
+    optional<const string&> sgOpt = sgc.getSecGroup();
+    if (!sgOpt)
+        return URIBuilder().build();
+    const auto& sg = sgOpt.get();
+    size_t spaceStart = sg.find("PolicySpace") + 12;
+    size_t gsgStart = sg.rfind("GbpLocalSecGroup");
+    size_t nameStart = gsgStart + 17;
+    return URIBuilder()
+               .addElement("PolicyUniverse")
+               .addElement("PolicySpace")
+               .addElement(sg.substr(spaceStart, gsgStart-spaceStart-1))
+               .addElement("GbpLocalSecGroup")
+               .addElement(sg.substr(nameStart, sg.size()-nameStart-1))
+               .build();
+}
+
 static shared_ptr<modelgbp::epr::L2Ep>
 populateL2E(shared_ptr<modelgbp::epr::L2Universe>& l2u,
             shared_ptr<const Endpoint>& ep,
             const string& uuid,
             shared_ptr<modelgbp::gbp::BridgeDomain>& bd,
             const URI& egURI,
-            const set<URI>& secGroups) {
+            const set<URI>& secGroups,
+            bool localNetpolEnabled) {
     using namespace modelgbp::gbp;
     using namespace modelgbp::gbpe;
     using namespace modelgbp::epr;
@@ -1028,7 +1063,8 @@ populateL2E(shared_ptr<modelgbp::epr::L2Universe>& l2u,
     vector<shared_ptr<SecurityGroupContext> > outSGC;
     l2e->resolveEprSecurityGroupContext(outSGC);
     for (auto &sgc : outSGC) {
-        auto sgURI = formSecGroupURI(*sgc);
+        auto sgURI = localNetpolEnabled ? formLocalSecGroupURI(*sgc)
+                                        : formSecGroupURI(*sgc);
         if (secGroups.find(sgURI) == secGroups.end())
             sgc->remove();
     }
@@ -1073,7 +1109,8 @@ populateL3E(shared_ptr<modelgbp::epr::L3Universe>& l3u,
             shared_ptr<modelgbp::gbp::RoutingDomain>& rd,
             const string& ip,
             const URI& egURI,
-            const set<URI>& secGroups) {
+            const set<URI>& secGroups,
+            bool localNetpolEnabled) {
     using namespace modelgbp::gbp;
     using namespace modelgbp::epr;
 
@@ -1087,7 +1124,8 @@ populateL3E(shared_ptr<modelgbp::epr::L3Universe>& l3u,
     vector<shared_ptr<SecurityGroupContext> > outSGC;
     l3e->resolveEprSecurityGroupContext(outSGC);
     for (auto &sgc : outSGC) {
-        auto sgURI = formSecGroupURI(*sgc);
+        auto sgURI = localNetpolEnabled ? formLocalSecGroupURI(*sgc)
+                                        : formSecGroupURI(*sgc);
         if (secGroups.find(sgURI) == secGroups.end())
             sgc->remove();
     }
@@ -1132,7 +1170,8 @@ bool EndpointManager::updateEndpointReg(const string& uuid) {
         {
             shared_ptr<L2Ep> l2e =
                 populateL2E(l2u.get(), es.endpoint, uuid,
-                            bd.get(), egURI.get(), secGroups);
+                            bd.get(), egURI.get(), secGroups,
+                            policyManager.useLocalNetpol());
 
             newl2eps.insert(l2e->getURI());
         }
@@ -1152,7 +1191,8 @@ bool EndpointManager::updateEndpointReg(const string& uuid) {
             shared_ptr<L2Ep> fl2e =
                 populateL2E(l2u.get(), es.endpoint, ipm.getUUID(), fbd.get(),
                             ipm.getEgURI().get(),
-                            secGroups);
+                            secGroups,
+                            policyManager.useLocalNetpol());
             newl2eps.insert(fl2e->getURI());
         }
     }
@@ -1171,7 +1211,8 @@ bool EndpointManager::updateEndpointReg(const string& uuid) {
                 shared_ptr<L3Ep> l3e =
                     populateL3E(l3u.get(), es.endpoint, uuid,
                                 rd.get(), ip, egURI.get(),
-                                secGroups);
+                                secGroups,
+                                policyManager.useLocalNetpol());
                 newl3eps.insert(l3e->getURI());
             }
 
@@ -1192,7 +1233,8 @@ bool EndpointManager::updateEndpointReg(const string& uuid) {
                     populateL3E(l3u.get(), es.endpoint, ipm.getUUID(),
                                 frd.get(), ipm.getFloatingIP().get(),
                                 ipm.getEgURI().get(),
-                                secGroups);
+                                secGroups,
+                                policyManager.useLocalNetpol());
                 newl3eps.insert(fl3e->getURI());
             }
         }

@@ -143,7 +143,7 @@ BOOST_FIXTURE_TEST_CASE( mo_serialize , BaseFixture ) {
     updateWriter.EndObject();
     updateWriter.EndArray();
     updateDoc.Parse(updateBuffer.GetString());
-    serializer.updateMOs(updateDoc, *client1, opflex::gbp::PolicyUpdateOp::REPLACE);
+    serializer.updateMOs(updateDoc, *client1, opflex::gbp::PolicyUpdateOp::REPLACE, false);
 
     // trigger deletions
     StringBuffer deleteBuffer;
@@ -165,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE( mo_serialize , BaseFixture ) {
     deleteWriter.EndArray();
     Document deleteDoc;
     deleteDoc.Parse(deleteBuffer.GetString());
-    serializer.updateMOs(deleteDoc, *client1, opflex::gbp::PolicyUpdateOp::DELETE);
+    serializer.updateMOs(deleteDoc, *client1, opflex::gbp::PolicyUpdateOp::DELETE, false);
 }
 
 BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
@@ -193,7 +193,7 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
     const Value& policy = result["policy"];
     BOOST_CHECK(policy.IsArray());
     for (SizeType i = 0; i < policy.Size(); ++i) {
-        serializer.deserialize(policy[i], sysClient, false, &notifs);
+        serializer.deserialize(policy[i], sysClient, false, &notifs, false);
     }
 
     URI uri("/");
@@ -235,7 +235,7 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
     const Value& policy2 = result2["policy"];
     BOOST_CHECK(policy2.IsArray());
     for (SizeType i = 0; i < policy2.Size(); ++i) {
-        serializer.deserialize(policy2[i], sysClient, true, &notifs);
+        serializer.deserialize(policy2[i], sysClient, true, &notifs, false);
     }
 
     oi = sysClient.get(1, uri);
@@ -252,7 +252,7 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
 
     // restore original
     for (SizeType i = 0; i < policy.Size(); ++i) {
-        serializer.deserialize(policy[i], sysClient, true, &notifs);
+        serializer.deserialize(policy[i], sysClient, true, &notifs, false);
     }
     sysClient.getChildren(2, uri, 3, 2, children);
     BOOST_CHECK_EQUAL(2, children.size());
@@ -275,7 +275,7 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
     const Value& policy3 = result3["policy"];
     BOOST_CHECK(policy3.IsArray());
     for (SizeType i = 0; i < policy3.Size(); ++i) {
-        serializer.deserialize(policy3[i], sysClient, true, &notifs);
+        serializer.deserialize(policy3[i], sysClient, true, &notifs, false);
     }
     sysClient.getChildren(2, uri, 3, 2, children);
     BOOST_CHECK_EQUAL(1, children.size());
@@ -292,7 +292,7 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
 
     // Don't change anything
     for (SizeType i = 0; i < policy3.Size(); ++i) {
-        serializer.deserialize(policy3[i], sysClient, true, &notifs);
+        serializer.deserialize(policy3[i], sysClient, true, &notifs, false);
     }
     sysClient.getChildren(2, uri, 3, 2, children);
     BOOST_CHECK_EQUAL(1, children.size());
@@ -376,7 +376,7 @@ BOOST_FIXTURE_TEST_CASE( types , BaseFixture ) {
     d.Parse(str.c_str());
     Value::ConstValueIterator it;
     for (it = d.Begin(); it != d.End(); ++it) {
-        serializer.deserialize(*it, sysClient, true, NULL);
+        serializer.deserialize(*it, sysClient, true, NULL, false);
     }
     BOOST_CHECK_EQUAL("test", sysClient.get(4, c4u)->getString(9));
     BOOST_CHECK_EQUAL("test", sysClient.get(5, c5u)->getString(10));

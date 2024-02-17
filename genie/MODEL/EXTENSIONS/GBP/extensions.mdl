@@ -100,6 +100,16 @@ module[gbpe]
         member[fragmentFlags; type=scalar/UInt8]
     }
 
+    class[LocalL24Classifier;
+          super=gbpe/L24Classifier;
+          concrete]
+    {
+        contained
+        {
+            parent[class=policy/Space]
+        }
+    }
+
     # A set of counters for a network endpoint
     class[EpCounter;
           super=observer/UuidObservable;

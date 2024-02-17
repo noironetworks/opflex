@@ -188,6 +188,18 @@ void OFFramework::prettyPrintMODB(std::ostream& output,
     serializer.displayMODB(output, tree, includeProps, utf8, truncate, excludeObservables);
 }
 
+size_t OFFramework::updateMOs(const string& file,
+                              opflex::gbp::PolicyUpdateOp op,
+                              opflex::modb::mointernal::StoreClient::notif_t *notifs) {
+    MOSerializer& serializer = pimpl->processor.getSerializer();
+    return serializer.updateMOs(file, pimpl->db.getStoreClient("_SYSTEM_"), op, notifs);
+}
+
+void OFFramework::deleteMOs(opflex::modb::mointernal::StoreClient::notif_t& notifs) {
+   MOSerializer& serializer = pimpl->processor.getSerializer();
+   return serializer.deleteMOs(pimpl->db.getStoreClient("_SYSTEM_"), notifs);
+}
+
 void OFFramework::setOpflexIdentity(const string& name,
                                     const string& domain) {
     pimpl->processor.setOpflexIdentity(name, domain);

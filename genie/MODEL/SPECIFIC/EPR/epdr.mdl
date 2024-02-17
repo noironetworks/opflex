@@ -31,7 +31,16 @@ module[epdr]
                 cardinality=many;
                 ]
         }
-      
+
+        dependency[LocalSecGroup;
+                   cardinality=many;
+                   ]
+        {
+           to[class=gbp/LocalSecGroup;
+               cardinality=many;
+               ]
+        }
+
         dependency[qos;
                    cardinality=single;]
         {

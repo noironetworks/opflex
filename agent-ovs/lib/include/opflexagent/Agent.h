@@ -25,6 +25,7 @@
 #include <opflexagent/FSWatcher.h>
 #include <opflexagent/SpanManager.h>
 #include <opflexagent/SnatManager.h>
+#include <opflexagent/FSNetpolSource.h>
 #include <opflexagent/NetFlowManager.h>
 #include <opflexagent/QosManager.h>
 #include <opflexagent/SysStatsManager.h>
@@ -380,6 +381,10 @@ private:
 
     std::set<std::string> snatSourcePaths;
     std::vector<std::unique_ptr<SnatSource>> snatSources;
+
+    std::set<std::string> netpolSourcePaths;
+    std::vector<std::unique_ptr<FSNetpolSource>> netpolSources;
+
     std::vector<std::unique_ptr<FaultSource>> faultSources;
 
     std::unordered_set<std::string> rendPluginLibs;
@@ -429,6 +434,8 @@ private:
     LogParams logParams;
     /* Persistent policy from disk */
     bool startupPolicyEnabled;
+    /* Local Network Policy enable */
+    bool localNetpolEnabled;
     boost::optional<std::string> opflexPolicyFile;
 };
 

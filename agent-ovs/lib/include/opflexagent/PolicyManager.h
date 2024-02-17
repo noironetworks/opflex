@@ -26,6 +26,15 @@
 #include <modelgbp/dmtree/Root.hpp>
 #include <modelgbp/gbpe/L24Classifier.hpp>
 
+#include <modelgbp/gbpe/LocalL24Classifier.hpp>
+#include <modelgbp/gbp/LocalSecGroup.hpp>
+#include <modelgbp/gbp/LocalSecGroupSubject.hpp>
+#include <modelgbp/gbp/LocalSecGroupRule.hpp>
+#include <modelgbp/gbp/LocalAllowDenyAction.hpp>
+#include <modelgbp/gbp/LocalLogAction.hpp>
+#include <modelgbp/gbp/LocalSubnets.hpp>
+#include <modelgbp/gbp/LocalSubnet.hpp>
+
 #include <string>
 #include <vector>
 #include <list>
@@ -723,6 +732,7 @@ public:
      * @param uri the URI of a modelgbp::gbp::Subnets object
      * @param subnets a result set for the output
      */
+    template <typename Subnets, typename Subnet>
     static void resolveSubnets(opflex::ofcore::OFFramework& framework,
                                const boost::optional<opflex::modb::URI>& uri,
                                /* out */ network::subnets_t& subnets);
@@ -854,9 +864,22 @@ public:
      */
     void getDnsResolvedNamedServicePorts( const std::string &domainName,
                                 network::service_ports_t &egressDnsResolved);
+
+    /**
+     * enable or disable local Network Policy
+     * @param val current value of localNetpolEnabled
+     */
+    void configLocalNetpol(bool& val) { localNetpolEnabled = val; }
+
+    /**
+     * check if local Network Policy is enabled
+     * @return current value of localNetpolEnabled
+     */
+    bool useLocalNetpol() { return localNetpolEnabled; }
 private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;
+    bool localNetpolEnabled = false;
     TaskQueue taskQueue;
     typedef std::unordered_map<opflex::modb::URI,
                 std::shared_ptr<modelgbp::gbp::Subnet> > subnet_map_t;
@@ -1031,6 +1054,7 @@ private:
     struct SecGrpState {
         std::unordered_set<std::string> dnsAsks;
         rule_list_t rules;
+        bool isLocal;
     };
     typedef std::unordered_map<opflex::modb::URI, SecGrpState> secgrp_map_t;
 
@@ -1068,6 +1092,21 @@ private:
         PolicyManager& pmanager;
     };
     SecGroupListener secGroupListener;
+
+    /**
+     * Listener for changes related to local policy objects.
+     */
+    class LocalSecGroupListener : public opflex::modb::ObjectListener {
+    public:
+        LocalSecGroupListener(PolicyManager& pmanager);
+        virtual ~LocalSecGroupListener();
+
+        virtual void objectUpdated(opflex::modb::class_id_t class_id,
+                                    const opflex::modb::URI& uri);
+    private:
+        PolicyManager& pmanager;
+    };
+    LocalSecGroupListener localSecGroupListener;
 
     /**
      * Listener for changes related to plaform config.
@@ -1202,7 +1241,7 @@ private:
             bool& notFound);
 
     bool updateSecGrpRules(const opflex::modb::URI& secGrpURI,
-                           bool& notFound);
+                           bool& notFound, bool local = false);
 
     /**
      * Recompute contract rules and notify listeners as needed
@@ -1212,7 +1251,7 @@ private:
     /**
      * Recompute security group rules and notify listeners as needed
      */
-    void updateSecGrps();
+    void updateSecGrps(bool local = false);
 
     /**
      * Update state for the domain listener

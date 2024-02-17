@@ -205,13 +205,23 @@ void FSEndpointSource::updated(const fs::path& filePath) {
                 optional<string> secGrpName =
                     v.second.get_optional<string>(SEC_GROUP_NAME);
                 if (secGrpName && secGrpPS) {
-                    newep.addSecurityGroup(opflex::modb::URIBuilder()
-                                           .addElement("PolicyUniverse")
-                                           .addElement("PolicySpace")
-                                           .addElement(secGrpPS.get())
-                                           .addElement("GbpSecGroup")
-                                           .addElement(secGrpName.get())
-                                           .build());
+                    if (manager->getAgent().getPolicyManager().useLocalNetpol()) {
+                        newep.addSecurityGroup(opflex::modb::URIBuilder()
+                                               .addElement("PolicyUniverse")
+                                               .addElement("PolicySpace")
+                                               .addElement(secGrpPS.get())
+                                               .addElement("GbpLocalSecGroup")
+                                               .addElement(secGrpName.get())
+                                               .build());
+                    } else {
+                        newep.addSecurityGroup(opflex::modb::URIBuilder()
+                                               .addElement("PolicyUniverse")
+                                               .addElement("PolicySpace")
+                                               .addElement(secGrpPS.get())
+                                               .addElement("GbpSecGroup")
+                                               .addElement(secGrpName.get())
+                                               .build());
+                   }
                 }
             }
         }
