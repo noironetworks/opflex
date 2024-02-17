@@ -199,6 +199,16 @@ module[gbp]
         }
     }
 
+    class[LocalSubnet;
+          super=gbp/Subnet;
+          concrete]
+    {
+        contained
+        {
+            parent[class=gbp/LocalSubnets]
+        }
+    }
+
     class[Subnets;
           super=gbp/BehavioralGroup;
           concrete]
@@ -215,6 +225,11 @@ module[gbp]
             }
         }
     }
+
+    class[LocalSubnets;
+          super=gbp/Subnets;
+          concrete]
+    {}
 
     class[ExternalL3BridgeDomain;
           super=gbp/L3BehavioralGroup;

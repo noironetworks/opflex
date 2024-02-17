@@ -5893,7 +5893,8 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
         if (subnets_uri)
             agent.getPolicyManager()
                 .addRoutingDomainToSubnets(subnets_uri.get(), rdURI);
-        PolicyManager::resolveSubnets(agent.getFramework(),
+        PolicyManager::resolveSubnets<Subnets, Subnet>
+                                     (agent.getFramework(),
                                       subnets_uri, intSubnets);
     }
     shared_ptr<const RDConfig> rdConfig =
