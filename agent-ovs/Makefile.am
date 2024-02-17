@@ -130,6 +130,7 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/Snat.h \
 	lib/include/opflexagent/SnatSource.h \
 	lib/include/opflexagent/SnatListener.h \
+	lib/include/opflexagent/FSNetpolSource.h \
 	lib/include/opflexagent/FSPacketDropLogConfigSource.h \
 	lib/include/opflexagent/PacketDropLogConfig.h \
 	lib/include/opflexagent/Faults.h \
@@ -228,6 +229,7 @@ libopflex_agent_la_SOURCES = \
 	lib/Snat.cpp \
 	lib/SnatManager.cpp \
 	lib/SnatSource.cpp \
+	lib/FSNetpolSource.cpp \
 	lib/FSPacketDropLogConfigSource.cpp \
 	lib/AgentPrometheusManager.cpp
 
