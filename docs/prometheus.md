@@ -41,6 +41,25 @@ Following are some of the opflex-agent and opflex-server configuration options t
 | opflex_endpoint_created_total | | total created local endpoints |
 | opflex_endpoint_removed_total | | total removed local endpoints |
 
+### Nat (Currently supported for OpenStack)
+
+#### Ep <--> External Network 
+This collects flow stats between Endpoints and External network for NAT traffic. All of these metrics are annotated with ep_uuid, mapped_ip, floating_ip, sepg and depg where sepg and depg are the EPGs the traffic is traversing. 
+
+| Family | Description |
+| ------ | ------ |
+| opflex_endpoint_to_extnetwork_bytes | Endpoint to Extnetwork bytes |
+| opflex_endpoint_to_extnetwork_packets | Endpoint to Extnetwork packets |
+| opflex_extnetwork_to_endpoint_bytes | Extnetwork to Endpoint bytes |
+| opflex_extnetwork_to_endpoint_packets | Extnetwork to Endpoint packets |
+
+These metrics answer below operational questions:
+* Packet count and byte count for the NAT flow from Endpoint to External network
+* Packet count and byte count for the NAT flow from External network to Endpoint
+* Endpoint Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for NAT egress flow 
+* Endpoint Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for NAT ingress flow
+* The packet and byte counters are referred from the OVS flow mod where the NAT happens i.e rewriting of the Ip and MAC address happens. 
+
 ### Services
 
 ##### Endpoint <--> Service
