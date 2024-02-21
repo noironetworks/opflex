@@ -181,6 +181,7 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
             const std::string DROP_LOG_ENABLE("drop-log-enable");
             const std::string DROP_LOG_MODE("drop-log-mode");
             const std::string DROP_LOG_PRUNING("drop-log-pruning");
+            const std::string DROP_LOG_PRINT_TENANT("drop-log-print-tenant");
             const std::string SIP("sip");
             const std::string DIP("dip");
             const std::string SMAC("smac");
@@ -192,6 +193,8 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
 
             dropCfg.dropLogEnable =
                 properties.get<bool>(DROP_LOG_ENABLE, false);
+            dropCfg.dropLogPrintTenant =
+                properties.get<bool>(DROP_LOG_PRINT_TENANT, false);
             dropLogMode =
                 properties.get<string>(DROP_LOG_MODE, "unfiltered");
             if(dropLogMode == "unfiltered"){
@@ -337,6 +340,7 @@ void FSPacketDropLogConfigSource::deleted(const fs::path& filePath) {
             dropCfg.filePath.clear();
             dropCfg.dropLogEnable = false;
             dropCfg.dropLogMode = DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG;
+            dropCfg.dropLogPrintTenant = false;
             manager->packetDropLogConfigUpdated(dropCfg);
             for(auto& itr: *dropPruneCfgSet) {
                 manager->packetDropPruneConfigDeleted(itr);

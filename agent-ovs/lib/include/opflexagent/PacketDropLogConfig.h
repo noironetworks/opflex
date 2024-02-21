@@ -48,7 +48,8 @@ typedef modelgbp::observer::DropLogModeEnumT DropLogMode;
         PacketDropLogConfig(const opflex::modb::URI &uri):
             dropLogCfgURI(uri),
             dropLogMode(DropLogMode::CONST_UNFILTERED_DROP_LOG),
-            dropLogEnable(false) {};
+            dropLogEnable(false),
+            dropLogPrintTenant(false) {};
         /**
          * Path of the file from where this config was read
          */
@@ -65,6 +66,11 @@ typedef modelgbp::observer::DropLogModeEnumT DropLogMode;
          * Whether Drop logging is enabled/disabled
          */
         bool dropLogEnable;
+        /**
+         * Whether drop logs should include the source/destination
+         * tenant.
+        */
+        bool dropLogPrintTenant;
     };
     /**
      * Collect Packet Drop Flow Specification

@@ -41,7 +41,8 @@ public:
         : ModbFixture(), ctZoneManager(idGen),
           switchManager(agent, flowExecutor, flowReader, portMapper),
           intFlowManager(agent, switchManager, idGen,
-                         ctZoneManager, tunnelEpManager),
+                         ctZoneManager, tunnelEpManager,
+                         endpointTenantMapper),
           advertManager(agent, intFlowManager),
           dnsManager(agent),
           pktInHandler(agent, intFlowManager, dnsManager) {
@@ -160,6 +161,7 @@ public:
     DnsManager dnsManager;
     PacketInHandler pktInHandler;
     ofputil_protocol proto;
+    EndpointTenantMapper endpointTenantMapper;
 };
 
 class EpAdvertFixtureGU : public AdvertManagerFixture {

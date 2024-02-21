@@ -136,7 +136,7 @@ void GeneveOptTableIdLayerVariant::getFormatString(boost::format &fmtStr) {
 }
 
 void GeneveOptTableIdLayerVariant::reParse(ParseInfo &p) {
-    p.meta[1] = p.scratchpad[3];
+    p.meta[ParseInfoMetaType::TABLE_ID] = p.scratchpad[3];
 }
 
 int GeneveOptCaptureReasonLayerVariant::configure() {
@@ -151,7 +151,7 @@ void GeneveOptCaptureReasonLayerVariant::getFormatString(boost::format &fmtStr) 
 }
 
 void GeneveOptCaptureReasonLayerVariant::reParse(ParseInfo &p) {
-    p.meta[2] = p.scratchpad[3];
+    p.meta[ParseInfoMetaType::CAPTURE_REASON] = p.scratchpad[3];
 }
 
 
@@ -167,7 +167,37 @@ void GeneveOptDeniedPoliciesLayerVariant::getFormatString(boost::format &fmtStr)
 }
 
 void GeneveOptDeniedPoliciesLayerVariant::reParse(ParseInfo &p) {
-    p.meta[3] = p.scratchpad[3];
+    p.meta[ParseInfoMetaType::POLICY_TRIGGERED_DROP] = p.scratchpad[3];
+}
+
+int GeneveOptSourceEPGLayerVariant::configure() {
+    addKeyData(65535);
+    addKeyData(0);
+    return 0;
+}
+
+void GeneveOptSourceEPGLayerVariant::getFormatString(boost::format &fmtStr) {
+    //Format string to print the layer goes here
+    fmtStr = boost::format("");
+}
+
+void GeneveOptSourceEPGLayerVariant::reParse(ParseInfo &p) {
+    p.meta[ParseInfoMetaType::SOURCE_EPG] = p.scratchpad[3];
+}
+
+int GeneveOptDestinationEPGLayerVariant::configure() {
+    addKeyData(65535);
+    addKeyData(2);
+    return 0;
+}
+
+void GeneveOptDestinationEPGLayerVariant::getFormatString(boost::format &fmtStr) {
+    //Format string to print the layer goes here
+    fmtStr = boost::format("");
+}
+
+void GeneveOptDestinationEPGLayerVariant::reParse(ParseInfo &p) {
+    p.meta[ParseInfoMetaType::DESTINATION_EPG] = p.scratchpad[3];
 }
 
 int ARPLayer::configure() {

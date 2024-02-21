@@ -17,6 +17,7 @@
 #include <boost/bind.hpp>
 #include <opflexagent/logging.h>
 #include <opflexagent/IdGenerator.h>
+#include <opflexagent/EndpointTenantMapper.h>
 #include "PacketDecoderLayers.h"
 #include <opflexagent/Network.h>
 #include <mutex>
@@ -288,8 +289,10 @@ public:
      * @param _clientio reference to IO service to handle client
      */
     PacketLogHandler(boost::asio::io_service &_io,
-            boost::asio::io_service &_clientio, IdGenerator& idGen_):server_io(_io),
-            client_io(_clientio), port(0), stopped(false), throttleActive(false), idGen(idGen_) {
+            boost::asio::io_service &_clientio, IdGenerator& idGen_,
+            EndpointTenantMapper &_endpointTenantMapper):server_io(_io),
+            client_io(_clientio), port(0), stopped(false), throttleActive(false), idGen(idGen_),
+            endpointTenantMap(_endpointTenantMapper) {
                 /*Prune unused control packets by default*/
                 #define LLDP_MAC "01:80:c2:00:00:0e"
                 #define MCAST_V6_MAC "33:33:00:00:00:00"
@@ -427,6 +430,7 @@ protected:
     friend UdpServer;
     friend LocalClient;
     IdGenerator& idGen;
+    EndpointTenantMapper& endpointTenantMap;
     std::vector<PacketFilterSpec> defaultPruneSpec;
     std::unordered_map<std::string, std::shared_ptr<PacketFilterSpec>> userPruneSpec;
     ///@}
