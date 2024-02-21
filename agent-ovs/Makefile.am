@@ -182,7 +182,8 @@ noinst_HEADERS = \
 	ovs/include/OvsdbMonitorMessage.h \
 	ovs/include/OvsdbTransactMessage.h \
 	ovs/include/OvsdbState.h \
-	ovs/include/DnsManager.h
+	ovs/include/DnsManager.h \
+	ovs/include/NatStatsManager.h
 
 libopflex_agent_la_SOURCES = \
 	lib/AgentLogHandler.cpp \
@@ -293,7 +294,8 @@ if RENDERER_OVS
 	ovs/OvsdbMessage.cpp \
 	ovs/OvsdbMonitorMessage.cpp \
 	ovs/CtZoneManager.cpp \
-	ovs/DnsManager.cpp
+	ovs/DnsManager.cpp \	
+	ovs/NatStatsManager.cpp
 
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
@@ -533,7 +535,8 @@ if RENDERER_OVS
 	ovs/test/PacketDecoder_test.cpp \
 	ovs/test/TableDropStatsManager_test.cpp \
 	ovs/test/OvsdbConnection_test.cpp \
-	ovs/test/DnsManager_test.cpp
+	ovs/test/DnsManager_test.cpp \
+	ovs/test/NatStatsManager_test.cpp
 endif
 
 

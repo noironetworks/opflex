@@ -217,6 +217,7 @@ public:
             fs->byte_count = PACKET_SIZE * (fs->packet_count);
             fs->flags = fe->entry->flags;
             fs->match = fe->entry->match;
+	    LOG(DEBUG) << "cookie and prioi and match "<< fs->cookie << " "<< fs->priority<<" "<<fs->match;
             LOG(DEBUG) << "### stats reply for COOKIE: "
                        << ovs_ntohll(fe->entry->cookie)
                        << " pkts: " << packet_count
