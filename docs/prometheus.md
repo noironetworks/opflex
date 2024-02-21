@@ -41,6 +41,27 @@ Following are some of the opflex-agent and opflex-server configuration options t
 | opflex_endpoint_created_total | | total created local endpoints |
 | opflex_endpoint_removed_total | | total removed local endpoints |
 
+### Nat (Currently supported for OpenStack)
+
+#### Ep <--> External Network 
+This collects flow stats between Endpoints and External network for NAT traffic. All of these metrics are annotated with ep_uuid, mapped_ip, floating_ip, sepg and depg where sepg and depg are the EPGs the traffic is traversing. 
+
+| Family | Annotations | Description |
+| ------ | ------ | ------ |
+| opflex_endpoint_to_extnetwork_bytes | ep_uuid, ep_mapped_ip, ep_floating_ip, sepg, depg | Endpoint to Extnetwork bytes |
+| opflex_endpoint_to_extnetwork_packets | ep_uuid, ep_mapped_ip, ep_floating_ip, sepg, depg | Endpoint to Extnetwork packets |
+| opflex_extnetwork_to_endpoint_bytes | ep_uuid, ep_mapped_ip, ep_floating_ip, sepg, depg | Extnetwork to Endpoint bytes |
+| oflex_extnetwork_to_endpoint_packets | ep_uuid, ep_mapped_ip, ep_floating_ip, sepg, depg | Extnetwork to Endpoint packets |
+
+These metrics answer below operational questions:
+* Packet count and byte count for the NAT traffic flow from Endpoint to External network
+* Packet count and byte count for the NAT traffic flow from External network to Endpoint
+* Endpoint Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for NAT egress flow 
+* Endpoint Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for NAT ingress flow
+* For Endpoint to Extnetwork traffic, Source epg is the Endpoint's EPG and Dest epg is the External Epg
+* For Extnetwork to Endpoint traffic, Source epg is the External EPG and Dest epg is the Endpoint's Epg
+* The packet and byte counters are referred from the OVS flow mod where the NAT happens i.e rewriting of the Ip and MAC address happens. 
+
 ### Services
 
 ##### Endpoint <--> Service
