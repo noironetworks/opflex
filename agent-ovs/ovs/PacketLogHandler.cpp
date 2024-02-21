@@ -24,6 +24,8 @@
 
 namespace opflexagent {
 
+typedef ParseInfoMetaType PIM;
+
 void LocalClient::run() {
     boost::asio::local::stream_protocol::endpoint invalidEndpoint("");
     if(remoteEndpoint==invalidEndpoint) {
@@ -158,17 +160,17 @@ void UdpServer::handleReceive(const boost::system::error_code& error,
 
 bool PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
     bool isPermit=false;
-    std::string bridge = ((p.meta[0] ==1)? "Int-" :
-            ((p.meta[0] ==2)? "Acc-" :""));
-    if((p.meta[0] == 1) &&
-            (intTableDescMap.find(p.meta[1])!= intTableDescMap.end())) {
-        dropReason = bridge + intTableDescMap[p.meta[1]].first;
-    } else if((p.meta[0] == 2) &&
-            (accTableDescMap.find(p.meta[1]) != accTableDescMap.end())) {
-        dropReason = bridge + accTableDescMap[p.meta[1]].first;
+    std::string bridge = ((p.meta[PIM::SOURCE_BRIDGE] ==1)? "Int-" :
+            ((p.meta[PIM::SOURCE_BRIDGE] ==2)? "Acc-" :""));
+    if((p.meta[PIM::SOURCE_BRIDGE] == 1) &&
+            (intTableDescMap.find(p.meta[PIM::TABLE_ID])!= intTableDescMap.end())) {
+        dropReason = bridge + intTableDescMap[p.meta[PIM::TABLE_ID]].first;
+    } else if((p.meta[PIM::SOURCE_BRIDGE] == 2) &&
+            (accTableDescMap.find(p.meta[PIM::TABLE_ID]) != accTableDescMap.end())) {
+        dropReason = bridge + accTableDescMap[p.meta[PIM::TABLE_ID]].first;
     }
 
-    switch(p.meta[2]) {
+    switch(p.meta[PIM::CAPTURE_REASON]) {
         case 0:
         {
             dropReason += " MISS";
@@ -186,13 +188,24 @@ bool PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
             break;
         }
     }
-    if((p.meta[2] == 1) || (p.meta[2]==2)) {
-        boost::optional<std::string> ruleUri  = idGen.getStringForId((IntFlowManager::getIdNamespace(L24Classifier::CLASS_ID)), p.meta[3]);
+    if((p.meta[PIM::CAPTURE_REASON] == 1) || (p.meta[PIM::CAPTURE_REASON]==2)) {
+        boost::optional<std::string> ruleUri  = idGen.getStringForId((
+            IntFlowManager::getIdNamespace(L24Classifier::CLASS_ID)),
+            p.meta[PIM::POLICY_TRIGGERED_DROP]);
 
         if (ruleUri) {
             dropReason += " "+ruleUri.get();
         }
     }
+    
+    if(endpointTenantMap.shouldPrintTenant == false) return isPermit;
+
+    std::string sourceTenant = endpointTenantMap.GetMapping(p.meta[PIM::SOURCE_EPG]);
+    std::string destinationTenant = endpointTenantMap.GetMapping(p.meta[PIM::DESTINATION_EPG]);
+    if(sourceTenant.empty()) sourceTenant = "N/A";
+    if(destinationTenant.empty()) destinationTenant = "N/A";
+    dropReason += " "+sourceTenant;
+    dropReason += " "+destinationTenant;
     return isPermit;
 }
 

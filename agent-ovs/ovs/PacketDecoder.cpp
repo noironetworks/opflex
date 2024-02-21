@@ -469,6 +469,14 @@ int PacketDecoder::configure() {
         sptrGeneveOptDeniedPoliciesLayerVariant(new GeneveOptDeniedPoliciesLayerVariant());
     sptrGeneveOptDeniedPoliciesLayerVariant->configure();
     registerLayer(sptrGeneveOptDeniedPoliciesLayerVariant); 
+    shared_ptr<PacketDecoderLayerVariant>
+        sptrGeneveOptSourceEPGLayerVariant(new GeneveOptSourceEPGLayerVariant());
+    sptrGeneveOptSourceEPGLayerVariant->configure();
+    registerLayer(sptrGeneveOptSourceEPGLayerVariant);
+    shared_ptr<PacketDecoderLayerVariant>
+        sptrGeneveOptDestinationEPGLayerVariant(new GeneveOptDestinationEPGLayerVariant());
+    sptrGeneveOptDestinationEPGLayerVariant->configure();
+    registerLayer(sptrGeneveOptDestinationEPGLayerVariant);
     /*Set the base layer id*/
     baseLayerId = sptrGeneve->getId();
     return 0;

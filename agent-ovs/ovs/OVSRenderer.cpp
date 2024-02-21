@@ -48,7 +48,8 @@ OVSRenderer::OVSRenderer(Agent& agent_)
                        intPortMapper),
       tunnelEpManager(&agent_),
       intFlowManager(agent_, intSwitchManager, idGen,
-                     ctZoneManager, tunnelEpManager),
+                     ctZoneManager, tunnelEpManager,
+                     endpointTenantMapper),
       accessSwitchManager(agent_, accessFlowExecutor,
                           accessFlowReader, accessPortMapper),
       accessFlowManager(agent_, accessSwitchManager, idGen, ctZoneManager),
@@ -78,7 +79,7 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       tableDropStatsEnabled(true), tableDropStatsInterval(0),
       spanRenderer(agent_), netflowRendererIntBridge(agent_), netflowRendererAccessBridge(agent_),
       qosRenderer(agent_), started(false), dropLogRemotePort(6081), dropLogLocalPort(50000),
-      pktLogger(pktLoggerIO, exporterIO, idGen)
+      pktLogger(pktLoggerIO, exporterIO, idGen, endpointTenantMapper)
 {
 
 }

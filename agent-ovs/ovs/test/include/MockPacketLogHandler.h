@@ -26,7 +26,9 @@ public:
      * Io_service arguments are not used in tests
      */
     MockPacketLogHandler(boost::asio::io_service &io_1,
-            boost::asio::io_service &io_2, IdGenerator& idGen): PacketLogHandler(io_1, io_2, idGen) {
+            boost::asio::io_service &io_2, IdGenerator& idGen,
+            EndpointTenantMapper& endpointTenantMap): 
+            PacketLogHandler(io_1, io_2, idGen, endpointTenantMap) {
     }
     /**
      * Start packet logging.

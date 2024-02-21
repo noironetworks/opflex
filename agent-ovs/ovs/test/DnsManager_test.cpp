@@ -167,7 +167,8 @@ public:
           ModbFixture(), ctZoneManager(idGen),
           switchManager(agent, flowExecutor, flowReader, intPortMapper),
           intFlowManager(agent, switchManager, idGen,
-                         ctZoneManager, tunnelEpManager),
+                         ctZoneManager, tunnelEpManager,
+                         endpointTenantMapper),
           dnsManager(agent),
           pktInHandler(agent, intFlowManager, dnsManager),
           proto(ofputil_protocol_from_ofp_version
@@ -193,6 +194,7 @@ private:
     MockPortMapper accPortMapper;
     MockSwitchManager switchManager;
     IntFlowManager intFlowManager;
+    EndpointTenantMapper endpointTenantMapper;
 protected:
     DnsManager dnsManager;
     PacketInHandler pktInHandler;
