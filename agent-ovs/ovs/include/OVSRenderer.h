@@ -28,6 +28,7 @@
 #include "NetFlowRenderer.h"
 #include "PacketLogHandler.h"
 #include "QosRenderer.h"
+#include "NatStatsManager.h"
 
 #include <mutex>
 
@@ -92,6 +93,7 @@ private:
     SecGrpStatsManager secGrpStatsManager;
     TableDropStatsManager tableDropStatsManager;
     DnsManager dnsManager;
+    NatStatsManager natStatsManager;
 
     std::string intBridgeName;
     std::string accessBridgeName;
@@ -129,6 +131,8 @@ private:
     long secGroupStatsInterval;
     bool tableDropStatsEnabled;
     long tableDropStatsInterval;
+    bool natStatsEnabled;
+    long natStatsInterval;
 
     std::unique_ptr<OvsdbConnection> ovsdbConnection;
     SpanRenderer spanRenderer;

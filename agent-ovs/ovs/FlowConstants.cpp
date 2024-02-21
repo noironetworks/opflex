@@ -28,6 +28,7 @@ const uint64_t RD_POL_DROP_FLOW = DEF_COOKIE(12);
 const uint64_t TABLE_DROP_FLOW = (ovs_htonll((uint64_t)1 << 62));
 const uint64_t DNS_RESPONSE_V4 = DEF_COOKIE(13);
 const uint64_t DNS_RESPONSE_V6 = DEF_COOKIE(14);
+const uint64_t NAT_FLOW = DEF_COOKIE(16);
 #undef DEF_COOKIE
 
 } // namespace cookie
