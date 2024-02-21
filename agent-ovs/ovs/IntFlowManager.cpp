@@ -73,6 +73,7 @@ using opflex::modb::URI;
 using opflex::modb::MAC;
 using opflex::modb::class_id_t;
 using modelgbp::observer::SvcStatUniverse;
+using modelgbp::observer::EpStatUniverse;
 
 namespace pt = boost::property_tree;
 using namespace modelgbp::gbp;
@@ -144,7 +145,7 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     floodScope(FLOOD_DOMAIN), virtualRouterEnabled(false),
     routerMac{}, routerAdv(false), virtualDHCPEnabled(false),
     conntrackEnabled(false), dhcpMac{}, dropLogRemotePort(0),
-    serviceStatsFlowDisabled(false),
+    serviceStatsFlowDisabled(false), isNatStatsEnabled(false),
     advertManager(agent, *this), isSyncing(false), stopping(false),
     faultmanager(agent.getFaultManager()),
     svcStatsTaskQueue(svcStatsIOService),
@@ -159,11 +160,11 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     agent.getFramework().registerPeerStatusListener(this);
 }
 
-void IntFlowManager::start(bool serviceStatsFlowDisabled_) {
+void IntFlowManager::start(bool serviceStatsFlowDisabled_, bool isNatStatsEnabled_) {
     LOG(DEBUG) << "Starting IntFlowManager"
                << " serviceStatsFlowDisabled: " << serviceStatsFlowDisabled_;
     serviceStatsFlowDisabled = serviceStatsFlowDisabled_;
-
+    isNatStatsEnabled = isNatStatsEnabled_;
     // set up port mapper
     switchManager.getPortMapper().registerPortStatusListener(this);
     advertManager.setPortMapper(&switchManager.getPortMapper());
@@ -991,7 +992,8 @@ static void flowsIpm(IntFlowManager& flowMgr,
                      uint32_t fepgVnid, uint32_t frdId,
                      uint32_t fbdId, uint32_t ffdId,
                      address& mappedIp, address& floatingIp,
-                     uint32_t nextHopPort, const uint8_t* nextHopMac) {
+                     uint32_t nextHopPort, const uint8_t* nextHopMac,
+                     bool isNatStatsEnabled) {
     const uint8_t* effNextHopMac =
         nextHopMac ? nextHopMac : flowMgr.getRouterMacAddr();
 
@@ -1000,13 +1002,23 @@ static void flowsIpm(IntFlowManager& flowMgr,
             // floating IP destination within the same EPG
             // Set up reverse DNAT
             FlowBuilder ipmRoute;
-            matchDestDom(ipmRoute.priority(452)
+            if (isNatStatsEnabled) {
+                matchDestDom(ipmRoute.priority(452)
+                             .ipDst(floatingIp).reg(0, fepgVnid),
+                             0, frdId)
+                    .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                    .cookie(flow::cookie::NAT_FLOW)
+                    .action()
+                    .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
+                    .ipDst(mappedIp).decTtl();
+            } else {
+                matchDestDom(ipmRoute.priority(452)
                          .ipDst(floatingIp).reg(0, fepgVnid),
                          0, frdId)
-                .action()
-                .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
-                .ipDst(mappedIp).decTtl();
-
+                    .action()
+                    .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
+                    .ipDst(mappedIp).decTtl();
+            }
             actionRevNatDest(ipmRoute, epgVnid, bdId,
                              fgrpId, rdId, ofPort);
             ipmRoute.build(elRouteDst);
@@ -1035,11 +1047,20 @@ static void flowsIpm(IntFlowManager& flowMgr,
     {
         // Apply NAT action in output table
         FlowBuilder ipmNatOut;
-        ipmNatOut.priority(10)
-            .metadata(flow::meta::out::NAT, flow::meta::out::MASK)
-            .reg(6, rdId)
-            .reg(7, fepgVnid)
-            .ipSrc(mappedIp);
+        if (isNatStatsEnabled) {
+            ipmNatOut.priority(10)
+                .metadata(flow::meta::out::NAT, flow::meta::out::MASK)
+                .reg(6, rdId)
+                .reg(7, fepgVnid)
+                .ipSrc(mappedIp).flags(OFPUTIL_FF_SEND_FLOW_REM)
+                .cookie(flow::cookie::NAT_FLOW);
+        } else {
+            ipmNatOut.priority(10)
+                .metadata(flow::meta::out::NAT, flow::meta::out::MASK)
+                .reg(6, rdId)
+                .reg(7, fepgVnid)
+                .ipSrc(mappedIp);
+        }
         ActionBuilder& ab = ipmNatOut.action();
         ab.ethSrc(macAddr).ethDst(effNextHopMac);
         if (!floatingIp.is_unspecified()) {
@@ -1070,11 +1091,21 @@ static void flowsIpm(IntFlowManager& flowMgr,
             // the destination IP is unique for a given next hop
             // interface.
             FlowBuilder ipmNextHopRev;
-            ipmNextHopRev.priority(201).inPort(nextHopPort)
-                .ethSrc(effNextHopMac).ipDst(floatingIp)
-                .action()
-                .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
-                .ipDst(mappedIp).decTtl();
+            if (isNatStatsEnabled) {
+                ipmNextHopRev.priority(201).inPort(nextHopPort)
+                    .ethSrc(effNextHopMac).ipDst(floatingIp)
+                    .flags(OFPUTIL_FF_SEND_FLOW_REM)
+                    .cookie(flow::cookie::NAT_FLOW)
+                    .action()
+                    .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
+                    .ipDst(mappedIp).decTtl();
+            } else {
+                ipmNextHopRev.priority(201).inPort(nextHopPort)
+                    .ethSrc(effNextHopMac).ipDst(floatingIp)
+                    .action()
+                    .ethSrc(flowMgr.getRouterMacAddr()).ethDst(macAddr)
+                    .ipDst(mappedIp).decTtl();
+            }
 
             actionRevNatDest(ipmNextHopRev, epgVnid, bdId,
                              fgrpId, rdId, ofPort);
@@ -1952,6 +1983,75 @@ static void flowsEndpointSNAT(SnatManager& snatMgr,
     }
 }
 
+bool IntFlowManager::updateEpAttributeMap (uint32_t vnid, uint32_t rdId, 
+                                           const std::string& ip, 
+                                           struct NatStatsManager::Nat_attr* att_map) 
+{
+    FlowKey key(ip, vnid, rdId);
+    if (natEpMap.find(key)!=natEpMap.end()) {
+        MatchLabels& matchLabels = natEpMap[key];
+        att_map->mappedIp = matchLabels.mappedIp;
+        att_map->floatingIp = matchLabels.floatingIp;
+        att_map->uuid = matchLabels.uuid;
+        att_map->src_epg = matchLabels.src_epg;
+        att_map->dst_epg = matchLabels.dst_epg;
+        return true;
+    }
+   return false;   
+}
+
+void  IntFlowManager::updateNatHashMapEntry( const std::string& fip, const std::string& mip, uint32_t fepgVnid,
+                                uint32_t epgVnid, const string& mapping, const std::string& uuid, 
+				uint32_t rdId)
+{
+    optional<URI> egUri = agent.getPolicyManager().getGroupForVnid(epgVnid);
+    optional<URI> fegUri = agent.getPolicyManager().getGroupForVnid(fepgVnid);
+    //Updating EP to external hashmap entry
+    FlowKey epToExt(mip, fepgVnid, rdId);
+    if (natEpMap.find(epToExt) != natEpMap.end()) {
+        MatchLabels& matchLabelsEpToExt = natEpMap[epToExt];
+        FlowKey oneToone(matchLabelsEpToExt.floatingIp, matchLabelsEpToExt.fvnid, int(0));
+        if (natEpMap.find(oneToone) != natEpMap.end()) {
+            natEpMap.erase(oneToone);
+        }
+        FlowKey nextHop(matchLabelsEpToExt.floatingIp, int(0), int(0));
+        if (natEpMap.find(nextHop) != natEpMap.end()) {
+            natEpMap.erase(nextHop);
+        }
+    } 
+    MatchLabels& matchLabelsEpToExt = natEpMap[epToExt];
+    matchLabelsEpToExt.mappedIp = mip;
+    matchLabelsEpToExt.floatingIp = fip;
+    matchLabelsEpToExt.uuid = uuid;
+    matchLabelsEpToExt.src_epg = egUri.get().toString();
+    matchLabelsEpToExt.dst_epg = fegUri.get().toString();
+    matchLabelsEpToExt.fvnid = fepgVnid;
+ 
+    //Updating external to EP hashmap entry
+    if (mapping == "snat") {
+        LOG(DEBUG) << "Updating hashmap entry for NAT SNAT Flow for the ep uuid: " <<uuid;
+        FlowKey key(fip, int(0), int(0));
+        MatchLabels& matchLabels = natEpMap[key];
+        matchLabels.mappedIp = mip;
+        matchLabels.floatingIp = fip;
+        matchLabels.uuid = uuid;
+        matchLabels.src_epg = fegUri.get().toString();
+        matchLabels.dst_epg = egUri.get().toString();
+        matchLabels.fvnid = fepgVnid;
+    } else if (mapping == "oneToone") {
+        LOG(DEBUG) << "Updating hashmap entry for NAT Flow for the ep uuid: " <<uuid;
+        FlowKey key(fip, fepgVnid, int(0));
+        MatchLabels& matchLabels = natEpMap[key];
+        matchLabels.mappedIp = mip;
+        matchLabels.floatingIp = fip;
+        matchLabels.uuid = uuid;
+        matchLabels.src_epg = fegUri.get().toString();
+        matchLabels.dst_epg = egUri.get().toString();
+	matchLabels.fvnid = fepgVnid;
+    }
+}
+
+
 void IntFlowManager::handleEndpointUpdate(const string& uuid) {
     LOG(DEBUG) << "Updating endpoint " << uuid;
 
@@ -1976,6 +2076,9 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
         if (ep) {
             LOG(DEBUG) << "Redo remote endpoint update " << uuid;
             remoteEndpointUpdated(uuid);
+        }
+        if (isNatStatsEnabled) {
+            clearNatStatsCounters(uuid);
         }
         return;
     }
@@ -2265,14 +2368,17 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                     optional<URI> ffdURI, fbdURI, frdURI;
                     if (!getGroupForwardingInfo(ipm.getEgURI().get(),
                                                 fepgVnid, frdURI, frdId,
-                                                fbdURI, fbdId, ffdURI, ffdId))
+                                                fbdURI, fbdId, ffdURI, ffdId)){
                         continue;
+                    }
 
                     uint32_t nextHop = OFPP_NONE;
                     if (ipm.getNextHopIf()) {
                         nextHop = switchManager.getPortMapper()
                             .FindPort(ipm.getNextHopIf().get());
-                        if (nextHop == OFPP_NONE) continue;
+                        if (nextHop == OFPP_NONE) {
+                            continue;
+                        }
                     }
                     uint8_t nextHopMac[6];
                     const uint8_t* nextHopMacp = NULL;
@@ -2280,13 +2386,32 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         ipm.getNextHopMAC().get().toUIntArray(nextHopMac);
                         nextHopMacp = nextHopMac;
                     }
+                    if (isNatStatsEnabled == true) {
+                        if ((!floatingIp.is_unspecified()) && (!mappedIp.is_unspecified())) {
+                             if (nextHop != OFPP_NONE) {
+                                 const string& mapping= "snat";
+                                 updateNatHashMapEntry(floatingIp.to_string(),
+                                                       mappedIp.to_string(),
+                                                       fepgVnid, epgVnid,
+                                                       mapping, uuid, rdId);
+                             } else {
+                                 const string& mapping= "oneToone";
+                                 updateNatHashMapEntry(floatingIp.to_string(),
+                                                       mappedIp.to_string(),
+                                                       fepgVnid, epgVnid,
+                                                       mapping, uuid, rdId);
+                            }
+                        }
+                    }
 
                     flowsIpm(*this, elSrc, elBridgeDst, elRouteDst,
                              elOutput, macAddr, ofPort,
                              epgVnid, rdId, bdId, fgrpId,
                              fepgVnid, frdId, fbdId, ffdId,
                              mappedIp, floatingIp, nextHop,
-                             nextHopMacp);
+                             nextHopMacp, isNatStatsEnabled);
+
+
                 }
 
                 const vector<string>& snatUuids = endPoint.getSnatUuids();
@@ -3004,6 +3129,155 @@ void IntFlowManager::clearSvcStatsCounters (const string& uuid,
                                                0, 0, 0, 0,
                                                attr_map());
         }
+    }
+    mutator.commit();
+}
+
+
+void IntFlowManager::updateNatStatsCounters(const string &direction,
+                                            const uint64_t &newPktCount,
+                                            const uint64_t &newByteCount,
+                                            const string &fip,
+                                            const string &vmIp,
+                                            const string &sepg,
+                                            const string &depg,
+                                            const string &epUuid)
+{
+     Mutator mutator(agent.getFramework(), "policyelement");
+
+     EndpointManager& epMgr = agent.getEndpointManager();
+     shared_ptr<const Endpoint> epWrapper = epMgr.getEndpoint(epUuid);
+     if (!epWrapper) {
+         LOG(DEBUG) << "endpoint not found for uuid: " << epUuid;
+         return;
+      } 
+    optional<shared_ptr<EpStatUniverse>> su = 
+                         EpStatUniverse::resolve(agent.getFramework());
+    if (su) {
+        if (direction=="EpToExt") {
+            auto natStat = su.get()->resolveGbpeEpToExtStatsCounter
+                                       ("EpToExt:"+epUuid);
+            if (!natStat) {
+                natStat = su.get()->addGbpeEpToExtStatsCounter
+                                               ("EpToExt:"+epUuid);
+            }
+            if (natStat) {
+                auto oldPktCount = natStat.get()->getTxPackets(0);
+                auto oldByteCount = natStat.get()->getTxBytes(0);
+                auto updPktCount = oldPktCount + newPktCount;
+                auto updByteCount = oldByteCount + newByteCount;
+                natStat.get()->setEpToExtUuid("EpToExt:"+epUuid);
+                natStat.get()->setMappedIp(vmIp);
+                natStat.get()->setFloatingIp(fip);
+                natStat.get()->setTxPackets(updPktCount).setTxBytes(updByteCount); 
+                natStat.get()->setSepg(sepg).setDepg(depg);
+                mutator.commit();
+                LOG(DEBUG) << "Ep to External Network packet count: "<< updPktCount
+                           << "and byte count: "<< updByteCount;
+                prometheusManager.addNUpdateNatStats("EpToExt:"+epUuid,
+                                                      direction,
+                                                      updByteCount,
+                                                      updPktCount,
+                                                      vmIp,
+                                                      fip,
+                                                      sepg,
+                                                      depg);
+             }
+        } else if (direction=="ExtToEp") {
+             auto natStat = su.get()->resolveGbpeExtToEpStatsCounter
+                                        ("ExtToEp:"+epUuid);
+             if (!natStat) {
+                 natStat = su.get()->addGbpeExtToEpStatsCounter
+                                                ("ExtToEp:"+epUuid);
+             }
+             if (natStat) {
+                 uint64_t updPktCount;
+                 uint64_t updByteCount;
+                 auto oldPktCount = natStat.get()->getRxPackets(0);
+                 auto oldByteCount = natStat.get()->getRxBytes(0);
+                 if (natStat.get()->getFloatingIp("") != fip) {
+                     updPktCount = 0 + newPktCount;
+                     updByteCount = 0 + newByteCount;
+                 } else {
+                     updPktCount = oldPktCount + newPktCount;
+                     updByteCount = oldByteCount + newByteCount;
+                 }
+                 natStat.get()->setExtToEpUuid("ExtToEp:"+epUuid);
+                 natStat.get()->setRxPackets(updPktCount).setRxBytes(updByteCount);
+                 natStat.get()->setMappedIp(vmIp);
+                 natStat.get()->setFloatingIp(fip);
+                 natStat.get()->setSepg(sepg).setDepg(depg);
+                 mutator.commit();
+                 LOG(DEBUG) << "External Network to Ep packet count: "<< updPktCount 
+                            << "and byte count: "<< updByteCount;
+                 prometheusManager.addNUpdateNatStats("ExtToEp:"+epUuid,
+                                                       direction,
+                                                       updByteCount,
+                                                       updPktCount,
+                                                       vmIp,
+                                                       fip,
+                                                       sepg,
+                                                       depg);
+
+             }
+        }
+    }
+}
+
+void IntFlowManager::clearNatStatsCounters (const std::string& epUuid) {
+    Mutator mutator(agent.getFramework(), "policyelement");
+    optional<shared_ptr<EpStatUniverse>> su = 
+                             EpStatUniverse::resolve(agent.getFramework());
+    auto vmToExtStats = su.get()->resolveGbpeEpToExtStatsCounter
+                                                      ("EpToExt:"+epUuid);
+    if (vmToExtStats) {
+        auto natEpg = vmToExtStats.get()->getDepg("");
+        auto epg = vmToExtStats.get()->getSepg("");
+        if (natEpg != "" && epg != "") {
+            auto natEpgUri = URI(natEpg);
+            optional<uint32_t> fepgVnid = agent.getPolicyManager().getVnidForGroup(natEpgUri);
+            uint32_t fvnid = fepgVnid.get();
+            auto epgUri = URI(epg);
+            optional<shared_ptr<RoutingDomain> > epgRd =  agent.getPolicyManager().
+                                                          getRDForGroup(epgUri);
+            optional<URI> rdURI = epgRd.get()->getURI();
+            uint32_t rdId = getId(RoutingDomain::CLASS_ID, rdURI.get());
+            const string ip = vmToExtStats.get()->getMappedIp("");
+            FlowKey ep(ip, fvnid, rdId);
+            if (natEpMap.find(ep) != natEpMap.end()) {
+                LOG(DEBUG) << "Removing hashmap entry for Nat Stat Egress flow";
+                natEpMap.erase(ep);
+            }
+        }
+        vmToExtStats.get()->remove(agent.getFramework(), "EpToExt:"+epUuid);
+        prometheusManager.removeNatCounter("EpToExt", "EpToExt:"+epUuid);
+        LOG(DEBUG)<< "Removed Ep to Extenal Flow" <<
+                     "Stats from Modb for the Epuuid: "<< epUuid;
+    }
+    auto ExtToVmStats = su.get()->resolveGbpeExtToEpStatsCounter
+                                                     ("ExtToEp:"+epUuid);
+    if (ExtToVmStats) {
+       auto natEpg = ExtToVmStats.get()->getSepg("");
+       if (natEpg != "") {
+           auto natEpgUri = URI(natEpg);
+           optional<uint32_t> fepgVnid = agent.getPolicyManager().getVnidForGroup(natEpgUri);
+           uint32_t fvnid = fepgVnid.get();
+           const string ip = ExtToVmStats.get()->getFloatingIp("");
+           //Flow key for Exteral to Ep can be either snat or 1:1 mapping. 
+           FlowKey fip(ip, fvnid, int(0));
+           FlowKey snat(ip, int(0), int(0));
+           if (natEpMap.find(fip) != natEpMap.end()) {
+               LOG(DEBUG) << "Removing hashmap entry for Nat Stat Ingress flow";
+               natEpMap.erase(fip);
+           } else if (natEpMap.find(snat) != natEpMap.end()) {
+               LOG(DEBUG) << "Removing hashmap entry for SNAT Nat Stat Ingress flow";
+               natEpMap.erase(snat);
+          }
+        }
+        ExtToVmStats.get()->remove(agent.getFramework(), "ExtToEp:"+epUuid);
+        prometheusManager.removeNatCounter("ExtToEp", "ExtToEp:"+epUuid);
+        LOG(DEBUG)<< "Removed Extenal to Ep Flow Stats" <<
+                     "from Modb for the Epuuid: "<< epUuid;
     }
     mutator.commit();
 }
@@ -6522,6 +6796,26 @@ GroupEdit IntFlowManager::reconcileGroups(GroupMap& recvGroups) {
 void IntFlowManager::completeSync() {
     writeMulticastGroups();
     advertManager.start();
+}
+
+bool IntFlowManager::FlowKey::
+operator==(const FlowKey &other) const {
+    return (ip == other.ip
+            && reg == other.reg
+	    && rd == other.rd);
+}
+
+size_t IntFlowManager::natFlowKeyHasher::
+operator()(const IntFlowManager::FlowKey& k) const noexcept {
+    using boost::hash_value;
+    using boost::hash_combine;
+
+    std::size_t seed = 0;
+    hash_combine(seed, hash_value(k.ip));
+    hash_combine(seed, hash_value(k.reg));
+    hash_combine(seed, hash_value(k.rd));
+
+    return (seed);
 }
 
 } // namespace opflexagent

@@ -644,3 +644,82 @@ module[gbpe]
         member[bytes; type=scalar/UInt64]
 
     }
+   
+    # A set of counters to track NAT traffic stats
+    class[EpToExtStatsCounter;
+          super=observer/Observable;
+          concrete;
+         ]
+    {
+        contained
+        {
+            parent[class=observer/EpStatUniverse]
+        }
+        named
+        { 
+            parent[class=*;]
+            {
+               component[member=epToExtUuid]
+            }
+        }
+
+        # A unique identifer of the ep and direction of the traffic
+        member[epToExtUuid; type=reference/UUID]
+
+        # A mapped IP of the EP
+        member[mappedIp; type=address/IP]
+
+        # A floating IP of the EP
+        member[floatingIp; type=address/IP]
+
+        # number of packets sent
+        member[txPackets; type=scalar/UInt64]
+
+        # the number of bytes sent
+        member[txBytes; type=scalar/UInt64]
+
+        # the source epg
+        member[sepg; type=ascii/String]
+
+        # the destination epg
+        member[depg; type=ascii/String]
+   }
+
+   class[ExtToEpStatsCounter;
+          super=observer/Observable;
+          concrete;
+         ]
+    {
+        contained
+        {
+            parent[class=observer/EpStatUniverse]
+        }
+        named
+        {
+            parent[class=*;]
+            {
+               component[member=extToEpUuid]
+            }
+        }
+
+        # A unique identifer of the ep and direction of the traffic
+        member[extToEpUuid; type=reference/UUID]
+
+        # A mapped IP of the EP
+        member[mappedIp; type=address/IP]
+
+        # A floating IP of the EP
+        member[floatingIp; type=address/IP]
+
+        # number of packets received
+        member[rxPackets; type=scalar/UInt64]
+
+        # the number of bytes received
+        member[rxBytes; type=scalar/UInt64]
+
+        # the source epg
+        member[sepg; type=ascii/String]
+
+        # the destination epg
+        member[depg; type=ascii/String]
+   }
