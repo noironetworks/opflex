@@ -114,6 +114,7 @@ void ExtraConfigManager::packetDropLogConfigUpdated(PacketDropLogConfig &dropCfg
         shared_ptr<DropLogConfig> dropLogCfg =
                 polUni.get()->addObserverDropLogConfig();
         dropLogCfg->setDropLogMode(dropCfg.dropLogMode);
+        dropLogCfg->setDropLogPrintTenant((const uint8_t)dropCfg.dropLogPrintTenant);
         dropLogCfg->setDropLogEnable((const uint8_t)dropCfg.dropLogEnable);
     }
     mutator.commit();

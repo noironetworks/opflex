@@ -78,11 +78,13 @@ public:
     BaseIntFlowManagerFixture()
         : FlowManagerFixture(),
           intFlowManager(agent, switchManager, idGen,
-                         ctZoneManager, tunnelEpManager),
+                         ctZoneManager, tunnelEpManager,
+                         endpointTenantMapper),
           dnsManager(agent),
           pktInHandler(agent, intFlowManager,dnsManager),
           policyMgr(agent.getPolicyManager()),
-          ep2_port(11), ep4_port(22) {
+          ep2_port(11), ep4_port(22)
+           {
 
         expTables.resize(IntFlowManager::NUM_FLOW_TABLES);
 

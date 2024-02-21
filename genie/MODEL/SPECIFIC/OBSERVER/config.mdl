@@ -21,6 +21,8 @@ module[observer]
         member[dropLogMode; type=observer/DropLogMode]
         # set to 0 to disable and 1 to enable drop logging
         member[dropLogEnable; type=scalar/UInt8]
+        # set to 0 to disable and 1 to enable printing source/destination tenant
+        member[dropLogPrintTenant; type=scalar/UInt8]
         named
         {
             parent[class=*;]
