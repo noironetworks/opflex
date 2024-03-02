@@ -9,3 +9,5 @@ query-filters:
       id: cpp/member-const-no-effect
   - exclude:
       id: cpp/poorly-documented-function
+  - exclude:
+      id: cpp/unused-static-variable
