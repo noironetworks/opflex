@@ -37,8 +37,7 @@ public:
         : ModbFixture(), ctZoneManager(idGen),
           switchManager(agent, flowExecutor, flowReader, intPortMapper),
           intFlowManager(agent, switchManager, idGen,
-                         ctZoneManager, tunnelEpManager,
-                         endpointTenantMapper),
+                         ctZoneManager, tunnelEpManager),
           dnsManager(agent),
           pktInHandler(agent, intFlowManager, dnsManager),
           proto(ofputil_protocol_from_ofp_version
@@ -103,7 +102,6 @@ public:
     DnsManager dnsManager;
     PacketInHandler pktInHandler;
     ofputil_protocol proto;
-    EndpointTenantMapper endpointTenantMapper;
 };
 
 static const uint8_t pkt_dhcpv4_discover[] =

@@ -78,8 +78,7 @@ public:
     BaseIntFlowManagerFixture()
         : FlowManagerFixture(),
           intFlowManager(agent, switchManager, idGen,
-                         ctZoneManager, tunnelEpManager,
-                         endpointTenantMapper),
+                         ctZoneManager, tunnelEpManager),
           dnsManager(agent),
           pktInHandler(agent, intFlowManager,dnsManager),
           policyMgr(agent.getPolicyManager()),

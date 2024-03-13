@@ -17,7 +17,7 @@
 #include <boost/bind.hpp>
 #include <opflexagent/logging.h>
 #include <opflexagent/IdGenerator.h>
-#include <opflexagent/EndpointTenantMapper.h>
+#include "EndpointTenantMapper.h"
 #include "PacketDecoderLayers.h"
 #include <opflexagent/Network.h>
 #include <mutex>

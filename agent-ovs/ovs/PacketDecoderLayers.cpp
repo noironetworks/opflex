@@ -200,6 +200,21 @@ void GeneveOptDestinationEPGLayerVariant::reParse(ParseInfo &p) {
     p.meta[ParseInfoMetaType::DESTINATION_EPG] = p.scratchpad[3];
 }
 
+int GeneveOptOutputPortLayerVariant::configure() {
+    addKeyData(65535);
+    addKeyData(7);
+    return 0;
+}
+
+void GeneveOptOutputPortLayerVariant::getFormatString(boost::format &fmtStr) {
+    //Format string to print the layer goes here
+    fmtStr = boost::format("");
+}
+
+void GeneveOptOutputPortLayerVariant::reParse(ParseInfo &p) {
+    p.meta[ParseInfoMetaType::OUTPUT_PORT] = p.scratchpad[3];
+}
+
 int ARPLayer::configure() {
     addField("hwType", 16, 0, PDF::FLDTYPE_BYTES, 0, 0, -1, 0, 0);
     addField("eType", 16, 16, PDF::FLDTYPE_BYTES, 0, 0, -1, 0, 0);

@@ -200,12 +200,19 @@ bool PacketLogHandler::getDropReason(ParseInfo &p, std::string &dropReason) {
     
     if(endpointTenantMap.shouldPrintTenant == false) return isPermit;
 
-    std::string sourceTenant = endpointTenantMap.GetMapping(p.meta[PIM::SOURCE_EPG]);
-    std::string destinationTenant = endpointTenantMap.GetMapping(p.meta[PIM::DESTINATION_EPG]);
+    std::string sourceTenant = "";
+    std::string destinationTenant = "";
+    if(p.meta[PIM::SOURCE_BRIDGE] == 1){
+        sourceTenant = endpointTenantMap.GetVNIDMapping(p.meta[PIM::SOURCE_EPG]);
+        destinationTenant = endpointTenantMap.GetVNIDMapping(p.meta[PIM::DESTINATION_EPG]);
+    }else{
+        sourceTenant = endpointTenantMap.GetPortMapping(endpointTenantMap.GetMatchingPort(p.meta[PIM::OUTPUT_PORT]));
+        destinationTenant = endpointTenantMap.GetPortMapping(p.meta[PIM::OUTPUT_PORT]);
+    }
     if(sourceTenant.empty()) sourceTenant = "N/A";
     if(destinationTenant.empty()) destinationTenant = "N/A";
-    dropReason += " "+sourceTenant;
-    dropReason += " "+destinationTenant;
+    dropReason += " STID="+sourceTenant;
+    dropReason += " DTID="+destinationTenant;
     return isPermit;
 }
 
