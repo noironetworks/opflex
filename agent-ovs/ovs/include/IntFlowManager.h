@@ -972,6 +972,10 @@ private:
     /* Map of multi-cast IP addresses to associated managed objects */
     typedef std::unordered_map<std::string, UriSet> MulticastMap;
     MulticastMap mcastMap;
+    /* Persistant multi-cast entries read during startup */
+    std::vector<std::string> oldMcastEntries;
+    // Lock to safe guard access to oldMcastEntries
+    std::mutex oldMcastEntriesMutex;
     /* Set of external flood domain Ids*/
     std::unordered_set<uint32_t> localExternalFdSet;
     /**
@@ -1000,6 +1004,16 @@ private:
      * Write out the current multicast subscriptions
      */
     void writeMulticastGroups();
+
+    /**
+     * Read persistent multicast config from file
+     */
+    void readOldMulticastGroups();
+
+    /**
+     * Clear persistent in-memory groups previously read frm file
+     */
+    void clearOldMulticastGroups();
     /**
      *
      */
@@ -1016,6 +1030,8 @@ private:
     std::unique_ptr<std::thread> svcStatsThread;
     boost::asio::io_service svcStatsIOService;
     std::unique_ptr<boost::asio::io_service::work> svcStatsIOWork;
+    boost::asio::io_service multiCastIOService;
+    std::unique_ptr<std::thread> multiCastIOThread;
     FaultManager& faultmanager;
     TaskQueue svcStatsTaskQueue;   
     // Lock to safe guard natstat related state

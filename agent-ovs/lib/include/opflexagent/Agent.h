@@ -289,6 +289,16 @@ public:
     const LogParams& getLogParams() { return logParams; }
 
     /**
+     * Get Multicast cache timeout value
+     */
+    uint32_t getMulticastCacheTimeout() { return multicast_cache_timeout; }
+
+    /**
+     * Get Switch Sync delay value
+     */
+    uint32_t getSwitchSyncDelay() { return switch_sync_delay; }
+
+    /**
      * Common function b/w Agent and Server to add all supported universes
      * @param root pointer to DmtreeRoot under which the universes will be created
      */
@@ -334,6 +344,10 @@ private:
     uint32_t peerHandshakeTimeout = 45000;
     /* keepalive timeout */
     uint32_t keepaliveTimeout = 120000;
+    /* How long to wait before timing out old multicast cache */
+    uint32_t multicast_cache_timeout = 300; /* seconds */
+    /* How long to wait from platform config to switch Sync */
+    uint32_t switch_sync_delay = 5; /* seconds */
 
     std::set<std::string> endpointSourceFSPaths;
     std::set<std::string> disabledFeaturesSet;
