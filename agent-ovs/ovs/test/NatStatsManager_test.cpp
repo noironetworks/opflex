@@ -52,8 +52,7 @@ class NatStatsManagerFixture : public PolicyStatsManagerFixture {
     public:
     NatStatsManagerFixture() : PolicyStatsManagerFixture(),
                                intFlowManager(agent, switchManager, idGen,
-                                              ctZoneManager, tunnelEpManager,
-					      endpointTenantMapper),
+                                              ctZoneManager, tunnelEpManager),
                                dnsManager(agent),
                                pktInHandler(agent, intFlowManager, dnsManager),
                                policyMgr(agent.getPolicyManager()),
