@@ -112,7 +112,6 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/Fault.h \
 	lib/include/opflexagent/Agent.h \
 	lib/include/opflexagent/IdGenerator.h \
-	lib/include/opflexagent/EndpointTenantMapper.h \
 	lib/include/opflexagent/KeyedRateLimiter.h \
 	lib/include/opflexagent/MulticastListener.h \
 	lib/include/opflexagent/TaskQueue.h \
@@ -183,7 +182,8 @@ noinst_HEADERS = \
 	ovs/include/OvsdbTransactMessage.h \
 	ovs/include/OvsdbState.h \
 	ovs/include/DnsManager.h \
-	ovs/include/NatStatsManager.h
+	ovs/include/NatStatsManager.h \
+	ovs/include/EndpointTenantMapper.h
 
 libopflex_agent_la_SOURCES = \
 	lib/AgentLogHandler.cpp \
@@ -218,7 +218,6 @@ libopflex_agent_la_SOURCES = \
 	lib/Fault.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
-	lib/EndpointTenantMapper.cpp \
 	lib/NotifServer.cpp \
 	lib/MulticastListener.cpp \
 	lib/TaskQueue.cpp \
@@ -294,8 +293,9 @@ if RENDERER_OVS
 	ovs/OvsdbMessage.cpp \
 	ovs/OvsdbMonitorMessage.cpp \
 	ovs/CtZoneManager.cpp \
-	ovs/DnsManager.cpp \
-	ovs/NatStatsManager.cpp
+	ovs/DnsManager.cpp \	
+	ovs/NatStatsManager.cpp \
+	ovs/EndpointTenantMapper.cpp
 
   librenderer_openvswitch_la_CFLAGS = \
 	$(libopenvswitch_CFLAGS) \
