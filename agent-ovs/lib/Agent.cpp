@@ -182,6 +182,8 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_HANDSHAKE("opflex.timers.handshake-timeout");
     static const std::string OPFLEX_KEEPALIVE("opflex.timers.keepalive-timeout");
     static const std::string OPFLEX_POLICY_RETRY_DELAY("opflex.timers.policy-retry-delay");
+    static const std::string OPFLEX_MULTICAST_CACHE_TIMEOUT("opflex.timers.mcast-cache-timeout");
+    static const std::string OPFLEX_SWITCH_SYNC_DELAY("opflex.timers.switch-sync-delay");
     static const std::string DISABLED_FEATURES("feature.disabled");
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
     static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
@@ -474,6 +476,20 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     if (keepaliveOpt) {
         keepaliveTimeout = keepaliveOpt.get();
         LOG(INFO) << "keepalive timeout set to " << keepaliveTimeout << " ms";
+    }
+
+    optional<uint32_t> mcastCacheTimeoutOpt =
+        properties.get_optional<uint32_t>(OPFLEX_MULTICAST_CACHE_TIMEOUT);
+    if (mcastCacheTimeoutOpt) {
+        multicast_cache_timeout = mcastCacheTimeoutOpt.get();
+        LOG(INFO) << "Multicast cache timeout set to " << multicast_cache_timeout << " seconds";
+    }
+
+    optional<uint32_t> switchSyncDelayOpt =
+        properties.get_optional<uint32_t>(OPFLEX_SWITCH_SYNC_DELAY);
+    if (switchSyncDelayOpt) {
+        switch_sync_delay = switchSyncDelayOpt.get();
+        LOG(INFO) << "Switch Sync Delay set to " << switch_sync_delay << " seconds";
     }
 
     LOG(INFO) << "Agent mode set to " <<
