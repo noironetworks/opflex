@@ -59,8 +59,8 @@ public:
     {
         // Create and execute thread after all member variables are initialized.
         parseThread_ = std::thread(&AsyncDocumentParser::Parse, this);
-        std::string fname = "/var/log/opflex-json.log." + std::to_string(getpid()) + "." + std::to_string(instance_count_);
-        out_.open(fname, std::ofstream::out | std::ofstream::app);
+        //std::string fname = "/var/log/opflex-json.log." + std::to_string(getpid()) + "." + std::to_string(instance_count_);
+        //out_.open(fname, std::ofstream::out | std::ofstream::app);
         instance_count_++;
     }
 
@@ -223,7 +223,7 @@ private:
     std::condition_variable finish_;
     bool stop_;
     int id_;
-    std::ofstream out_;
+    //std::ofstream out_;
 };
 
 } /* yajr namespace */

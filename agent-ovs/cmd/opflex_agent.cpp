@@ -112,6 +112,9 @@ public:
 
                 while (true) {
                     cond.wait(lock, [this]{ return stopped || need_reload || need_reset; });
+                    if (stopped) {
+                        break;
+                    }
                     if (!stopped && need_reload) {
                         LOG(INFO) << "Reloading agent because of " <<
                             "configuration update";
