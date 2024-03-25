@@ -41,7 +41,7 @@ void InspectorClientConn::connect() {
 
     timer.data = this;
     uv_timer_init(&client_loop, &timer);
-    uv_timer_start(&timer, on_timer, 5000, 5000);
+    uv_timer_start(&timer, on_timer, 15000, 15000);
 
     peer = yajr::Peer::create(name,
                               on_state_change,
