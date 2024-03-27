@@ -155,23 +155,24 @@ void OFFramework::stop() {
     pimpl->started = false;
 }
 
-void OFFramework::dumpMODB(const string& file) {
+void OFFramework::dumpMODB(const string& file, bool excludeObservables) {
     MOSerializer& serializer = pimpl->processor.getSerializer();
-    serializer.dumpMODB(file);
+    serializer.dumpMODB(file, excludeObservables);
 }
 
-void OFFramework::dumpMODB(FILE* file) {
+void OFFramework::dumpMODB(FILE* file, bool excludeObservables) {
     MOSerializer& serializer = pimpl->processor.getSerializer();
-    serializer.dumpMODB(file);
+    serializer.dumpMODB(file, excludeObservables);
 }
 
 void OFFramework::prettyPrintMODB(std::ostream& output,
                                   bool tree,
                                   bool includeProps,
                                   bool utf8,
-                                  size_t truncate) {
+                                  size_t truncate,
+                                  bool excludeObservables) {
     MOSerializer& serializer = pimpl->processor.getSerializer();
-    serializer.displayMODB(output, tree, includeProps, utf8, truncate);
+    serializer.displayMODB(output, tree, includeProps, utf8, truncate, excludeObservables);
 }
 
 void OFFramework::setOpflexIdentity(const string& name,

@@ -185,7 +185,8 @@ public:
                    const modb::URI& uri,
                    modb::mointernal::StoreClient& client,
                    T& writer,
-                   bool recursive = true) {
+                   bool recursive = true,
+                   bool excludeObservables = false) {
         const modb::ClassInfo& ci = store->getClassInfo(class_id);
         const std::shared_ptr<const modb::mointernal::ObjectInstance>
             oi(client.get(class_id, uri));
@@ -334,8 +335,11 @@ public:
                  std::vector<modb::URI> >::const_iterator clsit;
         std::vector<modb::URI>::const_iterator cit;
         for (clsit = children.begin(); clsit != children.end(); ++clsit) {
-            for (cit = clsit->second.begin(); cit != clsit->second.end(); ++cit) {
-                writer.String(cit->toString().c_str());
+            const modb::ClassInfo& cci = store->getClassInfo(clsit->first);
+            if (!excludeObservables || cci.getType() != modb::ClassInfo::class_type_t::OBSERVABLE) {
+                for (cit = clsit->second.begin(); cit != clsit->second.end(); ++cit) {
+                    writer.String(cit->toString().c_str());
+                }
             }
         }
         writer.EndArray();
@@ -362,9 +366,12 @@ public:
         writer.EndObject();
         if (recursive) {
             for (clsit = children.begin(); clsit != children.end(); ++clsit) {
-                for (cit = clsit->second.begin();
-                     cit != clsit->second.end(); ++cit) {
-                    serialize(clsit->first, *cit, client, writer);
+                const modb::ClassInfo& cci = store->getClassInfo(clsit->first);
+                if (!excludeObservables || cci.getType() != modb::ClassInfo::class_type_t::OBSERVABLE) {
+                    for (cit = clsit->second.begin();
+                         cit != clsit->second.end(); ++cit) {
+                        serialize(clsit->first, *cit, client, writer, recursive, excludeObservables);
+                    }
                 }
             }
         }
@@ -394,7 +401,7 @@ public:
      *
      * @param file the file to write to.
      */
-    void dumpMODB(const std::string& file);
+    void dumpMODB(const std::string& file, bool excludeObservables);
 
     /**
      * Dump the managed object database to the file specified as a
@@ -402,7 +409,7 @@ public:
      *
      * @param file the file to write to.
      */
-    void dumpMODB(FILE* file);
+    void dumpMODB(FILE* file, bool excludeObservables);
 
     /**
      * Dump the unresolved managed object database to the file specified as a
@@ -446,7 +453,8 @@ public:
      */
     void displayMODB(std::ostream& ostream,
                      bool tree = true, bool includeProps = false,
-                     bool utf8 = true, size_t truncate = 0);
+                     bool utf8 = true, size_t truncate = 0,
+                     bool excludeObservables = false);
 
     /**
      * Display the unresolved refrence in managed object database in a human-readable format
@@ -542,7 +550,8 @@ private:
                        bool tree, bool root, bool includeProps,
                        bool last, const std::string& prefix,
                        size_t prefixCharCount,
-                       bool utf8, size_t truncate = 0);
+                       bool utf8, size_t truncate = 0,
+                       bool excludeObservables = false);
 
      /**
      * Display a particular unresolved relation object

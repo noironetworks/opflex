@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
             Policies::writeBasicInit(mframework);
             Policies::writeTestPolicy(mframework);
 
-            mframework.dumpMODB(sample_file);
+            mframework.dumpMODB(sample_file, false);
 
             mframework.stop();
             return 0;
