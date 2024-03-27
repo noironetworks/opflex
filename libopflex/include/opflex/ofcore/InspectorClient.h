@@ -80,6 +80,13 @@ public:
     virtual void setUnresolved(bool enabled) = 0;
 
     /**
+     * exclude observables from output
+     *
+     * @param enabled set to true to exclude observables
+     */
+    virtual void setExcludeObservables(bool enabled) = 0;
+
+    /**
      * Query for a particular managed object
      *
      * @param subject the subject (class name) of the object

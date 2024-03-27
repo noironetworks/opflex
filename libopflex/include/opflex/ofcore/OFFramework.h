@@ -782,7 +782,7 @@ public:
      *
      * @param file the file to write to.
      */
-    virtual void dumpMODB(const std::string& file);
+    virtual void dumpMODB(const std::string& file, bool excludeObservables);
 
     /**
      * Dump the managed object database to the file specified as a
@@ -790,7 +790,7 @@ public:
      *
      * @param file the file to write to.
      */
-    virtual void dumpMODB(FILE* file);
+    virtual void dumpMODB(FILE* file, bool excludeObservables);
 
     /**
      * Pretty print the current MODB to the provided output stream.
@@ -806,7 +806,8 @@ public:
                                  bool tree = true,
                                  bool includeProps = true,
                                  bool utf8 = true,
-                                 size_t truncate = 0);
+                                 size_t truncate = 0,
+                                 bool excludeObservables = false);
 
     /**
      * Enable SSL for connections to opflex peers
