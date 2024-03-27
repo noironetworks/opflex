@@ -377,7 +377,7 @@ void MOSerializer::dumpUnResolvedMODB(FILE* pfile) {
     fwrite("\n", 1, 1, pfile);
 }
 
-void MOSerializer::dumpMODB(FILE* pfile) {
+void MOSerializer::dumpMODB(FILE* pfile, bool excludeObservables) {
     Region::obj_set_t roots;
     getRoots(store, roots);
     char buffer[1024];
@@ -387,6 +387,12 @@ void MOSerializer::dumpMODB(FILE* pfile) {
     StoreClient& client = store->getReadOnlyStoreClient();
     for (const Region::obj_set_t::value_type& r : roots) {
         try {
+            if (excludeObservables) {
+                const modb::ClassInfo &ci = store->getClassInfo(r.first);
+                if (ci.getType() == modb::ClassInfo::class_type_t::OBSERVABLE) {
+                    continue;
+                }
+            }
             serialize(r.first, r.second, client, writer, true);
         } catch (const std::out_of_range& e) { }
     }
@@ -394,14 +400,14 @@ void MOSerializer::dumpMODB(FILE* pfile) {
     fwrite("\n", 1, 1, pfile);
 }
 
-void MOSerializer::dumpMODB(const std::string& file) {
+void MOSerializer::dumpMODB(const std::string& file, bool excludeObservable) {
     FILE* pfile = fopen(file.c_str(), "w");
     if (pfile == NULL) {
         LOG(ERROR) << "Could not open MODB file "
                    << file << " for writing";
         return;
     }
-    dumpMODB(pfile);
+    dumpMODB(pfile, excludeObservable);
     fclose(pfile);
     LOG(INFO) << "Wrote MODB to " << file;
 }

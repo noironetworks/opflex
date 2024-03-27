@@ -175,7 +175,7 @@ void InspectorClientImpl::dumpToFile(FILE* file) {
     if (unresolved) {
         serializer.dumpUnResolvedMODB(file);
     } else {
-        serializer.dumpMODB(file);
+        serializer.dumpMODB(file, excludeObservables);
     }
 }
 
@@ -206,6 +206,10 @@ void InspectorClientImpl::setRecursive(bool enabled) {
 void InspectorClientImpl::setUnresolved(bool enabled) {
     unresolved = enabled;
     followRefs = enabled;
+}
+
+void InspectorClientImpl::setExcludeObservables(bool enabled) {
+    excludeObservables = enabled;
 }
 
 static std::string getRefSubj(const modb::ObjectStore& store,

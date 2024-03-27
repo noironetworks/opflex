@@ -72,6 +72,7 @@ public:
     virtual void setFollowRefs(bool enabled);
     virtual void setRecursive(bool enabled);
     virtual void setUnresolved(bool enabled);
+    virtual void setExcludeObservables(bool enabled);
     virtual void addQuery(const std::string& subject,
                           const modb::URI& uri);
     virtual void addClassQuery(const std::string& subject);
@@ -111,6 +112,7 @@ private:
     bool followRefs;
     bool recursive;
     bool unresolved;
+    bool excludeObservables;
     friend class internal::InspectorClientHandler;
 
     void executeCommands();

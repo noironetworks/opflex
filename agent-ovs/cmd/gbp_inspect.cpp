@@ -86,6 +86,7 @@ int main(int argc, char** argv) {
             ("props,p", "Include object properties in output")
             ("width,w", po::value<int>()->default_value(w.ws_col - 1),
              "Truncate output to the specified number of characters")
+            ("exclude-observables,x", "Exclude observables from output")
             ;
     } catch (const boost::bad_lexical_cast& e) {
         LOG(ERROR) << "exception while processing description: " << e.what();
@@ -107,6 +108,7 @@ int main(int argc, char** argv) {
     bool followRefs = false;
     int truncate = 0;
     bool unresolved = false;
+    bool excludeObservables = false;
     po::variables_map vm;
     try {
         po::store(po::command_line_parser(argc, argv).
@@ -131,6 +133,8 @@ int main(int argc, char** argv) {
             followRefs = true;
         if (vm.count("unresolved"))
             unresolved = true;
+        if (vm.count("exclude-observables"))
+            excludeObservables = true;
 
         log_file = vm["log"].as<string>();
         level_str = vm["level"].as<string>();
@@ -175,6 +179,7 @@ int main(int argc, char** argv) {
                                                 modelgbp::getMetadata()));
         client->setRecursive(recursive);
         client->setFollowRefs(followRefs);
+        client->setExcludeObservables(excludeObservables);
 
         if(unresolved) {
             client->setUnresolved(true);

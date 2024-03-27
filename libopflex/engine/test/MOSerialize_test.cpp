@@ -300,7 +300,7 @@ BOOST_FIXTURE_TEST_CASE( mo_deserialize , BaseFixture ) {
     BOOST_CHECK_EQUAL(0, notifs.size());
 
     string modbFilename("/tmp/mo.db");
-    serializer.dumpMODB(modbFilename);
+    serializer.dumpMODB(modbFilename, true);
     string unresolvedModbFilename("/tmp/unresolvedmo.db");
     FILE* unresolvedMoFile = fopen(unresolvedModbFilename.c_str(), "w");
     if (unresolvedMoFile == NULL) {

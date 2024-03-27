@@ -782,7 +782,7 @@ public:
      *
      * @param file the file to write to.
      */
-    virtual void dumpMODB(const std::string& file);
+    virtual void dumpMODB(const std::string& file, bool excludeObservables);
 
     /**
      * Dump the managed object database to the file specified as a
@@ -790,7 +790,7 @@ public:
      *
      * @param file the file to write to.
      */
-    virtual void dumpMODB(FILE* file);
+    virtual void dumpMODB(FILE* file, bool excludeObservables);
 
     /**
      * Pretty print the current MODB to the provided output stream.

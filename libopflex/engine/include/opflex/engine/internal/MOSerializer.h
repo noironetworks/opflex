@@ -394,7 +394,7 @@ public:
      *
      * @param file the file to write to.
      */
-    void dumpMODB(const std::string& file);
+    void dumpMODB(const std::string& file, bool excludeObservables);
 
     /**
      * Dump the managed object database to the file specified as a
@@ -402,7 +402,7 @@ public:
      *
      * @param file the file to write to.
      */
-    void dumpMODB(FILE* file);
+    void dumpMODB(FILE* file, bool excludeObservables);
 
     /**
      * Dump the unresolved managed object database to the file specified as a

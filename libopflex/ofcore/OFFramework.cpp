@@ -155,14 +155,14 @@ void OFFramework::stop() {
     pimpl->started = false;
 }
 
-void OFFramework::dumpMODB(const string& file) {
+void OFFramework::dumpMODB(const string& file, bool excludeObservables) {
     MOSerializer& serializer = pimpl->processor.getSerializer();
-    serializer.dumpMODB(file);
+    serializer.dumpMODB(file, excludeObservables);
 }
 
-void OFFramework::dumpMODB(FILE* file) {
+void OFFramework::dumpMODB(FILE* file, bool excludeObservables) {
     MOSerializer& serializer = pimpl->processor.getSerializer();
-    serializer.dumpMODB(file);
+    serializer.dumpMODB(file, excludeObservables);
 }
 
 void OFFramework::prettyPrintMODB(std::ostream& output,
