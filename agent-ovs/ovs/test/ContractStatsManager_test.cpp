@@ -63,8 +63,7 @@ class ContractStatsManagerFixture : public PolicyStatsManagerFixture {
 public:
     ContractStatsManagerFixture() : PolicyStatsManagerFixture(),
                                     intFlowManager(agent, switchManager, idGen,
-                                                   ctZoneManager, tunnelEpManager,
-                                                   endpointTenantMapper),
+                                                   ctZoneManager, tunnelEpManager),
                                     contractStatsManager(&agent, idGen,
                                                          switchManager, 300),
                                     policyManager(agent.getPolicyManager()) {

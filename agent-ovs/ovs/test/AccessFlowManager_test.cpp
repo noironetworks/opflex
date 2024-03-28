@@ -39,7 +39,7 @@ using opflex::modb::Mutator;
 class AccessFlowManagerFixture : public FlowManagerFixture {
 public:
     AccessFlowManagerFixture()
-        : accessFlowManager(agent, switchManager, idGen, ctZoneManager) {
+        : accessFlowManager(agent, switchManager, idGen, ctZoneManager){
         expTables.resize(AccessFlowManager::NUM_FLOW_TABLES);
         switchManager.registerStateHandler(&accessFlowManager);
         idGen.initNamespace("l24classifierRule");

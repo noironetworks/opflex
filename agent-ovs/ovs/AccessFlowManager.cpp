@@ -81,7 +81,7 @@ AccessFlowManager::AccessFlowManager(Agent& agent_,
                                      CtZoneManager& ctZoneManager_)
     : agent(agent_), switchManager(switchManager_), idGen(idGen_),
       ctZoneManager(ctZoneManager_), taskQueue(agent.getAgentIOService()),
-      conntrackEnabled(false), stopping(false), dropLogRemotePort(0) {
+      conntrackEnabled(false), stopping(false), dropLogRemotePort(0){
     // set up flow tables
     switchManager.setMaxFlowTables(NUM_FLOW_TABLES);
     SwitchManager::TableDescriptionMap fwdTblDescr;
@@ -521,7 +521,7 @@ void AccessFlowManager::handleEndpointUpdate(const string& uuid) {
             ctZoneManager.erase(uuid);
         return;
     }
-
+    
     uint32_t accessPort = OFPP_NONE;
     uint32_t uplinkPort = OFPP_NONE;
     const optional<string>& accessIface = ep->getAccessInterface();

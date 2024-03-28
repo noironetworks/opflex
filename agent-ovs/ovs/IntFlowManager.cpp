@@ -137,8 +137,7 @@ IntFlowManager::IntFlowManager(Agent& agent_,
                                SwitchManager& switchManager_,
                                IdGenerator& idGen_,
                                CtZoneManager& ctZoneManager_,
-                               TunnelEpManager& tunnelEpManager_,
-                               EndpointTenantMapper& endpointTenantMapper_) :
+                               TunnelEpManager& tunnelEpManager_) :
     agent(agent_), switchManager(switchManager_), idGen(idGen_),
     ctZoneManager(ctZoneManager_), tunnelEpManager(tunnelEpManager_),
     prometheusManager(agent.getPrometheusManager()),
@@ -149,8 +148,7 @@ IntFlowManager::IntFlowManager(Agent& agent_,
     serviceStatsFlowDisabled(false), isNatStatsEnabled(false),
     advertManager(agent, *this), isSyncing(false), stopping(false),
     faultmanager(agent.getFaultManager()),
-    svcStatsTaskQueue(svcStatsIOService),
-    endpointTenantMapper(endpointTenantMapper_) {
+    svcStatsTaskQueue(svcStatsIOService) {
     // set up flow tables
     switchManager.setMaxFlowTables(NUM_FLOW_TABLES);
     SwitchManager::TableDescriptionMap fwdTblDescr;
@@ -432,8 +430,6 @@ void IntFlowManager::packetDropLogConfigUpdated(const URI& dropLogCfgURI) {
         LOG(INFO) << "Defaulting to droplog disabled";
         return;
     }
-    endpointTenantMapper.shouldPrintTenant = dropLogCfg.get()->getDropLogPrintTenant(0) != 0;
-    LOG(INFO) << "Droplog tenant printing set to " + dropLogCfg.get()->getDropLogPrintTenant(0);
     if(dropLogCfg.get()->getDropLogEnable(0) != 0) {
         if(dropLogCfg.get()->getDropLogMode(
                     DropLogModeEnumT::CONST_UNFILTERED_DROP_LOG) ==
@@ -623,7 +619,6 @@ bool IntFlowManager::getGroupForwardingInfo(const URI& epgURI, uint32_t& vnid,
             return false;
         }
         vnid = epgVnid.get();
-        endpointTenantMapper.UpdateMappingFromURI(vnid, epgURI.toString());
 
         bdStr = "extbd:" + epgURI.toString();
         bdURI = URI(bdStr);
@@ -641,7 +636,6 @@ bool IntFlowManager::getGroupForwardingInfo(const URI& epgURI, uint32_t& vnid,
             return false;
         }
         vnid = epgVnid.get();
-        endpointTenantMapper.UpdateMappingFromURI(vnid, epgURI.toString());
 
         optional<shared_ptr<RoutingDomain> > epgRd = polMgr.getRDForGroup(epgURI);
         optional<shared_ptr<BridgeDomain> > epgBd = polMgr.getBDForGroup(epgURI);

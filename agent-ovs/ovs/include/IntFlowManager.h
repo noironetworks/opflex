@@ -17,7 +17,6 @@
 #include <opflexagent/Agent.h>
 #include "SwitchManager.h"
 #include <opflexagent/IdGenerator.h>
-#include <opflexagent/EndpointTenantMapper.h>
 #include "ActionBuilder.h"
 #include "AdvertManager.h"
 #include <opflexagent/TunnelEpManager.h>
@@ -75,8 +74,7 @@ public:
                    SwitchManager& switchManager,
                    IdGenerator& idGen,
                    CtZoneManager& ctZoneManager,
-                   TunnelEpManager& tnlEpManager,
-                   EndpointTenantMapper& endpointTenantMapper);
+                   TunnelEpManager& tnlEpManager);
     ~IntFlowManager() {}
 
     /**
@@ -1064,8 +1062,6 @@ private:
     typedef std::unordered_map<FlowKey, MatchLabels, natFlowKeyHasher> natFlowMatchKey;
     
     natFlowMatchKey natEpMap;
-     
-    EndpointTenantMapper& endpointTenantMapper;
 };
 
 } // namespace opflexagent

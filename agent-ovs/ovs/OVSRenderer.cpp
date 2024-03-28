@@ -48,11 +48,11 @@ OVSRenderer::OVSRenderer(Agent& agent_)
                        intPortMapper),
       tunnelEpManager(&agent_),
       intFlowManager(agent_, intSwitchManager, idGen,
-                     ctZoneManager, tunnelEpManager,
-                     endpointTenantMapper),
+                     ctZoneManager, tunnelEpManager),
       accessSwitchManager(agent_, accessFlowExecutor,
                           accessFlowReader, accessPortMapper),
       accessFlowManager(agent_, accessSwitchManager, idGen, ctZoneManager),
+      endpointTenantMapper(&agent_, &accessSwitchManager, agent_.getAgentIOService()),
       pktInHandler(agent_, intFlowManager, dnsManager),
       interfaceStatsManager(&agent_, intSwitchManager.getPortMapper(),
                             accessSwitchManager.getPortMapper()),
@@ -167,6 +167,7 @@ void OVSRenderer::start() {
     if (accessBridgeName != "") {
         accessFlowManager.start();
     }
+    endpointTenantMapper.start();
     dnsManager.setCacheDir(dnsCacheDir);
     dnsManager.start();
 
@@ -295,6 +296,7 @@ void OVSRenderer::stop() {
 
     intSwitchManager.stop();
     accessSwitchManager.stop();
+    endpointTenantMapper.stop();
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
         spanRenderer.stop();
     netflowRendererIntBridge.stop();

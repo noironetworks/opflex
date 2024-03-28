@@ -141,7 +141,8 @@ typedef enum  {
     CAPTURE_REASON,
     POLICY_TRIGGERED_DROP,
     SOURCE_EPG,
-    DESTINATION_EPG
+    DESTINATION_EPG,
+    OUTPUT_PORT
 } ParseInfoMetaType;
 
 /**
@@ -231,9 +232,11 @@ struct ParseInfo {
      */
     PacketTuple packetTuple;
     /**
-     * Source Bridge,TableId,CaptureReason,Policies triggered the drop,sourceEPG,destinationEPG
+     * Source Bridge, TableId, CaptureReason, 
+     * Policies triggered the drop,
+     * sourceEPG, destinationEPG, Output Port
      */
-    uint32_t meta[6];
+    uint32_t meta[7];
     /**
      * Prune logs for this packet
      */
