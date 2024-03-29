@@ -240,10 +240,9 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         OvsdbRowDetails rowDetails;
                         std::string uuid = itr->name.GetString();
                         rowDetails["uuid"] = OvsdbValue(uuid);
-                        std::string bridgeName;
                         processRowUpdate(itr->value, rowDetails);
                         if (rowDetails.find("name") != rowDetails.end()) {
-                            bridgeName = rowDetails["name"].getStringValue();
+                            auto& bridgeName = rowDetails["name"].getStringValue();
                             // use bridge name as key as that's the most common lookup
                             tableState[bridgeName] = rowDetails;
                         } else {

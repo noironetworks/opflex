@@ -204,7 +204,7 @@ public class FClassDef extends ItemFormatterTask
     private void genClassId(int aInIndent, MClass aInClass)
     {
         String lClassName = getClassName(aInClass, false);
-        out.printHeaderComment(aInIndent, Arrays.asList("The unique class ID for " + lClassName));
+        out.printHeaderComment(aInIndent, Collections.singletonList("The unique class ID for " + lClassName));
         out.println(aInIndent, "static const opflex::modb::class_id_t CLASS_ID = " + aInClass.getGID().getId() + ";");
         out.println();
     }
@@ -534,7 +534,7 @@ public class FClassDef extends ItemFormatterTask
         String lName = aInProp.getLID().getName();
         String lPType = Strings.upFirstLetter(aInBaseType.getLID().getName());
         lPType = getTypeAccessor(lPType);
-        List<String> lComments = Arrays.asList(
+        List<String> lComments = Collections.singletonList(
             "Set " + lName + " to the specified value in the currently-active mutator.");
         genPropMutator(aInIndent, aInClass, aInPropIdx,
                 lComments, aInComments, lName, lPType,
@@ -687,9 +687,12 @@ public class FClassDef extends ItemFormatterTask
 
         Collection<List<Pair<String, MNameRule>>> lNamingPaths = new LinkedList<>();
         boolean lIsUniqueNaming = aInClass.getNamingPaths(lNamingPaths, Language.CPP);
-        for (List<Pair<String, MNameRule>> lNamingPath : lNamingPaths)
+        if (lIsUniqueNaming)
         {
-            genNamedSelfResolvers(aInIdent, aInClass, lNamingPath, lIsUniqueNaming);
+            for (List<Pair<String, MNameRule>> lNamingPath : lNamingPaths)
+            {
+                genNamedSelfResolvers(aInIdent, aInClass, lNamingPath);
+            }
         }
     }
 
@@ -857,10 +860,9 @@ public class FClassDef extends ItemFormatterTask
         }
     }
     
-    private static String getResolverMethName(List<Pair<String, MNameRule>> aInNamingPath,
-                                              boolean aInIsUniqueNaming)
+    private static String getResolverMethName(List<Pair<String, MNameRule>> aInNamingPath)
     {
-        return getMethName(aInNamingPath, aInIsUniqueNaming, "resolve");
+        return getMethName(aInNamingPath, true, "resolve");
     }
 
     private static String getRemoverMethName(List<Pair<String, MNameRule>> aInNamingPath,
@@ -1016,10 +1018,10 @@ public class FClassDef extends ItemFormatterTask
         aOut.append(".build()");
     }
 
-    private void genNamedSelfResolvers(int aInIdent, MClass aInClass, List<Pair<String, MNameRule>> aInNamingPath, boolean aInIsUniqueNaming)
+    private void genNamedSelfResolvers(int aInIdent, MClass aInClass, List<Pair<String, MNameRule>> aInNamingPath)
     {
         String lClassName = getClassName(aInClass, false);
-        String lMethodName = getResolverMethName(aInNamingPath, aInIsUniqueNaming);
+        String lMethodName = getResolverMethName(aInNamingPath);
 
         ArrayList<String> comment = new ArrayList<>(Arrays.asList(
             "Retrieve an instance of " + lClassName + " from the managed",

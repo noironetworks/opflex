@@ -1054,14 +1054,14 @@ populateL2E(shared_ptr<modelgbp::epr::L2Universe>& l2u,
                 if (attr_map.find(name.get()) == attr_map.end())
                     epa->remove();
         }
-    }
-    for (const pair<const string, string>& ap : attr_map) {
-        shared_ptr<ReportedEpAttribute> epa =
-            epas->addGbpeReportedEpAttribute(ap.first);
-        epa->setName(ap.first);
-        epa->setValue(ap.second);
-        if (VM_NAME_ATTR == ap.first)
-            l2e->setVmName(ap.second);
+        for (const pair<const string, string>& ap : attr_map) {
+            shared_ptr<ReportedEpAttribute> epa =
+                epas->addGbpeReportedEpAttribute(ap.first);
+            epa->setName(ap.first);
+            epa->setValue(ap.second);
+            if (VM_NAME_ATTR == ap.first)
+                l2e->setVmName(ap.second);
+        }
     }
 
     return l2e;
