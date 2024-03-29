@@ -377,7 +377,7 @@ void MOSerializer::dumpUnResolvedMODB(FILE* pfile) {
     fwrite("\n", 1, 1, pfile);
 }
 
-void MOSerializer::dumpMODB(FILE* pfile) {
+void MOSerializer::dumpMODB(FILE* pfile, bool excludeObservables) {
     Region::obj_set_t roots;
     getRoots(store, roots);
     char buffer[1024];
@@ -387,21 +387,27 @@ void MOSerializer::dumpMODB(FILE* pfile) {
     StoreClient& client = store->getReadOnlyStoreClient();
     for (const Region::obj_set_t::value_type& r : roots) {
         try {
-            serialize(r.first, r.second, client, writer, true);
+            if (excludeObservables) {
+                const modb::ClassInfo &ci = store->getClassInfo(r.first);
+                if (ci.getType() == modb::ClassInfo::class_type_t::OBSERVABLE) {
+                    continue;
+                }
+            }
+            serialize(r.first, r.second, client, writer, true, excludeObservables);
         } catch (const std::out_of_range& e) { }
     }
     writer.EndArray();
     fwrite("\n", 1, 1, pfile);
 }
 
-void MOSerializer::dumpMODB(const std::string& file) {
+void MOSerializer::dumpMODB(const std::string& file, bool excludeObservable) {
     FILE* pfile = fopen(file.c_str(), "w");
     if (pfile == NULL) {
         LOG(ERROR) << "Could not open MODB file "
                    << file << " for writing";
         return;
     }
-    dumpMODB(pfile);
+    dumpMODB(pfile, excludeObservable);
     fclose(pfile);
     LOG(INFO) << "Wrote MODB to " << file;
 }
@@ -530,7 +536,8 @@ void MOSerializer::displayObject(std::ostream& ostream,
                                  bool includeProps,
                                  bool last, const std::string& prefix,
                                  size_t prefixCharCount,
-                                 bool utf8, size_t truncate) {
+                                 bool utf8, size_t truncate,
+                                 bool excludeObservables) {
     StoreClient& client = store->getReadOnlyStoreClient();
     const modb::ClassInfo& ci = store->getClassInfo(class_id);
     const std::shared_ptr<const modb::mointernal::ObjectInstance>
@@ -590,7 +597,9 @@ void MOSerializer::displayObject(std::ostream& ostream,
              std::vector<modb::URI> >::iterator clsit;
     std::vector<modb::URI>::const_iterator cit;
     for (clsit = children.begin(); clsit != children.end(); ) {
-        if (clsit->second.empty())
+        const modb::ClassInfo& cci = store->getClassInfo(clsit->first);
+        if (clsit->second.empty() ||
+            (excludeObservables && cci.getType() != modb::ClassInfo::class_type_t::OBSERVABLE))
             children.erase(clsit++);
         else {
             hasChildren = true;
@@ -721,22 +730,28 @@ void MOSerializer::displayObject(std::ostream& ostream,
             }
             displayObject(ostream, clsit->first, *cit,
                           tree, false, includeProps, islast, nprefix,
-                          nPrefixCharCount, utf8, truncate);
+                          nPrefixCharCount, utf8, truncate, excludeObservables);
         }
     }
 }
 
 void MOSerializer::displayMODB(std::ostream& ostream,
                                bool tree, bool includeProps, bool utf8,
-                               size_t truncate) {
+                               size_t truncate, bool excludeObservables) {
     Region::obj_set_t roots;
     getRoots(store, roots);
 
     for (const Region::obj_set_t::value_type& r : roots) {
         try {
+            if (excludeObservables) {
+                const modb::ClassInfo &ci = store->getClassInfo(r.first);
+                if (ci.getType() == modb::ClassInfo::class_type_t::OBSERVABLE) {
+                    continue;
+                }
+            }
             displayObject(ostream, r.first, r.second,
-                          tree, true, includeProps,
-                          true, "", 0, utf8, truncate);
+                          tree, true, includeProps, true, "",
+                          0, utf8, truncate, excludeObservables);
         } catch (const std::out_of_range& e) { }
     }
 }
