@@ -599,7 +599,7 @@ void MOSerializer::displayObject(std::ostream& ostream,
     for (clsit = children.begin(); clsit != children.end(); ) {
         const modb::ClassInfo& cci = store->getClassInfo(clsit->first);
         if (clsit->second.empty() ||
-            (excludeObservables && cci.getType() != modb::ClassInfo::class_type_t::OBSERVABLE))
+            (excludeObservables && cci.getType() == modb::ClassInfo::class_type_t::OBSERVABLE))
             children.erase(clsit++);
         else {
             hasChildren = true;
