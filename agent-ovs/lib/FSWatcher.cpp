@@ -203,10 +203,14 @@ void FSWatcher::operator()() {
                         event = (const struct inotify_event *) ptr;
 
                         if (event->len) {
-                            char *nullterm_event = (char *)malloc(sizeof(char)*(len+1));
-                            memcpy(nullterm_event,event->name,len);
-                            if(event->name[len-1] != '\0') {
-                                nullterm_event[len] = '\0';
+                            char *nullterm_event = (char *)malloc(sizeof(char)*(event->len));
+                            if (!nullterm_event)  {
+                                LOG(ERROR) << "Out of memory reading event " << event->name;
+                                continue;
+                            }
+                            memcpy(nullterm_event,event->name,event->len);
+                            if(event->name[event->len - 1] != '\0') {
+                                nullterm_event[event->len - 1] = '\0';
                             }
                             const WatchState* ws = activeWatches.at(event->wd);
                             for (Watcher* watcher : ws->watchers) {
