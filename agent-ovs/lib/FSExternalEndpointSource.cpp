@@ -9,7 +9,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
 #if defined(HAVE_SYS_INOTIFY_H) && defined(HAVE_SYS_EVENTFD_H)
 #define USE_INOTIFY
 #endif

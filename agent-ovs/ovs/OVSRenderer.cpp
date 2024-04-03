@@ -77,6 +77,7 @@ OVSRenderer::OVSRenderer(Agent& agent_)
       serviceStatsFlowDisabled(false), serviceStatsEnabled(true), serviceStatsInterval(0),
       secGroupStatsEnabled(true), secGroupStatsInterval(0),
       tableDropStatsEnabled(true), tableDropStatsInterval(0),
+      natStatsEnabled(false), natStatsInterval(0),
       spanRenderer(agent_), netflowRendererIntBridge(agent_), netflowRendererAccessBridge(agent_),
       qosRenderer(agent_), started(false), dropLogRemotePort(6081), dropLogLocalPort(50000),
       pktLogger(pktLoggerIO, exporterIO, idGen, endpointTenantMapper)

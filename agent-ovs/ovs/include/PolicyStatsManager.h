@@ -96,7 +96,7 @@ public:
     /**
      * Stop the policy stats manager
      */
-    void stop(bool unregister_listener=true);
+    virtual void stop(bool unregister_listener=true);
 
     /**
      * Get and increment the classifier counter generation ID

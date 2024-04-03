@@ -154,7 +154,7 @@ namespace opflexagent {
 
         values.clear();
         values.emplace_back(burst);
-        OvsdbValues tdSet2(values);
+        OvsdbValues tdSet2(std::move(values));
         msg1.rowData["ingress_policing_burst"] = tdSet2;
 
         const list<OvsdbTransactMessage> requests = {msg1};
@@ -209,11 +209,11 @@ namespace opflexagent {
 
         set<tuple<string, OvsdbFunction, string>> conditionSet;
         conditionSet.emplace("name", OvsdbFunction::EQ, interface);
-        msg3.conditions = conditionSet;
+        msg3.conditions = std::move(conditionSet);
 
         values.clear();
         values.emplace_back("named-uuid", uuid_name);
-        OvsdbValues tdSet4(values);
+        OvsdbValues tdSet4(std::move(values));
         msg3.rowData["qos"] = tdSet4;
 
         const list<OvsdbTransactMessage> requests = {msg1,msg2,msg3};
@@ -229,7 +229,7 @@ namespace opflexagent {
             OvsdbTransactMessage msg0(OvsdbOperation::DELETE, OvsdbTable::QOS);
             set<tuple<string, OvsdbFunction, string>> conditionSet0;
             conditionSet0.emplace("_uuid", OvsdbFunction::EQ, qosUuid);
-            msg0.conditions = conditionSet0;
+            msg0.conditions = std::move(conditionSet0);
             const list<OvsdbTransactMessage> qosDelRequest = {msg0};
             sendAsyncTransactRequests(qosDelRequest);
         }
@@ -242,7 +242,7 @@ namespace opflexagent {
             OvsdbTransactMessage msg2(OvsdbOperation::DELETE, OvsdbTable::QUEUE);
             set<tuple<string, OvsdbFunction, string>> conditionSet2;
             conditionSet2.emplace("_uuid", OvsdbFunction::EQ, queueUuid);
-            msg2.conditions = conditionSet2;
+            msg2.conditions = std::move(conditionSet2);
             const list<OvsdbTransactMessage> queueDelRequest = {msg2};
             sendAsyncTransactRequests(queueDelRequest);
         }
@@ -254,7 +254,7 @@ namespace opflexagent {
 
         set<tuple<string, OvsdbFunction, string>> conditionSet;
         conditionSet.emplace("name", OvsdbFunction::EQ, interface);
-        msg1.conditions = conditionSet;
+        msg1.conditions = std::move(conditionSet);
 
         const list<OvsdbTransactMessage> requests = {msg1};
         sendAsyncTransactRequests(requests);

@@ -18,6 +18,7 @@
 
 #include <boost/optional.hpp>
 
+#include <set>
 #include <string>
 #include <vector>
 #include <unordered_set>
