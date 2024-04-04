@@ -119,7 +119,7 @@ void ModelEndpointSource::objectUpdated (opflex::modb::class_id_t class_id,
             ep.resolveInvIp(ips);
             for(const auto& ip : ips) {
                 if (!ip->isIpSet()) continue;
-                const auto type = ip->getType(IP_TYPE_DEFAULT);
+                const auto& type = ip->getType(IP_TYPE_DEFAULT);
                 if (type == IP_TYPE_DEFAULT) {
                     newep.addIP(ip->getIp().get());
                 } else if (type == IP_TYPE_ANYCAST_RETURN) {
@@ -144,7 +144,7 @@ void ModelEndpointSource::objectUpdated (opflex::modb::class_id_t class_id,
             ep.resolveInvInterface(ifaces);
             for(const auto& iface : ifaces) {
                 if (!iface->isNameSet()) continue;
-                const auto type = iface->getType(IP_TYPE_DEFAULT);
+                const auto& type = iface->getType(IP_TYPE_DEFAULT);
                 if (type == IFACE_TYPE_INT) {
                     newep.setInterfaceName(iface->getName().get());
                 } else if (type == IFACE_TYPE_ACCESS) {

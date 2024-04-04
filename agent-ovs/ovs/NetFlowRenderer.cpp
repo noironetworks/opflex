@@ -100,10 +100,10 @@ namespace opflexagent {
         OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
         set<tuple<string, OvsdbFunction, string>> condSet;
         condSet.emplace("name", OvsdbFunction::EQ, switchName);
-        msg.conditions = condSet;
+        msg.conditions = std::move(condSet);
 
         vector<OvsdbValue> values;
-        OvsdbValues tdSet("set", values);
+        OvsdbValues tdSet("set", std::move(values));
         msg.rowData.emplace("netflow", tdSet);
 
         list<OvsdbTransactMessage> msgs = {msg};
@@ -115,10 +115,10 @@ namespace opflexagent {
         OvsdbTransactMessage msg(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
         set<tuple<string, OvsdbFunction, string>> condSet;
         condSet.emplace("name", OvsdbFunction::EQ, switchName);
-        msg.conditions = condSet;
+        msg.conditions = std::move(condSet);
 
         vector<OvsdbValue> values;
-        OvsdbValues tdSet("set", values);
+        OvsdbValues tdSet("set", std::move(values));
         msg.rowData.emplace("ipfix", tdSet);
 
         const list<OvsdbTransactMessage> requests = {msg};
@@ -151,7 +151,7 @@ namespace opflexagent {
         OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
         set<tuple<string, OvsdbFunction, string>> condSet;
         condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
-        msg2.conditions = condSet;
+        msg2.conditions = std::move(condSet);
 
         values.clear();
         values.emplace_back("named-uuid", uuid_name);
@@ -159,7 +159,7 @@ namespace opflexagent {
         msg2.rowData.emplace("netflow", tdSet4);
         // make sure there is no ipfix config
         values.clear();
-        OvsdbValues emptySet("set", values);
+        OvsdbValues emptySet("set", std::move(values));
         msg2.rowData.emplace("ipfix", emptySet);
 
         const list<OvsdbTransactMessage> requests = {msg1, msg2};
@@ -215,7 +215,7 @@ namespace opflexagent {
         OvsdbTransactMessage msg2(OvsdbOperation::UPDATE, OvsdbTable::BRIDGE);
         set<tuple<string, OvsdbFunction, string>> condSet;
         condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
-        msg2.conditions = condSet;
+        msg2.conditions = std::move(condSet);
 
         values.clear();
         values.emplace_back("named-uuid", uuid_name);
@@ -223,7 +223,7 @@ namespace opflexagent {
         msg2.rowData.emplace("ipfix", tdSet4);
         // make sure there is no netflow config
         values.clear();
-        OvsdbValues emptySet("set", values);
+        OvsdbValues emptySet("set", std::move(values));
         msg2.rowData.emplace("netflow", emptySet);
 
         const list<OvsdbTransactMessage> requests = {msg1, msg2};

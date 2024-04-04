@@ -11,6 +11,7 @@ import org.opendaylight.opflex.genie.engine.proc.Config;
 import org.opendaylight.opflex.modlan.utils.Strings;
 
 import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Created by midvorki on 11/5/14.
@@ -146,7 +147,7 @@ public class FEnumDef extends ItemFormatterTask
         }
         else
         {
-            return null;
+            return Collections.emptySet();
         }
     }
 

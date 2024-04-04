@@ -24,7 +24,7 @@ void EndpointTenantMapper::UpdateMappingFromURI(uint32_t key, std::string uri){
     size_t tLow = uri.find("PolicySpace") + 12;
     size_t gEpGStart = uri.rfind("GbpEpGroup");
     std::string tenant = uri.substr(tLow,gEpGStart-tLow-1);
-    UpdateMapping(key, tenant);
+    UpdateMapping(key, std::move(tenant));
 }
 
 std::string EndpointTenantMapper::GetMapping(uint32_t key){

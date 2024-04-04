@@ -16,6 +16,7 @@ import org.opendaylight.opflex.genie.engine.proc.Config;
 import org.opendaylight.opflex.modlan.utils.Strings;
 
 import java.util.Collection;
+import java.util.Collections;
 
 public class FEnumDef extends ItemFormatterTask
 {
@@ -121,7 +122,7 @@ public class FEnumDef extends ItemFormatterTask
         }
         else
         {
-            return null;
+            return Collections.emptySet();
         }
     }
 

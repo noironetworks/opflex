@@ -17,7 +17,6 @@
 
 #include <opflexagent/logging.h>
 #include <opflexagent/test/BaseFixture.h>
-#include <lib/util.h>
 #include <opflexagent/PrometheusManager.h>
 #include <opflex/ofcore/OFServerStats.h>
 

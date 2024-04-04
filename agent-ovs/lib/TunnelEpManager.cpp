@@ -9,7 +9,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
 #ifdef HAVE_IFADDRS_H
 #include <arpa/inet.h>
 #include <ifaddrs.h>

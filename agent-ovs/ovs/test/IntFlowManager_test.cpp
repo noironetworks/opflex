@@ -3319,15 +3319,15 @@ void BaseIntFlowManagerFixture::initExpPodServiceStats (const string& svc_ip,
 
     // Check if podtosvc and vice-versa are created, indirectly ensuring
     // cookie is created for these flows
-    auto epUuid = ep->getUUID();
-    auto svcUuid = as.getUUID();
+    const auto& epUuid = ep->getUUID();
+    const auto& svcUuid = as.getUUID();
     auto epSvcUuid = epUuid + ":" + svcUuid;
     auto epToSvcUuid = "eptosvc:"+epSvcUuid;
     auto svcToEpUuid = "svctoep:"+epSvcUuid;
     optional<shared_ptr<SvcStatUniverse> > su =
                 SvcStatUniverse::resolve(agent.getFramework());
     BOOST_CHECK(su);
-    auto aUuid = agent.getUuid();
+    const auto& aUuid = agent.getUuid();
     WAIT_FOR_DO_ONFAIL(su.get()->resolveGbpeEpToSvcCounter(aUuid, epToSvcUuid), 500,
                         ,LOG(ERROR) << "ep2svc obj not resolved uuid: " << epToSvcUuid;);
     WAIT_FOR_DO_ONFAIL(su.get()->resolveGbpeSvcToEpCounter(aUuid, svcToEpUuid), 500,

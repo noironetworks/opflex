@@ -146,7 +146,7 @@ verifyRoutingDomainDropStats(shared_ptr<RoutingDomain> rd,
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
 
-    auto uuid = contractStatsManager.getAgentUUID();
+    const auto& uuid = contractStatsManager.getAgentUUID();
     WAIT_FOR_DO_ONFAIL(su.get()->resolveGbpeRoutingDomainDropCounter(uuid,
                                     contractStatsManager.getCurrDropGenId(),
                                     rd->getURI().toString()),
@@ -404,7 +404,7 @@ BOOST_FIXTURE_TEST_CASE(testContractDelete, ContractStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid = contractStatsManager.getAgentUUID();
+    const auto& uuid = contractStatsManager.getAgentUUID();
     optional<shared_ptr<L24ClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeL24ClassifierCounter(uuid,
                         contractStatsManager.getCurrClsfrGenId(),
@@ -438,7 +438,7 @@ BOOST_FIXTURE_TEST_CASE(testSEpgDelete, ContractStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid = contractStatsManager.getAgentUUID();
+    const auto& uuid = contractStatsManager.getAgentUUID();
     optional<shared_ptr<L24ClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeL24ClassifierCounter(uuid,
                         contractStatsManager.getCurrClsfrGenId(),
@@ -472,7 +472,7 @@ BOOST_FIXTURE_TEST_CASE(testrDSEpgDelete, ContractStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid = contractStatsManager.getAgentUUID();
+    const auto& uuid = contractStatsManager.getAgentUUID();
     optional<shared_ptr<L24ClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeL24ClassifierCounter(uuid,
                         contractStatsManager.getCurrClsfrGenId(),
