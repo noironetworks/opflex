@@ -58,7 +58,6 @@ public:
     }
 
     IdGenerator idGen;
-    EndpointTenantMapper endpointTenantMapper;
     CtZoneManager ctZoneManager;
     MockFlowExecutor exec;
     MockFlowReader reader;
