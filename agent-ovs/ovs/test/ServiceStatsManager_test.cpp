@@ -505,8 +505,8 @@ ServiceStatsManagerFixture::testFlowStatsPodSvc (MockConnection& portConn,
                                                 bool testAggregate)
 {
     // create pod to svc and svc to pod flows
-    auto epUuid = ep0->getUUID();
-    auto svcUuid = as.getUUID();
+    const auto& epUuid = ep0->getUUID();
+    const auto& svcUuid = as.getUUID();
     auto epSvcUuid = epUuid + ":" + svcUuid;
     auto epToSvcUuid = "eptosvc:"+epSvcUuid;
     auto svcToEpUuid = "svctoep:"+epSvcUuid;
@@ -769,8 +769,8 @@ ServiceStatsManagerFixture::testFlowRemovedPodSvc (MockConnection& portConn,
 {
 
     // create pod to svc and svc to pod flows
-    auto epUuid = ep0->getUUID();
-    auto svcUuid = as.getUUID();
+    const auto& epUuid = ep0->getUUID();
+    const auto& svcUuid = as.getUUID();
     auto epSvcUuid = epUuid + ":" + svcUuid;
     auto epToSvcUuid = "eptosvc:"+epSvcUuid;
     auto svcToEpUuid = "svctoep:"+epSvcUuid;
@@ -1157,7 +1157,7 @@ ServiceStatsManagerFixture::checkPodSvcObjectStats (const std::string& epToSvcUu
     optional<shared_ptr<SvcStatUniverse> > su =
         SvcStatUniverse::resolve(agent.getFramework());
 
-    auto aUuid = agent.getUuid();
+    const auto& aUuid = agent.getUuid();
 
     LOG(DEBUG) << "checkObj expected pkt count: " << packet_count;
 
@@ -1215,7 +1215,7 @@ ServiceStatsManagerFixture::checkPodSvcObjectStats (const std::string& epToSvcUu
 
 void ServiceStatsManagerFixture::checkSvcTgtObsObj (bool add)
 {
-    auto svcUuid = as.getUUID();
+    const auto& svcUuid = as.getUUID();
     optional<shared_ptr<SvcStatUniverse> > su =
         SvcStatUniverse::resolve(agent.getFramework());
 
@@ -1245,8 +1245,8 @@ void ServiceStatsManagerFixture::checkSvcTgtObsObj (bool add)
 
 void ServiceStatsManagerFixture::checkPodSvcObsObj (bool add)
 {
-    auto epUuid = ep0->getUUID();
-    auto svcUuid = as.getUUID();
+    const auto& epUuid = ep0->getUUID();
+    const auto& svcUuid = as.getUUID();
     auto epSvcUuid = epUuid + ":" + svcUuid;
     auto epToSvcUuid = "eptosvc:"+epSvcUuid;
     auto svcToEpUuid = "svctoep:"+epSvcUuid;

@@ -9,7 +9,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
 #if defined(HAVE_SYS_INOTIFY_H) && defined(HAVE_SYS_EVENTFD_H)
 #define USE_INOTIFY
 #endif
@@ -42,7 +44,7 @@ FSServiceSource::FSServiceSource(ServiceManager* manager_,
     listener.addWatch(serviceDir, *this);
 }
 
-static bool isservice(fs::path filePath) {
+static bool isservice(const fs::path& filePath) {
     string fstr = filePath.filename().string();
     return ((boost::algorithm::ends_with(fstr, ".as") ||
              boost::algorithm::ends_with(fstr, ".service")) &&
@@ -82,7 +84,7 @@ void FSServiceSource::updated(const fs::path& filePath) {
         Service newserv;
         ptree properties;
 
-        string pathstr = filePath.string();
+        const string& pathstr = filePath.string();
 
         read_json(pathstr, properties);
         newserv.setUUID(properties.get<string>(UUID));
@@ -293,8 +295,8 @@ void FSServiceSource::updated(const fs::path& filePath) {
 
 void FSServiceSource::deleted(const fs::path& filePath) {
     try {
-        string pathstr = filePath.string();
-        serv_map_t::iterator it = knownServs.find(pathstr);
+        const string& pathstr = filePath.string();
+        auto it = knownServs.find(pathstr);
         if (it != knownServs.end()) {
             LOG(INFO) << "Removed service "
                       << it->second

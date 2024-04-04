@@ -249,6 +249,7 @@ void append(service_ports_t &current, subnets_t &addendum) {
         toAddSvc.address = toAdd.first;
         toAddSvc.prefixLen = toAdd.second;
         toAddSvc.port = 0;
+        toAddSvc.proto = 0;
         current.insert(toAddSvc);
     }
 }

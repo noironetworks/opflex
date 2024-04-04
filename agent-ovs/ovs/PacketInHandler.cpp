@@ -212,7 +212,7 @@ static void send_packet_out(Agent& agent,
      * Openshift bootstrap does not support vlans, so make a copy
      */
     if (send_untagged)
-        send_packet_out(conn, b, proto, in_port, out_port, outActionsSkipVlan);
+        send_packet_out(conn, b, proto, in_port, out_port, std::move(outActionsSkipVlan));
 }
 
 /**

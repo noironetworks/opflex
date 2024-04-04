@@ -57,7 +57,7 @@ void OvsdbConnection::connect_cb(uv_async_t* handle) {
         swPath.append(ovs_rundir()).append("/db.sock");
         ocp->peer = yajr::Peer::create(swPath, on_state_change,
                                        ocp, loop_selector, false);
-        ocp->remote_peer = swPath;
+        ocp->remote_peer = std::move(swPath);
     }
     assert(ocp->peer);
 }
@@ -142,7 +142,7 @@ void populateValues(const Value& value, string& type, map<string, string>& value
                 const string strVal = value[1].GetString();
                 values[strVal];
             } else if (arrayType == "set" && value[1].IsArray()) {
-                type = arrayType;
+                type = std::move(arrayType);
                 for (Value::ConstValueIterator memberItr = value[1].GetArray().Begin();
                      memberItr != value[1].GetArray().End(); ++memberItr) {
                     if (memberItr->IsArray()) {
@@ -156,7 +156,7 @@ void populateValues(const Value& value, string& type, map<string, string>& value
                     }
                 }
             } else if (arrayType == "map") {
-                type = arrayType;
+                type = std::move(arrayType);
                 for (Value::ConstValueIterator memberItr = value[1].GetArray().Begin();
                      memberItr != value[1].GetArray().End(); ++memberItr) {
                     if (memberItr->IsArray()) {
@@ -171,7 +171,7 @@ void populateValues(const Value& value, string& type, map<string, string>& value
                                         mapMemberItr->GetArray()[1].GetArray().Size() == 2) {
                                     uint64_t keyInt = mapMemberItr->GetArray()[0].GetUint64();
                                     std::string val = mapMemberItr->GetArray()[1].GetArray()[1].GetString();
-                                    values[std::to_string(keyInt)] = val;
+                                    values[std::to_string(keyInt)] = std::move(val);
                                 }
                             }
                         }
@@ -207,13 +207,13 @@ bool processRowUpdate(const Value& value, OvsdbRowDetails& rowDetails) {
                     const std::string propName = propItr->name.GetString();
                     if (propItr->value.IsString()) {
                         std::string stringValue = propItr->value.GetString();
-                        rowDetails[propName] = OvsdbValue(stringValue);
+                        rowDetails[propName] = std::move(OvsdbValue(stringValue));
                     } else if (propItr->value.IsArray()) {
                         map<string, string> items;
                         string type;
                         populateValues(propItr->value, type, items);
                         opflexagent::Dtype dataType = type.empty() ? opflexagent::Dtype::STRING : (type == "map" ? Dtype::MAP : Dtype::SET);
-                        rowDetails[propName] = OvsdbValue(dataType, type, items);
+                        rowDetails[propName] = std::move(OvsdbValue(dataType, type, items));
                     } else if (propItr->value.IsInt()) {
                         int intValue = propItr->value.GetInt();
                         rowDetails[propName] = OvsdbValue(intValue);
@@ -239,12 +239,12 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                     if (itr->name.IsString() && itr->value.IsObject()) {
                         OvsdbRowDetails rowDetails;
                         std::string uuid = itr->name.GetString();
-                        rowDetails["uuid"] = OvsdbValue(uuid);
+                        rowDetails["uuid"] = std::move(OvsdbValue(std::move(uuid)));
                         processRowUpdate(itr->value, rowDetails);
                         if (rowDetails.find("name") != rowDetails.end()) {
                             auto& bridgeName = rowDetails["name"].getStringValue();
                             // use bridge name as key as that's the most common lookup
-                            tableState[bridgeName] = rowDetails;
+                            tableState[bridgeName] = std::move(rowDetails);
                         } else {
                             LOG(WARNING) << "Dropping bridge with no name";
                         }
@@ -262,7 +262,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         OvsdbRowDetails rowDetails;
                         rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
-                        tableState[uuid] = rowDetails;
+                        tableState[uuid] = std::move(rowDetails);
                     }
                 }
                 ovsdbState.fullUpdate(OvsdbTable::IPFIX, tableState);
@@ -277,7 +277,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         OvsdbRowDetails rowDetails;
                         rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
-                        tableState[uuid] = rowDetails;
+                        tableState[uuid] = std::move(rowDetails);
                     }
                 }
                 ovsdbState.fullUpdate(OvsdbTable::NETFLOW, tableState);
@@ -292,7 +292,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         OvsdbRowDetails rowDetails;
                         rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
-                        tableState[uuid] = rowDetails;
+                        tableState[uuid] = std::move(rowDetails);
                     }
                 }
                 ovsdbState.fullUpdate(OvsdbTable::MIRROR, tableState);
@@ -307,7 +307,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         std::string uuid = itr->name.GetString();
                         rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
-                        tableState[uuid] = rowDetails;
+                        tableState[uuid] = std::move(rowDetails);
                     }
                 }
                 ovsdbState.fullUpdate(OvsdbTable::PORT, tableState);
@@ -322,7 +322,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         std::string uuid = itr->name.GetString();
                         rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
-                        tableState[uuid] = rowDetails;
+                        tableState[uuid] = std::move(rowDetails);
                     }
                 }
                 ovsdbState.fullUpdate(OvsdbTable::INTERFACE, tableState);
@@ -337,7 +337,7 @@ void OvsdbConnection::handleMonitor(uint64_t reqId, const Document& payload) {
                         std::string uuid  = itr->name.GetString();
                         rowDetails["uuid"] = OvsdbValue(uuid);
                         processRowUpdate(itr->value, rowDetails);
-                        tableState[uuid] = rowDetails;
+                        tableState[uuid] = std::move(rowDetails);
                     }
                 }
                 ovsdbState.fullUpdate(OvsdbTable::QOS, tableState);

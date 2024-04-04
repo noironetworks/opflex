@@ -53,7 +53,8 @@ InspectorClientImpl::InspectorClientImpl(const std::string& name_,
                                          const modb::ModelMetadata& model)
     : conn(*this, name_), db(threadManager),
       serializer(&db, this), pendingRequests(0),
-      followRefs(false), recursive(false), unresolved(false) {
+      followRefs(false), recursive(false), unresolved(false),
+      excludeObservables(false) {
     db.init(model);
     storeClient = &db.getStoreClient("_SYSTEM_");
 }

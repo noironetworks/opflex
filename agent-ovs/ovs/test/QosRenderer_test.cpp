@@ -36,7 +36,7 @@ public:
         std::string uuid = " 9b7295f4-07a8-41ac-a681-e0ee82560262";
         rowDetails["uuid"] = OvsdbValue(uuid);
         OvsdbTableDetails tableDetails;
-        tableDetails["intf1"] = rowDetails;
+        tableDetails["intf1"] = std::move(rowDetails);
         conn->getOvsdbState().fullUpdate(OvsdbTable::INTERFACE, tableDetails);
 
         OvsdbTableDetails qosTableDetails;
@@ -45,8 +45,8 @@ public:
         qosRowDetails["uuid"] = OvsdbValue(uuid);
         std::map<std::string, std::string> queueMap;
         queueMap.insert(make_pair("0", "7e35b63f-227b-4c96-b01b-9bd0c0562852"));
-        qosRowDetails["queues"] = OvsdbValue(Dtype::MAP, "map", queueMap);
-        qosTableDetails[uuid] = qosRowDetails;
+        qosRowDetails["queues"] = std::move(OvsdbValue(Dtype::MAP, "map", std::move(queueMap)));
+        qosTableDetails[uuid] = std::move(qosRowDetails);
         conn->getOvsdbState().fullUpdate(OvsdbTable::QOS, qosTableDetails);
 
         OvsdbTableDetails portTableDetails;
@@ -55,10 +55,10 @@ public:
         portRowDetails["uuid"] = OvsdbValue(uuid);
         std::map<std::string, std::string> qosMap;
         qosMap["f53499ff-0f9f-4f05-9e21-e15738bc7149"] = "";
-        portRowDetails["qos"] = OvsdbValue(Dtype::MAP, "map", qosMap);
+        portRowDetails["qos"] = std::move(OvsdbValue(Dtype::MAP, "map", std::move(qosMap)));
         const string portName ("intf1");
         portRowDetails["name"] = OvsdbValue(portName);
-        portTableDetails[uuid] = portRowDetails;
+        portTableDetails[uuid] = std::move(portRowDetails);
 
         conn->getOvsdbState().fullUpdate(OvsdbTable::PORT, portTableDetails);
     }
