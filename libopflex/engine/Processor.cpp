@@ -20,6 +20,8 @@
 #include <limits>
 #include <cmath>
 #include <random>
+#include <rapidjson/document.h>
+#include <rapidjson/filereadstream.h>
 
 #include <boost/generator_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -66,7 +68,8 @@ Processor::Processor(ObjectStore* store_, ThreadManager& threadManager_)
       processingDelay(DEFAULT_PROC_DELAY),
       retryDelay(DEFAULT_RETRY_DELAY),
       proc_loop(nullptr),
-      proc_active(false) {
+      proc_active(false),
+      startupdb(s_threadManager) {
     cleanup_async = {};
     proc_async = {};
     connect_async = {};
@@ -189,7 +192,8 @@ bool Processor::isObjNew(const URI& uri) {
 // ancestor that has a zero refcount.
 bool Processor::isOrphan(const item& item) {
     // simplest case: refcount is nonzero or item is local
-    if (item.details->local || item.details->refcount > 0)
+    // since startupdb is known state skip orphan check when using it
+    if (item.details->local || item.details->refcount > 0 || shouldResolveLocal())
         return false;
 
     try {
@@ -269,6 +273,83 @@ void Processor::sendToRole(const item& i, uint64_t& newexp,
     }
 }
 
+bool Processor::shouldResolveLocal() {
+    uint64_t curtime = now(proc_loop);
+    // check >= for duration 0 because now wont update till next uv_loop
+    if (!opflexPolicyFile
+       || ((newConnectiontime != 0)
+           && (curtime >= (newConnectiontime + startupPolicyDuration)))
+       || ((newConnectiontime == 0)
+           && local_resolve_after_connection))
+       return false;
+    else
+       return true;
+}
+
+void Processor::resolveObjLocal(const modb::class_id_t& class_id,
+                                const modb::URI& uri,
+                                StoreClient::notif_t& notifs) {
+    if (!shouldResolveLocal()) return;
+    std::shared_ptr<const modb::mointernal::ObjectInstance> oi;
+    StoreClient& s_client = startupdb.getReadOnlyStoreClient();
+    // Get from startupdb
+    s_client.get(class_id, uri, oi);
+    if (!oi) {
+        LOG(DEBUG) << "Local policy missing for " << class_id
+                   << " "  << uri;
+    } else {
+        LOG(DEBUG) << "Local policy resolved for " << class_id
+                   << " " << uri;
+        // Put in activedb
+        if (client->putIfModified(class_id, uri, oi)) {
+            client->queueNotification(class_id, uri, notifs);
+            LOG(DEBUG) << "QUEUE NOTIF for " << class_id
+                       << " : " << uri;
+        }
+        // check if this mo has a parent
+        try {
+            std::pair<modb::URI, modb::prop_id_t> parent(modb::URI::ROOT, 0);
+            if (s_client.getParent(class_id, uri, parent)) {
+                const modb::ClassInfo& parent_class =
+                    startupdb.getPropClassInfo(parent.second);
+                const modb::PropertyInfo& parent_prop =
+                    parent_class.getProperty(parent.second);
+                if (client->isPresent(parent_class.getId(), parent.first)) {
+                    if (client->addChild(parent_class.getId(),
+                                         parent.first,
+                                         parent_prop.getId(),
+                                         class_id,
+                                         uri)) {
+                        client->queueNotification(parent_class.getId(),
+                                                  parent.first,
+                                                  notifs);
+                    }
+                }
+            }
+        } catch (const std::out_of_range& e) {
+            // no parent class or property found
+            LOG(ERROR) << "Invalid parent or property for "
+                       << uri;
+        }
+        // recursively add children
+        const ClassInfo& ci = startupdb.getClassInfo(class_id);
+        const ClassInfo::property_map_t& pmap = ci.getProperties();
+        ClassInfo::property_map_t::const_iterator it;
+        for (it = pmap.begin(); it != pmap.end(); ++it) {
+            if (it->second.getType() == PropertyInfo::COMPOSITE) {
+                class_id_t prop_class = it->second.getClassId();
+                prop_id_t prop_id = it->second.getId();
+                std::vector<URI> children;
+                s_client.getChildren(class_id, uri, prop_id, prop_class, children);
+                std::vector<URI>::iterator cit;
+                for (cit = children.begin(); cit != children.end(); ++cit) {
+                    resolveObjLocal(prop_class, *cit, notifs);
+                }
+            }
+        }
+    }
+}
+
 bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
                            uint64_t& newexp, bool checkTime) {
     uint64_t curTime = now(proc_loop);
@@ -286,6 +367,11 @@ bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
     case ClassInfo::POLICY:
         {
             LOG(DEBUG) << "Resolving policy " << i.uri;
+            if (checkTime && shouldResolveLocal()) {
+                StoreClient::notif_t notifs;
+                resolveObjLocal(i.details->class_id, i.uri, notifs);
+                client->deliverNotifications(notifs);
+            }
             i.details->resolve_time = curTime;
             vector<reference_t> refs;
             refs.emplace_back(i.details->class_id, i.uri);
@@ -298,6 +384,11 @@ bool Processor::resolveObj(ClassInfo::class_type_t type, const item& i,
     case ClassInfo::REMOTE_ENDPOINT:
         {
             LOG(DEBUG) << "Resolving remote endpoint " << i.uri;
+            if (checkTime && shouldResolveLocal()) {
+                StoreClient::notif_t notifs;
+                resolveObjLocal(i.details->class_id, i.uri, notifs);
+                client->deliverNotifications(notifs);
+            }
             i.details->resolve_time = curTime;
             vector<reference_t> refs;
             refs.emplace_back(i.details->class_id, i.uri);
@@ -604,12 +695,46 @@ bool Processor::waitForPendingItems(uint32_t& wait) {
     return pool.waitForPendingItems(wait);
 }
 
+void Processor::setStartupPolicy(boost::optional<std::string>& file,
+                                 const modb::ModelMetadata& model,
+                                 uint64_t& duration,
+                                 bool& resolve_after_connection) {
+    opflexPolicyFile = file;
+    if (file) {
+        startupdb.init(model);
+        startupPolicyDuration = duration;
+        local_resolve_after_connection = resolve_after_connection;
+    }
+}
+
+size_t Processor::readStartupPolicy() {
+    if (!opflexPolicyFile) {
+        LOG(DEBUG) << "Skip missing startup policy read";
+        return 0;
+    }
+
+    FILE* pfile = fopen(opflexPolicyFile.get().c_str(), "r");
+    if (pfile == NULL) {
+        LOG(ERROR) << "Could not open policy file "
+                   << opflexPolicyFile.get() << " for reading";
+        return 0;
+    }
+
+    startupdb.start();
+    MOSerializer s_serializer(&startupdb);
+    StoreClient& s_client = startupdb.getStoreClient("_SYSTEM_");
+    return s_serializer.readMOs(pfile, s_client, true);
+}
+
 void Processor::start(ofcore::OFConstants::OpflexElementMode agent_mode) {
     if (proc_active) return;
     proc_active = true;
     pool.setClientMode(agent_mode);
 
     LOG(DEBUG) << "Starting OpFlex Processor";
+
+    size_t objs = readStartupPolicy();
+    LOG(DEBUG) << "Read " << objs << " objects from startup policy";
 
     client = &store->getStoreClient("_SYSTEM_");
     store->forEachClass(&register_listeners, this);
@@ -738,6 +863,11 @@ OpflexHandler* Processor::newHandler(OpflexConnection* conn) {
 void Processor::handleNewConnections() {
     const std::lock_guard<std::mutex> lock(item_mutex);
     obj_state_by_uri& uri_index = obj_state.get<uri_tag>();
+
+    // Only set this for the first connection after startup
+    if (newConnectiontime == 0) {
+        newConnectiontime = now(proc_loop);
+    }
 
     for (const item& i : obj_state) {
         uint64_t newexp = i.expiration;

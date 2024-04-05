@@ -189,6 +189,9 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
     static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
     static const std::string OVS_ASYNC_JSON("ovs.asyncjson.enabled");
+    static const std::string OPFLEX_POLICY_FILE("opflex.startup.policy-file");
+    static const std::string OPFLEX_LOCAL_RESOLVE_AFTER_CONNECTION("opflex.startup.resolve-aft-conn");
+    static const std::string OPFLEX_STARTUP_POLICY_DURATION("opflex.startup.policy-duration");
 
     // set feature flags to true
     clearFeatureFlags();
@@ -523,6 +526,27 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         if (ovsAsyncJsonEnabled.get() == true)
             setenv("OVS_USE_ASYNC_JSON", "", true);
     }
+
+    optional<std::string> policyFile =
+        properties.get_optional<std::string>(OPFLEX_POLICY_FILE);
+    if (policyFile) {
+        opflexPolicyFile = policyFile;
+        LOG(INFO) << "Startup policy file set to " << opflexPolicyFile;
+    }
+
+    optional<uint64_t> startup_policy_duration_present =
+        properties.get_optional<uint64_t>(OPFLEX_STARTUP_POLICY_DURATION);
+    if (startup_policy_duration_present) {
+        startupPolicyDuration = startup_policy_duration_present.get()*1000;
+        LOG(INFO) << "Startup policy duration set to " << startupPolicyDuration << " ms";
+    }
+
+    optional<bool> lResolveAftConn =
+        properties.get_optional<bool>(OPFLEX_LOCAL_RESOLVE_AFTER_CONNECTION);
+    if (lResolveAftConn) {
+        localResolveAftConn = lResolveAftConn.get();
+        LOG(INFO) << "Startup policy resolve after connection set to " << localResolveAftConn;
+    }
 }
 
 void Agent::applyProperties() {
@@ -581,6 +605,9 @@ void Agent::applyProperties() {
     framework.setPolicyRetryDelayTimerDuration(policy_retry_delay_timer*1000);
     framework.setHandshakeTimeout(peerHandshakeTimeout);
     framework.setKeepaliveTimeout(keepaliveTimeout);
+    framework.setStartupPolicy(opflexPolicyFile, modelgbp::getMetadata(),
+                               startupPolicyDuration,
+                               localResolveAftConn);
 }
 
 void Agent::start() {

@@ -761,6 +761,18 @@ public:
     bool waitForPendingItems(uint32_t& wait);
 
     /**
+     * Set startup policy file
+     * @param file startup policy file name or boost::none
+     * @param model the model to use for startupdb
+     * @param duration in ms how long from new connection to use startupdb
+     * @param resolve_after_connection delay local resolves till connection
+     */
+    void setStartupPolicy(boost::optional<std::string>& file,
+                          const modb::ModelMetadata& model,
+                          uint64_t& duration,
+                          bool& resolve_after_connection);
+
+    /**
      * Start the framework.  This will start all the framework threads
      * and attempt to connect to configured OpFlex peers.
      */

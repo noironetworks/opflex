@@ -267,6 +267,17 @@ public:
     bool waitForPendingItems(uint32_t& wait);
 
     /**
+     * Set startup policy
+     * @param file startup policy file name or boost::none
+     * @param model the model for initializing startupdb
+     * @param duration the amount of time in ms from new
+     *  connection to continue using startupdb
+     */
+    void setStartupPolicy(boost::optional<std::string>& file,
+                          const modb::ModelMetadata& model,
+                          uint64_t& duration,
+                          bool& resolve_after_connection);
+    /**
      * Enable/Disable reporting of observable changes to registered observers
      *
      * @param class_id Observable class ID
@@ -577,10 +588,32 @@ private:
     uint64_t policyRefTimerDuration = 1000*DEFAULT_PRR_TIMER_DURATION/2;
 
     /**
+     * new connection timestamp in msecs
+     */
+    volatile int64_t newConnectiontime = 0;
+
+    /**
+     * local resolves only after a new connection till startupPolicyDuration
+     */
+    volatile bool local_resolve_after_connection;
+
+    /**
+     * Startup policy timeout in ms. This is the amount of time
+     * from new connection that we would continue using the startup
+     * policy to resolve Mos from startupdb.
+     */
+    uint64_t startupPolicyDuration;
+
+    /**
      * Processing thread
      */
     uv_loop_t* proc_loop;
     boost::atomic<bool> proc_active;
+    /* Persistent policy from disk */
+    boost::optional<std::string> opflexPolicyFile;
+    util::ThreadManager s_threadManager;
+    modb::ObjectStore startupdb;
+
     uv_async_t cleanup_async;
     uv_async_t proc_async;
     uv_async_t connect_async;
@@ -608,6 +641,11 @@ private:
     bool declareObj(modb::ClassInfo::class_type_t type, const item& it,
                     uint64_t& newexp);
     void handleNewConnections();
+    size_t readStartupPolicy();
+    bool shouldResolveLocal();
+    void resolveObjLocal(const modb::class_id_t& class_id,
+                         const modb::URI& uri,
+                         modb::mointernal::StoreClient::notif_t& notifs);
 };
 
 } /* namespace engine */
