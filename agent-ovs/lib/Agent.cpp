@@ -214,7 +214,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         properties.get_optional<bool>(OPFLEX_INSPECTOR);
     optional<std::string> inspSocket =
         properties.get_optional<std::string>(OPFLEX_INSPECTOR_SOCK);
-    if (enabInspector) enableInspector = enabInspector;
+    if (enabInspector) enableInspector = std::move(enabInspector);
     if (inspSocket) inspectorSock = std::move(inspSocket);
 
     optional<bool> enabNotif =
@@ -232,7 +232,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     if (statChild)
         statMode_json = properties.get_optional<std::string>(OPFLEX_STATS_MODE);
 
-    if (enabNotif) enableNotif = enabNotif;
+    if (enabNotif) enableNotif = std::move(enabNotif);
     if (notSocket) notifSock = std::move(notSocket);
     if (notOwner) notifOwner = std::move(notOwner);
     if (notGrp) notifGroup = std::move(notGrp);

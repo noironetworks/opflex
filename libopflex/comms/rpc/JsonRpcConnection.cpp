@@ -79,13 +79,13 @@ void RpcConnection::doWrite(JsonRpcMessage* message) {
         break;
     case jsonrpc::JsonRpcMessage::RESPONSE:
         {
-            yajr::rpc::OutboundResult outm(*getPeer(), wrapper, message->getId());
+            yajr::rpc::OutboundResult outm(*getPeer(), std::move(wrapper), message->getId());
             outm.send();
         }
         break;
     case jsonrpc::JsonRpcMessage::ERROR_RESPONSE:
         {
-            yajr::rpc::OutboundError outm(*getPeer(), wrapper, message->getId());
+            yajr::rpc::OutboundError outm(*getPeer(), std::move(wrapper), message->getId());
             outm.send();
         }
         break;

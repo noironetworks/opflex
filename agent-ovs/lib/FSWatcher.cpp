@@ -54,7 +54,7 @@ operator()(const boost::filesystem::path& p) const noexcept {
 void FSWatcher::addWatch(const std::string& watchDir, Watcher& watcher) {
     fs::path wp(watchDir);
     WatchState& ws = regWatches[wp];
-    ws.watchPath = wp;
+    ws.watchPath = std::move(wp);
     ws.watchers.push_back(&watcher);
 }
 

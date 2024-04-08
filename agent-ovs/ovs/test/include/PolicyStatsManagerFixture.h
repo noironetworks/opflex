@@ -131,7 +131,7 @@ public:
                } else {
                    LOG(DEBUG) << "L24classifiercounter mo isnt present";
                });
-            verifyPromMetrics(classifier, t_packet_count, t_byte_count);
+            verifyPromMetrics(std::move(classifier), t_packet_count, t_byte_count);
         } else {
             const auto& uuid = statsManager->getAgentUUID();
             optional<shared_ptr<SecGrpClassifierCounter> > myCounter =
