@@ -427,8 +427,10 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
         } else {
             m_copy = messagep.release();
         }
-        incrementMsgCounter(conn, m_copy);
-        conn->sendMessage(m_copy, sync);
+	if (m_copy != NULL) {
+            incrementMsgCounter(conn, m_copy);
+            conn->sendMessage(m_copy, sync);
+	}
         if (message->getMethod() == "policy_resolve" && !uri.empty()) {
            addPendingItem(conn, uri);
         }

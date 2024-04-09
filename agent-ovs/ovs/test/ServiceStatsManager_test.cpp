@@ -428,7 +428,7 @@ ServiceStatsManagerFixture::testFlowStatsSvcTgt (MockConnection& portConn,
     };
 
     address nhAddr = address::from_string(nhip);
-    createFlowExpr(nhAddr, isNodePort);
+    createFlowExpr(std::move(nhAddr), isNodePort);
 
     boost::system::error_code ec;
     ec = make_error_code(boost::system::errc::success);
@@ -569,9 +569,9 @@ ServiceStatsManagerFixture::testFlowStatsPodSvc (MockConnection& portConn,
         }
     };
 
-    createFlowExpr(ep1Addr, svc1Addr, true);
+    createFlowExpr(std::move(ep1Addr), std::move(svc1Addr), true);
     if (testAggregate)
-        createFlowExpr(ep2Addr, svc2Addr, false);
+        createFlowExpr(std::move(ep2Addr), std::move(svc2Addr), false);
 
     boost::system::error_code ec;
     ec = make_error_code(boost::system::errc::success);

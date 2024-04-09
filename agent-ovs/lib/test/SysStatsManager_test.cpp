@@ -233,7 +233,7 @@ BOOST_FIXTURE_TEST_CASE(testOFPeer, SysStatsManagerFixture) {
 
     updateOFPeerStats(opflexStats);
     agent.getPrometheusManager().addNUpdateOFPeerStats(peer,
-                                                       opflexStats);
+                                                       std::move(opflexStats));
     verifyOFPeerMetrics(peer, 2, false);
 
     agent.getPrometheusManager().removeOFPeerStats(peer);

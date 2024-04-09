@@ -298,7 +298,7 @@ static void handleNDPktIn(Agent& agent,
                         pi.flow_metadata.flow.regs[7], pushVlanActions(vlan));
     } else {
         send_packet_out(agent, intConn, accConn, intFlowManager,
-                        intPortMapper, accPortMapper, egUri, b, proto,
+                        intPortMapper, accPortMapper, std::move(egUri), b, proto,
                         OFPP_CONTROLLER,
                         pi.flow_metadata.flow.in_port.ofp_port);
     }

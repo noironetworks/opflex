@@ -400,11 +400,16 @@ BOOST_FIXTURE_TEST_CASE( static_route_add_mod_del, PolicyIvLeafFixture ) {
     std::string repAddress;
     sleep(1);
     pU = PeerRouteUniverse::resolve(framework);
-    localRoute = LocalRoute::resolve(framework,
-                    rd_->getURI().toString(), addr_.to_string(), pfx_len);
-    BOOST_CHECK(localRoute);
-    reportedRoute = pU.get()->resolveEprReportedRoute(
+    if(rd_) {
+        localRoute = LocalRoute::resolve(framework,
                         rd_->getURI().toString(), addr_.to_string(), pfx_len);
+    }
+
+    BOOST_CHECK(localRoute);
+    if(rd_ ) {
+        reportedRoute = pU.get()->resolveEprReportedRoute(
+                            rd_->getURI().toString(), addr_.to_string(), pfx_len);
+    }
     BOOST_CHECK(reportedRoute);
     BOOST_CHECK(reportedRoute.get()->getAddress().get() == expectedRoute);
     std::vector<std::shared_ptr<LocalRouteToSrtRSrc>> srt;
@@ -419,8 +424,10 @@ BOOST_FIXTURE_TEST_CASE( static_route_add_mod_del, PolicyIvLeafFixture ) {
     BOOST_CHECK(!lrtToPrt);
     BOOST_CHECK(lrtToRrt.get()->getTargetURI() == remote_route1->getURI());
     //Check for the policy prefix
-    localRoute = LocalRoute::resolve(framework,
+    if(rd_ ) {
+        localRoute = LocalRoute::resolve(framework,
                      rd_->getURI().toString(), addr_.to_string(), 24);
+    }
     lrtToPrt = localRoute.get()->resolveEpdrLocalRouteToPrtRSrc();
     lrtToRrt = localRoute.get()->resolveEpdrLocalRouteToRrtRSrc();
     BOOST_CHECK(lrtToPrt.get()->getTargetURI() == l3ext2_net->getURI());

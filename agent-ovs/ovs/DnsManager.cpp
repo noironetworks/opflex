@@ -1470,7 +1470,7 @@ namespace opflexagent {
                break;
            }
        }
-       io_ctxt.post([=]() {processURI(class_id, askQMutex, askQ, func);});
+       io_ctxt.post([=]() {processURI(class_id, askQMutex, askQ, std::move(func));});
     }
 
     void DnsManager::stop() {

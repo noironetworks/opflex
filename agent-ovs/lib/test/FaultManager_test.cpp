@@ -172,6 +172,7 @@ BOOST_FIXTURE_TEST_CASE( epfault, FSFaultFixture ) {
     ep1.addIP("10.1.1.3");
     ep1.setInterfaceName("veth1");
     ep1.setEgURI(eg1->getURI());
+    ep1.setAccessIfaceVlan(223);
     epSource.updateEndpoint(ep1);
     Mutator mutatorElem(framework, "policyelement");
     shared_ptr<L2Universe> l2u = L2Universe::resolve(framework).get();

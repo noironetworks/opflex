@@ -83,7 +83,7 @@ private:
             addrs->insert(faddr.second.begin(), faddr.second.end());
         }
 
-        io.dispatch([this, addrs]() { listener.sync(addrs); });
+        io.dispatch([this, addrs]() { listener.sync(std::move(addrs)); });
     }
 
     void readConfig(const std::string& filePath) {

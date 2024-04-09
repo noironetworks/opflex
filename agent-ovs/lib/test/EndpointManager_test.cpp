@@ -367,6 +367,7 @@ BOOST_FIXTURE_TEST_CASE( basic, EndpointFixture ) {
     ep2.setMAC(MAC("00:00:00:00:00:02"));
     ep2.setInterfaceName("veth2");
     ep2.setAccessInterface("veth2-acc");
+    ep2.setAccessIfaceVlan(223);
     ep2.addIP("10.1.1.4");
     ep2.setEgURI(epgu);
 
@@ -1199,8 +1200,13 @@ BOOST_FIXTURE_TEST_CASE( fsextsource, FSEndpointFixture ) {
     WAIT_FOR(agent.getEndpointManager().getAdjacency(rdURI.get(),
                                             ep_ip_address,
                                             ep_new), 3000);
-    boost::optional<opflex::modb::MAC> mac = ep_new->getMAC();
-    boost::optional<std::string> accIntf = ep_new->getInterfaceName();
+    boost::optional<opflex::modb::MAC> mac = boost::none;
+    boost::optional<std::string> accIntf = boost::none;
+
+    if (ep_new) {
+        mac = ep_new->getMAC();
+        accIntf = ep_new->getInterfaceName();
+    }
     std::string assigned_intf("veth1");
     opflex::modb::MAC assigned_mac("10:ff:00:a3:02:01");
     BOOST_CHECK(mac == assigned_mac);
