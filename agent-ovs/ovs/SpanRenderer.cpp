@@ -106,7 +106,7 @@ namespace opflexagent {
 
         set<tuple<string, OvsdbFunction, string>> condSet;
         condSet.emplace("name", OvsdbFunction::EQ, session->getDestPort());
-        msg.conditions = condSet;
+        msg.conditions = std::move(condSet);
 
         requests.push_back(msg);
         sendAsyncTransactRequests(requests);
@@ -247,11 +247,11 @@ namespace opflexagent {
         OvsdbTransactMessage msg(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
         set<tuple<string, OvsdbFunction, string>> condSet;
         condSet.emplace("name", OvsdbFunction::EQ, switchName);
-        msg.conditions = condSet;
+        msg.conditions = std::move(condSet);
 
         vector<OvsdbValue> values;
         values.emplace_back("uuid", sessionUuid);
-        OvsdbValues tdSet = OvsdbValues(values);
+        OvsdbValues tdSet = OvsdbValues(std::move(values));
         msg.mutateRowData.emplace("mirrors", std::make_pair(OvsdbOperation::DELETE, tdSet));
 
         const list<OvsdbTransactMessage> requests = {msg};

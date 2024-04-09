@@ -2565,7 +2565,7 @@ void PolicyManager::updateExternalNode(const URI& uri,
         }
         routeIter->second->setPresent(true);
         if(*(routeIter->second) != *newRoute) {
-            routeIter->second = newRoute;
+            routeIter->second = std::move(newRoute);
             routeIter->second->setPresent(true);
             notifyStaticRoutes.insert(route->getURI());
             notifyLocalRoutes.insert(localRoute->getURI());
@@ -3071,8 +3071,8 @@ void PolicyManager::updateExternalNetworkPrefixes(
                 delURI,
                 delPPfx,
                 pPfxLen,
-                newNet,
-                newExtSub,
+                std::move(newNet),
+                std::move(newExtSub),
                 notifyLocalRoutes);
         }
     } else {

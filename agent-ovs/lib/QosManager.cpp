@@ -474,7 +474,7 @@ namespace opflexagent {
                 }
                 string taskId = updatedUri.toString()+ interface + dir;
                 qosmanager.taskQueue.dispatch(taskId, [=]() {
-                        qosmanager.notifyListeners(interface, dir, req);
+                        qosmanager.notifyListeners(interface, dir, std::move(req));
                         });
             }
         }

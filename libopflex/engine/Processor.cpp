@@ -91,7 +91,7 @@ Processor::PrngManager::PrngManager(void) {
     // Set the seed using time. This normally isn't a great
     // seed, but the entropy is quickly spread across the
     // bits with a few iterations.
-    generator.seed(static_cast<unsigned int>(std::time(0)));
+    generator.seed(static_cast<unsigned long long>(std::time(0)));
 }
 
 void Processor::change_expiration::operator()(Processor::item& i) {

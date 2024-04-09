@@ -3220,7 +3220,7 @@ const map<string,string> AgentPrometheusManager::createLabelMapFromTableDropKey 
 {
    map<string,string>   label_map;
    string table_str = bridge_name + string("_") + table_name;
-   label_map["table"] = table_str;
+   label_map["table"] = std::move(table_str);
    return label_map;
 }
 

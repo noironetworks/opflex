@@ -148,7 +148,7 @@ void SysStatsManager::updateMoDBCounts()
                  .setService(agent->getServiceManager().getServiceCount())
                  .setContract(agent->getPolicyManager().getContractCount())
                  .setSg(agent->getPolicyManager().getSecGrpCount());
-        prometheusManager.addNUpdateMoDBCounts(pMoDBCounts);
+        prometheusManager.addNUpdateMoDBCounts(std::move(pMoDBCounts));
     }
     mutator.commit();
 }

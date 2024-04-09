@@ -97,6 +97,7 @@ void ServiceManagerFixture::createServices (bool isLB, bool isNodePort, bool isE
         as.setServiceType(Service::CLUSTER_IP);
 
     sm1.setServiceIP("169.254.169.254");
+    sm1.setGatewayIP("169.254.1.1");
     sm1.setServiceProto("udp");
     sm1.setServicePort(53);
     sm1.addNextHopIP("10.20.44.2");
@@ -109,6 +110,7 @@ void ServiceManagerFixture::createServices (bool isLB, bool isNodePort, bool isE
     as.addServiceMapping(sm1);
 
     sm2.setServiceIP("fe80::a9:fe:a9:fe");
+    sm2.setGatewayIP("fe80::1");
     sm2.setServiceProto("tcp");
     sm2.setServicePort(80);
     sm2.addNextHopIP("2001:db8::2");

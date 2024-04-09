@@ -126,7 +126,7 @@ public:
             options["remote_ip"] = remoteIp;
             const string key = "1";
             options["key"] = key;
-            interfaceDetail["options"] = std::move(OvsdbValue(Dtype::MAP, "map", options));
+            interfaceDetail["options"] = std::move(OvsdbValue(Dtype::MAP, "map", std::move(options)));
             interfaceDetails[interfaceUuid] = std::move(interfaceDetail);
         }
 
@@ -142,7 +142,7 @@ public:
             options["remote_ip"] = remoteIp;
             const string key = "5";
             options["key"] = key;
-            interfaceDetail["options"] = std::move(OvsdbValue(Dtype::MAP, "map", options));
+            interfaceDetail["options"] = std::move(OvsdbValue(Dtype::MAP, "map", std::move(options)));
             interfaceDetails[interfaceUuid] = std::move(interfaceDetail);
         }
         conn->getOvsdbState().fullUpdate(OvsdbTable::INTERFACE, interfaceDetails);

@@ -70,6 +70,7 @@ opflexagent::Endpoint createEndpoint(const uint32_t epId,
         boost::replace_all_copy(epgTemplate, "<group_id>",
                                 std::to_string(groupId));
     ep.setEgURI(opflex::modb::URI(uri));
+    ep.setAccessIfaceVlan(223);
 
     return ep;
 }
