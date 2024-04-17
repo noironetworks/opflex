@@ -15,6 +15,7 @@
 #ifndef OPFLEX_OVSDBSTATE_H
 #define OPFLEX_OVSDBSTATE_H
 
+#include <set>
 #include <unordered_map>
 #include <boost/optional.hpp>
 #include "OvsdbMessage.h"

@@ -21,6 +21,7 @@ extern "C" {
 #include "ovs/include/OvsdbConnection.h"
 #include "OvsdbMonitorMessage.h"
 #include <opflexagent/logging.h>
+#include <map>
 
 namespace opflexagent {
 

@@ -16,6 +16,7 @@
 #define OPFLEX_OVSDBMONITORMESSAGE_H
 
 #include "OvsdbMessage.h"
+#include <list>
 
 namespace opflexagent {
 
