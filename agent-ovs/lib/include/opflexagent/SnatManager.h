@@ -19,6 +19,7 @@
 #include <boost/noncopyable.hpp>
 #include <opflex/modb/URI.h>
 
+#include <list>
 #include <unordered_set>
 #include <unordered_map>
 #include <mutex>

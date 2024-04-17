@@ -18,6 +18,7 @@
 
 #include <opflex/rpc/JsonRpcMessage.h>
 
+#include <map>
 #include <utility>
 
 namespace opflexagent {
