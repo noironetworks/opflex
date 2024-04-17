@@ -27,6 +27,7 @@
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
 #include <thread>
+#include <list>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>

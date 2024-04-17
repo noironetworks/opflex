@@ -18,6 +18,8 @@
 
 #include <rapidjson/document.h>
 #include "OvsdbMessage.h"
+#include <list>
+#include <set>
 #include <unordered_map>
 
 namespace opflexagent {
