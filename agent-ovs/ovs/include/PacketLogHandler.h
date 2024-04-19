@@ -223,7 +223,7 @@ public:
         if(!prefixLen.empty()) {
             pfxLen = stoul(prefixLen);
         }
-        if((pfxLen > 32) || (pfxLen == 0))
+        if((pfxLen > 128) || (pfxLen == 0))
            return false;
         return network::prefix_match( addr1, pfxLen,
                                  addr2, pfxLen, is_exact_match);
@@ -269,7 +269,7 @@ public:
         for (auto &i:ip_fields) {
             if(!fields[i].second.empty()) {
                 if(!compareIps(fields[i].second,p.fields[i].second,
-                            fields[i+8].second)) {
+                            fields[i+7].second)) {
                     return false;
                 }
             }

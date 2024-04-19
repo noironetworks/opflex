@@ -371,4 +371,49 @@ BOOST_FIXTURE_TEST_CASE(user_prune_tests, PacketDecoderFixture) {
     pktLogger.pruneLog(p3);
     BOOST_CHECK(p3.pruneLog == true);
 }
+
+BOOST_FIXTURE_TEST_CASE(user_prune_ip_prefix_tests, PacketDecoderFixture) {
+    auto pktDecoder = pktLogger.getDecoder();
+    std::shared_ptr<PacketFilterSpec> filt1(new PacketFilterSpec());
+    ParseInfo p3(&pktDecoder);
+    filt1->setField(TFLD_SRC_IP,"14.0.0.0");
+    filt1->setField(TFLD_SPFX_LEN,"24");
+    filt1->setField(TFLD_DST_IP,"100.0.0.0");
+    filt1->setField(TFLD_DPFX_LEN,"24");
+    filt1->setField(TFLD_IP_PROTO,"17");
+    pktLogger.updatePruneFilter("filt1",filt1);
+    int ret = pktDecoder.decode(udp_buf, 66, p3);
+    BOOST_CHECK(ret == 0);
+    pktLogger.pruneLog(p3);
+    BOOST_CHECK(p3.pruneLog == true);
+    pktLogger.deletePruneFilter("filt1");
+    filt1.reset(new PacketFilterSpec());
+    filt1->setField(TFLD_SRC_IP,"14.0.0.0");
+    filt1->setField(TFLD_DST_IP,"100.0.0.0");
+    pktLogger.updatePruneFilter("filt2",filt1);
+    pktLogger.pruneLog(p3);
+    BOOST_CHECK(p3.pruneLog == false);
+    ParseInfo p4(&pktDecoder);
+    ret = pktDecoder.decode(udpv6_buf, 86, p4);
+    BOOST_CHECK(ret == 0);
+    pktLogger.pruneLog(p4);
+    BOOST_CHECK(p4.pruneLog == false);
+    pktLogger.deletePruneFilter("filt1");
+    filt1.reset(new PacketFilterSpec());
+    filt1->setField(TFLD_SRC_IP,"fe80::a00:27ff:fefe:8f95");
+    filt1->setField(TFLD_DST_IP,"ff02::1:2");
+    pktLogger.updatePruneFilter("filt3",filt1);
+    pktLogger.pruneLog(p4);
+    BOOST_CHECK(p4.pruneLog == true);
+    pktLogger.deletePruneFilter("filt1");
+    filt1.reset(new PacketFilterSpec());
+    filt1->setField(TFLD_SRC_IP,"fe80::");
+    filt1->setField(TFLD_SPFX_LEN,"64");
+    filt1->setField(TFLD_DST_IP,"ff02::1:0");
+    filt1->setField(TFLD_DPFX_LEN,"120");
+    pktLogger.updatePruneFilter("filt4",filt1);
+    pktLogger.pruneLog(p4);
+    BOOST_CHECK(p4.pruneLog == true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
