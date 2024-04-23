@@ -199,16 +199,34 @@ public:
     OpflexClientConnection* getPeer(const std::string& hostname, int port);
 
     void resetAllUnconfiguredPeers();
+
+    /**
+     * Pending unresolved policy
+     */
+    struct PendingURI {
+        // The URI also the key
+        std::string uri;
+        // Time when URI was added
+        std::chrono::steady_clock::time_point timestamp;
+        // XID used when sending the request
+        uint64_t xid;
+
+        bool operator <(const PendingURI& pURI) const {
+            return (uri < pURI.uri);
+        }
+    };
           
     /**
      * A map of hostname and pending unresolved policies 
      */
-    std::map<std::string, std::set<std::string>> pendingResolution;
+    std::map<std::string, std::set<PendingURI>> pendingResolution;
 
     /**
      * Add the number of policies requested by the client
      */
-    void addPendingItem(OpflexClientConnection* conn, const std::string& uri);
+    void addPendingItem(OpflexClientConnection* conn,
+                        const std::string& uri,
+                        uint64_t& xid);
 
     /**
      * Remove the policies recieved from the peer
@@ -220,6 +238,22 @@ public:
      */
     void clearPendingItems(OpflexClientConnection* conn);
 
+    /**
+     * Wait for pending items
+     * @param wait min wait time input and how long to wait as output
+     * @return true wait, false no wait
+     */
+    bool waitForPendingItems(uint32_t& wait);
+
+    /**
+     * getPendingItem fromn xid and conn
+     * @param conn, connection to use
+     * @param xid, xid to match
+     * @param matchingUri, out the uri that matches the xid
+     * @return bool if found true else false
+     */
+    bool getPendingItem(OpflexClientConnection* conn, uint64_t& xid,
+                        std::string& matchingUri);
     /**
      * Register the given peer status listener to get updates on the
      * health of the connection pool and on individual connections.

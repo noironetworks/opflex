@@ -46,15 +46,20 @@ OpflexPool::OpflexPool(HandlerFactory& factory_,
 OpflexPool::~OpflexPool() {
 }
 
-void OpflexPool::addPendingItem(OpflexClientConnection* conn, const std::string& uri) {
+void OpflexPool::addPendingItem(OpflexClientConnection* conn, const std::string& uri,
+                                uint64_t& xid) {
     const std::string& hostName = conn->getHostname();
+    struct PendingURI pURI = { .uri = uri,
+                               .timestamp = std::chrono::steady_clock::now(),
+                               .xid = xid };
     std::unique_lock<std::mutex> lock(modify_uri_mutex);
-    if (pendingResolution[hostName].insert(uri).second == true) {
+    if (pendingResolution[hostName].insert(pURI).second == true) {
         conn->getOpflexStats()->incrPolUnresolvedCount();
         LOG(TRACE) << "add pending UC: conn: " << hostName
                    << " size: " << pendingResolution[hostName].size()
                    << " UC: " << conn->getOpflexStats()->getPolUnresolvedCount()
-                   << " URI: " << uri;
+                   << " URI: " << uri
+                   << " XID: " << xid;
     }
 }
 
@@ -71,8 +76,9 @@ void OpflexPool::clearPendingItems (OpflexClientConnection* conn)
 
 void OpflexPool::removePendingItem(OpflexClientConnection* conn, const std::string& uri) {
     const std::string& hostName = conn->getHostname();
+    struct PendingURI pURI = { .uri = uri };
     std::unique_lock<std::mutex> lock(modify_uri_mutex);
-    auto rem = pendingResolution[hostName].find(uri);
+    auto rem = pendingResolution[hostName].find(pURI);
     if (rem != pendingResolution[hostName].end()) {
         pendingResolution[hostName].erase(rem);
         conn->getOpflexStats()->decrPolUnresolvedCount();
@@ -81,6 +87,44 @@ void OpflexPool::removePendingItem(OpflexClientConnection* conn, const std::stri
                    << " UC: " << conn->getOpflexStats()->getPolUnresolvedCount()
                    << " URI: " << uri;
     }
+}
+
+bool OpflexPool::waitForPendingItems(uint32_t& wait) {
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    uint32_t min = ((uint32_t)-1);
+    std::unique_lock<std::mutex> lock(modify_uri_mutex);
+    for (auto const& host : pendingResolution) {
+        for (auto const& uri : pendingResolution[host.first]) {
+            uint32_t diff = std::chrono::duration_cast<std::chrono::seconds>
+                                (now - uri.timestamp).count();
+            LOG(INFO) << host.first << " -> "
+                      << uri.uri << " : "
+                      << uri.xid << " , "
+                      << diff << " seconds";
+            if (diff < min) min = diff;
+        }
+    }
+
+    if (min >= wait) {
+        return false;
+    } else {
+        wait = wait - min;
+        return true;
+    }
+}
+
+bool OpflexPool::getPendingItem(OpflexClientConnection* conn,
+                                uint64_t& xid,
+                                std::string& matchingUri) {
+    const std::string& hostName = conn->getHostname();
+    std::unique_lock<std::mutex> lock(modify_uri_mutex);
+    for (auto const& uri : pendingResolution[hostName]) {
+         if (uri.xid == xid) {
+             matchingUri = uri.uri;
+             return true;
+         }
+    }
+    return false;
 }
 
 boost::optional<string> OpflexPool::getLocation() {
@@ -432,7 +476,8 @@ size_t OpflexPool::sendToRole(OpflexMessage* message,
             conn->sendMessage(m_copy, sync);
 	}
         if (message->getMethod() == "policy_resolve" && !uri.empty()) {
-           addPendingItem(conn, uri);
+           uint64_t xid = message->getReqXid();
+           addPendingItem(conn, uri, xid);
         }
         i += 1;
     }
