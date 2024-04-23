@@ -35,6 +35,7 @@ SwitchManager::SwitchManager(Agent& agent_,
       connectDelayMs(agent.getSwitchSyncDelay()*1000),
       stopping(false), syncEnabled(false), syncing(false),
       syncInProgress(false), syncPending(false),
+      sync_retries(0),
       tlvTableDone(false), groupsDone(false) {
 
 }
@@ -140,17 +141,17 @@ void SwitchManager::handleConnection(SwitchConnection *sw) {
     syncPending = false;
 
     if (syncEnabled) {
-        LOG(DEBUG) << "[" << connection->getSwitchName() << "] "
+        LOG(INFO) << "[" << connection->getSwitchName() << "] "
                    << "Handling new connection to switch";
     } else {
-        LOG(DEBUG) << "[" << connection->getSwitchName() << "] "
+        LOG(INFO) << "[" << connection->getSwitchName() << "] "
                    << "Opflex sync not yet enabled, ignoring new "
             "connection to switch";
         return;
     }
 
     if (connectTimer) {
-        LOG(DEBUG) << "[" << connection->getSwitchName() << "] "
+        LOG(INFO) << "[" << connection->getSwitchName() << "] "
                    << "Sync state with switch will begin in "
                    << connectTimer->expires_from_now();
         connectTimer->async_wait(bind(&SwitchManager::onConnectTimer,
@@ -163,6 +164,20 @@ void SwitchManager::handleConnection(SwitchConnection *sw) {
 void SwitchManager::onConnectTimer(const boost::system::error_code& ec) {
     {
         const lock_guard<recursive_mutex> lock(timer_mutex);
+        uint32_t delay = agent.getSwitchSyncDynamic();
+        if (!ec && !stopping && connectTimer &&
+            sync_retries < 5 && delay &&
+            agent.getFramework().waitForPendingItems(delay)) {
+            connectTimer->expires_from_now(milliseconds(delay*1000));
+            sync_retries++;
+            LOG(INFO) << "[" << getConnection()->getSwitchName() << "] "
+                      << "Waiting for switch sync on policy, "
+                      << "Sync will be retried in "
+                      << connectTimer->expires_from_now();
+            connectTimer->async_wait(bind(&SwitchManager::onConnectTimer,
+                                          this, error));
+            return;
+        }
         connectTimer.reset();
     }
     if (stopping) return;

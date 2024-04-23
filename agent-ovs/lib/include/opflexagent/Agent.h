@@ -299,6 +299,11 @@ public:
     uint32_t getSwitchSyncDelay() { return switch_sync_delay; }
 
     /**
+     * Get if switch sync set to dynamic
+     */
+    uint32_t getSwitchSyncDynamic() { return switch_sync_dynamic; }
+
+    /**
      * Common function b/w Agent and Server to add all supported universes
      * @param root pointer to DmtreeRoot under which the universes will be created
      */
@@ -348,6 +353,7 @@ private:
     uint32_t multicast_cache_timeout = 300; /* seconds */
     /* How long to wait from platform config to switch Sync */
     uint32_t switch_sync_delay = 5; /* seconds */
+    uint32_t switch_sync_dynamic = 0; /* dynamic retry default 0 no retry */
 
     std::set<std::string> endpointSourceFSPaths;
     std::set<std::string> disabledFeaturesSet;
