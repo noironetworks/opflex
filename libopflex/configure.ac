@@ -165,7 +165,7 @@ AX_BOOST_FILESYSTEM
 
 dnl Package-config dependencies
 PKG_CHECK_MODULES([UV], [libuv >= 1.18.0])
-PKG_CHECK_MODULES([OPENSSL], [openssl >= 1.0.1])
+PKG_CHECK_MODULES([OPENSSL], [openssl >= 1.1])
 PKG_CHECK_MODULES([RAPIDJSON], [RapidJSON >= 1.1])
 
 dnl Older versions of autoconf don't define docdir

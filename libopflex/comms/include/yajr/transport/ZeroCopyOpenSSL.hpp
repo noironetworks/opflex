@@ -77,10 +77,6 @@ struct ZeroCopyOpenSSL : public Transport::Engine {
   private:
     SSL* ssl_;
     bool ready_;
-    static uv_rwlock_t * rwlock;
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    static void lockingCallback(int, int, const char *, int);
-#endif
     static void infoCallback(SSL const *, int, int);
     ZeroCopyOpenSSL(ZeroCopyOpenSSL::Ctx * ctx, bool passive);
 };
