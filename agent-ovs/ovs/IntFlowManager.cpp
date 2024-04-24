@@ -1282,7 +1282,7 @@ static void flowsEndpointDHCPSource(IntFlowManager& flowMgr,
                         LOG(WARNING) << "Invalid DHCP server IP: "
                                      << v4c.get().getServerIp().get();
                     } else  {
-                        serverIp = sip;
+                        serverIp = std::move(sip);
                     }
                 }
 
@@ -6827,7 +6827,7 @@ IntFlowManager::reconcileFlows(vector<TableState> flowTables,
         }
     }
 
-    return SwitchStateHandler::reconcileFlows(flowTables, recvFlows);
+    return SwitchStateHandler::reconcileFlows(std::move(flowTables), recvFlows);
 }
 
 GroupEdit IntFlowManager::reconcileGroups(GroupMap& recvGroups) {

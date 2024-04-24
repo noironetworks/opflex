@@ -252,13 +252,13 @@ public:
      */
     PolicyRoute(std::shared_ptr<modelgbp::gbp::RoutingDomain>& rd_,
                 std::shared_ptr<modelgbp::gbpe::InstContext>& rdInst_,
-                const boost::asio::ip::address& addr_, uint8_t pfx_len_,
+                boost::asio::ip::address addr_, uint8_t pfx_len_,
                 std::list<boost::asio::ip::address> &nh_,
                 std::shared_ptr<modelgbp::gbp::ExternalNode> nd_=
                 std::shared_ptr<modelgbp::gbp::ExternalNode>()):
-                rd(rd_), rdInst(rdInst_), address(addr_),
+                rd(rd_), rdInst(rdInst_), address(std::move(addr_)),
                 prefix_len(pfx_len_), nextHops(nh_), present(false),
-                nd(nd_) {};
+                nd(std::move(nd_)) {};
 
     /**
      * Copy constructor.

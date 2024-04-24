@@ -29,7 +29,6 @@
 #include <unordered_map>
 #include <memory>
 #include <thread>
-#include <functional>
 
 #include <csignal>
 #include <cstring>

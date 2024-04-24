@@ -1045,7 +1045,7 @@ private:
     };
     struct FlowKey {
         FlowKey(std::string k1, uint32_t k2, uint32_t k3) {
-            ip=k1;
+            ip=std::move(k1);
             reg=k2;
             rd = k3;
         }
