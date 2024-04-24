@@ -2022,7 +2022,7 @@ void PolicyManager::updateL3Nets(const opflex::modb::URI& rdURI,
                                      net, contractsToNotify);
             }
         }
-        rds.extNets = newNets;
+        rds.extNets = std::move(newNets);
     } else {
         for (const URI& net : rds.extNets) {
             l3n_map.erase(net);

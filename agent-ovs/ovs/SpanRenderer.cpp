@@ -101,7 +101,7 @@ namespace opflexagent {
         vec.emplace_back("erspan_hwid", erspanHwId);
         vec.emplace_back("remote_ip", session->getDestination().to_string());
         vec.emplace_back("key", std::to_string(session->getSessionId()));
-        OvsdbValues values3("map", vec);
+        OvsdbValues values3("map", std::move(vec));
         msg.rowData.emplace("options", values3);
 
         set<tuple<string, OvsdbFunction, string>> condSet;
@@ -314,7 +314,7 @@ namespace opflexagent {
             values.emplace_back("erspan_hwid", erspanHwId);
             values.emplace_back("remote_ip", sess->getDestination().to_string());
             values.emplace_back("key", std::to_string(sess->getSessionId()));
-            OvsdbValues tdSet5("map", values);
+            OvsdbValues tdSet5("map", std::move(values));
             msg2.rowData.emplace("options", tdSet5);
 
             requests.push_back(msg);

@@ -573,7 +573,7 @@ void OVSRenderer::onCleanupTimer(const boost::system::error_code& ec) {
         bind(connTrackIdGarbageCb,
              std::ref(getEndpointManager()),
              std::ref(getFramework()), _1, _2);
-    idGen.collectGarbage(ID_NMSPC_CONNTRACK, gcb);
+    idGen.collectGarbage(ID_NMSPC_CONNTRACK, std::move(gcb));
 
     if (started) {
         const std::lock_guard<std::mutex> guard(timer_mutex);

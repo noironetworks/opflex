@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
         Mutator mutator(framework, "init");
         std::shared_ptr<modelgbp::dmtree::Root> root =
             modelgbp::dmtree::Root::createRootElement(framework);
-        Agent::createUniverse(root);
+        Agent::createUniverse(std::move(root));
         mutator.commit();
 
         GbpOpflexServer server(server_port, SERVER_ROLES, peer_vec,
