@@ -386,80 +386,9 @@ void Cb< ZeroCopyOpenSSL >::on_read(
     }
 }
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-uv_rwlock_t * ZeroCopyOpenSSL::rwlock = NULL;
-
-void ZeroCopyOpenSSL::lockingCallback(
-        int mode,
-        int index,
-        const char * file,
-        int line)
-{
-
-    if (mode & CRYPTO_LOCK) {
-
-        LOG(TRACE)
-            << "Locking from "
-            << file
-            << ":"
-            << line
-        ;
-
-        if (mode & CRYPTO_WRITE) {
-            uv_rwlock_wrlock(&rwlock[index]);
-        } else {
-            uv_rwlock_rdlock(&rwlock[index]);
-        }
-
-    } else {
-
-        LOG(TRACE)
-            << "Unlocking from "
-            << file
-            << ":"
-            << line
-        ;
-
-        if (mode & CRYPTO_WRITE) {
-            uv_rwlock_wrunlock(&rwlock[index]);
-        } else {
-            uv_rwlock_rdunlock(&rwlock[index]);
-        }
-
-    }
-}
-#endif
-
 int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
     LOG(INFO);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    assert(!rwlock);
-    if (rwlock) {
-        LOG(ERROR) << "OpenSSL was already initialized";
-        return UV_EEXIST;
-    }
-    SSL_library_init();
-    SSL_load_error_strings();
-    ERR_load_SSL_strings();
-#else
-   OPENSSL_init_ssl(0, NULL);
-#endif
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    OpenSSL_add_all_algorithms();
-    if (forMultipleThreads) {
-        rwlock = new (std::nothrow) uv_rwlock_t[CRYPTO_num_locks()];
-        if (!rwlock) {
-            LOG(ERROR) << "Unable to allocate rwlock's for OpenSSL";
-            return UV_ENOMEM;
-        }
-
-        for (ssize_t i=0; i < CRYPTO_num_locks(); ++i) {
-            uv_rwlock_init(&rwlock[i]);
-        }
-
-        CRYPTO_set_locking_callback(lockingCallback);
-    }
-#endif
+    OPENSSL_init_ssl(0, NULL);
     return 0;
 }
 
@@ -467,32 +396,7 @@ int ZeroCopyOpenSSL::initOpenSSL(bool forMultipleThreads) {
 #include <openssl/engine.h>
 void ZeroCopyOpenSSL::finiOpenSSL() {
     LOG(INFO);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    if (rwlock) {
-
-        CRYPTO_set_locking_callback(NULL);
-
-        for (ssize_t i=0; i<CRYPTO_num_locks(); ++i) {
-            uv_rwlock_destroy(&rwlock[i]);
-        }
-
-        delete [] rwlock;
-    }
-
-    CONF_modules_free();
-#endif
-#if (OPENSSL_VERSION_NUMBER > 0x10000000L && OPENSSL_VERSION_NUMBER < 0x10100000L)
-    ERR_remove_thread_state(NULL);
-#endif
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    ENGINE_cleanup();
-#endif
     CONF_modules_unload(1);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    ERR_free_strings();
-    EVP_cleanup();
-    CRYPTO_cleanup_all_ex_data();
-#endif
 }
 
 ZeroCopyOpenSSL::ZeroCopyOpenSSL(ZeroCopyOpenSSL::Ctx * ctx, bool passive)
@@ -747,11 +651,7 @@ ZeroCopyOpenSSL::Ctx * ZeroCopyOpenSSL::Ctx::createCtx(
         char const * passphrase
    ) {
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    SSL_CTX * sslCtx = SSL_CTX_new(SSLv23_method());
-#else
     SSL_CTX * sslCtx = SSL_CTX_new(TLS_method());
-#endif
 
     if (!sslCtx) {
         IF_SSL_ERROR(sslErr) {

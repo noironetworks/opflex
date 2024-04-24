@@ -39,9 +39,7 @@ BOOST_AUTO_TEST_SUITE(asynchronous_sockets)
 struct CommsTests {
 
     CommsTests() {
-        LOG(INFO)
-            << "global setup\n"
-        ;
+        LOG(INFO) << "global setup\n";
 
         boost::unit_test::unit_test_log_t::instance()
             .set_threshold_level(::boost::unit_test::log_successful_tests);
@@ -50,30 +48,8 @@ struct CommsTests {
     }
 
     ~CommsTests() {
-        LOG(INFO)
-            << "global teardown\n"
-        ;
-
-#if (OPENSSL_VERSION_NUMBER < 0x10002000L)
-        /* this is the reason number 1232342985473894512321837423rd why OpenSSL
-         * is a giant pile of ________
-         *
-         * you fill in the blank ;-)
-         */
-        sk_SSL_COMP_pop_free(
-                SSL_COMP_get_compression_methods(),
-                free_comp_methods
-        );
-#elif (OPENSSL_VERSION_NUMBER < 0x10100000L)
-        SSL_COMP_free_compression_methods();
-#endif
+        LOG(INFO) << "global teardown\n";
     }
-
-#if (OPENSSL_VERSION_NUMBER < 0x10002000L)
-    static void free_comp_methods(SSL_COMP * p) {
-        OPENSSL_free(p);
-    }
-#endif
 
     /* potentially subject to static initialization order fiasco */
     static opflex::logging::StdOutLogHandler commsTestLogger_;
@@ -137,14 +113,7 @@ class CommsFixture {
         uv_close((uv_handle_t *)&timer_, down_on_close);
         uv_close((uv_handle_t *)&prepare_, down_on_close);
 
-#if (OPENSSL_VERSION_NUMBER > 0x10000000L && OPENSSL_VERSION_NUMBER < 0x10100000L)
-        ERR_remove_thread_state(NULL);
-#endif
         CONF_modules_unload(1);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-        ERR_free_strings();
-        EVP_cleanup();
-#endif
         ZeroCopyOpenSSL::finiOpenSSL();
 
         ::yajr::finiLoop(CommsFixture::current_loop);
