@@ -293,7 +293,7 @@ if RENDERER_OVS
 	ovs/OvsdbMessage.cpp \
 	ovs/OvsdbMonitorMessage.cpp \
 	ovs/CtZoneManager.cpp \
-	ovs/DnsManager.cpp \	
+	ovs/DnsManager.cpp \
 	ovs/NatStatsManager.cpp \
 	ovs/EndpointTenantMapper.cpp
 

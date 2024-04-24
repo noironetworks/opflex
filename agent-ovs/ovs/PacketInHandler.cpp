@@ -207,7 +207,7 @@ static void send_packet_out(Agent& agent,
         LOG(WARNING) << "Port " << out_port << " not found in int bridge";
     }
 
-    send_packet_out(conn, b, proto, in_port, out_port, outActions);
+    send_packet_out(conn, b, proto, in_port, out_port, std::move(outActions));
     /*
      * Openshift bootstrap does not support vlans, so make a copy
      */
@@ -700,7 +700,7 @@ static void handleVIPPktIn(bool v4,
     }
 
     unordered_set<ep_ptr> eps =
-        findEpsForIface(epMgr, iface,
+        findEpsForIface(epMgr, std::move(iface),
                         [&srcMac, &srcIp](const Endpoint& ep) {
                             for (const Endpoint::virt_ip_t& vip :
                                      ep.getVirtualIPs()) {
@@ -773,7 +773,7 @@ static void handleICMPErrPktIn(bool v4,
                    << " on " << pi.flow_metadata.flow.regs[7];
 
         send_packet_out(agent, intConn, accConn, intFlowManager,
-                        intPortMapper, accPortMapper, egUri,
+                        intPortMapper, accPortMapper, std::move(egUri),
                         b, proto, pi.flow_metadata.flow.regs[7],
                         OFPP_IN_PORT);
     }
