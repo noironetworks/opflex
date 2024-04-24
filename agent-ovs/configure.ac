@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------
 # Initialization
 
-AC_INIT([opflex-agent],[2.6.0])
+AC_INIT([opflex-agent],[2.5.0])
 AC_SUBST(MODULE_NAME, ["Group-based Policy Agent"])
 
 dnl For more information on libtool versioning, see:
@@ -169,8 +169,8 @@ if test "x$ax_cv_boost_asio" != xyes; then
     AC_MSG_ERROR([Boost::ASIO library is required])
 fi
 
-PKG_CHECK_MODULES([libopflex], [libopflex >= 2.6.0])
-PKG_CHECK_MODULES([libmodelgbp], [libmodelgbp >= 2.6.0])
+PKG_CHECK_MODULES([libopflex], [libopflex >= 2.5.0])
+PKG_CHECK_MODULES([libmodelgbp], [libmodelgbp >= 2.5.0])
 PKG_CHECK_MODULES([rapidjson], [RapidJSON >= 1.1])
 
 AM_COND_IF([RENDERER_OVS], [
