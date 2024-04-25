@@ -88,7 +88,7 @@ public class FConfigureAC
                                         + "# ---------------------------------------------------------------\n"
                                         + "# Dependency checks\n" + "\n" + "# Checks for header files\n"
                                         + "AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))\n"
-                                        + "PKG_CHECK_MODULES([libopflex], [libopflex >= 2.6.0])\n" + "\n"
+                                        + "PKG_CHECK_MODULES([libopflex], [libopflex >= 2.7.0])\n" + "\n"
                                         + "# Older versions of autoconf don't define docdir\n"
                                         + "if test x$docdir = x; then\n"
                                         + "\tAC_SUBST(docdir, ['${prefix}/share/doc/'$PACKAGE])\n" + "fi\n" + "\n"
