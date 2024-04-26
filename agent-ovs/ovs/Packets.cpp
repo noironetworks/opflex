@@ -408,7 +408,7 @@ static const size_t MAX_ROUTE = 16;
 class Routev4 {
 public:
     Routev4(address_v4 dest_, uint8_t prefixLen_, address_v4 nextHop_)
-        : dest(dest_), prefixLen(prefixLen_), nextHop(nextHop_) {}
+        : dest(std::move(dest_)), prefixLen(prefixLen_), nextHop(std::move(nextHop_)) {}
     address_v4 dest;
     uint8_t prefixLen;
     address_v4 nextHop;

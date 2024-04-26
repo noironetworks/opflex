@@ -174,7 +174,7 @@ void AccessFlowManager::setDropLog(const string& dropLogPort, const string& drop
     } else if (tunDst.is_v6()) {
         LOG(ERROR) << "IPv6 drop-log tunnel destinations are not supported";
     } else {
-        dropLogDst = tunDst;
+        dropLogDst = std::move(tunDst);
         LOG(INFO) << "DropLog port set to " << dropLogPort
                    << " tunnel destination: " << dropLogRemoteIp
                    << ":" <<_dropLogRemotePort;
