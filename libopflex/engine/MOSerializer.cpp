@@ -107,7 +107,8 @@ void MOSerializer::deserialize_enum(modb::mointernal::StoreClient& client,
 void MOSerializer::deserialize(const rapidjson::Value& mo,
                                modb::mointernal::StoreClient& client,
                                bool replaceChildren,
-                               /* out */ modb::mointernal::StoreClient::notif_t* notifs) {
+                               /* out */ modb::mointernal::StoreClient::notif_t* notifs,
+                               bool skiplocal) {
     if (!mo.IsObject()
         || !mo.HasMember("uri")
         || !mo.HasMember("subject")) return;
@@ -120,6 +121,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
     try {
         URI uri(uriv.GetString());
         const ClassInfo& ci = store->getClassInfo(classv.GetString());
+        if (skiplocal && ci.getOwner() != "policyreg") return;
         std::shared_ptr<ObjectInstance> oi =
             std::make_shared<ObjectInstance>(ci.getId(), false);
         if (mo.HasMember("properties")) {
@@ -412,7 +414,7 @@ void MOSerializer::dumpMODB(const std::string& file, bool excludeObservable) {
     LOG(INFO) << "Wrote MODB to " << file;
 }
 
-size_t MOSerializer::readMOs(FILE* pfile, StoreClient& client) {
+size_t MOSerializer::readMOs(FILE* pfile, StoreClient& client, bool skiplocal) {
     char buffer[1024];
     rapidjson::FileReadStream f(pfile, buffer, sizeof(buffer));
     rapidjson::Document d;
@@ -425,7 +427,7 @@ size_t MOSerializer::readMOs(FILE* pfile, StoreClient& client) {
     size_t i = 0;
     for (moit = d.Begin(); moit != d.End(); ++ moit) {
         const rapidjson::Value& mo = *moit;
-        deserialize(mo, client, true, NULL);
+        deserialize(mo, client, true, NULL, skiplocal);
         i += 1;
     }
     return i;

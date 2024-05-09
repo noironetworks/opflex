@@ -11,6 +11,25 @@
 
     // Configuration related to the OpFlex protocol
     "opflex": {
+    //  // This section controls how persistant config is treated
+    //  // during opflex startup
+    //  "startup": {
+    //      // Location of the pol.json that will be read and used on startup
+    //      // will be provided by the orchestrator
+    //      "policy-file": "/foo/bar/pol.json",
+    //      // How long to use the above file after agent connects to the leaf
+    //      // default is 0 meaning as soon as agent connects to leaf we will
+    //      // stop using the local policy for future resolves
+    //      "policy-duration": 0,
+    //      // Wait till opflex connects to leaf before using the local policy
+    //      // default 0, use in combination with policy-duration > 0
+    //      // This is useful if you want to preserve the old flows until
+    //      // the leaf connection succeeds and not overwrite them before we
+    //      // connect to the leaf using the local policy
+    //      // A related knob timers.switch-sync-delay controls after connection
+    //      // how much more longer to freeze the flow tables
+    //      "resolve-aft-conn": false
+    //  },
         // The policy domain for this agent.
         "domain": "openstack",
 

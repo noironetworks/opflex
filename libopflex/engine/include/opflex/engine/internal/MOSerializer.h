@@ -393,7 +393,8 @@ public:
                      modb::mointernal::StoreClient& client,
                      bool replaceChildren,
                      /* out */
-                     modb::mointernal::StoreClient::notif_t* notifs = NULL);
+                     modb::mointernal::StoreClient::notif_t* notifs,
+                     bool skiplocal = false);
 
     /**
      * Dump the managed object database to the file specified as a
@@ -425,9 +426,11 @@ public:
      * @param file the file containing the managed objects
      * @param client the store client to use
      * @param return the number of managed objects read
+     * @param skiplocal skip local mos if true
      */
     size_t readMOs(FILE* file,
-                   modb::mointernal::StoreClient& client);
+                   modb::mointernal::StoreClient& client,
+                   bool skiplocal = false);
 
     /**
      * Update managed objects from RapidJson document into the MODB
