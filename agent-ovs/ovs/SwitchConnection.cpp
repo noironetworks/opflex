@@ -16,14 +16,14 @@
 #include <unistd.h>
 
 #include "ovs-ofputil.h"
-#include <lib/util.h>
+#include <openvswitch/lib/util.h>
 #include <openvswitch/poll-loop.h>
 #define HAVE_STRUCT_MMSGHDR_MSG_LEN
 #define HAVE_SENDMMSG
 
 extern "C" {
-#include <lib/dirs.h>
-#include <lib/socket-util.h>
+#include <openvswitch/lib/dirs.h>
+#include <openvswitch/lib/socket-util.h>
 #include <openvswitch/vconn.h>
 #include <openvswitch/ofp-msgs.h>
 #include <openvswitch/ofp-packet.h>
