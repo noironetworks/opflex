@@ -15,7 +15,7 @@
 #endif
 
 extern "C" {
-#include <lib/dirs.h>
+#include <openvswitch/lib/dirs.h>
 }
 
 #include "ovs/include/OvsdbConnection.h"

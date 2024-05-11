@@ -29,7 +29,7 @@
 // OVS lib
 #include "ovs-shim.h"
 #include "ovs-ofputil.h"
-#include <lib/util.h>
+#include <openvswitch/lib/util.h>
 
 #include <openvswitch/ofp-msgs.h>
 #include <openvswitch/match.h>
