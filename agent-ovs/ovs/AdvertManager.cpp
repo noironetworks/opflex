@@ -30,7 +30,7 @@
 #include "ovs-ofputil.h"
 
 // OVS lib
-#include <lib/util.h>
+#include <openvswitch/lib/util.h>
 #include <openvswitch/match.h>
 
 using std::string;

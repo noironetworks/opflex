@@ -12,8 +12,8 @@
 #include <openvswitch/ofp-actions.h>
 #include <openvswitch/ofp-port.h>
 #include <openvswitch/meta-flow.h>
-#include <lib/byte-order.h>
-#include <lib/dp-packet.h>
+#include <openvswitch/lib/byte-order.h>
+#include <openvswitch/lib/dp-packet.h>
 #include <openvswitch/ofp-msgs.h>
 
 void format_action(const struct ofpact* acts, size_t ofpacts_len,

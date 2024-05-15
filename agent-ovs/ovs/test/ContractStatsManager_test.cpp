@@ -14,7 +14,7 @@
 #include <opflexagent/logging.h>
 #include <opflexagent/test/ModbFixture.h>
 #include "ovs-ofputil.h"
-#include <lib/util.h>
+#include <openvswitch/lib/util.h>
 #include "IntFlowManager.h"
 #include "ContractStatsManager.h"
 #include "TableState.h"
