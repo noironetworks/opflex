@@ -87,7 +87,7 @@ namespace opflexagent {
             if (qosReqOpt) {
                 qosmanager.notifyUpdate.insert(uri);
                 qosmanager.taskQueue.dispatch(uri.toString(), [=]() {
-                        processQosConfig(qosReqOpt.get()); });
+                        processQosConfig(std::move(qosReqOpt).get()); });
             }
         } else if (classId == modelgbp::qos::BandwidthLimit::CLASS_ID){
             optional<shared_ptr<modelgbp::qos::BandwidthLimit>> qosBandwidthOpt =
@@ -207,7 +207,7 @@ namespace opflexagent {
                     }
                 }
             }
-            notifyListeners(interface, BOTH, qosUri);
+            notifyListeners(interface, BOTH, std::move(qosUri));
         }
     }
 
@@ -473,7 +473,7 @@ namespace opflexagent {
 
                 }
                 string taskId = updatedUri.toString()+ interface + dir;
-                qosmanager.taskQueue.dispatch(taskId, [=]() {
+                qosmanager.taskQueue.dispatch(std::move(taskId), [=]() {
                         qosmanager.notifyListeners(interface, dir, std::move(req));
                         });
             }

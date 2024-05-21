@@ -2913,7 +2913,7 @@ void PolicyManager::updateRemoteRoutes(const URI& uri,
         routeIter->second->setPresent(true);
         if(*(routeIter->second) != *newRoute) {
             //Updated remote route
-            routeIter->second = newRoute;
+            routeIter->second = std::move(newRoute);
             routeIter->second->setPresent(true);
             notifyRemoteRoutes.insert(route->getURI());
             updatePolicyPrefixChildrenForRemoteRoute(rd.get()->getURI(),
