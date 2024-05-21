@@ -663,6 +663,7 @@ void MOSerializer::displayObject(std::ostream& ostream,
     }
     ostream << " " << std::endl;
 
+    auto origWidth = ostream.width();
     if (includeProps && !dispProps.empty()) {
         lineLength = 0;
         string pprefix = prefix;
@@ -737,6 +738,8 @@ void MOSerializer::displayObject(std::ostream& ostream,
             ostream.flags(fmt);
         }
     }
+    // restore stream width
+    ostream.width(origWidth);
 }
 
 void MOSerializer::displayMODB(std::ostream& ostream,

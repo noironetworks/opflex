@@ -487,7 +487,7 @@ OfpBuf compose_dhcpv4_reply(uint8_t message_type,
         if (prefix > 32) prefix = 32;
 
         static_route_len += (prefix / 8) + (prefix % 8 != 0) + 5;
-        routes.emplace_back(Routev4(dst, prefix, nextHop));
+        routes.emplace_back(dst, prefix, nextHop);
         if (routes.size() >= MAX_ROUTE) break;
     }
     if (static_route_len > 0) static_route_len += 2;
