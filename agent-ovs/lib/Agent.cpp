@@ -77,7 +77,8 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       prometheusExposeLocalHostOnly(false),
       prometheusExposeEpSvcNan(false),
       behaviorL34FlowsWithoutSubnet(true),
-      logParams(_logParams) {
+      logParams(_logParams),
+      startupPolicyEnabled(false) {
     std::random_device rng;
     std::mt19937 urng(rng());
     uuid = to_string(basic_random_generator<std::mt19937>(urng)());
@@ -189,6 +190,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
     static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
     static const std::string OVS_ASYNC_JSON("ovs.asyncjson.enabled");
+    static const std::string OPFLEX_STARTUP_POLICY_ENABLED("opflex.startup.enabled");
     static const std::string OPFLEX_POLICY_FILE("opflex.startup.policy-file");
     static const std::string OPFLEX_LOCAL_RESOLVE_AFTER_CONNECTION("opflex.startup.resolve-aft-conn");
     static const std::string OPFLEX_STARTUP_POLICY_DURATION("opflex.startup.policy-duration");
@@ -527,6 +529,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
             setenv("OVS_USE_ASYNC_JSON", "", true);
     }
 
+    optional<bool> startupPolicy =
+        properties.get_optional<bool>(OPFLEX_STARTUP_POLICY_ENABLED);
+    if (startupPolicy && startupPolicy.get()) {
+        startupPolicyEnabled = true;
+        LOG(INFO) << "Startup policy is enabled";
+    }
+
     optional<std::string> policyFile =
         properties.get_optional<std::string>(OPFLEX_POLICY_FILE);
     if (policyFile) {
@@ -606,7 +615,7 @@ void Agent::applyProperties() {
     framework.setHandshakeTimeout(peerHandshakeTimeout);
     framework.setKeepaliveTimeout(keepaliveTimeout);
     framework.setStartupPolicy(opflexPolicyFile, modelgbp::getMetadata(),
-                               startupPolicyDuration,
+                               startupPolicyDuration, startupPolicyEnabled,
                                localResolveAftConn);
 }
 

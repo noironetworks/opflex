@@ -272,10 +272,13 @@ public:
      * @param model the model for initializing startupdb
      * @param duration the amount of time in ms from new
      *  connection to continue using startupdb
+     * @param enabled if the feature is enabled
+     * @param resolve_after_connection resolve after leaf connection
      */
     void setStartupPolicy(boost::optional<std::string>& file,
                           const modb::ModelMetadata& model,
                           uint64_t& duration,
+                          bool& enabled,
                           bool& resolve_after_connection);
     /**
      * Enable/Disable reporting of observable changes to registered observers
@@ -591,6 +594,11 @@ private:
      * new connection timestamp in msecs
      */
     volatile int64_t newConnectiontime = 0;
+
+   /**
+    * is startup policy enabled
+    */
+    volatile bool startupPolicyEnabled = false;
 
     /**
      * local resolves only after a new connection till startupPolicyDuration

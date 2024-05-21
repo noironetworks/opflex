@@ -422,6 +422,7 @@ private:
     bool behaviorL34FlowsWithoutSubnet;
     LogParams logParams;
     /* Persistent policy from disk */
+    bool startupPolicyEnabled;
     boost::optional<std::string> opflexPolicyFile;
 };
 
