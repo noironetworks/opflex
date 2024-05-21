@@ -349,7 +349,7 @@ namespace opflexagent {
         }
 
         LOG(INFO) << "mirror src_port size " << srcPortUuids.size();
-        OvsdbValues tdSet("set", srcPortUuids);
+        OvsdbValues tdSet("set", std::move(srcPortUuids));
         msg1.rowData.emplace("select_src_port", tdSet);
 
         // dst ports
@@ -364,7 +364,7 @@ namespace opflexagent {
             }
         }
         LOG(INFO) << "mirror dst_port size " << dstPortUuids.size();
-        OvsdbValues tdSet2("set", dstPortUuids);
+        OvsdbValues tdSet2("set", std::move(dstPortUuids));
         msg1.rowData.emplace("select_dst_port", tdSet2);
 
         // output ports
@@ -377,7 +377,7 @@ namespace opflexagent {
             OvsdbValue outPort("uuid", outputPortUuid);
             outputPort.emplace_back(outPort);
         }
-        OvsdbValues tdSet3(outputPort);
+        OvsdbValues tdSet3(std::move(outputPort));
         msg1.rowData.emplace("output_port", tdSet3);
 
         // name
@@ -393,7 +393,7 @@ namespace opflexagent {
             OvsdbTransactMessage msg2(OvsdbOperation::MUTATE, OvsdbTable::BRIDGE);
             set<tuple<string, OvsdbFunction, string>> condSet;
             condSet.emplace("_uuid", OvsdbFunction::EQ, brUuid);
-            msg2.conditions = condSet;
+            msg2.conditions = std::move(condSet);
             values.clear();
             values.emplace_back("named-uuid", mirrorUuidName);
             OvsdbValues tdSet5(values);
@@ -402,7 +402,7 @@ namespace opflexagent {
             if (outputPortUuid.empty()) {
                 values.clear();
                 values.emplace_back("named-uuid", portNamedUuid);
-                OvsdbValues tdSet6(values);
+                OvsdbValues tdSet6(std::move(values));
                 msg2.mutateRowData.emplace("ports", std::make_pair(OvsdbOperation::INSERT, tdSet6));
             }
 
@@ -411,7 +411,7 @@ namespace opflexagent {
         } else {
             set<tuple<string, OvsdbFunction, string>> condSet;
             condSet.emplace("_uuid", OvsdbFunction::EQ, sessionUuid);
-            msg1.conditions = condSet;
+            msg1.conditions = std::move(condSet);
             requests.push_back(msg1);
         }
         sendAsyncTransactRequests(requests);
