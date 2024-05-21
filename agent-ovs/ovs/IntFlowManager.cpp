@@ -546,9 +546,11 @@ void IntFlowManager::contractUpdated(const URI& contractURI) {
 
 void IntFlowManager::configUpdated(const URI& configURI) {
     if (stopping) return;
+    LOG(DEBUG) << "config updated ";
     optional<shared_ptr<modelgbp::platform::Config>> config_opt =
         modelgbp::platform::Config::resolve(agent.getFramework(), configURI);
     if (config_opt) {
+	LOG(DEBUG) << "after resolve ";
         optional<const uint8_t> configEncapType =
             config_opt.get()->getEncapType();
         string fsuuid = "8encapmismatchconfig"; 
@@ -565,12 +567,17 @@ void IntFlowManager::configUpdated(const URI& configURI) {
             newfs.setAffectedObject(configURI.toString());
             faultmanager.createPlatformFault(newfs);           
         } else if (configEncapType && configEncapType.get() == encapType) {
+             LOG(DEBUG) << "clearing the faults ";
              Mutator mutator_policyelem(agent.getFramework(), "policyelement");
+	     LOG(DEBUG) << "fault uuid "<< fsuuid;
              auto fu = modelgbp::fault::Instance::resolve(agent.getFramework(),fsuuid);
               if (fu) {
+		     LOG(DEBUG) << "fault instance found ";
                      faultmanager.removeFault(fsuuid);
               } 
          }
+    }else {
+	    LOG(DEBUG) << "not able to resolve ";
     }
     switchManager.enableSync();
     agent.getAgentIOService()
