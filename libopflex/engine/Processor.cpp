@@ -274,6 +274,8 @@ void Processor::sendToRole(const item& i, uint64_t& newexp,
 }
 
 bool Processor::shouldResolveLocal() {
+    if (!startupPolicyEnabled) return false;
+
     uint64_t curtime = now(proc_loop);
     // check >= for duration 0 because now wont update till next uv_loop
     if (!opflexPolicyFile
@@ -698,7 +700,14 @@ bool Processor::waitForPendingItems(uint32_t& wait) {
 void Processor::setStartupPolicy(boost::optional<std::string>& file,
                                  const modb::ModelMetadata& model,
                                  uint64_t& duration,
+                                 bool& enabled,
                                  bool& resolve_after_connection) {
+    if (enabled == false) {
+        LOG(INFO) << "Startup policy disabled";
+        return;
+    }
+
+    startupPolicyEnabled = enabled;
     opflexPolicyFile = file;
     if (file) {
         startupdb.init(model);
@@ -733,8 +742,10 @@ void Processor::start(ofcore::OFConstants::OpflexElementMode agent_mode) {
 
     LOG(DEBUG) << "Starting OpFlex Processor";
 
-    size_t objs = readStartupPolicy();
-    LOG(DEBUG) << "Read " << objs << " objects from startup policy";
+    if (startupPolicyEnabled) {
+        size_t objs = readStartupPolicy();
+        LOG(DEBUG) << "Read " << objs << " objects from startup policy";
+    }
 
     client = &store->getStoreClient("_SYSTEM_");
     store->forEachClass(&register_listeners, this);

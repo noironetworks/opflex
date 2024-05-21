@@ -130,9 +130,10 @@ bool OFFramework::waitForPendingItems(uint32_t& wait) {
 void OFFramework::setStartupPolicy(boost::optional<std::string>& file,
                                    const modb::ModelMetadata& model,
                                    uint64_t& duration,
+                                   bool& enabled,
                                    bool& resolve_after_connection) {
-    pimpl->processor.setStartupPolicy(file, model,
-                                      duration, resolve_after_connection);
+    pimpl->processor.setStartupPolicy(file, model, duration,
+                                      enabled, resolve_after_connection);
 }
 
 void OFFramework::start() {
