@@ -24,8 +24,6 @@ using boost::asio::deadline_timer;
 using boost::posix_time::milliseconds;
 using boost::asio::placeholders::error;
 
-const long DEFAULT_SYNC_DELAY_ON_CONNECT_MSEC = 5000;
-
 SwitchManager::SwitchManager(Agent& agent_,
                              FlowExecutor& flowExecutor_,
                              FlowReader& flowReader_,
@@ -34,7 +32,7 @@ SwitchManager::SwitchManager(Agent& agent_,
       flowExecutor(flowExecutor_),
       flowReader(flowReader_),
       portMapper(portMapper_), stateHandler(NULL),
-      connectDelayMs(DEFAULT_SYNC_DELAY_ON_CONNECT_MSEC),
+      connectDelayMs(agent.getSwitchSyncDelay()*1000),
       stopping(false), syncEnabled(false), syncing(false),
       syncInProgress(false), syncPending(false),
       tlvTableDone(false), groupsDone(false) {

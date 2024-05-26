@@ -15,6 +15,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include <netinet/icmp6.h>
 
@@ -180,6 +181,10 @@ void IntFlowManager::start(bool serviceStatsFlowDisabled_, bool isNatStatsEnable
     initPlatformConfig();
     createStaticFlows();
 
+    if (agent.getMulticastCacheTimeout() > 0) {
+        readOldMulticastGroups();
+    }
+
     svcStatsIOWork.reset(new boost::asio::io_service::work(svcStatsIOService));
     svcStatsThread.reset(new std::thread([this]() {
             LOG(DEBUG) << "svcStatsThread start IO run";
@@ -228,6 +233,11 @@ void IntFlowManager::stop() {
         LOG(DEBUG) << "Stopping svcStatsThread";
         svcStatsThread->join();
         svcStatsThread.reset();
+    }
+    if (multiCastIOThread) {
+        LOG(DEBUG) << "Stopping multiCastIOThread";
+        multiCastIOThread->join();
+        multiCastIOThread.reset();
     }
 
     agent.getEndpointManager().unregisterListener(this);
@@ -6714,6 +6724,44 @@ bool IntFlowManager::removeFromMulticastList(const URI& uri) {
     return false;
 }
 
+void IntFlowManager::readOldMulticastGroups() {
+    if (mcastGroupFile == "") return;
+
+    pt::ptree tree;
+    try {
+       pt::read_json(mcastGroupFile, tree);
+       for (auto &v : tree.get_child("multicast-groups")) {
+            oldMcastEntries.push_back(v.second.data());
+       }
+    } catch (pt::json_parser_error& e) {
+       LOG(ERROR) << "Could not read multicast group file "
+                  << e.what();
+    }
+
+    if (oldMcastEntries.empty()) return;
+
+    /* Start a timer to clear the oldMcastEntries */
+    multiCastIOThread.reset(new std::thread([this]() {
+        LOG(DEBUG) << "multiCastIOThread start with timeout "
+                   << agent.getMulticastCacheTimeout() << " secs.";
+        boost::asio::steady_timer timer{multiCastIOService,
+            std::chrono::seconds{agent.getMulticastCacheTimeout()}};
+        timer.async_wait([this](const boost::system::error_code &ec) {
+            clearOldMulticastGroups();
+            multicastGroupsUpdated();
+            LOG(DEBUG) << "multiCastIOThread terminated.";
+        });
+        multiCastIOService.run();
+    }));
+
+}
+
+void IntFlowManager::clearOldMulticastGroups() {
+   const std::lock_guard<mutex> lock(oldMcastEntriesMutex);
+
+   oldMcastEntries.clear();
+}
+
 static const string MCAST_QUEUE_ITEM("mcast-groups");
 
 void IntFlowManager::multicastGroupsUpdated() {
@@ -6726,8 +6774,20 @@ void IntFlowManager::writeMulticastGroups() {
 
     pt::ptree tree;
     pt::ptree groups;
-    for (MulticastMap::value_type& kv : mcastMap)
-        groups.push_back(std::make_pair("", pt::ptree(kv.first)));
+
+    const std::lock_guard<mutex> lock(oldMcastEntriesMutex);
+    if (oldMcastEntries.empty()) {
+        for (MulticastMap::value_type& kv : mcastMap)
+            groups.push_back(std::make_pair("", pt::ptree(kv.first)));
+    } else {
+        /* Merge OldMcastEntries and any new entries just learned */
+        std::set<std::string> uniqEntries(oldMcastEntries.begin(),
+                                          oldMcastEntries.end());
+        for (MulticastMap::value_type& kv : mcastMap)
+             uniqEntries.insert(kv.first);
+        for (auto v : uniqEntries)
+             groups.push_back(std::make_pair("", pt::ptree(v)));
+    }
     tree.add_child("multicast-groups", groups);
 
     try {
