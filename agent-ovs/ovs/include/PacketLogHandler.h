@@ -89,10 +89,22 @@ public:
     void stop() {
         boost::system::error_code ec;
         stopped = true;
-        serverSocket.shutdown(boost::asio::ip::udp::socket::shutdown_both);
-        serverSocket.cancel(ec);
-        serverSocket.close(ec);
-    }
+        try {
+            serverSocket.shutdown(boost::asio::ip::udp::socket::shutdown_both);
+        } catch (const std::runtime_error& e) {
+            LOG(WARNING) << "Packetlogger failed to shutdown UDP socket: " << e.what();
+        }
+        try {
+            serverSocket.cancel(ec);
+        } catch (const std::runtime_error& e) {
+            LOG(WARNING) << "Packetlogger failed to cancel UDP socket: " << e.what();
+        }
+        try {
+            serverSocket.close(ec);
+        } catch (const std::runtime_error& e) {
+            LOG(WARNING) << "Packetlogger failed to close UDP socket: " << e.what();
+        }
+   }
 private:
     /**
      * Handle received UDP packets
