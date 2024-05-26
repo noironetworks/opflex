@@ -14,9 +14,6 @@
 #  include <config.h>
 #endif
 
-
-#include "config.h"
-
 #include <boost/test/unit_test.hpp>
 
 #include "opflex/ofcore/OFFramework.h"
