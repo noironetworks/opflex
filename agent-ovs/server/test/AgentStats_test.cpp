@@ -170,7 +170,7 @@ BOOST_FIXTURE_TEST_CASE(testOFAgent, AgentStatsFixture) {
 
     updateOFAgentStats(opflexStats);
     prometheusManager.addNUpdateOFAgentStats(agent,
-                                             opflexStats);
+                                             std::move(opflexStats));
     verifyOFAgentMetrics(agent, 2, false);
 
     prometheusManager.removeOFAgentStats(agent);

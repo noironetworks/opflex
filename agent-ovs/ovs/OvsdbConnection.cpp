@@ -207,13 +207,13 @@ bool processRowUpdate(const Value& value, OvsdbRowDetails& rowDetails) {
                     const std::string propName = propItr->name.GetString();
                     if (propItr->value.IsString()) {
                         std::string stringValue = propItr->value.GetString();
-                        rowDetails[propName] = std::move(OvsdbValue(stringValue));
+                        rowDetails[propName] = std::move(OvsdbValue(std::move(stringValue)));
                     } else if (propItr->value.IsArray()) {
                         map<string, string> items;
                         string type;
                         populateValues(propItr->value, type, items);
                         opflexagent::Dtype dataType = type.empty() ? opflexagent::Dtype::STRING : (type == "map" ? Dtype::MAP : Dtype::SET);
-                        rowDetails[propName] = std::move(OvsdbValue(dataType, type, items));
+                        rowDetails[propName] = std::move(OvsdbValue(dataType, std::move(type), std::move(items)));
                     } else if (propItr->value.IsInt()) {
                         int intValue = propItr->value.GetInt();
                         rowDetails[propName] = OvsdbValue(intValue);

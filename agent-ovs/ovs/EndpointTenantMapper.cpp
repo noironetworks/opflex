@@ -17,7 +17,8 @@ using std::string;
 typedef EndpointListener::uri_set_t uri_set_t;
 
 EndpointTenantMapper::EndpointTenantMapper(Agent* agent_, SwitchManager* accessSwitchManager_, boost::asio::io_service& ioService_)
-    : agent(agent_), accessSwitchManager(accessSwitchManager_), taskQueue(ioService_) {
+    : shouldPrintTenant(false), agent(agent_), accessSwitchManager(accessSwitchManager_),
+      taskQueue(ioService_), stopping(false) {
     endpointTenantMap = {};
     portTenantMap = {};
     portToPortMap = {};
@@ -41,7 +42,7 @@ void EndpointTenantMapper::stop() {
 }
 
 void EndpointTenantMapper::UpdateVNIDMapping(uint32_t key, std::string value){
-    endpointTenantMap[key] = value;
+    endpointTenantMap[key] = std::move(value);
 }
 
 void EndpointTenantMapper::UpdateVNIDMappingFromURI(uint32_t key, std::string uri){
@@ -52,7 +53,7 @@ void EndpointTenantMapper::UpdateVNIDMappingFromURI(uint32_t key, std::string ur
 }
 
 void EndpointTenantMapper::UpdatePortMapping(uint32_t key, std::string value){
-    portTenantMap[key] = value;
+    portTenantMap[key] = std::move(value);
 }
 
 void EndpointTenantMapper::UpdatePortMappingFromURI(uint32_t key, std::string uri){

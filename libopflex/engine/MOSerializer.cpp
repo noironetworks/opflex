@@ -728,9 +728,11 @@ void MOSerializer::displayObject(std::ostream& ostream,
                 nprefix = prefix + (last ? "  " : (utf8 ? VERT : "|") + " ");
                 nPrefixCharCount += 2;
             }
+            std::ios_base::fmtflags fmt(ostream.flags());
             displayObject(ostream, clsit->first, *cit,
                           tree, false, includeProps, islast, nprefix,
                           nPrefixCharCount, utf8, truncate, excludeObservables);
+            ostream.flags(fmt);
         }
     }
 }
