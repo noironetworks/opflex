@@ -615,7 +615,7 @@ void EndpointManager::updateEndpointExternal(const Endpoint& endpoint) {
         if (egURI) {
             group_ep_map[egURI.get()].insert(uuid);
         }
-        es.egURI = egURI;
+        es.egURI = std::move(egURI);
     }
 
     // update interface name to endpoint mapping
@@ -955,13 +955,13 @@ bool EndpointManager::updateEndpointLocal(const string& uuid,
             LocalL2Ep::remove(framework, locall2ep);
         }
     }
-    es.locall2EPs = newlocall2eps;
+    es.locall2EPs = std::move(newlocall2eps);
     for (const URI& locall3ep : es.locall3EPs) {
         if (newlocall3eps.find(locall3ep) == newlocall3eps.end()) {
             LocalL3Ep::remove(framework, locall3ep);
         }
     }
-    es.locall3EPs = newlocall3eps;
+    es.locall3EPs = std::move(newlocall3eps);
 
     // Update IP address mapping group map
     for (const URI& ipmGrp : newipmgroups) {
@@ -975,7 +975,7 @@ bool EndpointManager::updateEndpointLocal(const string& uuid,
                 ipm_group_ep_map.erase(ipmGrp);
         }
     }
-    es.ipMappingGroups = newipmgroups;
+    es.ipMappingGroups = std::move(newipmgroups);
 
     mutator.commit();
 
@@ -1204,13 +1204,13 @@ bool EndpointManager::updateEndpointReg(const string& uuid) {
             L2Ep::remove(framework, l2ep);
         }
     }
-    es.l2EPs = newl2eps;
+    es.l2EPs = std::move(newl2eps);
     for (const URI& l3ep : es.l3EPs) {
         if (newl3eps.find(l3ep) == newl3eps.end()) {
             L3Ep::remove(framework, l3ep);
         }
     }
-    es.l3EPs = newl3eps;
+    es.l3EPs = std::move(newl3eps);
 
     mutator.commit();
     return true;

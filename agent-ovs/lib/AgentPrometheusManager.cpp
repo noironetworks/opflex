@@ -3268,7 +3268,7 @@ void AgentPrometheusManager::createStaticGaugeTableDrop (const string& bridge_na
                 gauge_check.add(&gauge);
                 string table_drop_key = bridge_name + table_name;
                 table_drop_gauge_map[metric][table_drop_key] =
-                        make_pair(std::move(label_map), &gauge);
+                        make_pair(label_map, &gauge);
             }
         }
     }

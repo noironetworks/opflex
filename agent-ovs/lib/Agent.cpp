@@ -205,17 +205,17 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
 
     optional<std::string> ofName =
         properties.get_optional<std::string>(OPFLEX_NAME);
-    if (ofName) opflexName = ofName;
+    if (ofName) opflexName = std::move(ofName);
     optional<std::string> ofDomain =
         properties.get_optional<std::string>(OPFLEX_DOMAIN);
-    if (ofDomain) opflexDomain = ofDomain;
+    if (ofDomain) opflexDomain = std::move(ofDomain);
 
     optional<bool> enabInspector =
         properties.get_optional<bool>(OPFLEX_INSPECTOR);
     optional<std::string> inspSocket =
         properties.get_optional<std::string>(OPFLEX_INSPECTOR_SOCK);
     if (enabInspector) enableInspector = enabInspector;
-    if (inspSocket) inspectorSock = inspSocket;
+    if (inspSocket) inspectorSock = std::move(inspSocket);
 
     optional<bool> enabNotif =
         properties.get_optional<bool>(OPFLEX_NOTIF);
@@ -233,10 +233,10 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         statMode_json = properties.get_optional<std::string>(OPFLEX_STATS_MODE);
 
     if (enabNotif) enableNotif = enabNotif;
-    if (notSocket) notifSock = notSocket;
-    if (notOwner) notifOwner = notOwner;
-    if (notGrp) notifGroup = notGrp;
-    if (notPerms) notifPerms = notPerms;
+    if (notSocket) notifSock = std::move(notSocket);
+    if (notOwner) notifOwner = std::move(notOwner);
+    if (notGrp) notifGroup = std::move(notGrp);
+    if (notPerms) notifPerms = std::move(notPerms);
     if (statMode_json) {
         statMode = getStatModeFromString(statMode_json.get());
     }
@@ -368,13 +368,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     optional<std::string> confsslClientCertPass =
         properties.get_optional<std::string>(OPFLEX_SSL_CERT_PASS);
     if (confSslMode)
-        sslMode = confSslMode;
+        sslMode = std::move(confSslMode);
     if (confsslCaStore)
-        sslCaStore = confsslCaStore;
+        sslCaStore = std::move(confsslCaStore);
     if (confsslClientCert)
-        sslClientCert = confsslClientCert;
+        sslClientCert = std::move(confsslClientCert);
     if (confsslClientCertPass)
-        sslClientCertPass = confsslClientCertPass;
+        sslClientCertPass = std::move(confsslClientCertPass);
 
     optional<const ptree&> rendererPlugins =
         properties.get_child_optional(PLUGINS_RENDERER);
@@ -586,7 +586,7 @@ void Agent::start() {
     Mutator mutator(framework, "init");
     std::shared_ptr<modelgbp::dmtree::Root> root =
         modelgbp::dmtree::Root::createRootElement(framework);
-    Agent::createUniverse(root);
+    Agent::createUniverse(std::move(root));
     mutator.commit();
 
     // instantiate other components

@@ -12,7 +12,6 @@
 #include <opflexagent/logging.h>
 #include "FlowConstants.h"
 #include "AccessFlowManager.h"
-#include <opflexagent/Agent.h>
 #include "TableState.h"
 #include "TableDropStatsManager.h"
 
@@ -101,6 +100,7 @@ void BaseTableDropStatsManager::start(bool register_listener) {
        AgentPrometheusManager &prometheusManager = agent->getPrometheusManager();
        prometheusManager.addTableDropGauge(connection->getSwitchName(),
                                             tbl_it.second.first);
+       const std::lock_guard<std::mutex> lock(pstatMtx);
        CurrentDropCounterState[tbl_it.first];
        auto &counter = TableDropCounterState[tbl_it.first];
        counter.packet_count = boost::make_optional(false, 0);

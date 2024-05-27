@@ -335,7 +335,7 @@ BOOST_FIXTURE_TEST_CASE(testSecGrpDelete, SecGrpStatsManagerFixture) {
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
-    auto uuid = secGrpStatsManager.getAgentUUID();
+    const auto& uuid = secGrpStatsManager.getAgentUUID();
     optional<shared_ptr<SecGrpClassifierCounter> > myCounter;
     WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeSecGrpClassifierCounter(uuid,
                         secGrpStatsManager.getCurrClsfrGenId(),

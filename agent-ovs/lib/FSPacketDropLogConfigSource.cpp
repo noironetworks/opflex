@@ -254,7 +254,7 @@ void FSPacketDropLogConfigSource::updated(const fs::path& filePath) {
                     manager->packetDropPruneConfigDeleted(itr);
                 }
             }
-            dropPruneCfgSet = newPruneSet;
+            dropPruneCfgSet = std::move(newPruneSet);
             LOG(INFO) << "Updated packet drop log config "
                       << " from " << filePath;
         } else if (isPacketDropFlowConfig(filePath)) {

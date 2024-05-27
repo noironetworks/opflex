@@ -294,7 +294,7 @@ void IntFlowManager::setTunnel(const string& tunnelRemoteIp,
     } else if (tunDst.is_v6()) {
         LOG(ERROR) << "IPv6 tunnel destinations are not supported";
     } else {
-        tunnelDst = tunDst;
+        tunnelDst = std::move(tunDst);
     }
 }
 
@@ -1627,7 +1627,7 @@ void IntFlowManager::handleRemoteEndpointUpdate(const string& uuid) {
         if (hasTunDest) {
             if (hasProxyMac) {
                 if ((proxyTunId =
-                     getProxyTunnelId(agent.getFramework(), rdURI)) == 0)
+                     getProxyTunnelId(agent.getFramework(), std::move(rdURI))) == 0)
                      return;
                 meta = flow::meta::out::REMOTE_TUNNEL_PROXY;
             } else {
@@ -2472,7 +2472,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                     }
                 }
                 if (anycastReturnIps.empty()) {
-                    anycastReturnIps = ipAddresses;
+                    anycastReturnIps = std::move(ipAddresses);
                 }
 
                 for (const address& ipAddr : anycastReturnIps) {
@@ -3241,8 +3241,8 @@ void IntFlowManager::clearNatStatsCounters (const std::string& epUuid) {
     auto vmToExtStats = su.get()->resolveGbpeEpToExtStatsCounter
                                                       ("EpToExt:"+epUuid);
     if (vmToExtStats) {
-        auto natEpg = vmToExtStats.get()->getDepg("");
-        auto epg = vmToExtStats.get()->getSepg("");
+        const auto& natEpg = vmToExtStats.get()->getDepg("");
+        const auto& epg = vmToExtStats.get()->getSepg("");
         if (natEpg != "" && epg != "") {
             auto natEpgUri = URI(natEpg);
             optional<uint32_t> fepgVnid = agent.getPolicyManager().getVnidForGroup(natEpgUri);
@@ -3267,7 +3267,7 @@ void IntFlowManager::clearNatStatsCounters (const std::string& epUuid) {
     auto ExtToVmStats = su.get()->resolveGbpeExtToEpStatsCounter
                                                      ("ExtToEp:"+epUuid);
     if (ExtToVmStats) {
-       auto natEpg = ExtToVmStats.get()->getSepg("");
+       const auto& natEpg = ExtToVmStats.get()->getSepg("");
        if (natEpg != "") {
            auto natEpgUri = URI(natEpg);
            optional<uint32_t> fepgVnid = agent.getPolicyManager().getVnidForGroup(natEpgUri);
@@ -6785,7 +6785,7 @@ void IntFlowManager::writeMulticastGroups() {
                                           oldMcastEntries.end());
         for (MulticastMap::value_type& kv : mcastMap)
              uniqEntries.insert(kv.first);
-        for (auto v : uniqEntries)
+        for (const auto& v : uniqEntries)
              groups.push_back(std::make_pair("", pt::ptree(v)));
     }
     tree.add_child("multicast-groups", groups);

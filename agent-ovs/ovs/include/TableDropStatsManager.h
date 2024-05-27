@@ -58,7 +58,7 @@ public:
     /**
      * Stop the policy stats manager
      */
-    void stop(bool unregister_listener=false);
+    virtual void stop(bool unregister_listener=false);
 
     /**
      * Timer interval handler.  For unit tests only.

@@ -288,7 +288,9 @@ public:
         /**
          * Default constructor for service mapping
          */
-        ServiceMapping() : ctMode(false) {}
+        ServiceMapping() : serviceIp(boost::none), serviceProto(boost::none),
+            servicePort(boost::none), gatewayIp(boost::none), nextHopPort(boost::none),
+            nodePort(boost::none), saTimeoutSecs(boost::none), ctMode(false) {}
 
         /**
          * Get the service IP address for this service mapping

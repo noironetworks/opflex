@@ -17,7 +17,7 @@ OVS_ADDL_CFLAGS = \
 	-D__STDC_CONSTANT_MACROS
 
 AM_CPPFLAGS = $(BOOST_CPPFLAGS) \
-	-Wall -Wno-maybe-uninitialized -Werror \
+	-Wall -Wno-maybe-uninitialized -Wno-overloaded-virtual -Werror \
 	-I$(top_srcdir)/lib/include \
 	-DLOCALSTATEDIR='"$(localstatedir)"'
 if ENABLE_TSAN

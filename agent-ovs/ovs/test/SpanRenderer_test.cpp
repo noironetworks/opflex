@@ -41,7 +41,7 @@ public:
         string uuid = "9b7295f4-07a8-41ac-a681-e0ee82560262";
         rowDetails["uuid"] = OvsdbValue(uuid);
         OvsdbTableDetails tableDetails;
-        tableDetails["br-int"] = rowDetails;
+        tableDetails["br-int"] = std::move(rowDetails);
         conn->getOvsdbState().fullUpdate(OvsdbTable::BRIDGE, tableDetails);
 
         OvsdbRowDetails portDetail;
@@ -80,7 +80,7 @@ public:
         portDetail["uuid"] = OvsdbValue(erspanPortUuid3);
         const string portName3(ERSPAN_PORT_PREFIX + "abc");
         portDetail["name"] = OvsdbValue(portName3);
-        portDetails[erspanPortUuid3] = portDetail;
+        portDetails[erspanPortUuid3] = std::move(portDetail);
 
         conn->getOvsdbState().fullUpdate(OvsdbTable::PORT, portDetails);
 
@@ -99,7 +99,7 @@ public:
         dstPorts[p1PortUuid];
         dstPorts[p2PortUuid];
         mirrorDetail["select_dst_port"] = OvsdbValue(Dtype::SET, "set", dstPorts);
-        mirrorDetails[uuid] = mirrorDetail;
+        mirrorDetails[uuid] = std::move(mirrorDetail);
 
         OvsdbRowDetails mirrorDetail2;
         uuid = "922108c7-ce2d-4d46-a419-1654a5bf47ef";
@@ -107,9 +107,9 @@ public:
         const string mirrorName2("ugh-vspan");
         mirrorDetail2["name"] = OvsdbValue(mirrorName2);
         mirrorDetail2["out_port"] = OvsdbValue(erspanPortUuid2);
-        mirrorDetail2["select_src_port"] = OvsdbValue(Dtype::SET, "set", srcPorts);
-        mirrorDetail2["select_dst_port"] = OvsdbValue(Dtype::SET, "set", dstPorts);
-        mirrorDetails[uuid] = mirrorDetail2;
+        mirrorDetail2["select_src_port"] = std::move(OvsdbValue(Dtype::SET, "set", std::move(srcPorts)));
+        mirrorDetail2["select_dst_port"] = std::move(OvsdbValue(Dtype::SET, "set", std::move(dstPorts)));
+        mirrorDetails[uuid] = std::move(mirrorDetail2);
 
         conn->getOvsdbState().fullUpdate(OvsdbTable::MIRROR, mirrorDetails);
 
@@ -126,8 +126,8 @@ public:
             options["remote_ip"] = remoteIp;
             const string key = "1";
             options["key"] = key;
-            interfaceDetail["options"] = OvsdbValue(Dtype::MAP, "map", options);
-            interfaceDetails[interfaceUuid] = interfaceDetail;
+            interfaceDetail["options"] = std::move(OvsdbValue(Dtype::MAP, "map", options));
+            interfaceDetails[interfaceUuid] = std::move(interfaceDetail);
         }
 
         {
@@ -142,8 +142,8 @@ public:
             options["remote_ip"] = remoteIp;
             const string key = "5";
             options["key"] = key;
-            interfaceDetail["options"] = OvsdbValue(Dtype::MAP, "map", options);
-            interfaceDetails[interfaceUuid] = interfaceDetail;
+            interfaceDetail["options"] = std::move(OvsdbValue(Dtype::MAP, "map", options));
+            interfaceDetails[interfaceUuid] = std::move(interfaceDetail);
         }
         conn->getOvsdbState().fullUpdate(OvsdbTable::INTERFACE, interfaceDetails);
     }

@@ -521,53 +521,53 @@ bool PolicyManager::updateEPGDomains(const URI& egURI, bool& toRemove) {
             }
         }
 
-        domainClass = ndomainClass;
-        domainURI = ndomainURI;
+        domainClass = std::move(ndomainClass);
+        domainURI = std::move(ndomainURI);
     }
 
     bool updated = false;
     if (!compare_shared_ptr(epg, gs.epGroup)) {
-        gs.epGroup = epg;
+        gs.epGroup = std::move(epg);
         updated = true;
     }
     if (!compare_shared_ptr(newInstCtx, gs.instContext)) {
-        gs.instContext = newInstCtx;
+        gs.instContext = std::move(newInstCtx);
         updated = true;
     }
     if (!compare_shared_ptr(newfd, gs.floodDomain)) {
-        gs.floodDomain = newfd;
+        gs.floodDomain = std::move(newfd);
         updated = true;
     }
     if (!compare_shared_ptr(newfdctx, gs.floodContext)) {
-        gs.floodContext = newfdctx;
+        gs.floodContext = std::move(newfdctx);
         updated = true;
     }
     if (!compare_shared_ptr(newbd, gs.bridgeDomain)) {
-        gs.bridgeDomain = newbd;
+        gs.bridgeDomain = std::move(newbd);
         updated = true;
     }
     if (!compare_shared_ptr(newrd, gs.routingDomain)) {
-        gs.routingDomain = newrd;
+        gs.routingDomain = std::move(newrd);
         updated = true;
     }
     if (!compare_shared_ptr(newBDInstCtx, gs.instBDContext)) {
-        gs.instBDContext = newBDInstCtx;
+        gs.instBDContext = std::move(newBDInstCtx);
         updated = true;
     }
     if (!compare_shared_ptr(newRDInstCtx, gs.instRDContext)) {
-        gs.instRDContext = newRDInstCtx;
+        gs.instRDContext = std::move(newRDInstCtx);
         updated = true;
     }
     if (!compare_shared_ptr(newl2epretpolicy, gs.l2EpRetPolicy)) {
-        gs.l2EpRetPolicy = newl2epretpolicy;
+        gs.l2EpRetPolicy = std::move(newl2epretpolicy);
         updated = true;
     }
     if (!compare_shared_ptr(newl3epretpolicy, gs.l3EpRetPolicy)) {
-        gs.l3EpRetPolicy = newl3epretpolicy;
+        gs.l3EpRetPolicy = std::move(newl3epretpolicy);
         updated = true;
     }
     if (newsmap != gs.subnet_map) {
-        gs.subnet_map = newsmap;
+        gs.subnet_map = std::move(newsmap);
         updated = true;
     }
 
@@ -1544,13 +1544,13 @@ bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
             deleteDnsAsk(secGrpURI, s);
         }
     }
-    for (auto s : newDnsRefs) {
+    for (const auto& s : newDnsRefs) {
         /*new Dns Ref*/
         if(oldDnsRefs.find(s) == oldDnsRefs.end()) {
             createDnsAsk(secGrpURI, s);
         }
     }
-    secGrpMap[secGrpURI].dnsAsks = newDnsRefs;
+    secGrpMap[secGrpURI].dnsAsks = std::move(newDnsRefs);
     return updated;
 }
 
@@ -1989,8 +1989,8 @@ void PolicyManager::updateL3Nets(const opflex::modb::URI& rdURI,
                             delURI,
                             delPPfx,
                             pPfxLen,
-                            newNet,
-                            newExtSub,
+                            std::move(newNet),
+                            std::move(newExtSub),
                             notifyLocalRoutes);
                         continue;
                     }
@@ -2270,12 +2270,12 @@ bool PolicyManager::updateExternalInterface(const URI& uri, bool &toRemove) {
        newsmap != eis.subnet_map) {
         updated = true;
     }
-    eis.extDomain = newExtDom;
-    eis.routingDomain = newRD;
-    eis.bridgeDomain = newExtBD;
-    eis.instContext = newBDContext;
-    eis.instRDContext = newRDContext;
-    eis.subnet_map = newsmap;
+    eis.extDomain = std::move(newExtDom);
+    eis.routingDomain = std::move(newRD);
+    eis.bridgeDomain = std::move(newExtBD);
+    eis.instContext = std::move(newBDContext);
+    eis.instRDContext = std::move(newRDContext);
+    eis.subnet_map = std::move(newsmap);
     return updated;
 }
 
@@ -2325,15 +2325,18 @@ void PolicyManager::updateDomain(class_id_t class_id, const URI& uri) {
     // Determine routing-domains that may be affected by changes to Subnet
     if (class_id == modelgbp::gbp::Subnets::CLASS_ID) {
 
-        // Update routing domains that depend on this Subnets
-        auto it1 = subnets_rd_map.find(uri);
-        if (it1 != subnets_rd_map.end()) {
-            uri_set_t& rdset = it1->second;
+        {
+            lock_guard<mutex> rdGuard(subnets_rd_mutex);
+            // Update routing domains that depend on this Subnets
+            auto it1 = subnets_rd_map.find(uri);
+            if (it1 != subnets_rd_map.end()) {
+                uri_set_t &rdset = it1->second;
 
-            for (const auto& it2 : rdset) {
-                if (notifyRds.find(it2) != notifyRds.end())
-                    continue;
-                notifyRds.insert(it2);
+                for (const auto &it2: rdset) {
+                    if (notifyRds.find(it2) != notifyRds.end())
+                        continue;
+                    notifyRds.insert(it2);
+                }
             }
         }
 
@@ -2420,14 +2423,14 @@ bool PolicyManager::getRoute(
         auto lrtToRrt = localRoute.get()->resolveEpdrLocalRouteToRrtRSrc();
         auto lrtToPrt = localRoute.get()->resolveEpdrLocalRouteToPrtRSrc();
         if(lrtToPrt) {
-            auto extNetURI = lrtToPrt.get()->getTargetURI().get();
+            const auto& extNetURI = lrtToPrt.get()->getTargetURI().get();
             l3n_map_t::const_iterator it = l3n_map.find(extNetURI);
             if(it != l3n_map.end() && it->second.instContext) {
                 sclass = it->second.instContext.get()->getClassid();
             }
         }
         if(lrtToRrt) {
-            auto remoteRtURI = lrtToRrt.get()->getTargetURI().get();
+            const auto& remoteRtURI = lrtToRrt.get()->getTargetURI().get();
             route_map_t::const_iterator iter = remote_route_map.find(remoteRtURI);
             if(iter == remote_route_map.end()){
                 return true;
@@ -2451,7 +2454,7 @@ bool PolicyManager::getRoute(
             nhList.clear();
             list<boost::asio::ip::address> newNhList;
             for(auto const &stRoute: lrtToSrt) {
-                auto stRouteURI = stRoute->getTargetURI().get();
+                const auto& stRouteURI = stRoute->getTargetURI().get();
                 route_map_t::const_iterator iter = static_route_map.find(stRouteURI);
                 if(iter == static_route_map.end()){
                     continue;
@@ -2459,7 +2462,7 @@ bool PolicyManager::getRoute(
                 iter->second->getRoute(rd_, rdInst_, addr_, pfx_len, nhList);
                 newNhList.merge(nhList);
             }
-            nhList = newNhList;
+            nhList = std::move(newNhList);
         }
         return true;
     }
@@ -2719,16 +2722,15 @@ void PolicyManager::updatePolicyPrefixChildrenForRemoteRoute(
             bool is_exact_match = false;
             if(network::prefix_match(targetAddr, pfxLen, addr,
                                      prefixLen, is_exact_match)) {
-                optional<shared_ptr<LocalRoute>> localRoute
-                    = boost::make_optional<shared_ptr<LocalRoute> >(false, nullptr);
-                optional<shared_ptr<LocalRouteToRrtRSrc>> lrtToRrt;
-                optional<shared_ptr<LocalRouteToPrtRSrc>> lrtToPrt;
-                localRoute = LocalRoute::resolve(framework,
-                                                 rdURI.toString(),
-                                                 addr.to_string(),
-                                                 prefixLen);
-                lrtToRrt = localRoute.get()->resolveEpdrLocalRouteToRrtRSrc();
-                lrtToPrt = localRoute.get()->resolveEpdrLocalRouteToPrtRSrc();
+                optional<shared_ptr<LocalRoute>> localRoute =
+                    LocalRoute::resolve(framework,
+                                        rdURI.toString(),
+                                        addr.to_string(),
+                                        prefixLen);
+                optional<shared_ptr<LocalRouteToRrtRSrc>> lrtToRrt =
+                    localRoute.get()->resolveEpdrLocalRouteToRrtRSrc();
+                optional<shared_ptr<LocalRouteToPrtRSrc>> lrtToPrt =
+                    localRoute.get()->resolveEpdrLocalRouteToPrtRSrc();
                 if(routeURI == parentRemoteRt) {
                     notifyLocalRoutes.insert(localRoute.get()->getURI());
                     continue;

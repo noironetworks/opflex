@@ -25,6 +25,8 @@
 #include <grp.h>
 #include <pwd.h>
 
+#include <utility>
+
 namespace opflexagent {
 
 namespace ba = boost::asio;
@@ -214,7 +216,7 @@ private:
     public:
         write_ctx(shared_ptr<StringBuffer> message_,
                   session_ptr session_)
-            : message(message_), session(session_) {}
+            : message(std::move(message_)), session(session_) {}
 
         void handle_error(const boost::system::error_code& ec) {
             if (ec != ba::error::operation_aborted) {
@@ -398,7 +400,7 @@ void NotifServer::dispatchVirtualIp(const std::unordered_set<std::string>& uuids
     writer.EndObject();
     writer.EndObject();
 
-    do_dispatch(sb, sessions, "virtual-ip");
+    do_dispatch(std::move(sb), sessions, "virtual-ip");
 }
 
 } /* namespace opflexagent */

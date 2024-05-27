@@ -414,7 +414,7 @@ void NatStatsManagerFixture::testFlowStatsRoutetb(MockConnection& portConn,
     uint32_t expPkts = 0;
     uint32_t expBytes = 0;
     uint32_t numFlows = 1;
-    auto epUuid = ep0->getUUID();
+    const auto& epUuid = ep0->getUUID();
     expPkts = (FINAL_PACKET_COUNT - INITIAL_PACKET_COUNT) * numFlows;
     expBytes = expPkts * PACKET_SIZE;
     checkModbObjectCountersToEp(epUuid, "ExtToEp", expPkts, expBytes);
@@ -489,7 +489,7 @@ void NatStatsManagerFixture::testFlowStatsOutTb(MockConnection& portConn,
     uint32_t expPkts = 0;
     uint32_t expBytes = 0;
     uint32_t numFlows = 1;
-    auto epUuid = ep0->getUUID();
+    const auto& epUuid = ep0->getUUID();
     expPkts = (FINAL_PACKET_COUNT - INITIAL_PACKET_COUNT) * numFlows;
     expBytes = expPkts * PACKET_SIZE;
     checkModbObjectCountersToEp(epUuid, "EpToExt", expPkts, expBytes);
@@ -565,7 +565,7 @@ void NatStatsManagerFixture::testFlowStatsSrcTb(MockConnection& portConn,
     uint32_t expPkts = 0;
     uint32_t expBytes = 0;
     uint32_t numFlows = 1;
-    auto epUuid = ep0->getUUID();
+    const auto& epUuid = ep0->getUUID();
     expPkts = (FINAL_PACKET_COUNT - INITIAL_PACKET_COUNT) * numFlows;
     expBytes = expPkts * PACKET_SIZE;
     checkModbObjectCountersToEp(epUuid, "ExtToVm", expPkts, expBytes);

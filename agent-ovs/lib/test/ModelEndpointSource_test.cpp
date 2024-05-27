@@ -165,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE(endpoints, ModelEndpointSourceFixture) {
 
         {
             BOOST_REQUIRE(e->getDHCPv4Config());
-            auto d4 = e->getDHCPv4Config().get();
+            const auto& d4 = e->getDHCPv4Config().get();
             BOOST_REQUIRE(d4.getDomain());
             BOOST_CHECK_EQUAL("domain", d4.getDomain().get());
             BOOST_REQUIRE(d4.getInterfaceMtu());
@@ -192,7 +192,7 @@ BOOST_FIXTURE_TEST_CASE(endpoints, ModelEndpointSourceFixture) {
         }
         {
             BOOST_REQUIRE(e->getDHCPv6Config());
-            auto d6 = e->getDHCPv6Config().get();
+            const auto& d6 = e->getDHCPv6Config().get();
             BOOST_REQUIRE(d6.getT1());
             BOOST_CHECK_EQUAL(1, d6.getT1().get());
             BOOST_REQUIRE(d6.getT2());
