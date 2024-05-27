@@ -137,6 +137,18 @@ public:
 };
 
 /**
+ * Variant implementing output port
+ */
+class GeneveOptOutputPortLayerVariant: public PacketDecoderLayerVariant {
+public:
+    GeneveOptOutputPortLayerVariant():PacketDecoderLayerVariant("GeneveOpt", "OutputPort", 5, 6){};
+    virtual ~GeneveOptOutputPortLayerVariant() {};
+    virtual int configure();
+    virtual void getFormatString(boost::format &fmtStr);
+    virtual void reParse(ParseInfo &p);
+};
+
+/**
  * Layer implementing ARP
  */
 class ARPLayer: public PacketDecoderLayer {

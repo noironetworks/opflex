@@ -477,6 +477,10 @@ int PacketDecoder::configure() {
         sptrGeneveOptDestinationEPGLayerVariant(new GeneveOptDestinationEPGLayerVariant());
     sptrGeneveOptDestinationEPGLayerVariant->configure();
     registerLayer(sptrGeneveOptDestinationEPGLayerVariant);
+    shared_ptr<PacketDecoderLayerVariant>
+        sptrGeneveOptOutputPortLayerVariant(new GeneveOptOutputPortLayerVariant());
+    sptrGeneveOptOutputPortLayerVariant->configure();
+    registerLayer(sptrGeneveOptOutputPortLayerVariant);
     /*Set the base layer id*/
     baseLayerId = sptrGeneve->getId();
     return 0;
