@@ -376,6 +376,21 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     if (confsslClientCertPass)
         sslClientCertPass = std::move(confsslClientCertPass);
 
+    optional<uint32_t> mcastCacheTimeoutOpt =
+        properties.get_optional<uint32_t>(OPFLEX_MULTICAST_CACHE_TIMEOUT);
+    if (mcastCacheTimeoutOpt) {
+        multicast_cache_timeout = mcastCacheTimeoutOpt.get();
+        LOG(INFO) << "Multicast cache timeout set to " << multicast_cache_timeout << " seconds";
+    }
+
+    // This is used by switchmanager and needs to happen before loading the renderer
+    optional<uint32_t> switchSyncDelayOpt =
+        properties.get_optional<uint32_t>(OPFLEX_SWITCH_SYNC_DELAY);
+    if (switchSyncDelayOpt) {
+        switch_sync_delay = switchSyncDelayOpt.get();
+        LOG(INFO) << "Switch Sync Delay set to " << switch_sync_delay << " seconds";
+    }
+
     optional<const ptree&> rendererPlugins =
         properties.get_child_optional(PLUGINS_RENDERER);
 
@@ -476,20 +491,6 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     if (keepaliveOpt) {
         keepaliveTimeout = keepaliveOpt.get();
         LOG(INFO) << "keepalive timeout set to " << keepaliveTimeout << " ms";
-    }
-
-    optional<uint32_t> mcastCacheTimeoutOpt =
-        properties.get_optional<uint32_t>(OPFLEX_MULTICAST_CACHE_TIMEOUT);
-    if (mcastCacheTimeoutOpt) {
-        multicast_cache_timeout = mcastCacheTimeoutOpt.get();
-        LOG(INFO) << "Multicast cache timeout set to " << multicast_cache_timeout << " seconds";
-    }
-
-    optional<uint32_t> switchSyncDelayOpt =
-        properties.get_optional<uint32_t>(OPFLEX_SWITCH_SYNC_DELAY);
-    if (switchSyncDelayOpt) {
-        switch_sync_delay = switchSyncDelayOpt.get();
-        LOG(INFO) << "Switch Sync Delay set to " << switch_sync_delay << " seconds";
     }
 
     LOG(INFO) << "Agent mode set to " <<
