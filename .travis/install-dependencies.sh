@@ -3,6 +3,11 @@
 set -o errtrace
 set -x
 
+git clone https://github.com/eddyxu/cpp-coveralls
+pushd cpp-coveralls
+sudo ./setup.py install
+popd
+
 wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
 tar -xvzf artifacts.tgz
 sudo dpkg -i jammy/libnoiro-openvswitch_2.12.0-1_amd64.deb
