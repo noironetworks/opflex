@@ -354,6 +354,9 @@ private:
     /* How long to wait from platform config to switch Sync */
     uint32_t switch_sync_delay = 5; /* seconds */
     uint32_t switch_sync_dynamic = 0; /* dynamic retry default 0 no retry */
+    // startup policy duration from new connection in seconds
+    uint64_t startupPolicyDuration = 0; /* seconds */
+    bool localResolveAftConn = false; /* local resolve after conn estb */
 
     std::set<std::string> endpointSourceFSPaths;
     std::set<std::string> disabledFeaturesSet;
@@ -418,6 +421,8 @@ private:
     std::unordered_set<std::string> prometheusEpAttributes;
     bool behaviorL34FlowsWithoutSubnet;
     LogParams logParams;
+    /* Persistent policy from disk */
+    boost::optional<std::string> opflexPolicyFile;
 };
 
 } /* namespace opflexagent */

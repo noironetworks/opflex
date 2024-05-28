@@ -127,6 +127,14 @@ bool OFFramework::waitForPendingItems(uint32_t& wait) {
     return pimpl->processor.waitForPendingItems(wait);
 }
 
+void OFFramework::setStartupPolicy(boost::optional<std::string>& file,
+                                   const modb::ModelMetadata& model,
+                                   uint64_t& duration,
+                                   bool& resolve_after_connection) {
+    pimpl->processor.setStartupPolicy(file, model,
+                                      duration, resolve_after_connection);
+}
+
 void OFFramework::start() {
     LOG(DEBUG) << "Starting OpFlex Framework";
     pimpl->started = true;
