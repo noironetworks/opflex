@@ -145,7 +145,7 @@ namespace opflexagent {
         OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::INTERFACE);
         set<tuple<string, OvsdbFunction, string>> conditionSet;
         conditionSet.emplace("name", OvsdbFunction::EQ, interface);
-        msg1.conditions = conditionSet;
+        msg1.conditions = std::move(conditionSet);
 
         vector<OvsdbValue> values;
         values.emplace_back(rate);
@@ -249,7 +249,7 @@ namespace opflexagent {
 
         OvsdbTransactMessage msg1(OvsdbOperation::UPDATE, OvsdbTable::PORT);
         vector<OvsdbValue> values;
-        OvsdbValues emptySet("set", values);
+        OvsdbValues emptySet("set", std::move(values));
         msg1.rowData.emplace("qos", emptySet);
 
         set<tuple<string, OvsdbFunction, string>> conditionSet;

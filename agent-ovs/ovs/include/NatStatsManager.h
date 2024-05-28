@@ -96,7 +96,7 @@ private:
         NatTrafficFlowMatchKey_t(uint32_t k1, uint32_t k2, string k3) {
             vnid = k1;
             rd = k2;
-            ip = k3;
+            ip = std::move(k3);
         }
 
         /**

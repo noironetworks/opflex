@@ -36,10 +36,10 @@ public:
         // simulate results of monitor
         OvsdbRowDetails rowDetails;
         std::string uuid = " 9b7295f4-07a8-41ac-a681-e0ee82560262";
-        rowDetails["uuid"] = OvsdbValue(uuid);
+        rowDetails["uuid"] = OvsdbValue(std::move(uuid));
         OvsdbTableDetails tableDetails;
-        tableDetails["br-int"] = rowDetails;
-        conn->getOvsdbState().fullUpdate(OvsdbTable::BRIDGE, tableDetails);
+        tableDetails["br-int"] = std::move(rowDetails);
+        conn->getOvsdbState().fullUpdate(OvsdbTable::BRIDGE, std::move(tableDetails));
     }
 
     virtual ~NetFlowRendererFixture() {
