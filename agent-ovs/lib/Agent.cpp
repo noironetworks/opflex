@@ -539,7 +539,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     optional<std::string> policyFile =
         properties.get_optional<std::string>(OPFLEX_POLICY_FILE);
     if (policyFile) {
-        opflexPolicyFile = policyFile;
+        opflexPolicyFile = std::move(policyFile);
         LOG(INFO) << "Startup policy file set to " << opflexPolicyFile;
     }
 
