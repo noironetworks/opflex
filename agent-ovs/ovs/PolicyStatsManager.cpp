@@ -18,7 +18,7 @@
 
 #include "ovs-ofputil.h"
 
-#include <lib/util.h>
+#include <openvswitch/lib/util.h>
 
 extern "C" {
 #include <openvswitch/ofp-msgs.h>
