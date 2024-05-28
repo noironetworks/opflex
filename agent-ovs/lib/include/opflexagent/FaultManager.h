@@ -9,6 +9,7 @@
 #include <opflex/ofcore/OFFramework.h>
 #include <opflexagent/Fault.h> 
 #include <opflexagent/EndpointListener.h>
+#include <map>
 #include <mutex>
 
 namespace opflexagent {

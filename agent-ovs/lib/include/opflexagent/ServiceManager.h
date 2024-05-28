@@ -20,6 +20,7 @@
 #include <opflex/modb/URI.h>
 #include <opflex/ofcore/OFFramework.h>
 
+#include <list>
 #include <unordered_set>
 #include <unordered_map>
 #include <mutex>

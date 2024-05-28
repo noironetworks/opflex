@@ -15,6 +15,7 @@
 
 #include <opflex/modb/URI.h>
 
+#include <set>
 #include <string>
 
 namespace opflexagent {
