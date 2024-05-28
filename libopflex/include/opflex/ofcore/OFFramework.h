@@ -765,11 +765,13 @@ public:
      * @param file startup policy file name or boost::none
      * @param model the model to use for startupdb
      * @param duration in ms how long from new connection to use startupdb
+     * @pararm enabled if the startup policy is enabled
      * @param resolve_after_connection delay local resolves till connection
      */
     void setStartupPolicy(boost::optional<std::string>& file,
                           const modb::ModelMetadata& model,
                           uint64_t& duration,
+                          bool& enabled,
                           bool& resolve_after_connection);
 
     /**
