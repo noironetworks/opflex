@@ -296,6 +296,7 @@ private:
     std::atomic<bool> syncing;
     std::atomic<bool> syncInProgress;
     std::atomic<bool> syncPending;
+    std::atomic<int> sync_retries;
 
     std::vector<FlowEntryList> recvFlows;
     std::vector<bool> tableDone;

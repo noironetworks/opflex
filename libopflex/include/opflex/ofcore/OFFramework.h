@@ -753,6 +753,13 @@ public:
      */
     void setKeepaliveTimeout(const uint32_t timeout);
 
+   /**
+    * Wait for pending items
+    * @param wait min wait time input and how long to wait as output
+    * @return true wait, false no wait
+    */
+    bool waitForPendingItems(uint32_t& wait);
+
     /**
      * Start the framework.  This will start all the framework threads
      * and attempt to connect to configured OpFlex peers.

@@ -600,6 +600,10 @@ void Processor::setTunnelMac(const opflex::modb::MAC &mac) {
     pool.setTunnelMac(mac);
 }
 
+bool Processor::waitForPendingItems(uint32_t& wait) {
+    return pool.waitForPendingItems(wait);
+}
+
 void Processor::start(ofcore::OFConstants::OpflexElementMode agent_mode) {
     if (proc_active) return;
     proc_active = true;

@@ -108,7 +108,24 @@
            //
            // How long to wait (in ms) for keepalive echo to
            // be ack'd before timing out connection
-           // "keepalive-timeout" : 120000
+           // "keepalive-timeout" : 120000,
+           //
+           // Initial switch sync delay
+           // How long to wait from PlatformConfig resolution
+           // to start the switch sync, default 5 seconds
+           // "switch-sync-delay": 5,
+           //
+           // Subsequent switch sync delay
+           // In case we have subsequent resolutions pending
+           // whats the minimum time any resolution can be
+           // pending before we retry switch sync
+           // default 0, no further wait
+           // If this value is > 0, we keep checking if
+           // every pending MO waited at least this long
+           // before retrying switch sync
+           // Max retries will be 5 so as to not wait
+           // forever
+           // "switch-sync-dynamic": 0
        },
        // Statistics. Counters for various artifacts.
        // mode: can be either

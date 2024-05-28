@@ -385,6 +385,13 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
 void OpflexPEHandler::handlePolicyResolveErr(uint64_t reqId,
                                              const rapidjson::Value& payload) {
     auto conn = (OpflexClientConnection*)getConnection();
+    OpflexPool& pool = getProcessor()->getPool();
+    std::string uri = "";
+    bool found = pool.getPendingItem(conn, reqId, uri);
+    if (found) {
+        LOG(ERROR) << "Policy resolve failed for request "
+                   << reqId << " : " << uri;
+    }
     conn->getOpflexStats()->incrPolResolveErrs();
     handleError(reqId, payload, "Policy Resolve");
 }

@@ -259,6 +259,13 @@ public:
      */
     void setTunnelMac(const opflex::modb::MAC &mac);
 
+   /**
+    * Wait for pending items
+    * @param wait min wait time input and how long to wait as output
+    * @return true wait, false no wait
+    */
+    bool waitForPendingItems(uint32_t& wait);
+
     /**
      * Enable/Disable reporting of observable changes to registered observers
      *
