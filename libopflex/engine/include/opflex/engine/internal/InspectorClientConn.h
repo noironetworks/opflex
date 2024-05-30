@@ -35,9 +35,11 @@ public:
      * @param handlerFactory a factory that can allocate a handler for
      * the connection
      * @param name A path name for the unix socket
+     * @param timeout Time to wait for query completion
      */
     InspectorClientConn(HandlerFactory& handlerFactory,
-                        const std::string& name);
+                        const std::string& name,
+                        long timeout);
     virtual ~InspectorClientConn();
 
     // ****************
@@ -55,6 +57,7 @@ public:
 
 private:
     const std::string& name;
+    long query_timeout;
 
     yajr::Peer* peer;
 

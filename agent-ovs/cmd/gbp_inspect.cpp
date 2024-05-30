@@ -50,6 +50,7 @@ void sighandler(int sig) {
     LOG(INFO) << "Got " << strsignal(sig) << " signal";
 }
 #define DEF_SOCKET LOCALSTATEDIR"/run/opflex-agent-inspect.sock"
+#define DEF_INSPECT_QUERY_TIMEOUT 5000
 
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
@@ -70,6 +71,9 @@ int main(int argc, char** argv) {
             ("syslog", "Log to syslog instead of file or standard out")
             ("socket", po::value<string>()->default_value(DEF_SOCKET),
              "Connect to the specified UNIX domain socket (default " DEF_SOCKET ")")
+            ("timeout,i",
+	     po::value<long>()->default_value(DEF_INSPECT_QUERY_TIMEOUT),
+             "Timeout value for policy query in ms (default 5000 ms)")
             ("query,q", po::value<std::vector<string> >(),
              "Query for a specific object with subjectname,uri or all objects "
              "of a specific type with subjectname")
@@ -107,6 +111,7 @@ int main(int argc, char** argv) {
     bool recursive = false;
     bool followRefs = false;
     int truncate = 0;
+    long timeout = DEF_INSPECT_QUERY_TIMEOUT;
     bool unresolved = false;
     bool excludeObservables = false;
     po::variables_map vm;
@@ -141,6 +146,7 @@ int main(int argc, char** argv) {
         if (vm.count("syslog")) {
             log_to_syslog = true;
         }
+        timeout = vm["timeout"].as<long>();
         socket = vm["socket"].as<string>();
         out_file = vm["output"].as<string>();
         load_file = vm["load"].as<string>();
@@ -176,7 +182,8 @@ int main(int argc, char** argv) {
     try {
         unique_ptr<InspectorClient>
             client(InspectorClient::newInstance(socket,
-                                                modelgbp::getMetadata()));
+                                                modelgbp::getMetadata(),
+                                                timeout));
         client->setRecursive(recursive);
         client->setFollowRefs(followRefs);
         client->setExcludeObservables(excludeObservables);
