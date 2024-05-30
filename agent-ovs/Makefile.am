@@ -308,7 +308,7 @@ if RENDERER_OVS
 	$(libopenvswitch_CFLAGS) \
 	$(libofproto_CFLAGS) \
 	-I$(top_srcdir)/ovs/include \
-	-std=gnu++11
+	-std=gnu++14
 if ENABLE_TSAN
   librenderer_openvswitch_la_CXXFLAGS += -fsanitize=thread
 endif

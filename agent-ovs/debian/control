@@ -3,10 +3,10 @@ Priority: optional
 Section: net
 Maintainer: OpFlex Developers <opflex-dev@lists.opendaylight.org>
 Build-Depends:
- debhelper (>= 8.0.0), autotools-dev, libboost-all-dev (>= 1.53),
+ debhelper (>= 8.0.0), autotools-dev, libboost-all-dev (>= 1.65),
  libopflex-dev, libmodelgbp-dev, libnoiro-openvswitch-dev (>= 2.12.0) <!norenderer>,
  libnoiro-openvswitch (>= 2.12.0) <!norenderer>, libnetfilter-conntrack-dev (>= 1.0) <!norenderer>,
- rapidjson-dev (>=1.1), pkgconf, libssl-dev (>= 1.0), prometheus-cpp (>= 1.0.1),
+ rapidjson-dev (>=1.1), pkgconf, libssl-dev (>= 1.1), prometheus-cpp (>= 1.0.1),
  libcurl4-openssl-dev, curl
 Standards-Version: 3.9.8
 Homepage: https://wiki.opendaylight.org/view/OpFlex:Main

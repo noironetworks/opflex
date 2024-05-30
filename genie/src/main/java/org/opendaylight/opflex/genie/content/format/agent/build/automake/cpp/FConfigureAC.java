@@ -87,7 +87,7 @@ public class FConfigureAC
                                         + "AM_CONDITIONAL(HAVE_DOXYGEN, [test x$DOXYGEN != 'xnone']) \n" + "\n"
                                         + "# ---------------------------------------------------------------\n"
                                         + "# Dependency checks\n" + "\n" + "# Checks for header files\n"
-                                        + "AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))\n"
+                                        + "AX_BOOST_BASE([1.65.0], [], AC_MSG_ERROR([Boost is required]))\n"
                                         + "PKG_CHECK_MODULES([libopflex], [libopflex >= 2.7.0])\n" + "\n"
                                         + "# Older versions of autoconf don't define docdir\n"
                                         + "if test x$docdir = x; then\n"

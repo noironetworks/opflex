@@ -29,9 +29,6 @@ Requires: libnsl2
 %endif
 BuildRequires: libuv-devel
 BuildRequires: openssl-devel
-%if 0%{?rhel} == 7
-BuildRequires: devtoolset-8-toolchain
-%endif
 BuildRequires: boost-devel
 BuildRequires: boost-test
 BuildRequires: rapidjson-devel >= 1.1
@@ -64,23 +61,15 @@ Development libraries for libopflex
 %setup -q
 
 %build
-%if 0%{?rhel} == 7
-. /opt/rh/devtoolset-8/enable
-%define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
-%endif
 %configure --disable-assert --disable-tests-make-all
 make %{?_smp_mflags}
 
 %install
 %make_install
 
-%if 0%{?rhel} == 7
 %check
 %if %{with check}
-    . /opt/rh/devtoolset-8/enable
-    %define __strip /opt/rh/devtoolset-8/root/usr/bin/strip
     make check
-%endif
 %endif
 
 %post -p /sbin/ldconfig

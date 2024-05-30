@@ -13,7 +13,7 @@ You can check out opflex repository with https as follows:
 libopflex requires
 - libuv >= 1.20
 - rapidjson 1.1
-- Boost >= 1.53
+- Boost >= 1.65
 
 
 Install Boost base and the Boost unit testing library, plus libuv1, doxygen, openssl and rapidjson-dev from your preferred distro.

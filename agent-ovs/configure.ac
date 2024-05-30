@@ -77,7 +77,7 @@ AC_PROG_INSTALL
 AM_PROG_AS
 AC_LANG([C])
 AC_LANG([C++])
-AX_CXX_COMPILE_STDCXX([11], [ext], [mandatory])
+AX_CXX_COMPILE_STDCXX([14], [ext], [mandatory])
 
 # check for doxygen
 AC_CHECK_PROGS(DOXYGEN,doxygen,none)
@@ -139,7 +139,7 @@ AM_COND_IF([ENABLE_GPROF],
 
 # Checks for header files
 
-AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))
+AX_BOOST_BASE([1.65.0], [], AC_MSG_ERROR([Boost is required]))
 AX_BOOST_PROGRAM_OPTIONS
 if test "x$ax_cv_boost_program_options" != xyes; then
     AC_MSG_ERROR([Boost::Program_Options library is required])

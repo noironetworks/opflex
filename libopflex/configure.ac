@@ -157,7 +157,7 @@ dnl ---------------------------------------------------------------
 dnl Dependency checks
 
 dnl Boost dependencies
-AX_BOOST_BASE([1.53.0], [], AC_MSG_ERROR([Boost is required]))
+AX_BOOST_BASE([1.65.0], [], AC_MSG_ERROR([Boost is required]))
 AX_BOOST_SYSTEM
 AX_BOOST_ASIO
 AX_BOOST_UNIT_TEST_FRAMEWORK
