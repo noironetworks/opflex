@@ -53,9 +53,11 @@ public:
      *
      * @param name A path name for the unix socket
      * @param model the model metadata object
+     * @param timeout time to wait for query completion
      */
     static InspectorClient* newInstance(const std::string& name,
-                                        const modb::ModelMetadata& model);
+                                        const modb::ModelMetadata& model,
+                                        long timeout);
 
     /**
      * Follow references for retrieved objects
