@@ -25,9 +25,11 @@ namespace internal {
 using yajr::Peer;
 
 InspectorClientConn::InspectorClientConn(HandlerFactory& handlerFactory,
-                                         const std::string& name_)
+                                         const std::string& name_,
+                                         long timeout)
     : OpflexConnection(handlerFactory), name(name_), peer(NULL) {
     client_loop = {};
+    query_timeout = timeout;
     timer = {};
 }
 
@@ -41,7 +43,7 @@ void InspectorClientConn::connect() {
 
     timer.data = this;
     uv_timer_init(&client_loop, &timer);
-    uv_timer_start(&timer, on_timer, 5000, 5000);
+    uv_timer_start(&timer, on_timer, query_timeout, query_timeout);
 
     peer = yajr::Peer::create(name,
                               on_state_change,

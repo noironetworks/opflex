@@ -42,9 +42,11 @@ public:
      *
      * @param name the unix socket name
      * @param model the model metadata object
+     * @param timeout the time to wait for query completion
      */
     InspectorClientImpl(const std::string& name,
-                        const modb::ModelMetadata& model);
+                        const modb::ModelMetadata& model,
+                        long timeout);
 
     /**
      * Destroy the inspector client

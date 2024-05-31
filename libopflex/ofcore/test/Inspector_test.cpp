@@ -42,7 +42,7 @@ static const string SOCK_NAME("/tmp/inspector_test.sock");
 class InspectorFixture : public BaseFixture {
 public:
     InspectorFixture()
-        : BaseFixture(), inspector(&db), client(SOCK_NAME, md) {
+        : BaseFixture(), inspector(&db), client(SOCK_NAME, md, 5000) {
         inspector.setSocketName(SOCK_NAME);
         inspector.start();
     }

@@ -27,8 +27,9 @@ namespace ofcore {
 
 InspectorClient*
 InspectorClient::newInstance(const std::string& name,
-                             const modb::ModelMetadata& model) {
-    return new engine::InspectorClientImpl(name, model);
+                             const modb::ModelMetadata& model,
+                             long timeout) {
+    return new engine::InspectorClientImpl(name, model, timeout);
 }
 
 }
@@ -50,8 +51,9 @@ using internal::OpflexConnection;
 using internal::OpflexMessage;
 
 InspectorClientImpl::InspectorClientImpl(const std::string& name_,
-                                         const modb::ModelMetadata& model)
-    : conn(*this, name_), db(threadManager),
+                                         const modb::ModelMetadata& model,
+                                         long timeout)
+    : conn(*this, name_, timeout), db(threadManager),
       serializer(&db, this), pendingRequests(0),
       followRefs(false), recursive(false), unresolved(false),
       excludeObservables(false) {
