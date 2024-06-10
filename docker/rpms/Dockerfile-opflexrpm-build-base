@@ -1,12 +1,18 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.3
 ARG proxy
-RUN microdnf install --enablerepo codeready-builder-for-rhel-8-x86_64-rpms \
+RUN microdnf install -y yum yum-utils \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/x86_64/os \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/debug/tree \
+ && yum --nogpgcheck -y update
+RUN yum --nogpgcheck install -y \
     libtool pkgconfig autoconf automake make cmake file python3-six openssl-devel \
     git gcc gcc-c++ boost-devel diffutils python3-devel libnetfilter_conntrack-devel \
     wget which curl-devel procps zlib-devel libmnl-devel vi rpmdevtools rpmlint \
     java-11-openjdk-devel checkpolicy graphviz groff selinux-policy-devel iproute-devel \
     doxygen libuv-devel libnsl2-devel selinux-policy-targeted \
-    && microdnf clean all
+    && yum clean all
 RUN wget https://dlcdn.apache.org/maven/maven-3/3.9.7/binaries/apache-maven-3.9.7-bin.tar.gz \
     && tar zxvf apache-maven-3.9.7-bin.tar.gz \
     && rm apache-maven-3.9.7-bin.tar.gz
@@ -37,12 +43,14 @@ RUN if [ ! -z "$proxy" ]; then \
    fi
 ENV PATH=/apache-maven-3.9.7/bin:$PATH
 RUN pushd /root \
+    && git config --global http.postBuffer 157286400 \
     && git clone https://github.com/noironetworks/3rdparty-rpm \
     && rpmdev-setuptree \
     && git clone https://github.com/openvswitch/ovs.git -b v2.12.0 \
     && pushd ovs \
     && cp ../3rdparty-rpm/noiro-openvswitch/noiro-openvswitch.spec /root/rpmbuild/SPECS \
     && patch -p1 < ../3rdparty-rpm/noiro-openvswitch/noiro-openvswitch.patch \
+    && patch -p1 < ../3rdparty-rpm/noiro-openvswitch/ovsidl.patch \
     && rm -f openvswitch*.tar.gz \
     && ./boot.sh \
     && ./configure \
@@ -56,7 +64,7 @@ RUN pushd /root \
     && rm -Rf /root/ovs
 RUN pushd /root \
     && rpmdev-setuptree \
-    && git clone https://github.com/libuv/libuv.git -b v1.20.2 \
+    && git clone https://github.com/libuv/libuv.git -b v1.20.2 --depth 1 \
     && pushd libuv \
     && cp ../3rdparty-rpm/libuv.spec /root/rpmbuild/SPECS \
     && rm -f libuv*.tar.gz \
@@ -70,7 +78,7 @@ RUN pushd /root \
     && rm -Rf /root/libuv
 RUN pushd /root \
     && rpmdev-setuptree \
-    && git clone https://github.com/jupp0r/prometheus-cpp.git -b v1.0.1 \
+    && git clone https://github.com/jupp0r/prometheus-cpp.git -b v1.0.1 --depth 1 \
     && pushd prometheus-cpp \
     && git submodule init \
     && git submodule update \
