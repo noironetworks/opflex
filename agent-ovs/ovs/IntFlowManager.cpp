@@ -555,6 +555,28 @@ void IntFlowManager::configUpdated(const URI& configURI) {
             config_opt.get()->getEncapType();
         string fsuuid = "8encapmismatchconfig"; 
 
+	if (encapType == ENCAP_NONE) {
+	    LOG(DEBUG) << "None";
+	}else if(encapType == ENCAP_VLAN) {
+	    LOG(DEBUG) << "ENCAP_VLAN";
+	}else if(encapType == ENCAP_VXLAN) {
+	    LOG(DEBUG) << "ENCAP_VXLAN";
+	}else if(encapType == ENCAP_IVXLAN ){
+	    LOG(DEBUG) << "ENCAP_IVXLAN";
+        }
+
+        if (configEncapType) {
+	    if (configEncapType.get() == ENCAP_NONE) {
+                LOG(DEBUG) << "None";
+            }else if(configEncapType.get() == ENCAP_VLAN) {
+                LOG(DEBUG) << "ENCAP_VLAN";
+            }else if(configEncapType.get() == ENCAP_VXLAN) {
+                LOG(DEBUG) << "ENCAP_VXLAN";
+            }else if(configEncapType.get() == ENCAP_IVXLAN ){
+                LOG(DEBUG) << "ENCAP_IVXLAN";
+            }
+	}
+
         if (configEncapType && configEncapType.get() != encapType) {
             LOG(INFO) << "fault raised for encapType from fabric doesn't match "
                          "agent config";
