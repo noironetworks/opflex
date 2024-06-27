@@ -233,7 +233,11 @@ public:
             pfxLen = 128;
         }
         if(!prefixLen.empty()) {
-            pfxLen = stoul(prefixLen);
+            try {
+                pfxLen = stoul(prefixLen);
+            } catch(std::exception const& ex) {
+                /*Should not get here as value is already vetted*/
+            }
         }
         if((pfxLen > 128) || (pfxLen == 0))
            return false;

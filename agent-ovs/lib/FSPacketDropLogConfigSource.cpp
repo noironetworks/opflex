@@ -130,19 +130,22 @@ static int validateMacMask(const std::string& arg,
     }
     return 0;
 }
-static int validatePrefix(int filter_idx, const std::string & arg, 
-        optional<boost::asio::ip::address> &addr, optional<uint8_t> &pfxLen) {
+static int validatePrefix(int filter_idx, const std::string & arg,
+       optional<boost::asio::ip::address> &addr, optional<uint8_t> &pfxLen) {
     using namespace boost;
     int ret=0;
     if(arg.empty()) {
         return ret;
     }
-    std::string address_string = arg;
+    string address_string = arg;
+    string pfxLenArg;
+    bool maskPresent = false;
     if(arg.find('/') != std::string::npos) {
         std::vector<std::string> splitVec;
         split(splitVec,arg, is_any_of("/"), token_compress_on);
         address_string = splitVec[0];
-        pfxLen = strtol(splitVec[1].c_str(),NULL,10);
+        pfxLenArg = splitVec[1];
+        maskPresent = true;
     }
     boost::system::error_code ec; 
     addr = asio::ip::address::from_string(address_string, ec);
@@ -150,14 +153,26 @@ static int validatePrefix(int filter_idx, const std::string & arg,
         LOG(ERROR) << "Invalid address for filter " << filter_idx;
         return -1;
     }
-    if(pfxLen) {
+    if(!pfxLenArg.empty()) {
+        LOG(INFO) << "PrefixLen is set!";
+        size_t *end = nullptr;
+        uint8_t pfxLenVal;
+        try {
+            pfxLenVal = stoul(pfxLenArg, end, 10);
+        } catch (std::exception const& ex) {
+            LOG(ERROR) << "Incorrect prefix length for filter" << filter_idx;
+            return -1;
+        }
         if(addr.get().is_v4()) {
-            ret = (pfxLen.get()>32 || pfxLen.get()==0)?-1:0;
+            ret = (pfxLenVal>32)?-1:0;
         } else {
-            ret = (pfxLen.get()>128 || pfxLen.get()==0)?-1:0;
+            ret = (pfxLenVal>128)?-1:0;
+        }
+        if (ret == 0) {
+            pfxLen = pfxLenVal;
         } 
-    } else {
-        pfxLen = (addr.get().is_v4()?32:128);
+    } else if(maskPresent) {
+        ret = -1;
     }
     if(ret != 0) {
         LOG(ERROR) << "Incorrect prefix length for filter" << filter_idx;
