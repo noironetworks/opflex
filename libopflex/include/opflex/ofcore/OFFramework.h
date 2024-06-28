@@ -587,6 +587,8 @@
 #include "opflex/ofcore/OFAgentStats.h"
 #include <opflex/modb/URI.h>
 #include <opflex/modb/PropertyInfo.h>
+#include "opflex/gbp/Policy.h"
+#include <opflex/modb/mo-internal/StoreClient.h>
 
 /**
  * @defgroup cpp C++ Interface
@@ -773,6 +775,23 @@ public:
                           uint64_t& duration,
                           bool& enabled,
                           bool& resolve_after_connection);
+
+    /**
+     * update MODB from file
+     * @param file the filename to update from
+     * @param op DELETE or REPLACE or ADD
+     * @param out notifs the notifications list
+     * @return number of MOs updated or deleted
+     */
+    size_t updateMOs(const std::string& file,
+                     opflex::gbp::PolicyUpdateOp op,
+                     opflex::modb::mointernal::StoreClient::notif_t *notifs);
+
+    /**
+     * Delete MOs from MODB
+     * @param notifs contain the URIs and classids of the MOs to be deleted
+     */
+    void deleteMOs(opflex::modb::mointernal::StoreClient::notif_t& notifs);
 
     /**
      * Start the framework.  This will start all the framework threads

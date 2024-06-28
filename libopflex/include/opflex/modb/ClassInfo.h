@@ -49,6 +49,13 @@ public:
          * repository.
          */
         POLICY,
+
+        /**
+         * An MO describing a configured policy that describes some
+         * user intent.  These objects are owned by the policy
+         * element.
+         */
+        LOCAL_POLICY,
         /**
          * An MO describing a policy enforcement endpoint that
          * resolved from the endpoint registry.  These objects are

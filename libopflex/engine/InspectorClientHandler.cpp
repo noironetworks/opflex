@@ -68,7 +68,7 @@ void InspectorClientHandler::handlePolicyQueryRes(const Value& payload) {
         Value::ConstValueIterator it;
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
-            client->serializer.deserialize(mo, *storeClient, true, &notifs);
+            client->serializer.deserialize(mo, *storeClient, true, &notifs, false);
         }
     }
 

@@ -37,6 +37,14 @@ module[gbp]
         member[allow; type=scalar/UInt8]
     }
 
+    class[LocalAllowDenyAction;
+          super=gbp/Action;
+          concrete]
+    {
+        # Set to nonzero to allow, or zero to deny
+        member[allow; type=scalar/UInt8]
+    }
+
     class[LogAction;
           super=gbp/Action;
           concrete]

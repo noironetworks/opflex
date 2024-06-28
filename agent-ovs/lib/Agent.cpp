@@ -28,6 +28,7 @@
 #include <opflexagent/FSLearningBridgeSource.h>
 #include <opflexagent/FSExternalEndpointSource.h>
 #include <opflexagent/FSSnatSource.h>
+#include <opflexagent/FSNetpolSource.h>
 #include <opflexagent/FSPacketDropLogConfigSource.h>
 #include <opflexagent/logging.h>
 
@@ -78,7 +79,8 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       prometheusExposeEpSvcNan(false),
       behaviorL34FlowsWithoutSubnet(true),
       logParams(_logParams),
-      startupPolicyEnabled(false) {
+      startupPolicyEnabled(false),
+      localNetpolEnabled(false) {
     std::random_device rng;
     std::mt19937 urng(rng());
     uuid = to_string(basic_random_generator<std::mt19937>(urng)());
@@ -149,6 +151,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string ENDPOINT_SOURCE_MODEL_LOCAL("endpoint-sources.model-local");
     static const std::string SERVICE_SOURCE_PATH("service-sources.filesystem");
     static const std::string SNAT_SOURCE_PATH("snat-sources.filesystem");
+    static const std::string NETPOL_SOURCE_PATH("netpol-sources.filesystem");
     static const std::string DROP_LOG_CFG_SOURCE_FSPATH("drop-log-config-sources.filesystem");
     static const std::string FAULT_SOURCE_FSPATH("host-agent-fault-sources.filesystem");
     static const std::string PACKET_EVENT_NOTIF_SOCK("packet-event-notif.socket-name");
@@ -194,6 +197,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_POLICY_FILE("opflex.startup.policy-file");
     static const std::string OPFLEX_LOCAL_RESOLVE_AFTER_CONNECTION("opflex.startup.resolve-aft-conn");
     static const std::string OPFLEX_STARTUP_POLICY_DURATION("opflex.startup.policy-duration");
+    static const std::string OPFLEX_ENABLE_LOCAL_NETPOL("opflex.enable-local-netpol");
 
     // set feature flags to true
     clearFeatureFlags();
@@ -325,6 +329,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     if (snatSource) {
         for (const ptree::value_type &v : snatSource.get())
              snatSourcePaths.insert(v.second.data());
+    }
+
+    optional<const ptree&> netpolSource =
+        properties.get_child_optional(NETPOL_SOURCE_PATH);
+    if (netpolSource) {
+        for (const ptree::value_type &v : netpolSource.get())
+             netpolSourcePaths.insert(v.second.data());
     }
 
     optional<const ptree&> dropLogCfgSrc =
@@ -556,6 +567,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         localResolveAftConn = lResolveAftConn.get();
         LOG(INFO) << "Startup policy resolve after connection set to " << localResolveAftConn;
     }
+
+    optional<bool> enableLocalNetpol =
+        properties.get_optional<bool>(OPFLEX_ENABLE_LOCAL_NETPOL);
+    if (enableLocalNetpol && enableLocalNetpol.get()) {
+        localNetpolEnabled = true;
+        LOG(INFO) << "Local Network Policy is enabled";
+    }
 }
 
 void Agent::applyProperties() {
@@ -568,6 +586,7 @@ void Agent::applyProperties() {
         policyManager.setOpflexDomain(opflexDomain.get());
     }
 
+    policyManager.configLocalNetpol(localNetpolEnabled);
     if (endpointSourceFSPaths.empty() &&
         endpointSourceModelLocalNames.empty())
         LOG(ERROR) << "No endpoint sources found in configuration.";
@@ -575,6 +594,8 @@ void Agent::applyProperties() {
         LOG(INFO) << "No service sources found in configuration.";
     if (snatSourcePaths.empty())
         LOG(INFO) << "No SNAT sources found in configuration.";
+    if (netpolSourcePaths.empty())
+        LOG(INFO) << "No Local Network Policy sources found in configuration.";
     if (opflexPeers.empty())
         LOG(ERROR) << "No Opflex peers found in configuration";
     if (renderers.empty())
@@ -695,6 +716,13 @@ void Agent::start() {
         SnatSource* source =
             new FSSnatSource(&snatManager, fsWatcher, path);
         snatSources.emplace_back(source);
+    }
+    if (localNetpolEnabled) {
+        for (const std::string& path : netpolSourcePaths) {
+            FSNetpolSource* source =
+                new FSNetpolSource(framework, fsWatcher, path);
+                netpolSources.emplace_back(source);
+        }
     }
     if(!dropLogCfgSourcePath.empty()) {
         opflex::modb::URI uri = (opflex::modb::URIBuilder()

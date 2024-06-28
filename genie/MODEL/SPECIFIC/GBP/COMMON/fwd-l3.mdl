@@ -199,6 +199,16 @@ module[gbp]
         }
     }
 
+    class[LocalSubnet;
+          super=gbp/Subnet;
+          concrete]
+    {
+        contained
+        {
+            parent[class=gbp/LocalSubnets]
+        }
+    }
+
     class[Subnets;
           super=gbp/BehavioralGroup;
           concrete]
@@ -213,6 +223,16 @@ module[gbp]
             {
                 component[member=name]
             }
+        }
+    }
+
+    class[LocalSubnets;
+          super=gbp/Subnets;
+          concrete]
+    {
+        contained
+        {
+            parent[class=policy/Space]
         }
     }
 

@@ -186,7 +186,7 @@ void GbpOpflexServerImpl::readPolicy(const std::string& file) {
 
 void GbpOpflexServerImpl::updatePolicy(rapidjson::Document& d,
                                        gbp::PolicyUpdateOp op) {
-    size_t objs = serializer.updateMOs(d, *getSystemClient(), op);
+    size_t objs = serializer.updateMOs(d, *getSystemClient(), op, false);
     LOG(INFO) << "Update " << objs
               << " managed objects from GRPC update";
     listener.sendUpdates();
