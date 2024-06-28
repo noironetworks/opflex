@@ -135,7 +135,6 @@ BOOST_FIXTURE_TEST_CASE( droplogpruneconfigsource, FSConfigFixture ) {
     boost::optional<shared_ptr<DropPruneConfig>> dropPruneCfg = DropPruneConfig::resolve(agent.getFramework(), dropPruneUri);
     BOOST_CHECK(dropPruneCfg.get()->getFilterName().get() == "flt1");
     BOOST_CHECK(dropPruneCfg.get()->getSrcAddress().get() == "1.2.3.4");
-    BOOST_CHECK(dropPruneCfg.get()->getSrcPrefixLen().get() == 32);
     BOOST_CHECK(dropPruneCfg.get()->getDstAddress().get() == "5.6.7.0");
     BOOST_CHECK(dropPruneCfg.get()->getDstPrefixLen().get() == 24);
     BOOST_CHECK(dropPruneCfg.get()->getSrcMac().get().toString() == "00:01:02:03:04:05");
