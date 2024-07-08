@@ -90,12 +90,6 @@ public:
      */
     void registerStateHandler(SwitchStateHandler* handler);
 
-    /**
-     * Set the delay after connection before syncing starts
-     * @param delay the delay in milliseconds
-     */
-    void setSyncDelayOnConnect(long delay);
-
     /* Interface: OnConnectListener */
     virtual void Connected(SwitchConnection *swConn);
 
