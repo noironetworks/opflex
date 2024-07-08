@@ -299,6 +299,12 @@ public:
     uint32_t getSwitchSyncDelay() { return switch_sync_delay; }
 
     /**
+     * Set Switch Sync delay value, used from test code
+     * @param delay in seconds
+     */
+    void setSwitchSyncDelay(uint32_t delay) { switch_sync_delay = delay; }
+
+    /**
      * Get if switch sync set to dynamic
      */
     uint32_t getSwitchSyncDynamic() { return switch_sync_dynamic; }

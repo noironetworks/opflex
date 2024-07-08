@@ -102,6 +102,10 @@ void SwitchManager::enableSync() {
             << "[" << (connection ? connection->getSwitchName() : "(none)")
             << "] Switch state synchronization enabled";
 
+        // This is not reliable when read from the constructor.
+        // The renderer policy can be read before the policy
+        // file that contains this value. so read it again.
+        connectDelayMs = agent.getSwitchSyncDelay()*1000;
         // Set a deadline for syncing of switch state. If we get
         // connected to the switch before that, then we'll wait till
         // the deadline expires before attempting to sync.
@@ -122,10 +126,6 @@ void SwitchManager::enableSync() {
 
 void SwitchManager::registerStateHandler(SwitchStateHandler* handler) {
     stateHandler = handler;
-}
-
-void SwitchManager::setSyncDelayOnConnect(long delay) {
-    connectDelayMs = delay;
 }
 
 void SwitchManager::Connected(SwitchConnection *swConn) {

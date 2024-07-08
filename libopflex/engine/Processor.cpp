@@ -745,6 +745,10 @@ void Processor::start(ofcore::OFConstants::OpflexElementMode agent_mode) {
     if (startupPolicyEnabled) {
         size_t objs = readStartupPolicy();
         LOG(DEBUG) << "Read " << objs << " objects from startup policy";
+        if (objs == 0) {
+           LOG(INFO) << "Disabling startup policy due to read failure";
+           startupPolicyEnabled = false;
+        }
     }
 
     client = &store->getStoreClient("_SYSTEM_");
