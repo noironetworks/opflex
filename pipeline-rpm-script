@@ -1,0 +1,22 @@
+pipeline {
+    agent {
+        label 'noiro-build-101.cisco.com'
+    }
+    environment {
+        DOCKER_USER = 'noiro'
+        DOCKER_TAG = 'latest'
+        BASEIMAGE = 'noiro/opflexrpm-build-base:latest'
+        BRANCH = 'master'
+    }
+    stages {
+        stage('Main Script') {
+            steps {
+                script {
+                    sh """
+                        cd docker/rpms; ./build_opflexrpm.sh ${env.DOCKER_USER} ${env.DOCKER_TAG} ${env.BASEIMAGE} ${env.BRANCH} $BUILD_NUMBER
+                    """
+                }
+            }
+        }
+    }
+}
