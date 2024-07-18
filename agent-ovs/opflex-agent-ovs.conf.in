@@ -221,6 +221,15 @@
         "filesystem": ["DEFAULT_FS_FAULT_DIR"]
     },
 
+    //// Enable resolution of local network policies via netpol-sources
+    //// default false
+    //"enable-local-netpol": false,
+    //// JSON files containing local netpols, MUST end with .netpol
+    //"netpol-sources": {
+    //   // Filesystem path to monitor local netpol files ending in .netpol
+    //   "filesystem": ["DEFAULT_FS_NETPOL_DIR"]
+    //},
+
     // Dynamically loaded plugins can add new functionality to the
     // opflex agent at startup.
     "plugins": {

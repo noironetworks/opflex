@@ -473,7 +473,7 @@ void OpflexServerHandler::handleEPDeclareReq(const rapidjson::Value& id,
         Value::ConstValueIterator ep_it;
         for (ep_it = endpoint.Begin(); ep_it != endpoint.End(); ++ep_it) {
             const Value& mo = *ep_it;
-            serializer.deserialize(mo, client, true, &notifs);
+            serializer.deserialize(mo, client, true, &notifs, false);
         }
     }
     if (flakyMode) {
@@ -749,7 +749,7 @@ void OpflexServerHandler::handleStateReportReq(const rapidjson::Value& id,
         Value::ConstValueIterator ep_it;
         for (ep_it = observable.Begin(); ep_it != observable.End(); ++ep_it) {
             const Value& mo = *ep_it;
-            serializer.deserialize(mo, client, true, &notifs);
+            serializer.deserialize(mo, client, true, &notifs, false);
         }
     }
     client.deliverNotifications(notifs);

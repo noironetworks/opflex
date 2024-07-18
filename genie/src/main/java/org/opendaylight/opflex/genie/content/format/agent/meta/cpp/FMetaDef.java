@@ -104,7 +104,11 @@ public class FMetaDef
 
     private static String getClassType(MClass aIn)
     {
-        if (isPolicy(aIn))
+        if (isLocalPolicy(aIn))
+        {
+            return "ClassInfo::LOCAL_POLICY";
+        }
+        else if (isPolicy(aIn))
         {
             return "ClassInfo::POLICY";
         }
@@ -171,6 +175,18 @@ public class FMetaDef
     private static boolean isPolicy(MClass aIn)
     {
         return aIn.isSubclassOf("policy/Component") || aIn.isSubclassOf("policy/Definition");
+    }
+
+    private static boolean isLocalPolicy(MClass aIn)
+    {
+        return aIn.isInstanceOf("gbpe/LocalL24Classifier")
+               || aIn.isInstanceOf("gbp/LocalSecGroup")
+               || aIn.isInstanceOf("gbp/LocalSecGroupSubject")
+               || aIn.isInstanceOf("gbp/LocalSecGroupRule")
+               || aIn.isInstanceOf("gbp/LocalAllowDenyAction")
+               || aIn.isInstanceOf("gbp/LocalLogAction")
+               || aIn.isInstanceOf("gbp/LocalSubnets")
+               || aIn.isInstanceOf("gbp/LocalSubnet");
     }
 
     private static boolean isObservable(MClass aIn)

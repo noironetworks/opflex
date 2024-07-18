@@ -108,6 +108,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
                                modb::mointernal::StoreClient& client,
                                bool replaceChildren,
                                /* out */ modb::mointernal::StoreClient::notif_t* notifs,
+                               bool islocal,
                                bool skiplocal) {
     if (!mo.IsObject()
         || !mo.HasMember("uri")
@@ -123,7 +124,7 @@ void MOSerializer::deserialize(const rapidjson::Value& mo,
         const ClassInfo& ci = store->getClassInfo(classv.GetString());
         if (skiplocal && ci.getOwner() != "policyreg") return;
         std::shared_ptr<ObjectInstance> oi =
-            std::make_shared<ObjectInstance>(ci.getId(), false);
+            std::make_shared<ObjectInstance>(ci.getId(), islocal);
         if (mo.HasMember("properties")) {
             const Value& properties = mo["properties"];
             if (properties.IsArray()) {
@@ -427,14 +428,38 @@ size_t MOSerializer::readMOs(FILE* pfile, StoreClient& client, bool skiplocal) {
     size_t i = 0;
     for (moit = d.Begin(); moit != d.End(); ++ moit) {
         const rapidjson::Value& mo = *moit;
-        deserialize(mo, client, true, NULL, skiplocal);
+        deserialize(mo, client, true, NULL, false, skiplocal);
         i += 1;
     }
     return i;
 }
 
+size_t MOSerializer::updateMOs(const std::string& file, StoreClient& client,
+                               gbp::PolicyUpdateOp op,
+                               modb::mointernal::StoreClient::notif_t* notifs) {
+    FILE* pfile = fopen(file.c_str(), "r");
+    if (pfile == NULL) {
+        LOG(ERROR) << "Could not open MODB file "
+                   << file << " for reading";
+        return 0;
+    }
+    char buffer[1024];
+    rapidjson::FileReadStream f(pfile, buffer, sizeof(buffer));
+    rapidjson::Document d;
+    d.ParseStream<0, rapidjson::UTF8<>, rapidjson::FileReadStream>(f);
+    if (!d.IsArray()) {
+        LOG(ERROR) << "Malformed policy file: not an array " << file;
+        return 0;
+    }
+    size_t n = updateMOs(d, client, op, true, notifs);
+    client.deliverNotifications(*notifs);
+    return n;
+}
+
 size_t MOSerializer::updateMOs(rapidjson::Document& d, StoreClient& client,
-                               PolicyUpdateOp op) {
+                               PolicyUpdateOp op,
+                               bool islocal,
+                               modb::mointernal::StoreClient::notif_t* notifs) {
 
     rapidjson::Value::ConstValueIterator moit;
     size_t i = 0;
@@ -443,7 +468,7 @@ size_t MOSerializer::updateMOs(rapidjson::Document& d, StoreClient& client,
     if (replaceChildren || op == PolicyUpdateOp::ADD) {
         for (moit = d.Begin(); moit != d.End(); ++ moit) {
             const rapidjson::Value& mo = *moit;
-            deserialize(mo, client, replaceChildren, NULL);
+            deserialize(mo, client, replaceChildren, notifs, islocal);
             i += 1;
         }
     } else if (deleteRec || op == PolicyUpdateOp::DELETE) {
@@ -462,8 +487,11 @@ size_t MOSerializer::updateMOs(rapidjson::Document& d, StoreClient& client,
             try {
                 URI uri(uriv.GetString());
                 const ClassInfo& ci = store->getClassInfo(classv.GetString());
-                if (client.remove(ci.getId(), uri, deleteRec, NULL) && listener)
+                if (client.remove(ci.getId(), uri, deleteRec, NULL) && listener) {
                     listener->remoteObjectUpdated(ci.getId(), uri, op);
+                    if (notifs)
+                        client.queueNotification(ci.getId(), uri, *notifs);
+                }
             } catch (const std::invalid_argument& e) {
                 // ignore invalid URIs
                 LOG(DEBUG) << "Could not deserialize invalid object of class "
@@ -477,6 +505,22 @@ size_t MOSerializer::updateMOs(rapidjson::Document& d, StoreClient& client,
         }
     }
     return i;
+}
+
+void MOSerializer::deleteMOs(modb::mointernal::StoreClient& client,
+                             opflex::modb::mointernal::StoreClient::notif_t& notifs) {
+    if (notifs.empty())
+        return;
+
+    opflex::modb::mointernal::StoreClient::notif_t::const_iterator nit;
+    for (nit = notifs.begin(); nit != notifs.end(); ++nit) {
+        if (!client.remove(nit->second, nit->first, false, NULL)) {
+            LOG(ERROR) << "Could not delete URI: " << nit->first
+                       << " of class " << nit->second
+                       << " from MODB";
+        }
+    }
+    client.deliverNotifications(notifs);
 }
 
 #define FORMAT_PROP(gfunc, type, prefixTrunc, output)                   \

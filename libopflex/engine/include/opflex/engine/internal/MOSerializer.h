@@ -388,12 +388,16 @@ public:
      * @param notifs an optional map that will hold update
      * notifications that should be dispatched as a result of this
      * change.
+     * @param islocal, true if this object instance is local
+     * @param skiplocal, if true skip locals and observables
+     * from the json object
      */
     void deserialize(const rapidjson::Value& mo,
                      modb::mointernal::StoreClient& client,
                      bool replaceChildren,
                      /* out */
                      modb::mointernal::StoreClient::notif_t* notifs,
+                     bool islocal,
                      bool skiplocal = false);
 
     /**
@@ -438,11 +442,39 @@ public:
      * @param d the RapidJson document representing the update
      * @param client the store client to use
      * @param op the Update opcode
+     * @param islocal true of its a local mo
      * @param return the number of managed objects updated
      */
     size_t updateMOs(rapidjson::Document& d,
                      modb::mointernal::StoreClient& client,
-                     gbp::PolicyUpdateOp op);
+                     gbp::PolicyUpdateOp op,
+                     bool islocal,
+                     /* out */
+                     modb::mointernal::StoreClient::notif_t* notifs = NULL);
+
+    /**
+     * Update managed objects from file into the MODB
+     * assumes updates are for local MOs
+     *
+     * @param file the file representing the update
+     * @param client the store client to use
+     * @param op the Update opcode
+     * @param out notifs the notification list
+     * @return the number of managed objects updated
+     */
+    size_t updateMOs(const std::string& file,
+                     modb::mointernal::StoreClient& client,
+                     gbp::PolicyUpdateOp op,
+                     /* out */
+                     modb::mointernal::StoreClient::notif_t* notifs);
+
+    /**
+     * Delete MOs from MODB
+     * @param client the store client to use
+     * @param notifs contain the URIs and classids of the MOs to be deleted
+     */
+    void deleteMOs(modb::mointernal::StoreClient& client,
+                  opflex::modb::mointernal::StoreClient::notif_t& notifs);
 
     /**
      * Display the managed object database in a human-readable format

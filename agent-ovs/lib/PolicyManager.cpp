@@ -43,6 +43,7 @@ using opflex::modb::URI;
 using opflex::modb::URIBuilder;
 using boost::optional;
 using boost::asio::ip::address;
+using modelgbp::gbpe::LocalL24Classifier;
 
 #define POLICYMANAGER_STATIC_ROUTE_COST 1
 //TODO: This should depend on the EGP being used.
@@ -52,7 +53,8 @@ PolicyManager::PolicyManager(OFFramework& framework_,
                              boost::asio::io_service& agent_io_)
     : framework(framework_), opflexDomain("default"), taskQueue(agent_io_),
       domainListener(*this), contractListener(*this),
-      secGroupListener(*this), configListener(*this), routeListener(*this) {
+      secGroupListener(*this), localSecGroupListener(*this),
+      configListener(*this), routeListener(*this) {
 
 }
 
@@ -102,6 +104,13 @@ void PolicyManager::start() {
     Subnet::registerListener(framework, &secGroupListener);
     DnsAnswer::registerListener(framework, &secGroupListener);
 
+    LocalSecGroup::registerListener(framework, &localSecGroupListener);
+    LocalSecGroupSubject::registerListener(framework, &localSecGroupListener);
+    LocalSecGroupRule::registerListener(framework, &localSecGroupListener);
+    LocalL24Classifier::registerListener(framework, &localSecGroupListener);
+    LocalSubnets::registerListener(framework, &localSecGroupListener);
+    LocalSubnet::registerListener(framework, &localSecGroupListener);
+
     ExternalNode::registerListener(framework, &routeListener);
     StaticRoute::registerListener(framework, &routeListener);
     StaticNextHop::registerListener(framework, &routeListener);
@@ -118,6 +127,29 @@ void PolicyManager::start() {
             ->addDomainConfigToConfigRSrc()
             ->setTargetConfig(opflexDomain);
     mutator.commit();
+
+    if (useLocalNetpol()) {
+        Mutator mutator_policy_reg(framework, "policyreg");
+        shared_ptr<modelgbp::policy::Universe> universe =
+            modelgbp::policy::Universe::resolve(framework).get();
+        optional<shared_ptr<modelgbp::policy::Space>> common =
+            universe->resolvePolicySpace("common");
+        if (!common) {
+            common = universe->addPolicySpace("common");
+        }
+        mutator_policy_reg.commit();
+
+        Mutator mutator_policy_element(framework, "policyelement");
+        /* Add LocalAllowDenyAction */
+        shared_ptr<modelgbp::gbp::LocalAllowDenyAction> action =
+           common.get()->addGbpLocalAllowDenyAction("allow");
+        action->setAllow(1);
+        action = common.get()->addGbpLocalAllowDenyAction("deny");
+        action->setAllow(0);
+        /* Add LocalLogAction */
+        common.get()->addGbpLocalLogAction("log");
+        mutator_policy_element.commit();
+    }
 }
 
 void PolicyManager::stop() {
@@ -156,6 +188,13 @@ void PolicyManager::stop() {
     Subnets::unregisterListener(framework, &secGroupListener);
     Subnet::unregisterListener(framework, &secGroupListener);
     DnsAnswer::unregisterListener(framework, &secGroupListener);
+
+    LocalSecGroup::unregisterListener(framework, &localSecGroupListener);
+    LocalSecGroupSubject::unregisterListener(framework, &localSecGroupListener);
+    LocalSecGroupRule::unregisterListener(framework, &localSecGroupListener);
+    LocalL24Classifier::unregisterListener(framework, &localSecGroupListener);
+    LocalSubnets::unregisterListener(framework, &localSecGroupListener);
+    LocalSubnet::unregisterListener(framework, &localSecGroupListener);
 
     ExternalNode::unregisterListener(framework, &routeListener);
     StaticRoute::unregisterListener(framework, &routeListener);
@@ -1045,12 +1084,24 @@ void PolicyManager::deleteSubnets(const URI& subnets) {
     }
 }
 
+template <typename Subnets, typename Subnet>
+void resolveSubnet(shared_ptr<Subnets>& subnets_obj, vector<shared_ptr<Subnet> >& subnets) { }
+
+template <>
+void resolveSubnet(shared_ptr<modelgbp::gbp::Subnets>& subnets_obj,
+                   vector<shared_ptr<modelgbp::gbp::Subnet> >& subnets) {
+    subnets_obj.get()->resolveGbpSubnet(subnets);
+}
+template <>
+void resolveSubnet(shared_ptr<modelgbp::gbp::LocalSubnets>& subnets_obj,
+                   vector<shared_ptr<modelgbp::gbp::LocalSubnet> >& subnets) {
+    subnets_obj.get()->resolveGbpLocalSubnet(subnets);
+}
+
+template <typename Subnets, typename Subnet>
 void PolicyManager::resolveSubnets(OFFramework& framework,
                                    const optional<URI>& subnets_uri,
                                    /* out */ network::subnets_t& subnets_out) {
-    using modelgbp::gbp::Subnets;
-    using modelgbp::gbp::Subnet;
-
     if (!subnets_uri) return;
     optional<shared_ptr<Subnets> > subnets_obj =
         Subnets::resolve(framework, subnets_uri.get());
@@ -1060,7 +1111,7 @@ void PolicyManager::resolveSubnets(OFFramework& framework,
     }
 
     vector<shared_ptr<Subnet> > subnets;
-    subnets_obj.get()->resolveGbpSubnet(subnets);
+    resolveSubnet(subnets_obj.get(), subnets);
 
     boost::system::error_code ec;
 
@@ -1089,6 +1140,11 @@ void resolveChildren(shared_ptr<modelgbp::gbp::SecGroupSubject>& subject,
     subject->resolveGbpSecGroupRule(rules);
 }
 template <>
+void resolveChildren(shared_ptr<modelgbp::gbp::LocalSecGroupSubject>& subject,
+                     vector<shared_ptr<modelgbp::gbp::LocalSecGroupRule> > &rules) {
+    subject->resolveGbpLocalSecGroupRule(rules);
+}
+template <>
 void resolveChildren(shared_ptr<modelgbp::gbp::Contract>& contract,
                      vector<shared_ptr<modelgbp::gbp::Subject> > &subjects) {
     contract->resolveGbpSubject(subjects);
@@ -1098,23 +1154,90 @@ void resolveChildren(shared_ptr<modelgbp::gbp::SecGroup>& secgroup,
                      vector<shared_ptr<modelgbp::gbp::SecGroupSubject> > &subjects) {
     secgroup->resolveGbpSecGroupSubject(subjects);
 }
-
+template <>
+void resolveChildren(shared_ptr<modelgbp::gbp::LocalSecGroup>& secgroup,
+                     vector<shared_ptr<modelgbp::gbp::LocalSecGroupSubject> > &subjects) {
+    secgroup->resolveGbpLocalSecGroupSubject(subjects);
+}
 template <typename Rule>
 void resolveRemoteSubnets(OFFramework& framework,
                           shared_ptr<Rule>& parent,
                           /* out */ network::subnets_t &remoteSubnets) {}
-
 template <>
 void resolveRemoteSubnets(OFFramework& framework,
                           shared_ptr<modelgbp::gbp::SecGroupRule>& rule,
                           /* out */ network::subnets_t &remoteSubnets) {
+    using modelgbp::gbp::Subnets;
+    using modelgbp::gbp::Subnet;
+
     typedef modelgbp::gbp::SecGroupRuleToRemoteAddressRSrc RASrc;
     vector<shared_ptr<RASrc> > raSrcs;
     rule->resolveGbpSecGroupRuleToRemoteAddressRSrc(raSrcs);
     for (const shared_ptr<RASrc>& ra : raSrcs) {
         optional<URI> subnets_uri = ra->getTargetURI();
-        PolicyManager::resolveSubnets(framework, subnets_uri, remoteSubnets);
+        PolicyManager::resolveSubnets<Subnets, Subnet>
+            (framework, subnets_uri, remoteSubnets);
     }
+}
+template <>
+void resolveRemoteSubnets(OFFramework& framework,
+                          shared_ptr<modelgbp::gbp::LocalSecGroupRule>& rule,
+                          /* out */ network::subnets_t &remoteSubnets) {
+    using modelgbp::gbp::LocalSubnets;
+    using modelgbp::gbp::LocalSubnet;
+
+    typedef modelgbp::gbp::LocalSecGroupRuleToRemoteAddressRSrc RASrc;
+    vector<shared_ptr<RASrc> > raSrcs;
+    rule->resolveGbpLocalSecGroupRuleToRemoteAddressRSrc(raSrcs);
+    for (const shared_ptr<RASrc>& ra : raSrcs) {
+        optional<URI> subnets_uri = ra->getTargetURI();
+        PolicyManager::resolveSubnets<LocalSubnets, LocalSubnet>
+            (framework, subnets_uri, remoteSubnets);
+    }
+}
+
+template <typename Rule, typename RuleToClassifier>
+void resolveGbpRuleToClassifierResource(shared_ptr<Rule>& rule,
+                                        vector<shared_ptr<RuleToClassifier> >& clsRel) { }
+
+template <>
+void resolveGbpRuleToClassifierResource(shared_ptr<modelgbp::gbp::Rule>& rule,
+                                        vector<shared_ptr<modelgbp::gbp::RuleToClassifierRSrc> >& clsRel) {
+    rule->resolveGbpRuleToClassifierRSrc(clsRel);
+}
+
+template <>
+void resolveGbpRuleToClassifierResource(shared_ptr<modelgbp::gbp::SecGroupRule>& rule,
+                                        vector<shared_ptr<modelgbp::gbp::RuleToClassifierRSrc> >& clsRel) {
+    rule->resolveGbpRuleToClassifierRSrc(clsRel);
+}
+
+template <>
+void resolveGbpRuleToClassifierResource(shared_ptr<modelgbp::gbp::LocalSecGroupRule>& rule,
+                                        vector<shared_ptr<modelgbp::gbp::LocalSecGroupRuleToClassifierRSrc> >& clsRel) {
+   rule->resolveGbpLocalSecGroupRuleToClassifierRSrc(clsRel);
+}
+
+template <typename Rule, typename RuleToAction>
+void resolveGbpRuleToActionResource(shared_ptr<Rule>& rule,
+                                    vector<shared_ptr<RuleToAction> >& clsAct) { }
+
+template <>
+void resolveGbpRuleToActionResource(shared_ptr<modelgbp::gbp::Rule>& rule,
+                                    vector<shared_ptr<modelgbp::gbp::RuleToActionRSrc> >& clsAct) {
+    rule->resolveGbpRuleToActionRSrc(clsAct);
+}
+
+template <>
+void resolveGbpRuleToActionResource(shared_ptr<modelgbp::gbp::SecGroupRule>& rule,
+                                    vector<shared_ptr<modelgbp::gbp::RuleToActionRSrc> >& clsAct) {
+    rule->resolveGbpRuleToActionRSrc(clsAct);
+}
+
+template <>
+void resolveGbpRuleToActionResource(shared_ptr<modelgbp::gbp::LocalSecGroupRule>& rule,
+                                    vector<shared_ptr<modelgbp::gbp::LocalSecGroupRuleToActionRSrc> >&clsAct) {
+    rule->resolveGbpLocalSecGroupRuleToActionRSrc(clsAct);
 }
 
 template <typename Rule>
@@ -1144,17 +1267,18 @@ bool resolveNamedAddress(PolicyManager &pMgr,
     return (dnsNames.empty() || !namedSvcPorts.empty());
 }
 
-void sortOrderOfSameRange(vector<shared_ptr<modelgbp::gbpe::L24Classifier>>& classifiers) {
+template <typename Classifier>
+void sortOrderOfSameRange(vector<shared_ptr<Classifier>>& classifiers) {
      using modelgbp::gbpe::L24Classifier;
-     vector<shared_ptr<L24Classifier>>::iterator begin = classifiers.begin();
-     vector<shared_ptr<L24Classifier>>::iterator end = classifiers.begin();
-     PriorityComparator<shared_ptr<L24Classifier> > classifierPrioComp;
+     typename vector<shared_ptr<Classifier>>::iterator begin = classifiers.begin();
+     typename vector<shared_ptr<Classifier>>::iterator end = classifiers.begin();
+     PriorityComparator<shared_ptr<Classifier> > classifierPrioComp;
      int set=0;
 
      for (auto it = classifiers.begin(); it != classifiers.end(); it ++){
-         const shared_ptr<L24Classifier>& currClsr = *it;
+         const shared_ptr<Classifier>& currClsr = *it;
          if (*it != *(--classifiers.end())){
-             const shared_ptr<L24Classifier>& nextClsr = *(it+1) ;
+             const shared_ptr<Classifier>& nextClsr = *(it+1) ;
              if (currClsr->getOrder(0) == nextClsr->getOrder(0)) {
                 if (set == 0){
                    begin = it;
@@ -1368,21 +1492,25 @@ void PolicyManager::deleteDnsAsk(const URI &uri, const std::string &domainName)
     }
 }
 
-template <typename Parent, typename Subject, typename Rule>
+template <typename Parent, typename Subject, typename Rule,
+          typename Classifier, typename Action,
+          typename RuleToClassifier, typename RuleToAction>
 static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
                               const URI& parentURI, bool& notFound,
                               PolicyManager::rule_list_t& oldRules,
                               PolicyManager::uri_set_t &oldRedirGrps, bool log,
-                              PolicyManager::uri_set_t &newRedirGrps,
+                              bool local, PolicyManager::uri_set_t &newRedirGrps,
                               PolicyManager::named_addr_set_t &newDnsRefs)
 {
-    using modelgbp::gbpe::L24Classifier;
     using modelgbp::gbp::RuleToClassifierRSrc;
     using modelgbp::gbp::RuleToActionRSrc;
+    using modelgbp::gbp::LocalSecGroupRuleToClassifierRSrc;
+    using modelgbp::gbp::LocalSecGroupRuleToActionRSrc;
     using modelgbp::gbp::AllowDenyAction;
     using modelgbp::gbp::RedirectAction;
     using modelgbp::gbp::RedirectDestGroup;
     using modelgbp::gbp::LogAction;
+    using modelgbp::gbp::LocalLogAction;
 
     optional<shared_ptr<Parent> > parent =
         Parent::resolve(framework, parentURI);
@@ -1395,7 +1523,7 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
     /* get all classifiers for this parent as an ordered-list */
     PolicyManager::rule_list_t newRules;
     OrderComparator<shared_ptr<Rule> > ruleComp;
-    OrderComparator<shared_ptr<L24Classifier> > classifierComp;
+    OrderComparator<shared_ptr<Classifier> > classifierComp;
     vector<shared_ptr<Subject> > subjects;
     resolveChildren(parent.get(), subjects);
     for (shared_ptr<Subject>& sub : subjects) {
@@ -1412,42 +1540,42 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
             uint8_t dir = rule->getDirection().get();
             network::subnets_t remoteSubnets;
             network::service_ports_t namedSvcPorts;
-            resolveRemoteSubnets(framework, rule, remoteSubnets);
+            resolveRemoteSubnets<Rule>(framework, rule, remoteSubnets);
             if(!resolveNamedAddress(pMgr, framework, rule, newDnsRefs, namedSvcPorts)) {
                continue;  //ignore policies with DNS names that do not have atleast one name resolved.
             }
-            vector<shared_ptr<L24Classifier> > classifiers;
-            vector<shared_ptr<RuleToClassifierRSrc> > clsRel;
-            rule->resolveGbpRuleToClassifierRSrc(clsRel);
+            vector<shared_ptr<Classifier> > classifiers;
+            vector<shared_ptr<RuleToClassifier> > clsRel;
+            resolveGbpRuleToClassifierResource(rule, clsRel);
 
-            for (shared_ptr<RuleToClassifierRSrc>& r : clsRel) {
+            for (shared_ptr<RuleToClassifier>& r : clsRel) {
                 if (!r->isTargetSet() ||
-                    r->getTargetClass().get() != L24Classifier::CLASS_ID) {
+                    r->getTargetClass().get() != Classifier::CLASS_ID) {
                     continue;
                 }
-                optional<shared_ptr<L24Classifier> > cls =
-                    L24Classifier::resolve(framework, r->getTargetURI().get());
+                optional<shared_ptr<Classifier> > cls =
+                    Classifier::resolve(framework, r->getTargetURI().get());
                 if (cls) {
                     classifiers.push_back(cls.get());
                 }
             }
             stable_sort(classifiers.begin(), classifiers.end(), classifierComp);
 
-            vector<shared_ptr<RuleToActionRSrc> > actRel;
-            rule->resolveGbpRuleToActionRSrc(actRel);
+            vector<shared_ptr<RuleToAction> > actRel;
+            resolveGbpRuleToActionResource(rule, actRel);
             bool ruleAllow = true;
             bool ruleRedirect = false;
             bool ruleLog = false;
             uint32_t minOrder = UINT32_MAX;
             optional<shared_ptr<RedirectDestGroup>> redirDstGrp;
             optional<URI> destGrpUri;
-            for (shared_ptr<RuleToActionRSrc>& r : actRel) {
+            for (shared_ptr<RuleToAction>& r : actRel) {
                 if (!r->isTargetSet()) {
                     continue;
                 }
                 if(r->getTargetClass().get() == AllowDenyAction::CLASS_ID) {
-                    optional<shared_ptr<AllowDenyAction> > act =
-                        AllowDenyAction::resolve(framework, r->getTargetURI().get());
+                    optional<shared_ptr<Action> > act =
+                        Action::resolve(framework, r->getTargetURI().get());
                     if (act) {
                         if (act.get()->getOrder(UINT32_MAX-1) < minOrder) {
                             minOrder = act.get()->getOrder(UINT32_MAX-1);
@@ -1484,11 +1612,18 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
                         ruleLog = true;
                     }
                 }
+                else if (r->getTargetClass().get() == LocalLogAction::CLASS_ID) {
+                         optional<shared_ptr<LocalLogAction> > resolveLog =
+                            LocalLogAction::resolve(framework,r->getTargetURI().get());
+                    if (resolveLog) {
+                        ruleLog = true;
+                    }
+                }
             }
 
-            sortOrderOfSameRange(classifiers);
+            sortOrderOfSameRange<Classifier>(classifiers);
             uint16_t clsPrio = 0;
-            for (const shared_ptr<L24Classifier>& c : classifiers) {
+            for (const shared_ptr<Classifier>& c : classifiers) {
                 newRules.push_back(std::make_shared<PolicyRule>(dir,
                                                     rulePrio - clsPrio,
                                                     c, ruleAllow,
@@ -1521,23 +1656,38 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
     if (updated) {
         oldRules.swap(newRules);
         for (shared_ptr<PolicyRule>& c : oldRules) {
-            LOG(DEBUG) << parentURI << ": " << *c;
+            LOG(DEBUG) << parentURI << ": " << *c
+                       << " local: " << local;
         }
     }
     return updated;
 }
 
-bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
+bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound, bool local) {
     using namespace modelgbp::gbp;
+    using modelgbp::gbpe::L24Classifier;
     uri_set_t oldRedirGrps, newRedirGrps;
     PolicyManager::named_addr_set_t newDnsRefs;
     PolicyManager::named_addr_set_t &oldDnsRefs = secGrpMap[secGrpURI].dnsAsks;
     bool log = false;
-    bool updated =  updatePolicyRules<SecGroup, SecGroupSubject,
-                             SecGroupRule>(*this, framework, secGrpURI,
-                                           notFound, secGrpMap[secGrpURI].rules,
-                                           oldRedirGrps, log, newRedirGrps,
-                                           newDnsRefs);
+    bool updated;
+
+    if (!local) {
+        updated = updatePolicyRules<SecGroup, SecGroupSubject,
+                      SecGroupRule, L24Classifier, AllowDenyAction,
+                      RuleToClassifierRSrc, RuleToActionRSrc>(*this,
+                          framework, secGrpURI, notFound,
+                          secGrpMap[secGrpURI].rules,
+                          oldRedirGrps, log, local, newRedirGrps, newDnsRefs);
+    } else {
+        updated = updatePolicyRules<LocalSecGroup, LocalSecGroupSubject,
+                      LocalSecGroupRule, LocalL24Classifier, LocalAllowDenyAction,
+                      LocalSecGroupRuleToClassifierRSrc, LocalSecGroupRuleToActionRSrc>(*this,
+                              framework, secGrpURI, notFound,
+                              secGrpMap[secGrpURI].rules,
+                              oldRedirGrps, log, local, newRedirGrps, newDnsRefs);
+    }
+
     for (const auto& s : oldDnsRefs) {
         /*lost Dns Ref*/
         if(dns_demand_map.find(s) != dns_demand_map.end() && (newDnsRefs.find(s) == newDnsRefs.end())) {
@@ -1556,14 +1706,18 @@ bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound) {
 
 bool PolicyManager::updateContractRules(const URI& contrURI, bool& notFound) {
     using namespace modelgbp::gbp;
+    using modelgbp::gbpe::L24Classifier;
     uri_set_t oldRedirGrps, newRedirGrps;
     ContractState& cs = contractMap[contrURI];
     named_addr_set_t newDnsRef;
     bool log = false;
     bool updated = updatePolicyRules<Contract, Subject,
-                                     Rule>(*this, framework, contrURI,
+                                     Rule, L24Classifier,
+                                     AllowDenyAction,
+                                     RuleToClassifierRSrc,
+                                     RuleToActionRSrc>(*this, framework, contrURI,
                                            notFound, cs.rules,
-                                           oldRedirGrps, log,
+                                           oldRedirGrps, log, false,
                                            newRedirGrps,
                                            newDnsRef);
     for (const URI& u : oldRedirGrps) {
@@ -1618,7 +1772,7 @@ void PolicyManager::updateContracts() {
     }
 }
 
-void PolicyManager::updateSecGrps() {
+void PolicyManager::updateSecGrps(bool local) {
     /* recompute the rules for all security groups if a policy
        object changed */
     unique_lock<mutex> guard(state_mutex);
@@ -1627,7 +1781,12 @@ void PolicyManager::updateSecGrps() {
     auto it = secGrpMap.begin();
     while (it != secGrpMap.end()) {
         bool notfound = false;
-        if (updateSecGrpRules(it->first, notfound)) {
+        /* Skip rules that are not relevant for this computation */
+        if (it->second.isLocal != local) {
+            ++it;
+            continue;
+        }
+        if (updateSecGrpRules(it->first, notfound, local)) {
             toNotify.insert(it->first);
         }
         if (notfound) {
@@ -3208,13 +3367,32 @@ void PolicyManager::SecGroupListener::objectUpdated(class_id_t classId,
     } else {
         unique_lock<mutex> guard(pmanager.state_mutex);
         if (classId == modelgbp::gbp::SecGroup::CLASS_ID) {
-            pmanager.secGrpMap[uri];
+            pmanager.secGrpMap[uri].isLocal = false;
         }
 
-	pmanager.taskQueue.dispatch("secgroup", [this]() {
-		pmanager.updateSecGrps();
-	    });
+        pmanager.taskQueue.dispatch("secgroup", [this]() {
+            pmanager.updateSecGrps(false);
+        });
     }
+}
+
+PolicyManager::LocalSecGroupListener::LocalSecGroupListener(PolicyManager& pmanager_)
+    : pmanager(pmanager_) {}
+
+PolicyManager::LocalSecGroupListener::~LocalSecGroupListener() {}
+
+void PolicyManager::LocalSecGroupListener::objectUpdated(class_id_t classId,
+                                                         const URI& uri) {
+    LOG(DEBUG) << "LocalSecGroupListener update for URI " << uri;
+    unique_lock<mutex> guard(pmanager.state_mutex);
+
+    if (classId == modelgbp::gbp::LocalSecGroup::CLASS_ID) {
+        pmanager.secGrpMap[uri].isLocal = true;
+    }
+
+    pmanager.taskQueue.dispatch("secgroup", [this]() {
+        pmanager.updateSecGrps(true);
+    });
 }
 
 PolicyManager::ConfigListener::ConfigListener(PolicyManager& pmanager_)

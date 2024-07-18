@@ -368,7 +368,7 @@ void OpflexPEHandler::handlePolicyResolveRes(uint64_t reqId,
         Value::ConstValueIterator it;
         for (it = policy.Begin(); it != policy.End(); ++it) {
             const Value& mo = *it;
-            serializer.deserialize(mo, *client, true, &notifs);
+            serializer.deserialize(mo, *client, true, &notifs, false);
             if (!mo.HasMember("uri")) {
                 LOG(ERROR) << "uri member doesn't exist in the JSON value" ;
             }
@@ -422,7 +422,7 @@ void OpflexPEHandler::handlePolicyUpdateReq(const rapidjson::Value& id,
             Value::ConstValueIterator it;
             for (it = replace.Begin(); it != replace.End(); ++it) {
                 const Value& mo = *it;
-                serializer.deserialize(mo, *client, true, &notifs);
+                serializer.deserialize(mo, *client, true, &notifs, false);
             }
         }
         if (it->HasMember("merge_children")) {
@@ -435,7 +435,7 @@ void OpflexPEHandler::handlePolicyUpdateReq(const rapidjson::Value& id,
             Value::ConstValueIterator it;
             for (it = merge.Begin(); it != merge.End(); ++it) {
                 const Value& mo = *it;
-                serializer.deserialize(mo, *client, false, &notifs);
+                serializer.deserialize(mo, *client, false, &notifs, false);
             }
         }
         if (it->HasMember("delete")) {
@@ -553,7 +553,7 @@ void OpflexPEHandler::handleEPResolveRes(uint64_t reqId,
         Value::ConstValueIterator it;
         for (it = endpoint.Begin(); it != endpoint.End(); ++it) {
             const Value& mo = *it;
-            serializer.deserialize(mo, *client, true, &notifs);
+            serializer.deserialize(mo, *client, true, &notifs, false);
         }
     }
     client->deliverNotifications(notifs);
@@ -588,7 +588,7 @@ void OpflexPEHandler::handleEPUpdateReq(const rapidjson::Value& id,
             Value::ConstValueIterator it;
             for (it = replace.Begin(); it != replace.End(); ++it) {
                 const Value& mo = *it;
-                serializer.deserialize(mo, *client, true, &notifs);
+                serializer.deserialize(mo, *client, true, &notifs, false);
             }
         }
         if (it->HasMember("delete")) {
