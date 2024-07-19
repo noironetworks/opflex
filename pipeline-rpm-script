@@ -5,8 +5,13 @@ pipeline {
     environment {
         DOCKER_USER = 'noiro'
         DOCKER_TAG = 'latest'
-        BASEIMAGE = 'noiro/opflexrpm-build-base:latest'
+        BASEIMAGE = 'noiro/opflex-rpm-build-base:master-test'
         BRANCH = 'master'
+        ARTIFACTORY_USER = 'noiro.gen'
+        ARTIFACTORY_URL = 'https://engci-maven.cisco.com/artifactory'
+        ARTIFACT_URL = 'https://engci-maven.cisco.com/artifactory/noiro-snapshot/opflex/master/rhel8/agent/$BUILD_NUMBER'
+        SIGNED_RPMS = "$WORKSPACE/rpmbuild/RPMS/noarch"
+        RPM_DIR = "$WORKSPACE/docker/rpms"
     }
     stages {
         stage('Main Script') {
@@ -14,6 +19,50 @@ pipeline {
                 script {
                     sh """
                         cd docker/rpms; ./build_opflexrpm.sh ${env.DOCKER_USER} ${env.DOCKER_TAG} ${env.BASEIMAGE} ${env.BRANCH} $BUILD_NUMBER
+                    """
+                }
+            }
+        }
+        stage('Extract RPM Tar File') {
+            steps {
+                script {
+                    def tarFile = "opflexrpms-${BUILD_NUMBER}.tar.gz"
+                    sh """
+                        rm -rf ${SIGNED_RPMS}
+                        mkdir -p ${SIGNED_RPMS}
+                        tar -xf ${RPM_DIR}/${tarFile} -C ${SIGNED_RPMS}
+                    """
+                }
+            }
+        }
+        stage('Sign RPM') {
+            steps {
+                script {
+                    // Execute sign-rpm.sh with Vault credentials passed as parameters
+                    sh """
+                        ./docker/rpms/sign-rpm.sh ${SIGNED_RPMS} ${params.SIGNUSER1} ${signUser2} ${params.ReleaseBuild}
+                    """
+                }
+            }
+        }
+        stage('Push artifacts') {
+            steps {
+                script {
+                    sh """
+                         for rpm in ${SIGNED_RPMS}/opflexrpms-${BUILD_NUMBER}/*.rpm
+                             do curl -v -u ${ARTIFACTORY_USER}:${params.ARTIFACT_TOKEN} -X PUT "${ARTIFACT_URL}/\$(basename \$rpm)" -T "\$rpm"
+                         done 
+                    """
+                }
+            }
+        }
+	stage('Re-Tar Signed RPMs') {
+            steps {
+                script {
+                    def tarFile = "signed-opflexrpms-${BUILD_NUMBER}.tar.gz"
+                    sh """
+                        cd ${SIGNED_RPMS}
+                        tar -czf ${RPM_DIR}/${tarFile} *
                     """
                 }
             }
