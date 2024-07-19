@@ -5,7 +5,7 @@ pipeline {
     environment {
         DOCKER_USER = 'noiro'
         DOCKER_TAG = 'latest'
-        BASEIMAGE = 'noiro/opflexrpm-build-base:latest'
+        BASEIMAGE = 'noiro/opflex-rpm-build-base:master-test'
         BRANCH = 'master'
     }
     stages {
