@@ -311,6 +311,25 @@ public:
     uint32_t getSwitchSyncDynamic() { return switch_sync_dynamic; }
 
     /**
+     * save the last PlatformConfig delete time
+     */
+    void updateResetTime() {
+        std::unique_lock<std::mutex> guard(reset_time_mutex);
+
+        reset_time = std::chrono::steady_clock::now();
+    }
+
+    /**
+     * Check if enough time has passed since last PlatformConfig delete / reset
+     */
+    bool shouldReset() {
+        std::unique_lock<std::mutex> guard(reset_time_mutex);
+
+        auto diff = std::chrono::steady_clock::now() - reset_time;
+        return diff > std::chrono::seconds(reset_wait_delay);
+    }
+
+    /**
      * Common function b/w Agent and Server to add all supported universes
      * @param root pointer to DmtreeRoot under which the universes will be created
      */
@@ -361,6 +380,11 @@ private:
     /* How long to wait from platform config to switch Sync */
     uint32_t switch_sync_delay = 5; /* seconds */
     uint32_t switch_sync_dynamic = 0; /* dynamic retry default 0 no retry */
+    uint32_t reset_wait_delay  = 5; /* seconds */
+    /* Timestamp of last PlatformConfig delete event */
+    std::chrono::steady_clock::time_point reset_time;
+    /* mutex to update reset_time */
+    std::mutex reset_time_mutex;
     // startup policy duration from new connection in seconds
     uint64_t startupPolicyDuration = 0; /* seconds */
     bool localResolveAftConn = false; /* local resolve after conn estb */
