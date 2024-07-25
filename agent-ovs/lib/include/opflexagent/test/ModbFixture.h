@@ -90,12 +90,22 @@ public:
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier9;
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier10;
 
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier0;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier1;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier2;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier5;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier6;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier7;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier8;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier9;
+
      // order 10
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier11;
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier12;
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier13;
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier14;
     std::shared_ptr<modelgbp::gbp::AllowDenyAction> action1;
+    std::shared_ptr<modelgbp::gbp::LocalAllowDenyAction> local_action1;
        // order 20
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier15;
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier16;
@@ -109,6 +119,7 @@ public:
     std::shared_ptr<modelgbp::gbpe::L24Classifier> classifier20;
 
     std::shared_ptr<modelgbp::gbp::LogAction> action2;
+    std::shared_ptr<modelgbp::gbp::LocalLogAction> local_action2;
 
     std::shared_ptr<modelgbp::gbp::AllowDenyAction> action3;
     std::shared_ptr<modelgbp::gbp::LogAction> action4;
@@ -289,6 +300,55 @@ protected:
         using namespace modelgbp;
         using namespace modelgbp::gbp;
         using namespace modelgbp::gbpe;
+        Mutator mutator_local(framework, "policyelement");
+        /* blank classifier */
+        local_classifier0 = space->addGbpeLocalL24Classifier("classifier0");
+        local_classifier0->setOrder(10);
+
+
+        /* allow TCP to dst port 80 cons->prov */
+        local_classifier1 = space->addGbpeLocalL24Classifier("classifier1");
+        local_classifier1->setEtherT(l2::EtherTypeEnumT::CONST_IPV4)
+            .setProt(6 /* TCP */).setDFromPort(80);
+
+        /* allow ARP from prov->cons */
+        local_classifier2 = space->addGbpeLocalL24Classifier("classifier2");
+        local_classifier2->setEtherT(l2::EtherTypeEnumT::CONST_ARP);
+
+        /* allow bidirectional FCoE */
+        local_classifier5 = space->addGbpeLocalL24Classifier("classifier5");
+        local_classifier5->setOrder(20).setEtherT(l2::EtherTypeEnumT::CONST_FCOE);
+
+        /* allow SSH from port 22 with ACK+SYN */
+        local_classifier6 = space->addGbpeLocalL24Classifier("classifier6");
+        local_classifier6->setEtherT(l2::EtherTypeEnumT::CONST_IPV4)
+            .setProt(6 /* TCP */)
+            .setSFromPort(22)
+            .setTcpFlags(l4::TcpFlagsEnumT::CONST_ACK |
+                         l4::TcpFlagsEnumT::CONST_SYN);
+
+        /* allow SSH from port 22 with EST */
+        local_classifier7 = space->addGbpeLocalL24Classifier("classifier7");
+        local_classifier7->setEtherT(l2::EtherTypeEnumT::CONST_IPV4)
+            .setProt(6 /* TCP */)
+            .setSFromPort(21)
+            .setTcpFlags(l4::TcpFlagsEnumT::CONST_ESTABLISHED);
+
+        /* allow TCPv6 to dst port 80 cons->prov */
+        local_classifier8 = space->addGbpeLocalL24Classifier("classifier8");
+        local_classifier8->setEtherT(l2::EtherTypeEnumT::CONST_IPV6)
+            .setProt(6 /* TCP */).setDFromPort(80);
+
+        /* Allow 22 reflexive */
+        local_classifier9 = space->addGbpeLocalL24Classifier("classifier9");
+        local_classifier9->setOrder(10)
+            .setEtherT(l2::EtherTypeEnumT::CONST_IPV4)
+            .setProt(6 /* TCP */)
+            .setDFromPort(22)
+            .setConnectionTracking(ConnTrackEnumT::CONST_REFLEXIVE);
+
+        local_action1 = space->addGbpLocalAllowDenyAction("action1");
+        mutator_local.commit();
 
         Mutator mutator(framework, policyOwner);
 

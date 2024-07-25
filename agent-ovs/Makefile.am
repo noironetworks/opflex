@@ -520,6 +520,7 @@ if RENDERER_OVS
 	ovs/test/FlowManagerFixture.cpp \
 	ovs/test/IntFlowManager_test.cpp \
 	ovs/test/AccessFlowManager_test.cpp \
+    ovs/test/AccessFlowManager_LocalSG_test.cpp \
 	ovs/test/PacketInHandler_test.cpp \
 	ovs/test/AdvertManager_test.cpp \
 	ovs/test/PortMapper_test.cpp \

@@ -18,12 +18,13 @@
 #include "FlowUtils.h"
 
 #include <opflex/modb/Mutator.h>
-#include <modelgbp/gbp/SecGroup.hpp>
+#include <modelgbp/gbp/LocalSecGroup.hpp>
 
 #include <memory>
 #include <vector>
+#include <thread>
 
-BOOST_AUTO_TEST_SUITE(AccessFlowManager_test)
+BOOST_AUTO_TEST_SUITE(AccessFlowManagerLocalSG_test)
 
 using std::vector;
 using std::string;
@@ -33,13 +34,15 @@ using boost::asio::io_service;
 using opflex::modb::URI;
 using namespace opflexagent;
 using namespace modelgbp::gbp;
-using modelgbp::gbpe::L24Classifier;
+using modelgbp::gbpe::LocalL24Classifier;
 using opflex::modb::Mutator;
 
-class AccessFlowManagerFixture : public FlowManagerFixture {
+class AccessFlowManagerLocalSGFixture : public FlowManagerFixture {
 public:
-    AccessFlowManagerFixture()
+    AccessFlowManagerLocalSGFixture()
         : accessFlowManager(agent, switchManager, idGen, ctZoneManager){
+        bool enable = true;
+        agent.getPolicyManager().configLocalNetpol(enable);
         expTables.resize(AccessFlowManager::NUM_FLOW_TABLES);
         switchManager.registerStateHandler(&accessFlowManager);
         idGen.initNamespace("l24classifierRule");
@@ -47,7 +50,9 @@ public:
         accessFlowManager.enableConnTrack();
         accessFlowManager.start();
     }
-    virtual ~AccessFlowManagerFixture() {
+    virtual ~AccessFlowManagerLocalSGFixture() {
+        bool enable = false;
+        agent.getPolicyManager().configLocalNetpol(enable);
         accessFlowManager.stop();
         stop();
     }
@@ -65,7 +70,6 @@ public:
     void initExpSecGrpSet12(bool second = true, int remoteAddress = 0);
     uint16_t initExpSecGrp3(int remoteAddress);
     void initExpSecGrp4(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet);
-    void initExpSecGrp5(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet);
     void initExpSecGrp6();
 
     /** Initialize system security group flow entries */
@@ -76,12 +80,12 @@ public:
 
     AccessFlowManager accessFlowManager;
 
-    shared_ptr<SecGroup> secGrp1;
-    shared_ptr<SecGroup> secGrp2;
-    shared_ptr<SecGroup> secGrp3;
-    shared_ptr<SecGroup> sysSecGrp1;
+    shared_ptr<LocalSecGroup> secGrp1;
+    shared_ptr<LocalSecGroup> secGrp2;
+    shared_ptr<LocalSecGroup> secGrp3;
+    shared_ptr<LocalSecGroup> sysSecGrp1;
 
-    shared_ptr<L24Classifier> classifier100,classifier101;
+    shared_ptr<LocalL24Classifier> local_classifier100,local_classifier101;
 
     shared_ptr<modelgbp::policy::Space> pSpace;
     shared_ptr<modelgbp::qos::Requirement> reqCfg;
@@ -94,7 +98,7 @@ public:
     void initExpLearningBridge();
 };
 
-BOOST_FIXTURE_TEST_CASE(endpoint, AccessFlowManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(endpoint, AccessFlowManagerLocalSGFixture) {
     setConnected();
 
     ep0.reset(new Endpoint("0-0-0-0"));
@@ -178,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(endpoint, AccessFlowManagerFixture) {
 
 }
 
-BOOST_FIXTURE_TEST_CASE(epDscpTest, AccessFlowManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(epDscpTest, AccessFlowManagerLocalSGFixture) {
     setConnected();
 
     URI reqUri("/PolicyUniverse/PolicySpace/test/QosRequirement/req1/");
@@ -212,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(epDscpTest, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("dscp-configured", 500);
 }
 
-BOOST_FIXTURE_TEST_CASE(learningBridge, AccessFlowManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(learningBridge, AccessFlowManagerLocalSGFixture) {
     setConnected();
 
     ep0.reset(new Endpoint("0-0-0-0"));
@@ -250,53 +254,53 @@ enum CaptureReason {
     };
 
 
-BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
-    LOG(DEBUG) << "AccessFlowManagerFixture::secGrp";
+BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerLocalSGFixture) {
+    LOG(DEBUG) << "AccessFlowManagerLocalSGFixture::secGrp";
     createObjects();
     createPolicyObjects();
-    shared_ptr<modelgbp::gbp::Subnets> rs;
+    shared_ptr<modelgbp::gbp::LocalSubnets> rs;
     {
-        Mutator mutator(framework, "policyreg");
-        rs = space->addGbpSubnets("subnets_rule0");
+        Mutator mutator(framework, "policyelement");
+        rs = space->addGbpLocalSubnets("subnets_rule0");
 
-        rs->addGbpSubnet("subnets_rule0_1")
+        rs->addGbpLocalSubnet("subnets_rule0_1")
             ->setAddress("0.0.0.0")
             .setPrefixLen(0);
-        rs->addGbpSubnet("subnets_rule0_2")
+        rs->addGbpLocalSubnet("subnets_rule0_2")
             ->setAddress("0::")
             .setPrefixLen(0);
 
-        shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4, r5 ;
-        secGrp1 = space->addGbpSecGroup("secgrp1");
+        shared_ptr<modelgbp::gbp::LocalSecGroupRule> r1, r2, r3, r4, r5 ;
+        secGrp1 = space->addGbpLocalSecGroup("secgrp1");
 
-        r1 = secGrp1->addGbpSecGroupSubject("1_subject1")
-                ->addGbpSecGroupRule("1_1_rule1");
+        r1 = secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+                ->addGbpLocalSecGroupRule("1_1_rule1");
         r1->setDirection(DirectionEnumT::CONST_IN).setOrder(100)
-            .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());
-        r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier1->getURI().toString());
+        r1->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        r2 = secGrp1->addGbpSecGroupSubject("1_subject1")
-                ->addGbpSecGroupRule("1_1_rule2");
+        r2 = secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+                ->addGbpLocalSecGroupRule("1_1_rule2");
         r2->setDirection(DirectionEnumT::CONST_IN).setOrder(150)
-            .addGbpRuleToClassifierRSrc(classifier8->getURI().toString());
-        r2->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier8->getURI().toString());
+        r2->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        r3 = secGrp1->addGbpSecGroupSubject("1_subject1")
-            ->addGbpSecGroupRule("1_1_rule3");
+        r3 = secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+            ->addGbpLocalSecGroupRule("1_1_rule3");
         r3->setDirection(DirectionEnumT::CONST_OUT).setOrder(200)
-            .addGbpRuleToClassifierRSrc(classifier2->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier2->getURI().toString());
 
-        r4 = secGrp1->addGbpSecGroupSubject("1_subject1")
-                ->addGbpSecGroupRule("1_1_rule4");
+        r4 = secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+                ->addGbpLocalSecGroupRule("1_1_rule4");
         r4->setDirection(DirectionEnumT::CONST_IN).setOrder(300)
-            .addGbpRuleToClassifierRSrc(classifier6->getURI().toString());
-        r4->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier6->getURI().toString());
+        r4->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        r5 = secGrp1->addGbpSecGroupSubject("1_subject1")
-                 ->addGbpSecGroupRule("1_1_rule5");
+        r5 = secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+                 ->addGbpLocalSecGroupRule("1_1_rule5");
         r5->setDirection(DirectionEnumT::CONST_IN).setOrder(400)
-            .addGbpRuleToClassifierRSrc(classifier7->getURI().toString());
-        r5->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier7->getURI().toString());
+        r5->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
 
         mutator.commit();
@@ -316,9 +320,8 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     initExpSecGrpSet1();
     WAIT_FOR_TABLES("one-secgrp", 500);
 
-    LOG(DEBUG) << "two-secgrp-nocon";
     ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
-                                            "/tenant0/GbpSecGroup/secgrp2/"));
+                                            "/tenant0/GbpLocalSecGroup/secgrp2/"));
     epSrc.updateEndpoint(*ep0);
 
     clearExpFlowTables();
@@ -327,25 +330,25 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("two-secgrp-nocon", 500);
 
     {
-        shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3;
+        shared_ptr<modelgbp::gbp::LocalSecGroupRule> r1, r2, r3;
 
-        Mutator mutator(framework, "policyreg");
-        secGrp2 = space->addGbpSecGroup("secgrp2");
-        r1 = secGrp2->addGbpSecGroupSubject("2_subject1")
-                ->addGbpSecGroupRule("2_1_rule1");
-        r1->addGbpRuleToClassifierRSrc(classifier0->getURI().toString());
-        r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+        Mutator mutator(framework, "policyelement");
+        secGrp2 = space->addGbpLocalSecGroup("secgrp2");
+        r1 = secGrp2->addGbpLocalSecGroupSubject("2_subject1")
+                ->addGbpLocalSecGroupRule("2_1_rule1");
+        r1->addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier0->getURI().toString());
+        r1->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        r2 = secGrp2->addGbpSecGroupSubject("2_subject1")
-                ->addGbpSecGroupRule("2_1_rule2");
+        r2 = secGrp2->addGbpLocalSecGroupSubject("2_subject1")
+                ->addGbpLocalSecGroupRule("2_1_rule2");
         r2->setDirection(DirectionEnumT::CONST_BIDIRECTIONAL).setOrder(20)
-            .addGbpRuleToClassifierRSrc(classifier5->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier5->getURI().toString());
 
-        r3 = secGrp2->addGbpSecGroupSubject("2_subject1")
-            ->addGbpSecGroupRule("2_1_rule3");
+        r3 = secGrp2->addGbpLocalSecGroupSubject("2_subject1")
+            ->addGbpLocalSecGroupRule("2_1_rule3");
         r3->setDirection(DirectionEnumT::CONST_OUT).setOrder(30)
-            .addGbpRuleToClassifierRSrc(classifier9->getURI().toString());
-        r3->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier9->getURI().toString());
+        r3->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
         mutator.commit();
     }
 
@@ -355,27 +358,27 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("two-secgrp", 500);
 
     {
-        Mutator mutator(framework, "policyreg");
-        rs = space->addGbpSubnets("subnets_rule1");
+        Mutator mutator(framework, "policyelement");
+        rs = space->addGbpLocalSubnets("subnets_rule1");
 
-        rs->addGbpSubnet("subnets_rule1_1")
+        rs->addGbpLocalSubnet("subnets_rule1_1")
             ->setAddress("192.168.0.0")
             .setPrefixLen(16);
-        rs->addGbpSubnet("subnets_rule1_2")
+        rs->addGbpLocalSubnet("subnets_rule1_2")
             ->setAddress("fd80::")
             .setPrefixLen(32);
 
-        secGrp1->addGbpSecGroupSubject("1_subject1")
-            ->addGbpSecGroupRule("1_1_rule1")
-            ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+        secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+            ->addGbpLocalSecGroupRule("1_1_rule1")
+            ->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        secGrp1->addGbpSecGroupSubject("1_subject1")
-            ->addGbpSecGroupRule("1_1_rule2")
-            ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+        secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+            ->addGbpLocalSecGroupRule("1_1_rule2")
+            ->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        secGrp1->addGbpSecGroupSubject("1_subject1")
-            ->addGbpSecGroupRule("1_1_rule3")
-            ->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+        secGrp1->addGbpLocalSecGroupSubject("1_subject1")
+            ->addGbpLocalSecGroupRule("1_1_rule3")
+            ->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
         mutator.commit();
     }
@@ -385,12 +388,12 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("remote-secgrp", 500);
 
     {
-        Mutator mutator(framework, "policyreg");
+        Mutator mutator(framework, "policyelement");
 
-        rs->addGbpSubnet("subnets_rule1_3")
+        rs->addGbpLocalSubnet("subnets_rule1_3")
             ->setAddress("10.0.0.0")
             .setPrefixLen(8);
-        rs->addGbpSubnet("subnets_rule1_4")
+        rs->addGbpLocalSubnet("subnets_rule1_4")
             ->setAddress("fd34:9c39:1374:358c::")
             .setPrefixLen(64);
 
@@ -403,39 +406,39 @@ BOOST_FIXTURE_TEST_CASE(secGrp, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("remote-addsubnets", 500);
 }
 
-BOOST_FIXTURE_TEST_CASE(syssecgrp, AccessFlowManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(syssecgrp, AccessFlowManagerLocalSGFixture) {
     createObjects();
     createPolicyObjects();
-    shared_ptr<modelgbp::gbp::Subnets> rs;
+    shared_ptr<modelgbp::gbp::LocalSubnets> rs;
     {
-        Mutator mutator(framework, "policyreg");
-        rs = space->addGbpSubnets("subnets_rule0");
+        Mutator mutator(framework, "policyelement");
+        rs = space->addGbpLocalSubnets("subnets_rule0");
 
-        rs->addGbpSubnet("subnets_rule0_1")
+        rs->addGbpLocalSubnet("subnets_rule0_1")
             ->setAddress("0.0.0.0")
             .setPrefixLen(0);
-        rs->addGbpSubnet("subnets_rule0_2")
+        rs->addGbpLocalSubnet("subnets_rule0_2")
             ->setAddress("0::")
             .setPrefixLen(0);
 
-        shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4, r5 ;
-        sysSecGrp1 = space->addGbpSecGroup("ostack_SystemSecurityGroup");
+        shared_ptr<modelgbp::gbp::LocalSecGroupRule> r1, r2, r3, r4, r5 ;
+        sysSecGrp1 = space->addGbpLocalSecGroup("ostack_SystemSecurityGroup");
 
-        r1 = sysSecGrp1->addGbpSecGroupSubject("2_subject1")
-                ->addGbpSecGroupRule("2_1_rule1");
-        r1->addGbpRuleToClassifierRSrc(classifier0->getURI().toString());
-        r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+        r1 = sysSecGrp1->addGbpLocalSecGroupSubject("2_subject1")
+                ->addGbpLocalSecGroupRule("2_1_rule1");
+        r1->addGbpLocalSecGroupRuleToClassifierRSrc(classifier0->getURI().toString());
+        r1->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
 
-        r2 = sysSecGrp1->addGbpSecGroupSubject("2_subject1")
-                ->addGbpSecGroupRule("2_1_rule2");
+        r2 = sysSecGrp1->addGbpLocalSecGroupSubject("2_subject1")
+                ->addGbpLocalSecGroupRule("2_1_rule2");
         r2->setDirection(DirectionEnumT::CONST_BIDIRECTIONAL).setOrder(20)
-            .addGbpRuleToClassifierRSrc(classifier5->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier5->getURI().toString());
 
-        r3 = sysSecGrp1->addGbpSecGroupSubject("2_subject1")
-            ->addGbpSecGroupRule("2_1_rule3");
+        r3 = sysSecGrp1->addGbpLocalSecGroupSubject("2_subject1")
+            ->addGbpLocalSecGroupRule("2_1_rule3");
         r3->setDirection(DirectionEnumT::CONST_OUT).setOrder(30)
-            .addGbpRuleToClassifierRSrc(classifier9->getURI().toString());
-        r3->addGbpSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
+            .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier9->getURI().toString());
+        r3->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs->getURI().toString());
         mutator.commit();
 
     }
@@ -455,53 +458,53 @@ BOOST_FIXTURE_TEST_CASE(syssecgrp, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("syssecgrp", 500);
 }
 
-BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerLocalSGFixture) {
     createObjects();
     createPolicyObjects();
-    shared_ptr<modelgbp::gbp::Subnets> rs1;
+    shared_ptr<modelgbp::gbp::LocalSubnets> rs1;
     {
-       Mutator mutator(framework, "policyreg");
-       rs1 = space->addGbpSubnets("subnets_rule_1");
-       rs1->addGbpSubnet("subnets_rule1_1")
+       Mutator mutator(framework, "policyelement");
+       rs1 = space->addGbpLocalSubnets("subnets_rule_1");
+       rs1->addGbpLocalSubnet("subnets_rule1_1")
           ->setAddress("192.169.0.0")
           .setPrefixLen(16);
 
-       shared_ptr<modelgbp::gbp::SecGroupRule> r1, r2, r3, r4;
+       shared_ptr<modelgbp::gbp::LocalSecGroupRule> r1, r2, r3, r4;
         //secgrp 3
-       secGrp3 = space->addGbpSecGroup("secgrp3");
+       secGrp3 = space->addGbpLocalSecGroup("secgrp3");
         //action 1
-       action1 = space->addGbpAllowDenyAction("action1");
-       action1->setAllow(0).setOrder(5);
+       local_action1 = space->addGbpLocalAllowDenyAction("action1");
+       local_action1->setAllow(0).setOrder(5);
        //action 2
-       action2 =  space->addGbpLogAction("action2");
+       local_action2 =  space->addGbpLocalLogAction("action2");
        //security group rule
-       r1 = secGrp3->addGbpSecGroupSubject("1_subject1")
-                   ->addGbpSecGroupRule("1_1_rule1");
+       r1 = secGrp3->addGbpLocalSecGroupSubject("1_subject1")
+                   ->addGbpLocalSecGroupRule("1_1_rule1");
        r1->setDirection(DirectionEnumT::CONST_OUT).setOrder(100)
-          .addGbpRuleToClassifierRSrc(classifier2->getURI().toString());
-       r1->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
-       r1->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
-         ->setTargetAllowDenyAction(action1->getURI());
-       r1->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
-         ->setTargetLogAction(action2->getURI());
-       r2 = secGrp3->addGbpSecGroupSubject("1_subject1")
-         ->addGbpSecGroupRule("1_1_rule2");
+          .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier2->getURI().toString());
+       r1->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
+       r1->addGbpLocalSecGroupRuleToActionRSrcLocalAllowDenyAction(local_action1->getURI().toString())
+         ->setTargetLocalAllowDenyAction(local_action1->getURI());
+       r1->addGbpLocalSecGroupRuleToActionRSrcLocalLogAction(local_action2->getURI().toString())
+         ->setTargetLocalLogAction(local_action2->getURI());
+       r2 = secGrp3->addGbpLocalSecGroupSubject("1_subject1")
+         ->addGbpLocalSecGroupRule("1_1_rule2");
        r2->setDirection(DirectionEnumT::CONST_IN).setOrder(150)
-         .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());
-       r2->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
-       r2->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
-         ->setTargetAllowDenyAction(action1->getURI());
-       r2->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
-         ->setTargetLogAction(action2->getURI());
-       r3 = secGrp3->addGbpSecGroupSubject("1_subject1")
-          ->addGbpSecGroupRule("1_1_rule3");
+         .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier1->getURI().toString());
+       r2->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
+       r2->addGbpLocalSecGroupRuleToActionRSrcLocalAllowDenyAction(local_action1->getURI().toString())
+         ->setTargetLocalAllowDenyAction(local_action1->getURI());
+       r2->addGbpLocalSecGroupRuleToActionRSrcLocalLogAction(local_action2->getURI().toString())
+         ->setTargetLocalLogAction(local_action2->getURI());
+       r3 = secGrp3->addGbpLocalSecGroupSubject("1_subject1")
+          ->addGbpLocalSecGroupRule("1_1_rule3");
        r3->setDirection(DirectionEnumT::CONST_BIDIRECTIONAL).setOrder(200)
-           .addGbpRuleToClassifierRSrc(classifier5->getURI().toString());
-       r3->addGbpSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
-       r3->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
-         ->setTargetAllowDenyAction(action1->getURI());
-       r3->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
-         ->setTargetLogAction(action2->getURI());
+           .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier5->getURI().toString());
+       r3->addGbpLocalSecGroupRuleToRemoteAddressRSrc(rs1->getURI().toString());
+       r3->addGbpLocalSecGroupRuleToActionRSrcLocalAllowDenyAction(local_action1->getURI().toString())
+         ->setTargetLocalAllowDenyAction(local_action1->getURI());
+       r3->addGbpLocalSecGroupRuleToActionRSrcLocalLogAction(local_action2->getURI().toString())
+         ->setTargetLocalLogAction(local_action2->getURI());
 
        mutator.commit();
      }
@@ -513,7 +516,7 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("empty-secgrp", 500);
 
     ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
-                                            "/tenant0/GbpSecGroup/secgrp3/"));
+                                            "/tenant0/GbpLocalSecGroup/secgrp3/"));
     epSrc.updateEndpoint(*ep0);
 
     clearExpFlowTables();
@@ -523,131 +526,33 @@ BOOST_FIXTURE_TEST_CASE(denyrule, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("deny-rule", 500);
 }
 
-BOOST_FIXTURE_TEST_CASE(egressDnsRule, AccessFlowManagerFixture) {
-    using namespace modelgbp::epdr;
+BOOST_FIXTURE_TEST_CASE(permitLog, AccessFlowManagerLocalSGFixture) {
     createObjects();
     createPolicyObjects();
+    shared_ptr<modelgbp::gbp::LocalSubnets> subnets1;
     {
-       Mutator mutator(framework, "policyreg");
-       shared_ptr<modelgbp::gbp::SecGroup> sec4;
-        //secgrp 4
-       sec4 = space->addGbpSecGroup("sec4");
-       //classifier 100
-       classifier100 = space->addGbpeL24Classifier("classifier100");
-       classifier100->setEtherT(modelgbp::l2::EtherTypeEnumT::CONST_IPV4);
-       classifier101 = space->addGbpeL24Classifier("classifier101");
-       classifier101->setEtherT(modelgbp::l2::EtherTypeEnumT::CONST_IPV6);
-       //action 1
-       action1 = space->addGbpAllowDenyAction("action1");
-       action1->setAllow(0).setOrder(5);
-       //security group rule
-       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule1")
-           ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
-           .addGbpRuleToClassifierRSrc(classifier100->getURI().toString());
-       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule1")
-           ->addGbpDnsName(std::string("cnn.com"));
-       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule2")
-           ->setOrder(20).setDirection(DirectionEnumT::CONST_OUT)
-           .addGbpRuleToClassifierRSrc(classifier101->getURI().toString());
-       sec4->addGbpSecGroupSubject("sec4_sub1")->addGbpSecGroupRule("sec4_sub1_rule2")
-           ->addGbpDnsName(std::string("facebook.com"));
-       mutator.commit();
-       Mutator mutator1(framework, "policyelement");
-       auto dDU = DnsDiscovered::resolve(framework);
-       auto dnsEntry = dDU.get()->addEpdrDnsEntry(std::string("cnn.com"));
-       dnsEntry->addEpdrDnsMappedAddress(std::string("151.101.1.67"));
-       dnsEntry->addEpdrDnsMappedAddress(std::string("151.101.193.67"));
-       auto dnsAnswer = dDU.get()->addEpdrDnsAnswer(std::string("cnn.com"));
-       dnsAnswer->addEpdrDnsAnswerToResultRSrc(dnsEntry->getURI().toString());
-       auto dnsEntry2 = dDU.get()->addEpdrDnsEntry(std::string("facebook.com"));
-       dnsEntry2->addEpdrDnsMappedAddress(std::string("2a03:2880:f14b:82:face:b00c:0:25de"));
-       auto dnsAnswer2 = dDU.get()->addEpdrDnsAnswer(std::string("facebook.com"));
-       dnsAnswer2->addEpdrDnsAnswerToResultRSrc(dnsEntry2->getURI().toString());
-       mutator1.commit();
-     }
-
-    ep0.reset(new Endpoint("0-0-0-0"));
-    epSrc.updateEndpoint(*ep0);
-
-    initExpStatic();
-    WAIT_FOR_TABLES("empty-secgrp", 500);
-
-    ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
-                                            "/tenant0/GbpSecGroup/sec4/"));
-    epSrc.updateEndpoint(*ep0);
-
-    clearExpFlowTables();
-    initExpStatic();
-    std::vector<std::pair<std::string,uint16_t>> namedSvcPorts = {
-        std::make_pair("151.101.1.67",0),std::make_pair("151.101.193.67",0),
-        std::make_pair("2a03:2880:f14b:82:face:b00c:0:25de",0)};
-    initExpSecGrp4(namedSvcPorts);
-
-    WAIT_FOR_TABLES("egress-dns-rule", 500);
-    shared_ptr<modelgbp::gbp::SecGroup> sec5;
-    Mutator mutator2(framework, "policyreg");
-    //secgrp 5
-    sec5 = space->addGbpSecGroup("sec5");
-    sec5->addGbpSecGroupSubject("sec5_sub1")->addGbpSecGroupRule("sec5_sub1_rule1")
-        ->setOrder(15).setDirection(DirectionEnumT::CONST_OUT)
-        .addGbpRuleToClassifierRSrc(classifier100->getURI().toString());
-    sec5->addGbpSecGroupSubject("sec5_sub1")->addGbpSecGroupRule("sec5_sub1_rule1")
-        ->addGbpDnsName(std::string("_jabber._tcp.gmail.com"));
-    mutator2.commit();
-    Mutator mutator3(framework, "policyelement");
-    auto dDU = DnsDiscovered::resolve(framework);
-    auto dnsEntry3 = dDU.get()->addEpdrDnsEntry(std::string("_jabber._tcp.gmail.com"));
-    dnsEntry3->addEpdrDnsSrv("xmpp-server.l.google.com",5269);
-    dnsEntry3->addEpdrDnsSrv("alt1.xmpp-server.l.google.com",5269);
-    dnsEntry3->addEpdrDnsSrv("alt2.xmpp-server.l.google.com",5269);
-    auto dnsEntry4 = dDU.get()->addEpdrDnsEntry(std::string("xmpp-server.l.google.com"));
-    dnsEntry4->addEpdrDnsMappedAddress(std::string("64.233.171.125"));
-    auto dnsEntry5 = dDU.get()->addEpdrDnsEntry(std::string("alt1.xmpp-server.l.google.com"));
-    dnsEntry5->addEpdrDnsMappedAddress(std::string("64.233.171.126"));
-    auto dnsAnswer3 = dDU.get()->addEpdrDnsAnswer(std::string("_jabber._tcp.gmail.com"));
-    dnsAnswer3->addEpdrDnsAnswerToResultRSrc(dnsEntry3->getURI().toString());
-    dnsAnswer3->addEpdrDnsAnswerToResultRSrc(dnsEntry4->getURI().toString());
-    dnsAnswer3->addEpdrDnsAnswerToResultRSrc(dnsEntry5->getURI().toString());
-    mutator3.commit();
-    ep1.reset(new Endpoint("0-0-0-1"));
-    epSrc.updateEndpoint(*ep1);
-
-    ep1->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
-                                            "/tenant0/GbpSecGroup/sec5/"));
-    epSrc.updateEndpoint(*ep1);
-    std::vector<std::pair<std::string,uint16_t>> namedSvcPorts2 = {
-        std::make_pair("64.233.171.125",5269), std::make_pair("64.233.171.126",5269)};
-    initExpSecGrp5(namedSvcPorts2);
-    WAIT_FOR_TABLES("egress-dns-rule-srv", 500);
-}
-
-BOOST_FIXTURE_TEST_CASE(permitLog, AccessFlowManagerFixture) {
-    createObjects();
-    createPolicyObjects();
-    shared_ptr<modelgbp::gbp::Subnets> subnets1;
-    {
-       Mutator mutator(framework, "policyreg");
-       subnets1 = space->addGbpSubnets("subnets1");
-       subnets1->addGbpSubnet("subnets1")
+       Mutator mutator(framework, "policyelement");
+       subnets1 = space->addGbpLocalSubnets("subnets1");
+       subnets1->addGbpLocalSubnet("subnets1")
           ->setAddress("10.0.0.0")
           .setPrefixLen(16);
 
         //secgrp 6
-       auto secGrp6 = space->addGbpSecGroup("secgrp6");
+       auto secGrp6 = space->addGbpLocalSecGroup("secgrp6");
         //actions
-       action1 = space->addGbpAllowDenyAction("action1");
-       action1->setAllow(1).setOrder(10);
-       action2 =  space->addGbpLogAction("action2");
+       local_action1 = space->addGbpLocalAllowDenyAction("action1");
+       local_action1->setAllow(1).setOrder(10);
+       local_action2 =  space->addGbpLocalLogAction("action2");
        //security group rule
-       auto r1 = secGrp6->addGbpSecGroupSubject("1_subject1")
-                   ->addGbpSecGroupRule("1_rule1");
+       auto r1 = secGrp6->addGbpLocalSecGroupSubject("1_subject1")
+                   ->addGbpLocalSecGroupRule("1_rule1");
        r1->setDirection(DirectionEnumT::CONST_OUT).setOrder(100)
-          .addGbpRuleToClassifierRSrc(classifier1->getURI().toString());
-       r1->addGbpSecGroupRuleToRemoteAddressRSrc(subnets1->getURI().toString());
-       r1->addGbpRuleToActionRSrcAllowDenyAction(action1->getURI().toString())
-         ->setTargetAllowDenyAction(action1->getURI());
-       r1->addGbpRuleToActionRSrcLogAction(action2->getURI().toString())
-         ->setTargetLogAction(action2->getURI());
+          .addGbpLocalSecGroupRuleToClassifierRSrc(local_classifier1->getURI().toString());
+       r1->addGbpLocalSecGroupRuleToRemoteAddressRSrc(subnets1->getURI().toString());
+       r1->addGbpLocalSecGroupRuleToActionRSrcLocalAllowDenyAction(local_action1->getURI().toString())
+         ->setTargetLocalAllowDenyAction(local_action1->getURI());
+       r1->addGbpLocalSecGroupRuleToActionRSrcLocalLogAction(local_action2->getURI().toString())
+         ->setTargetLocalLogAction(local_action2->getURI());
        mutator.commit();
      }
 
@@ -658,7 +563,7 @@ BOOST_FIXTURE_TEST_CASE(permitLog, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("empty-secgrp", 500);
 
     ep0->addSecurityGroup(opflex::modb::URI("/PolicyUniverse/PolicySpace"
-                                            "/tenant0/GbpSecGroup/secgrp6/"));
+                                            "/tenant0/GbpLocalSecGroup/secgrp6/"));
     epSrc.updateEndpoint(*ep0);
 
     clearExpFlowTables();
@@ -668,7 +573,7 @@ BOOST_FIXTURE_TEST_CASE(permitLog, AccessFlowManagerFixture) {
     WAIT_FOR_TABLES("permitLog", 500);
 }
 
-void AccessFlowManagerFixture::addDscpFlows(shared_ptr<Endpoint>& ep) {
+void AccessFlowManagerLocalSGFixture::addDscpFlows(shared_ptr<Endpoint>& ep) {
     uint32_t access = portmapper.FindPort(ep->getAccessInterface().get());
     if (access == OFPP_NONE) return;
 
@@ -679,7 +584,7 @@ void AccessFlowManagerFixture::addDscpFlows(shared_ptr<Endpoint>& ep) {
          .actions().setDscp(112).resubmit(access,1).done());
 }
 
-void AccessFlowManagerFixture::initExpStatic() {
+void AccessFlowManagerLocalSGFixture::initExpStatic() {
     ADDF(Bldr().table(OUT).priority(1).isMdAct(0)
          .actions().out(OUTPORT).done());
     ADDF(Bldr().table(OUT).priority(1)
@@ -744,7 +649,7 @@ void AccessFlowManagerFixture::initExpStatic() {
     }
 }
 
-void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
+void AccessFlowManagerLocalSGFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
     uint32_t access = portmapper.FindPort(ep->getAccessInterface().get());
     uint32_t uplink = portmapper.FindPort(ep->getAccessUplinkInterface().get());
 
@@ -799,7 +704,7 @@ void AccessFlowManagerFixture::initExpDhcpEp(shared_ptr<Endpoint>& ep) {
     }
 }
 
-void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
+void AccessFlowManagerLocalSGFixture::initExpEp(shared_ptr<Endpoint>& ep) {
     uint32_t access = portmapper.FindPort(ep->getAccessInterface().get());
     uint32_t uplink = portmapper.FindPort(ep->getAccessUplinkInterface().get());
     uint32_t zoneId = idGen.getId("conntrack", ep->getUUID());
@@ -850,7 +755,7 @@ void AccessFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep) {
     }
 }
 
-void AccessFlowManagerFixture::initExpLearningBridge() {
+void AccessFlowManagerLocalSGFixture::initExpLearningBridge() {
     ADDF(Bldr().table(GRP).priority(500).in(24)
          .isVlanTci("0x1400/0x1f00")
          .actions().outPort(42).done());
@@ -859,23 +764,23 @@ void AccessFlowManagerFixture::initExpLearningBridge() {
          .actions().outPort(24).done());
 }
 
-void AccessFlowManagerFixture::initExpSecGrpSet1() {
+void AccessFlowManagerLocalSGFixture::initExpSecGrpSet1() {
     uint32_t setId = idGen.getId("secGroupSet", secGrp1->getURI().toString());
     initExpSecGrp1(setId, 0);
 }
 
-void AccessFlowManagerFixture::initExpSecGrpSet12(bool second,
+void AccessFlowManagerLocalSGFixture::initExpSecGrpSet12(bool second,
                                                   int remoteAddress) {
     uint32_t setId = idGen.getId("secGroupSet",
                                  secGrp1->getURI().toString() +
                                  ",/PolicyUniverse/PolicySpace/tenant0"
-                                 "/GbpSecGroup/secgrp2/");
+                                 "/GbpLocalSecGroup/secgrp2/");
     initExpSecGrp1(setId, remoteAddress);
     if (second)
         initExpSecGrp2(setId);
 }
 
-void AccessFlowManagerFixture::initExpSysSecGrpSet1(){
+void AccessFlowManagerLocalSGFixture::initExpSysSecGrpSet1(){
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     PolicyManager::rule_list_t rules;
     agent.getPolicyManager().getSecGroupRules(sysSecGrp1->getURI(), rules);
@@ -891,7 +796,7 @@ void AccessFlowManagerFixture::initExpSysSecGrpSet1(){
 
     /* classifier 5 */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier5->getURI().toString());
+                         local_classifier5->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(SYS_IN_POL).priority(prio).cookie(ruleId)
          .isEth(0x8906).actions().go(IN_POL).done());
     ADDF(Bldr(SEND_FLOW_REM).table(SYS_OUT_POL).priority(prio).cookie(ruleId)
@@ -899,7 +804,7 @@ void AccessFlowManagerFixture::initExpSysSecGrpSet1(){
 
     /* classifier 9 */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier9->getURI().toString());
+                         local_classifier9->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(SYS_IN_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("-new+est-rel+rpl-inv+trk").tcp()
          .actions().go(IN_POL).done());
@@ -926,7 +831,7 @@ void AccessFlowManagerFixture::initExpSysSecGrpSet1(){
 
 }
 
-uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
+uint16_t AccessFlowManagerLocalSGFixture::initExpSecGrp1(uint32_t setId,
                                                   int remoteAddress) {
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     PolicyManager::rule_list_t rules;
@@ -935,7 +840,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
 
     /* classifer 1  */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier1->getURI().toString());
+                         local_classifier1->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio).cookie(ruleId)
              .tcp().reg(SEPG, setId).isIpSrc("192.168.0.0/16").isTpDst(80)
@@ -949,7 +854,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
          .tcp().reg(SEPG, setId).isTpDst(80).actions().go(TAP).done());
     /* classifer 8  */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier8->getURI().toString());
+                         local_classifier8->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
              .tcp6().reg(SEPG, setId).isIpv6Src("fd80::/32").isTpDst(80)
@@ -965,7 +870,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
         .actions().go(TAP).done());
     /* classifier 2  */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier2->getURI().toString());
+                         local_classifier2->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio-256).cookie(ruleId)
               .arp().reg(SEPG, setId).isTpa("192.168.0.0/16")
@@ -980,13 +885,13 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
     }
     /* classifier 6 */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier6->getURI().toString());
+                         local_classifier6->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-384).cookie(ruleId)
          .tcp().reg(SEPG, setId).isTpSrc(22)
          .isTcpFlags("+syn+ack").actions().go(TAP).done());
     /* classifier 7 */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier7->getURI().toString());
+                         local_classifier7->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-512).cookie(ruleId)
          .tcp().reg(SEPG, setId).isTpSrc(21)
          .isTcpFlags("+ack").actions().go(TAP).done());
@@ -998,7 +903,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp1(uint32_t setId,
 }
 
 
-uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
+uint16_t AccessFlowManagerLocalSGFixture::initExpSecGrp2(uint32_t setId) {
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
     PolicyManager::rule_list_t rules;
     agent.getPolicyManager().getSecGroupRules(secGrp2->getURI(), rules);
@@ -1006,7 +911,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
 
     /* classifier 5 */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier5->getURI().toString());
+                         local_classifier5->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio).cookie(ruleId)
          .reg(SEPG, setId).isEth(0x8906).actions().go(TAP).done());
     ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
@@ -1014,7 +919,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
 
     /* classifier 9 */
     ruleId = idGen.getId("l24classifierRule",
-                         classifier9->getURI().toString());
+                         local_classifier9->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio - 128).cookie(ruleId)
          .isCtState("-new+est-rel+rpl-inv+trk").tcp().reg(SEPG, setId)
          .actions().go(TAP).done());
@@ -1042,7 +947,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp2(uint32_t setId) {
     return 1;
 }
 
-uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
+uint16_t AccessFlowManagerLocalSGFixture::initExpSecGrp3(int remoteAddress) {
 
     uint32_t setId = 2;
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
@@ -1051,7 +956,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     uint64_t ruleId;
 
      /* classifer 2  */
-    ruleId = idGen.getId("l24classifierRule", classifier2->getURI().toString());
+    ruleId = idGen.getId("l24classifierRule", local_classifier2->getURI().toString());
     if (remoteAddress) {
          ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
              .arp().reg(SEPG, setId).actions()
@@ -1059,7 +964,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     }
 
     /* classifer 1  */
-    ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());
+    ruleId = idGen.getId("l24classifierRule", local_classifier1->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-128).cookie(ruleId)
         .tcp().reg(SEPG, setId).actions()
@@ -1068,7 +973,7 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     }
 
     /* classifer 5  */
-    ruleId = idGen.getId("l24classifierRule", classifier5->getURI().toString());
+    ruleId = idGen.getId("l24classifierRule", local_classifier5->getURI().toString());
     if (remoteAddress) {
         ADDF(Bldr(SEND_FLOW_REM).table(IN_POL).priority(prio-256).cookie(ruleId)
              .reg(SEPG, setId).isEth(0x8906).actions()
@@ -1081,12 +986,12 @@ uint16_t AccessFlowManagerFixture::initExpSecGrp3(int remoteAddress) {
     return 512;
 }
 
-void AccessFlowManagerFixture::initExpSecGrp4(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet) {
+void AccessFlowManagerLocalSGFixture::initExpSecGrp4(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet) {
     using boost::asio::ip::address;
     uint32_t setId = 2;
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
-    uint64_t ruleId = idGen.getId("l24classifierRule", classifier100->getURI().toString());
-    uint64_t rule6Id = idGen.getId("l24classifierRule", classifier101->getURI().toString());
+    uint64_t ruleId = idGen.getId("l24classifierRule", local_classifier100->getURI().toString());
+    uint64_t rule6Id = idGen.getId("l24classifierRule", local_classifier101->getURI().toString());
     for( auto& pr : namedAddressSet) {
         auto destAddr = address::from_string(pr.first);
         if(destAddr.is_v4()) {
@@ -1101,24 +1006,10 @@ void AccessFlowManagerFixture::initExpSecGrp4(std::vector<std::pair<std::string,
     }
 }
 
-void AccessFlowManagerFixture::initExpSecGrp5(std::vector<std::pair<std::string,uint16_t>>& namedAddressSet) {
-    using boost::asio::ip::address;
-    uint32_t setId = 3;
-    uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
-    uint64_t ruleId = idGen.getId("l24classifierRule", classifier100->getURI().toString());
-    for( auto& pr : namedAddressSet) {
-        auto destAddr = address::from_string(pr.first);
-        if(destAddr.is_v4()) {
-            ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
-             .tcp().reg(SEPG, setId).isIpDst(pr.first).isTpDst(pr.second).actions()
-             .go(TAP).done());
-        }
-    }
-}
-void AccessFlowManagerFixture::initExpSecGrp6() {
+void AccessFlowManagerLocalSGFixture::initExpSecGrp6() {
     uint32_t setId = 2;
     uint16_t prio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
-    uint64_t ruleId = idGen.getId("l24classifierRule", classifier1->getURI().toString());
+    uint64_t ruleId = idGen.getId("l24classifierRule", local_classifier1->getURI().toString());
     ADDF(Bldr(SEND_FLOW_REM).table(OUT_POL).priority(prio).cookie(ruleId)
              .tcp().reg(SEPG, setId).isIpDst("10.0.0.0/16").isTpDst(80).actions()
              .permitLog(OUT_POL,EXP_DROP,ruleId).go(TAP).done());
