@@ -1507,6 +1507,7 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
     using modelgbp::gbp::LocalSecGroupRuleToClassifierRSrc;
     using modelgbp::gbp::LocalSecGroupRuleToActionRSrc;
     using modelgbp::gbp::AllowDenyAction;
+    using modelgbp::gbp::LocalAllowDenyAction;
     using modelgbp::gbp::RedirectAction;
     using modelgbp::gbp::RedirectDestGroup;
     using modelgbp::gbp::LogAction;
@@ -1573,7 +1574,8 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
                 if (!r->isTargetSet()) {
                     continue;
                 }
-                if(r->getTargetClass().get() == AllowDenyAction::CLASS_ID) {
+                if(r->getTargetClass().get() == AllowDenyAction::CLASS_ID ||
+                   r->getTargetClass().get() == LocalAllowDenyAction::CLASS_ID) {
                     optional<shared_ptr<Action> > act =
                         Action::resolve(framework, r->getTargetURI().get());
                     if (act) {
@@ -3390,7 +3392,7 @@ void PolicyManager::LocalSecGroupListener::objectUpdated(class_id_t classId,
         pmanager.secGrpMap[uri].isLocal = true;
     }
 
-    pmanager.taskQueue.dispatch("secgroup", [this]() {
+    pmanager.taskQueue.dispatch("localsecgroup", [this]() {
         pmanager.updateSecGrps(true);
     });
 }
