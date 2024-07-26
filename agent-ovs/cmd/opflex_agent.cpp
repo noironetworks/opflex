@@ -121,9 +121,11 @@ public:
                         break;
                     }
                     if (!stopped && need_reset) {
-                        LOG(INFO) << "Disconnect from existing peers and " <<
-                            "fallback to configured list because of configuration update";
-                        framework.resetAllUnconfiguredPeers();
+                        if (agent.shouldReset()) {
+                            LOG(WARNING) << "Disconnect from existing peers and " <<
+                                "fallback to configured list because of configuration update";
+                            framework.resetAllUnconfiguredPeers();
+                        }
                         need_reset = false;
                         continue;
                     }

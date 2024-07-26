@@ -145,6 +145,12 @@
            // Max retries will be 5 so as to not wait
            // forever
            // "switch-sync-dynamic": 0
+           //
+           // skip reset.conf processing if platformConfig
+           // delete was processed within this interval.
+           // This is to avoid duplicate reset processing
+           // for the same event
+           // "reset-wait-delay": 5
        },
        // Statistics. Counters for various artifacts.
        // mode: can be either

@@ -189,6 +189,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_MULTICAST_CACHE_TIMEOUT("opflex.timers.mcast-cache-timeout");
     static const std::string OPFLEX_SWITCH_SYNC_DELAY("opflex.timers.switch-sync-delay");
     static const std::string OPFLEX_SWITCH_SYNC_DYNAMIC("opflex.timers.switch-sync-dynamic");
+    static const std::string OPFLEX_RESET_WAIT_DELAY("opflex.timers.reset-wait-delay");
     static const std::string DISABLED_FEATURES("feature.disabled");
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
     static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
@@ -414,6 +415,14 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         switch_sync_dynamic = switchSyncDynamicOpt.get();
         LOG(INFO) << "Switch Sync Dynamic set to " << switch_sync_dynamic << " seconds";
     }
+
+    optional<uint32_t> resetWaitDelayOpt =
+        properties.get_optional<uint32_t>(OPFLEX_RESET_WAIT_DELAY);
+    if (resetWaitDelayOpt) {
+        reset_wait_delay = resetWaitDelayOpt.get();
+        LOG(INFO) << "Reset Wait delay set to " << reset_wait_delay << " seconds";
+    }
+    updateResetTime();
 
     optional<const ptree&> rendererPlugins =
         properties.get_child_optional(PLUGINS_RENDERER);
