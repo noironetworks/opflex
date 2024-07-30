@@ -9,6 +9,9 @@ pipeline {
         BRANCH = 'master'
         RPM_DIR = "$WORKSPACE/docker/rpms"
         SIGNED_RPMS = "$WORKSPACE/rpmbuild/RPMS/noarch"
+        ARTIFACTORY_USER = 'noiro.gen'
+        ARTIFACTORY_URL = 'https://engci-maven.cisco.com/artifactory'
+        ARTIFACT_URL = 'https://engci-maven.cisco.com/artifactory/noiro-snapshot/opflex/master/rhel8/agent/$BUILD_NUMBER'
     }
     stages {
         stage('Build Opflex RPMS') {
@@ -48,6 +51,23 @@ pipeline {
                     }
                 }
             }
+        }
+        stage('Push artifacts') {
+           steps {
+              script {
+                  withCredentials([
+                      conjurSecretCredential(credentialsId: 'noiro-conjur-artifactory-token', variable: 'ARTIFACT_TOKEN')
+                      ]) {
+                      script {
+                         sh """
+                             for rpm in ${SIGNED_RPMS}/opflexrpms-${BUILD_NUMBER}/*.rpm
+                                 do curl -v -u ${ARTIFACTORY_USER}:\${ARTIFACT_TOKEN} -X PUT "${ARTIFACT_URL}/\$(basename \$rpm)" -T "\$rpm"
+                             done 
+                         """
+                      }
+                   }
+              }
+           }
         }
         stage('Re-Tar Signed RPMs') {
             steps {
