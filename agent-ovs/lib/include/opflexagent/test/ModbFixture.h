@@ -93,6 +93,7 @@ public:
     std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier0;
     std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier1;
     std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier2;
+    std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier3;
     std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier5;
     std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier6;
     std::shared_ptr<modelgbp::gbpe::LocalL24Classifier> local_classifier7;
@@ -314,6 +315,12 @@ protected:
         /* allow ARP from prov->cons */
         local_classifier2 = space->addGbpeLocalL24Classifier("classifier2");
         local_classifier2->setEtherT(l2::EtherTypeEnumT::CONST_ARP);
+
+        /* classifiers with port ranges */
+        local_classifier3 = space->addGbpeLocalL24Classifier("classifier3");
+        local_classifier3->setOrder(10)
+            .setEtherT(l2::EtherTypeEnumT::CONST_IPV4).setProt(6 /* TCP */)
+            .setDFromPort(80).setDToPort(85);
 
         /* allow bidirectional FCoE */
         local_classifier5 = space->addGbpeLocalL24Classifier("classifier5");

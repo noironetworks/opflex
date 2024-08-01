@@ -90,7 +90,8 @@ public:
     // New counter objects get created for every diff in flow. Prometheus
     // maintains an aggregatiion of all these updates. On the second update
     // with same values in tests, check for total value in prometheus.
-    void verifyFlowStats(shared_ptr<L24Classifier> classifier,
+    template <typename Classifier>
+    void verifyFlowStats(shared_ptr<Classifier> classifier,
                          uint32_t packet_count, // delta
                          uint32_t byte_count, // delta
                          bool isExistingMetric,
@@ -132,6 +133,54 @@ public:
                    LOG(DEBUG) << "L24classifiercounter mo isnt present";
                });
             verifyPromMetrics(std::move(classifier), t_packet_count, t_byte_count);
+        } else if (agent.getPolicyManager().useLocalNetpol()) {
+            const auto& uuid = statsManager->getAgentUUID();
+            optional<shared_ptr<LocalSecGrpClassifierCounter> > myCounter =
+                boost::make_optional<shared_ptr<LocalSecGrpClassifierCounter> >(false, nullptr);
+            LOG(DEBUG) << "verifying stats for"
+                        << " classifier: " << classifier->getURI().toString()
+                        << " delta pkt count: " << packet_count
+                        << " delta byte count: " << byte_count
+                        << " total pkt count: " << t_packet_count
+                        << " total byte count: " << t_byte_count;
+            WAIT_FOR_DO_ONFAIL(
+                (myCounter && myCounter.get()
+                    && (
+                        ((table_id == AccessFlowManager::SEC_GROUP_OUT_TABLE_ID)
+                        && (myCounter.get()->getTxpackets()
+                                && (myCounter.get()->getTxpackets().get() == packet_count))
+                        && (myCounter.get()->getTxbytes()
+                                && (myCounter.get()->getTxbytes().get() == byte_count)))
+                        ||
+                        ((table_id == AccessFlowManager::SEC_GROUP_IN_TABLE_ID)
+                        && (myCounter.get()->getRxpackets().get() == packet_count)
+                        && (myCounter.get()->getRxbytes().get() == byte_count))
+                       )),
+                500, // usleep(1000) * 500 = 500ms
+                (myCounter = su.get()->resolveGbpeLocalSecGrpClassifierCounter(uuid,
+                                  statsManager->getCurrClsfrGenId(),
+                                  classifier->getURI().toString())),
+                if (myCounter && myCounter.get()) {
+                    if (table_id == AccessFlowManager::SEC_GROUP_OUT_TABLE_ID) {
+                        if (myCounter.get()->getTxpackets()) {
+                            BOOST_CHECK_EQUAL(myCounter.get()->getTxpackets().get(), packet_count);
+                        } else {
+                            LOG(DEBUG) << "tx pkts invalid";
+                        }
+                        if (myCounter.get()->getTxbytes()) {
+                            BOOST_CHECK_EQUAL(myCounter.get()->getTxbytes().get(), byte_count);
+                        } else {
+                            LOG(DEBUG) << "tx bytes invalid";
+                        }
+                    } else if (table_id == AccessFlowManager::SEC_GROUP_IN_TABLE_ID) {
+                        BOOST_CHECK_EQUAL(myCounter.get()->getRxpackets().get(), packet_count);
+                        BOOST_CHECK_EQUAL(myCounter.get()->getRxbytes().get(), byte_count);
+                    }
+                } else {
+                    LOG(DEBUG) << "SGclassifiercounter mo isnt present";
+                });
+            verifyPromMetrics(classifier, t_packet_count, t_byte_count,
+                              table_id == AccessFlowManager::SEC_GROUP_OUT_TABLE_ID);
         } else {
             const auto& uuid = statsManager->getAgentUUID();
             optional<shared_ptr<SecGrpClassifierCounter> > myCounter =
@@ -264,10 +313,11 @@ public:
         return NULL;
     }
 
+    template <typename Classifier>
     void writeClassifierFlows(FlowEntryList& entryList,
                               uint32_t table_id,
                               uint32_t portNum,
-                              shared_ptr<L24Classifier>& classifier,
+                              shared_ptr<Classifier>& classifier,
                               shared_ptr<EpGroup> srcEpg = NULL,
                               shared_ptr<EpGroup> dstEpg = NULL,
                               PolicyManager *policyManager = NULL) {
@@ -302,9 +352,9 @@ public:
                                 entryListCopy);
     }
 
-    template <typename cStatsManager>
+    template <typename cStatsManager,typename Classifier>
     void testCircBuffer(MockConnection& portConn,
-                        shared_ptr<L24Classifier>& classifier,
+                        shared_ptr<Classifier>& classifier,
                         uint32_t table_id,
                         uint32_t portNum,
                         PolicyStatsManager *statsManager,
@@ -312,7 +362,7 @@ public:
                         shared_ptr<EpGroup> dstEpg = NULL,
                         PolicyManager *policyManager = NULL) {
         FlowEntryList entryList;
-        writeClassifierFlows(entryList,table_id,portNum,classifier);
+        writeClassifierFlows<Classifier>(entryList,table_id,portNum,classifier);
         boost::system::error_code ec;
         ec = make_error_code(boost::system::errc::success);
         // Call on_timer function to process the flow entries received from
@@ -373,6 +423,13 @@ public:
                                                           classifier->getURI()
                                                           .toString());
             WAIT_FOR(!myCounter,500);
+        } else if (agent.getPolicyManager().useLocalNetpol()) {
+            optional<shared_ptr<LocalSecGrpClassifierCounter> > myCounter =
+                su.get()->resolveGbpeLocalSecGrpClassifierCounter(uuid,firstId,
+                                                                  classifier->
+                                                                  getURI().
+                                                                  toString());
+            WAIT_FOR(!myCounter,500);
         } else {
             optional<shared_ptr<SecGrpClassifierCounter> > myCounter =
                 su.get()->resolveGbpeSecGrpClassifierCounter(uuid,firstId,
@@ -383,9 +440,9 @@ public:
         }
     }
 
-    template <typename cStatsManager>
+    template <typename cStatsManager,typename Classifier>
     void testOneFlow(MockConnection& portConn,
-                     shared_ptr<L24Classifier>& classifier,uint32_t table_id,
+                     shared_ptr<Classifier>& classifier,uint32_t table_id,
                      uint32_t portNum,
                      bool isExistingMetric,
                      PolicyStatsManager *statsManager,
@@ -394,7 +451,7 @@ public:
                      shared_ptr<EpGroup> dstEpg = NULL) {
         // add flows in switchManager
         FlowEntryList entryList;
-        writeClassifierFlows(entryList,table_id,portNum,classifier,
+        writeClassifierFlows<Classifier>(entryList,table_id,portNum,classifier,
                              srcEpg,dstEpg,policyManager);
 
         boost::system::error_code ec;
@@ -454,7 +511,7 @@ public:
 
         // Verify per classifier/per epg pair packet and byte count
 
-        verifyFlowStats(classifier,
+        verifyFlowStats<Classifier>(classifier,
                         exp_classifier_packet_count,
                         exp_classifier_packet_count * PACKET_SIZE,
                         isExistingMetric,

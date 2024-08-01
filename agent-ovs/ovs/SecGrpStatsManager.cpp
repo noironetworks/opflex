@@ -26,6 +26,7 @@ extern "C" {
 #include <opflex/modb/Mutator.h>
 #include <modelgbp/gbpe/L24Classifier.hpp>
 #include <modelgbp/gbpe/SecGrpClassifierCounter.hpp>
+#include <modelgbp/gbpe/LocalSecGrpClassifierCounter.hpp>
 #include <modelgbp/observer/PolicyStatUniverse.hpp>
 
 namespace opflexagent {
@@ -46,7 +47,8 @@ using boost::system::error_code;
 SecGrpStatsManager::SecGrpStatsManager(Agent* agent_, IdGenerator& idGen_,
                                        SwitchManager& switchManager_,
                                        long timer_interval_)
-    : PolicyStatsManager(agent_,idGen_,switchManager_,timer_interval_) {
+    : PolicyStatsManager(agent_,idGen_,switchManager_,timer_interval_),
+      agent(agent_) {
 }
 
 
@@ -122,9 +124,15 @@ void SecGrpStatsManager::on_timer(const error_code& ec) {
 
 void SecGrpStatsManager::clearCounterObject(const string& key,
                                             uint8_t index) {
-    SecGrpClassifierCounter::remove(agent->getFramework(),
-                                    getAgentUUID(),
-                                    genIdList_[key]->uidList[index],key);
+    if (agent->getPolicyManager().useLocalNetpol()) {
+        LocalSecGrpClassifierCounter::remove(agent->getFramework(),
+                                             getAgentUUID(),
+                                             genIdList_[key]->uidList[index],key);
+    } else {
+        SecGrpClassifierCounter::remove(agent->getFramework(),
+                                        getAgentUUID(),
+                                        genIdList_[key]->uidList[index],key);
+    }
 }
 
 void SecGrpStatsManager::
@@ -138,34 +146,60 @@ updatePolicyStatsCounters(const string& l24Classifier,
         uint64_t nextId = getNextClsfrGenId();
         clearOldCounters(l24Classifier,nextId);
         if (newVals1.byte_count && newVals2.byte_count) {
-            su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
-                                                     nextId,
-                                                     l24Classifier)
-                ->setTxpackets(newVals2.packet_count.get())
-                .setTxbytes(newVals2.byte_count.get())
-                .setRxpackets(newVals1.packet_count.get())
-                .setRxbytes(newVals1.byte_count.get());
+            if (agent->getPolicyManager().useLocalNetpol()) {
+                su.get()->addGbpeLocalSecGrpClassifierCounter(getAgentUUID(),
+                                                              nextId,
+                                                              l24Classifier)
+                    ->setTxpackets(newVals2.packet_count.get())
+                    .setTxbytes(newVals2.byte_count.get())
+                    .setRxpackets(newVals1.packet_count.get())
+                    .setRxbytes(newVals1.byte_count.get());
+            } else {
+                su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
+                                                         nextId,
+                                                         l24Classifier)
+                    ->setTxpackets(newVals2.packet_count.get())
+                    .setTxbytes(newVals2.byte_count.get())
+                    .setRxpackets(newVals1.packet_count.get())
+                    .setRxbytes(newVals1.byte_count.get());
+            }
             prometheusManager.addNUpdateSGClassifierCounter(l24Classifier,
                                                             newVals1.byte_count.get(),
                                                             newVals1.packet_count.get(),
                                                             newVals2.byte_count.get(),
                                                             newVals2.packet_count.get());
         } else if (newVals1.byte_count) {
-            su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
-                                                     nextId,
-                                                     l24Classifier)
-                ->setRxpackets(newVals1.packet_count.get())
-                .setRxbytes(newVals1.byte_count.get());
+            if (agent->getPolicyManager().useLocalNetpol()) {
+                su.get()->addGbpeLocalSecGrpClassifierCounter(getAgentUUID(),
+                                                              nextId,
+                                                              l24Classifier)
+                    ->setRxpackets(newVals1.packet_count.get())
+                    .setRxbytes(newVals1.byte_count.get());
+            } else {
+                su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
+                                                         nextId,
+                                                         l24Classifier)
+                    ->setRxpackets(newVals1.packet_count.get())
+                    .setRxbytes(newVals1.byte_count.get());
+            }
             prometheusManager.addNUpdateSGClassifierCounter(l24Classifier,
                                                             newVals1.byte_count.get(),
                                                             newVals1.packet_count.get(),
                                                             0, 0);
         } else if (newVals2.byte_count) {
-            su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
-                                                     nextId,
-                                                     l24Classifier)
-                ->setTxpackets(newVals2.packet_count.get())
-                .setTxbytes(newVals2.byte_count.get());
+            if (agent->getPolicyManager().useLocalNetpol()) {
+                su.get()->addGbpeLocalSecGrpClassifierCounter(getAgentUUID(),
+                                                              nextId,
+                                                              l24Classifier)
+                    ->setTxpackets(newVals2.packet_count.get())
+                    .setTxbytes(newVals2.byte_count.get());
+            } else {
+                su.get()->addGbpeSecGrpClassifierCounter(getAgentUUID(),
+                                                         nextId,
+                                                         l24Classifier)
+                    ->setTxpackets(newVals2.packet_count.get())
+                    .setTxbytes(newVals2.byte_count.get());
+            }
             prometheusManager.addNUpdateSGClassifierCounter(l24Classifier,
                                                             0, 0,
                                                             newVals2.byte_count.get(),
@@ -182,6 +216,11 @@ void SecGrpStatsManager::objectUpdated(opflex::modb::class_id_t class_id,
             removeAllCounterObjects(uri.toString());
             prometheusManager.removeSGClassifierCounter(uri.toString());
         }
+    } else if (class_id == LocalL24Classifier::CLASS_ID) {
+        if (!LocalL24Classifier::resolve(agent->getFramework(),uri)) {
+            removeAllCounterObjects(uri.toString());
+            prometheusManager.removeSGClassifierCounter(uri.toString());
+       }
     }
 }
 
