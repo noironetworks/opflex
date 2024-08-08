@@ -22,7 +22,7 @@
 #include "FlowConstants.h"
 #include "PolicyStatsManagerFixture.h"
 
-#include <modelgbp/gbpe/SecGrpClassifierCounter.hpp>
+#include <modelgbp/gbpe/LocalSecGrpClassifierCounter.hpp>
 #include <modelgbp/observer/PolicyStatUniverse.hpp>
 
 #include <opflex/modb/Mutator.h>
@@ -62,12 +62,14 @@ public:
     }
 };
 
-class SecGrpStatsManagerFixture : public PolicyStatsManagerFixture {
+class SecGrpStatsManagerLocalSGFixture : public PolicyStatsManagerFixture {
 
 public:
-    SecGrpStatsManagerFixture() : PolicyStatsManagerFixture(),
+    SecGrpStatsManagerLocalSGFixture() : PolicyStatsManagerFixture(),
                                   secGrpStatsManager(&agent, idGen,
                                                      switchManager, 100000) {
+        bool enable = true;
+        agent.getPolicyManager().configLocalNetpol(enable);
         idGen.initNamespace("l24classifierRule");
         idGen.initNamespace("secGroupSet");
         idGen.initNamespace("secGroup");
@@ -75,24 +77,26 @@ public:
         createPolicyObjects();
         switchManager.setMaxFlowTables(IntFlowManager::NUM_FLOW_TABLES);
     }
-    virtual ~SecGrpStatsManagerFixture() {
+    virtual ~SecGrpStatsManagerLocalSGFixture() {
+        bool enable = false;
+        agent.getPolicyManager().configLocalNetpol(enable);
         stop();
     }
-    virtual void verifyPromMetrics(shared_ptr<L24Classifier> classifier,
+    virtual void verifyPromMetrics(shared_ptr<LocalL24Classifier> classifier,
                             uint32_t pkts,
                             uint32_t bytes,
-                            bool isTx=false) override;
+                            bool isTx=false);
     MockSecGrpStatsManager secGrpStatsManager;
 };
 
-void SecGrpStatsManagerFixture::
-verifyPromMetrics (shared_ptr<L24Classifier> classifier,
+void SecGrpStatsManagerLocalSGFixture::
+verifyPromMetrics (shared_ptr<LocalL24Classifier> classifier,
                    uint32_t pkts,
                    uint32_t bytes,
                    bool isTx)
 {
     std::string s_rx_bytes, s_rx_pkts, s_tx_bytes, s_tx_pkts;
-    if (classifier == classifier1) {
+    if (classifier == local_classifier1) {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier1,[etype:2048,proto:6,dport:80]\"} "\
                      + std::to_string(bytes);
@@ -105,7 +109,7 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
         s_rx_pkts = "opflex_sg_rx_packets{classifier=\"tenant:tenant0,policy:"\
                     "classifier1,[etype:2048,proto:6,dport:80]\"} "\
                     + std::to_string(pkts);
-    } else if (classifier == classifier2) {
+    } else if (classifier == local_classifier2) {
         s_tx_bytes = "opflex_sg_tx_bytes{classifier=\"tenant:tenant0,policy:"\
                      "classifier2,[etype:2054,]\"} "\
                      + std::to_string(bytes);
@@ -148,9 +152,9 @@ verifyPromMetrics (shared_ptr<L24Classifier> classifier,
     }
 }
 
-BOOST_AUTO_TEST_SUITE(SecGrpStatsManager_test)
+BOOST_AUTO_TEST_SUITE(SecGrpStatsManagerLocalSG_test)
 
-BOOST_FIXTURE_TEST_CASE(testFlowMatchStats, SecGrpStatsManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(testFlowMatchStats, SecGrpStatsManagerLocalSGFixture) {
     MockConnection accPortConn(TEST_CONN_TYPE_ACC);
     secGrpStatsManager.registerConnection(&accPortConn);
     secGrpStatsManager.start();
@@ -160,11 +164,11 @@ BOOST_FIXTURE_TEST_CASE(testFlowMatchStats, SecGrpStatsManagerFixture) {
                               OFPTYPE_FLOW_STATS_REPLY, NULL);
     LOG(DEBUG) << "### SecGrpClassifierCounter flow stats in start";
     // testing one flow only
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier1,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier1,
                 AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                 1, false, &secGrpStatsManager);
     // 2 entries in flow table now - testing second flow
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier2,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier2,
                 AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                 2, false,
                 &secGrpStatsManager);
@@ -172,21 +176,21 @@ BOOST_FIXTURE_TEST_CASE(testFlowMatchStats, SecGrpStatsManagerFixture) {
     // Note: If the portNum is set as 2, then it clashes with classifier2
     // entry. So first classifier1 entry will get deleted. No new counter
     // objeects will get generated and verifyflowstats will fail.
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier1,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier1,
                 AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                 3, true,
                 &secGrpStatsManager);
     LOG(DEBUG) << "### SecGrpClassifierCounter flow stats out start";
     // same 3 steps above for OUT table
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier1,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier1,
                 AccessFlowManager::SEC_GROUP_OUT_TABLE_ID,
                 1, false,
                 &secGrpStatsManager);
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier2,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier2,
                 AccessFlowManager::SEC_GROUP_OUT_TABLE_ID,
                 2, false,
                 &secGrpStatsManager);
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier1,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier1,
                 AccessFlowManager::SEC_GROUP_OUT_TABLE_ID,
                 3, true,
                 &secGrpStatsManager);
@@ -197,7 +201,7 @@ BOOST_FIXTURE_TEST_CASE(testFlowMatchStats, SecGrpStatsManagerFixture) {
 
 
 
-BOOST_FIXTURE_TEST_CASE(testFlowRemoved, SecGrpStatsManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(testFlowRemoved, SecGrpStatsManagerLocalSGFixture) {
     MockConnection accPortConn(TEST_CONN_TYPE_ACC);
     secGrpStatsManager.registerConnection(&accPortConn);
     secGrpStatsManager.start();
@@ -205,15 +209,15 @@ BOOST_FIXTURE_TEST_CASE(testFlowRemoved, SecGrpStatsManagerFixture) {
 
     // Add flows in switchManager
     FlowEntryList entryList;
-    writeClassifierFlows<L24Classifier>(entryList,
+    writeClassifierFlows<LocalL24Classifier>(entryList,
                          AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                          1,
-                         classifier3);
+                         local_classifier3);
     FlowEntryList entryList1;
-    writeClassifierFlows<L24Classifier>(entryList1,
+    writeClassifierFlows<LocalL24Classifier>(entryList1,
                          AccessFlowManager::SEC_GROUP_OUT_TABLE_ID,
                          1,
-                         classifier3);
+                         local_classifier3);
 
     boost::system::error_code ec;
     ec = make_error_code(boost::system::errc::success);
@@ -282,13 +286,13 @@ BOOST_FIXTURE_TEST_CASE(testFlowRemoved, SecGrpStatsManagerFixture) {
     // calculate expected packet count and byte count
     // that we should have in Genie object
 
-    verifyFlowStats<L24Classifier>(classifier3,
+    verifyFlowStats<LocalL24Classifier>(local_classifier3,
                     LAST_PACKET_COUNT,
                     LAST_PACKET_COUNT * PACKET_SIZE,
                     true,
                     AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                     &secGrpStatsManager);
-    verifyFlowStats<L24Classifier>(classifier3,
+    verifyFlowStats<LocalL24Classifier>(local_classifier3,
                     LAST_PACKET_COUNT,
                     LAST_PACKET_COUNT * PACKET_SIZE,
                     false,
@@ -298,7 +302,7 @@ BOOST_FIXTURE_TEST_CASE(testFlowRemoved, SecGrpStatsManagerFixture) {
     secGrpStatsManager.stop();
 }
 
-BOOST_FIXTURE_TEST_CASE(testCircularBuffer, SecGrpStatsManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(testCircularBuffer, SecGrpStatsManagerLocalSGFixture) {
     MockConnection accPortConn(TEST_CONN_TYPE_ACC);
     secGrpStatsManager.registerConnection(&accPortConn);
     secGrpStatsManager.start();
@@ -306,8 +310,8 @@ BOOST_FIXTURE_TEST_CASE(testCircularBuffer, SecGrpStatsManagerFixture) {
     LOG(DEBUG) << "### SecGrpClassifierCounter circbuffer start";
     // Add flows in switchManager
 
-    testCircBuffer<MockSecGrpStatsManager,L24Classifier>(accPortConn,
-                   classifier3,
+    testCircBuffer<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,
+                   local_classifier3,
                    AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                    2,
                    &secGrpStatsManager);
@@ -315,7 +319,7 @@ BOOST_FIXTURE_TEST_CASE(testCircularBuffer, SecGrpStatsManagerFixture) {
     secGrpStatsManager.stop();
 }
 
-BOOST_FIXTURE_TEST_CASE(testSecGrpDelete, SecGrpStatsManagerFixture) {
+BOOST_FIXTURE_TEST_CASE(testSecGrpDelete, SecGrpStatsManagerLocalSGFixture) {
     MockConnection accPortConn(TEST_CONN_TYPE_ACC);
     secGrpStatsManager.registerConnection(&accPortConn);
     secGrpStatsManager.start();
@@ -324,22 +328,22 @@ BOOST_FIXTURE_TEST_CASE(testSecGrpDelete, SecGrpStatsManagerFixture) {
     secGrpStatsManager.Handle(&accPortConn,
                               OFPTYPE_FLOW_STATS_REPLY, NULL);
     // testing one flow only
-    testOneFlow<MockSecGrpStatsManager,L24Classifier>(accPortConn,classifier1,
+    testOneFlow<MockSecGrpStatsManager,LocalL24Classifier>(accPortConn,local_classifier1,
                 AccessFlowManager::SEC_GROUP_IN_TABLE_ID,
                 1, false, &secGrpStatsManager);
-    Mutator mutator(agent.getFramework(), "policyreg");
+    Mutator mutator(agent.getFramework(), "policyelement");
 
     // Note: In UTs, deleting the sg doesnt trigger classifier delete
     //modelgbp::gbp::SecGroup::remove(agent.getFramework(),"tenant0","secgrp1");
-    modelgbp::gbpe::L24Classifier::remove(agent.getFramework(),"tenant0","classifier1");
+    modelgbp::gbpe::LocalL24Classifier::remove(agent.getFramework(),"tenant0","classifier1");
     mutator.commit();
     optional<shared_ptr<PolicyStatUniverse> > su =
         PolicyStatUniverse::resolve(agent.getFramework());
     const auto& uuid = secGrpStatsManager.getAgentUUID();
-    optional<shared_ptr<SecGrpClassifierCounter> > myCounter;
-    WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeSecGrpClassifierCounter(uuid,
+    optional<shared_ptr<LocalSecGrpClassifierCounter> > myCounter;
+    WAIT_FOR_DO_ONFAIL(!(su.get()->resolveGbpeLocalSecGrpClassifierCounter(uuid,
                         secGrpStatsManager.getCurrClsfrGenId(),
-                        classifier1->getURI().toString()))
+                        local_classifier1->getURI().toString()))
                         ,500
                         ,
                         ,LOG(ERROR) << "Obj still present";);

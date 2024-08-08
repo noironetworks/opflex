@@ -258,7 +258,7 @@ BOOST_FIXTURE_TEST_CASE(testFlowMatchStats, ContractStatsManagerFixture) {
     contractStatsManager.Handle(&integrationPortConn,
                                 OFPTYPE_FLOW_STATS_REPLY, NULL);
 
-    testOneFlow<MockContractStatsManager>(integrationPortConn,classifier3,
+    testOneFlow<MockContractStatsManager,L24Classifier>(integrationPortConn,classifier3,
                 IntFlowManager::POL_TABLE_ID,
                 1,
                 false,
@@ -314,7 +314,7 @@ BOOST_FIXTURE_TEST_CASE(testFlowRemoved, ContractStatsManagerFixture) {
 
     // Add flows in switchManager
     FlowEntryList entryList;
-    writeClassifierFlows(entryList,
+    writeClassifierFlows<L24Classifier>(entryList,
                          IntFlowManager::POL_TABLE_ID,
                          1,
                          classifier3,
@@ -353,7 +353,7 @@ BOOST_FIXTURE_TEST_CASE(testFlowRemoved, ContractStatsManagerFixture) {
     // calculate expected packet count and byte count
     // that we should have in Genie object
 
-    verifyFlowStats(classifier3,
+    verifyFlowStats<L24Classifier>(classifier3,
                     LAST_PACKET_COUNT,
                     LAST_PACKET_COUNT * PACKET_SIZE,
                     false,
@@ -371,7 +371,7 @@ BOOST_FIXTURE_TEST_CASE(testCircularBuffer, ContractStatsManagerFixture) {
     contractStatsManager.start();
     LOG(DEBUG) << "### Contract circbuffer Start";
     // Add flows in switchManager
-    testCircBuffer<MockContractStatsManager>(intPortConn,classifier3,
+    testCircBuffer<MockContractStatsManager,L24Classifier>(intPortConn,classifier3,
                    IntFlowManager::POL_TABLE_ID,2,&contractStatsManager,
                    epg1,epg2,&policyManager);
     LOG(DEBUG) << "### Contract circbuffer End";
@@ -388,7 +388,7 @@ BOOST_FIXTURE_TEST_CASE(testContractDelete, ContractStatsManagerFixture) {
     contractStatsManager.Handle(&integrationPortConn,
                                 OFPTYPE_FLOW_STATS_REPLY, NULL);
 
-    testOneFlow<MockContractStatsManager>(integrationPortConn,
+    testOneFlow<MockContractStatsManager,L24Classifier>(integrationPortConn,
                 classifier3,
                 IntFlowManager::POL_TABLE_ID,
                 1,
@@ -423,7 +423,7 @@ BOOST_FIXTURE_TEST_CASE(testSEpgDelete, ContractStatsManagerFixture) {
     contractStatsManager.start();
     LOG(DEBUG) << "### Contract SEPG Delete Start";
 
-    testOneFlow<MockContractStatsManager>(integrationPortConn,
+    testOneFlow<MockContractStatsManager,L24Classifier>(integrationPortConn,
                 classifier3,
                 IntFlowManager::POL_TABLE_ID,
                 1,
@@ -457,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(testrDSEpgDelete, ContractStatsManagerFixture) {
     contractStatsManager.start();
     LOG(DEBUG) << "### Contract DSEPG Delete Start";
 
-    testOneFlow<MockContractStatsManager>(integrationPortConn,
+    testOneFlow<MockContractStatsManager,L24Classifier>(integrationPortConn,
                 classifier3,
                 IntFlowManager::POL_TABLE_ID,
                 1,

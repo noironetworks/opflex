@@ -577,6 +577,16 @@ module[gbpe]
         member[txbytes; type=scalar/UInt64]
     }
 
+    class[LocalSecGrpClassifierCounter;
+          super=gbpe/SecGrpClassifierCounter;
+          concrete]
+    {
+        contained
+        {
+            parent[class=observer/PolicyStatUniverse]
+        }
+    }
+
     class[RoutingDomainDropCounter;
           super=observer/Observable;
           concrete;

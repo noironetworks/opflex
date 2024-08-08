@@ -78,6 +78,7 @@ void PolicyStatsManager::start(bool register_listener,
     }
     if(register_listener) {
         L24Classifier::registerListener(agent->getFramework(),this);
+        LocalL24Classifier::registerListener(agent->getFramework(),this);
     }
 }
 
