@@ -25,9 +25,9 @@ if [ -z "$5" ]; then
   BUILDVER="private"
 fi
 
-podman build --no-cache --build-arg baseimage="$BASEIMAGE" --build-arg branch="$BRANCH" \
+docker build --no-cache --build-arg baseimage="$BASEIMAGE" --build-arg branch="$BRANCH" \
    --build-arg buildversion="$BUILDVER"  -t "$DOCKER_USER"/opflexrpm-build:"$DOCKER_TAG" \
    -f ./Dockerfile-opflexrpm-build .
-cid=$(podman create "$DOCKER_USER"/opflexrpm-build:"$DOCKER_TAG")
-podman cp "$cid:/root/opflexrpms-$BUILDVER.tar.gz" ./opflexrpms-"$BUILDVER".tar.gz
-podman rm "$cid"
+cid=$(docker create "$DOCKER_USER"/opflexrpm-build:"$DOCKER_TAG")
+docker cp "$cid:/root/opflexrpms-$BUILDVER.tar.gz" ./opflexrpms-"$BUILDVER".tar.gz
+docker rm "$cid"
