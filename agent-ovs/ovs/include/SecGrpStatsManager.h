@@ -85,7 +85,6 @@ public:
 private:
     flowCounterState_t secGrpInState;
     flowCounterState_t secGrpOutState;
-    Agent *agent;
 };
 
 } /* namespace opflexagent */

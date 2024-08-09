@@ -47,8 +47,7 @@ using boost::system::error_code;
 SecGrpStatsManager::SecGrpStatsManager(Agent* agent_, IdGenerator& idGen_,
                                        SwitchManager& switchManager_,
                                        long timer_interval_)
-    : PolicyStatsManager(agent_,idGen_,switchManager_,timer_interval_),
-      agent(agent_) {
+    : PolicyStatsManager(agent_,idGen_,switchManager_,timer_interval_) {
 }
 
 
