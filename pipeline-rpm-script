@@ -42,11 +42,12 @@ pipeline {
                     conjurSecretCredential(credentialsId: 'noiro-conjur-keeper-secret-id', variable: 'KEEPER_SECRET')
                     ]) {
                     script {
+                        def signUser1 = params.SIGNUSER1 ?: 'empty'
                        // Handle empty params.SIGNUSER2 and pass empty string if it is
                         def signUser2 = params.SIGNUSER2 ?: 'empty'
                         // Execute sign-rpm.sh with Vault credentials passed as parameters
                         sh """
-                           ./docker/rpms/sign-rpm.sh ${SIGNED_RPMS} ${params.SIGNUSER1} ${signUser2} ${params.ReleaseBuild}
+                           ./docker/rpms/sign-rpm.sh ${SIGNED_RPMS} ${signUser1} ${signUser2} ${params.ReleaseBuild}
                         """
                     }
                 }
