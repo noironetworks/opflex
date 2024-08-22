@@ -1,0 +1,85 @@
+pipeline {
+    agent {
+        label 'noiro-build-101.cisco.com'
+    }
+    environment {
+        DOCKER_USER = 'noiro'
+        DOCKER_TAG = 'latest'
+        BASEIMAGE = 'noiro/opflex-rpm-build-base:master-test'
+        BRANCH = 'master'
+        RPM_DIR = "$WORKSPACE/docker/rpms"
+        SIGNED_RPMS = "$WORKSPACE/rpmbuild/RPMS/noarch"
+        ARTIFACTORY_USER = 'noiro.gen'
+        ARTIFACTORY_URL = 'https://engci-maven.cisco.com/artifactory'
+        ARTIFACT_URL = 'https://engci-maven.cisco.com/artifactory/noiro-snapshot/opflex/master/rhel8/agent/$BUILD_NUMBER'
+    }
+    stages {
+        stage('Build Opflex RPMS') {
+            steps {
+                script {
+                    sh """
+                        cd docker/rpms; ./build_opflexrpm.sh ${env.DOCKER_USER} ${env.DOCKER_TAG} ${env.BASEIMAGE} ${env.BRANCH} $BUILD_NUMBER
+                    """
+                }
+            }
+        }
+        stage('Extract RPM Tar File') {
+            steps {
+                script {
+                    def tarFile = "opflexrpms-${BUILD_NUMBER}.tar.gz"
+                    sh """
+                        rm -rf ${SIGNED_RPMS}
+                        mkdir -p ${SIGNED_RPMS}
+                        tar -xf ${RPM_DIR}/${tarFile} -C ${SIGNED_RPMS}
+                    """
+                }
+            }
+        }
+        stage('Sign RPM') {
+            steps {
+                withCredentials([
+                    conjurSecretCredential(credentialsId: 'noiro-conjur-keeper-role-id', variable: 'KEEPER_ROLE_ID'),
+                    conjurSecretCredential(credentialsId: 'noiro-conjur-keeper-secret-id', variable: 'KEEPER_SECRET')
+                    ]) {
+                    script {
+                        def signUser1 = params.SIGNUSER1 ?: 'empty'
+                       // Handle empty params.SIGNUSER2 and pass empty string if it is
+                        def signUser2 = params.SIGNUSER2 ?: 'empty'
+                        // Execute sign-rpm.sh with Vault credentials passed as parameters
+                        sh """
+                           ./docker/rpms/sign-rpm.sh ${SIGNED_RPMS} ${signUser1} ${signUser2} ${params.ReleaseBuild}
+                        """
+                    }
+                }
+            }
+        }
+        stage('Push artifacts') {
+           steps {
+              script {
+                  withCredentials([
+                      conjurSecretCredential(credentialsId: 'noiro-conjur-artifactory-token', variable: 'ARTIFACT_TOKEN')
+                      ]) {
+                      script {
+                         sh """
+                             for rpm in ${SIGNED_RPMS}/opflexrpms-${BUILD_NUMBER}/*.rpm
+                                 do curl -v -u ${ARTIFACTORY_USER}:\${ARTIFACT_TOKEN} -X PUT "${ARTIFACT_URL}/\$(basename \$rpm)" -T "\$rpm"
+                             done 
+                         """
+                      }
+                   }
+              }
+           }
+        }
+        stage('Re-Tar Signed RPMs') {
+            steps {
+                script {
+                    def tarFile = "signed-opflexrpms-${BUILD_NUMBER}.tar.gz"
+                    sh """
+                        cd ${SIGNED_RPMS}
+                        tar -czf ${SIGNED_RPMS}/${tarFile} *
+                    """
+                }
+            }
+        }
+    }
+}
