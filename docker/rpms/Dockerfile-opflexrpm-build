@@ -1,0 +1,51 @@
+ARG baseimage=noiro/opflexrpm-build-base:latest
+FROM $baseimage
+ARG branch="master"
+ARG buildversion="private"
+RUN mkdir -p /root/opflexrpms-$buildversion \
+  && rm -f /root/opflexrpms/* \
+  && git clone https://github.com/noironetworks/opflex -b $branch \
+  && cd opflex \
+  && pushd libopflex \
+  && ./autogen.sh \
+  && ./configure --with-buildversion=$buildversion \
+  && make srpm \
+  && make rpm \
+  && cp *.rpm /root/opflexrpms-$buildversion \
+  && export LIBOPFLEX_INSTALLS=`ls *.x86_64.rpm` \
+  && rpm -i $LIBOPFLEX_INSTALLS \
+  && popd \
+  && pushd genie \
+  && mvn compile exec:java \
+  && popd \
+  && pushd genie/target/libmodelgbp \
+  && bash autogen.sh \
+  && ./configure --with-buildversion=$buildversion \
+     libopflex_CFLAGS='none' libopflex_LIBS='none' \
+  && make srpm \
+  && ./configure --with-buildversion=$buildversion \
+  && make rpm \
+  && cp *.rpm /root/opflexrpms-$buildversion \
+  && export MODELGBP_INSTALLS=`ls *.x86_64.rpm` \
+  && rpm -i $MODELGBP_INSTALLS \
+  && popd \
+  && pushd agent-ovs \
+  && ./autogen.sh \
+  && ./configure --with-buildversion=$buildversion \
+     libopflex_CFLAGS='none' libopflex_LIBS='none' \
+     libmodelgbp_CFLAGS='none' libmodelgbp_LIBS='none' \
+     libofproto_CFLAGS='none' libofproto_LIBS='none' \
+     libopenvswitch_CFLAGS='none' libopenvswitch_LIBS='none' \
+  && make srpm \
+  && ./configure --with-buildversion=$buildversion \
+  && make rpm \
+  && cp *.rpm /root/opflexrpms-$buildversion \
+  && popd \
+  && cd /root \
+  && cp ./rpmbuild-libuv/RPMS/x86_64/*.rpm ./opflexrpms-$buildversion \
+  && cp ./rpmbuild-ovs/RPMS/noarch/*.rpm ./opflexrpms-$buildversion \
+  && cp ./rpmbuild-ovs/RPMS/x86_64/*.rpm ./opflexrpms-$buildversion \
+  && cp ./rpmbuild-prometheus/RPMS/x86_64/*.rpm ./opflexrpms-$buildversion \
+  && cp ./rpmbuild-rapidjson/RPMS/x86_64/*.rpm ./opflexrpms-$buildversion \
+  && tar czvf opflexrpms-$buildversion.tar.gz ./opflexrpms-$buildversion \
+  && cd /
