@@ -71,4 +71,18 @@ module[observer]
             }
         }
     }
+
+    class[OutOfBandConfigUniverse;
+          super=observer/Universe;
+          concrete;
+          ]
+    {
+        named
+        {
+            parent[class=*;]
+            {
+                component[prefix=outOfBandCfg;]
+            }
+        }
+    }
 }

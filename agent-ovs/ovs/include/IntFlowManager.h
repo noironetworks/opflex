@@ -209,6 +209,15 @@ public:
     void setEndpointAdv(AdvertManager::EndpointAdvMode mode,
             AdvertManager::EndpointAdvMode tunnelMode,
             uint64_t tunnelAdvIntvl=600);
+    
+    /**
+     * Enable or disable tunnel endpoint advertisements and set the mode
+     *
+     * @param tunnelMode the tunnel endpoint advertisement mode
+     * @param tunnelAdvIntvl the tunnel endpoint advertisement interval
+     */
+    void restartTunnelEndpointAdv(AdvertManager::EndpointAdvMode tunnelMode,
+        uint64_t tunnelAdvIntvl);
 
     /**
      * Set the multicast group file
@@ -300,6 +309,9 @@ public:
     virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI);
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI);
     virtual void packetDropPruneConfigUpdated(const std::string& pruneFilter){
+    /*Do nothing as of now*/
+    }
+    virtual void outOfBandConfigUpdated(std::shared_ptr<OutOfBandConfigSpec> &oobSptr) {
     /*Do nothing as of now*/
     }
 

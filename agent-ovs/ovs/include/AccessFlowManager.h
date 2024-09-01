@@ -88,6 +88,9 @@ public:
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI);
     virtual void packetDropPruneConfigUpdated(const std::string& filterName) {
      /*Do nothing as of now*/ }
+    virtual void outOfBandConfigUpdated(std::shared_ptr<OutOfBandConfigSpec> &oobSptr) {
+    /*Do nothing as of now*/
+    }
     ///@}
 
     /* Interface: EndpointListener */
