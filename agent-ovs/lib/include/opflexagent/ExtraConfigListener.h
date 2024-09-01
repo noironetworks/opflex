@@ -14,6 +14,7 @@
 #define OPFLEXAGENT_EXTRACONFIGLISTENER_H
 
 #include <opflex/modb/URI.h>
+#include <opflexagent/OutOfBandConfig.h>
 
 namespace opflexagent {
 
@@ -60,6 +61,14 @@ public:
      * @param filterName Prune filter name 
      */
     virtual void packetDropPruneConfigUpdated(const std::string &filterName) = 0;
+
+    /**
+     * Called when an out of band config is updated
+     *
+     * @param oobSptr out of band config shared pointer
+     */
+    virtual void outOfBandConfigUpdated(std::shared_ptr<OutOfBandConfigSpec> &oobSptr) = 0;
+
 };
 
 } /* namespace opflexagent */

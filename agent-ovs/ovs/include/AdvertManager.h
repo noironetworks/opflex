@@ -105,6 +105,7 @@ public:
     { tunnelEndpointAdv = tunnelMode;
       tunnelEpAdvInterval = delay;}
 
+    void restartTunnelEndpointAdv(const std::string& uuid);
     /**
      * Module start
      */
