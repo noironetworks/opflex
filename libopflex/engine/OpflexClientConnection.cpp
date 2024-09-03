@@ -160,17 +160,21 @@ void OpflexClientConnection::on_state_change(Peer * p, void * data,
     case yajr::StateChange::DISCONNECT:
         LOG(INFO) << "[" << conn->getRemotePeer() << "] "
                   << "Disconnected";
+        if (conn->pool->getResetAllPeers() &&
+            !conn->pool->isConfiguredPeer(conn->hostname, conn->port)) {
+            conn->resetAllUnconfiguredPeers();
+        } else {
+            uv_timer_stop(conn->handshake_timer);
+            conn->active = false;
+            conn->ready = false;
+            conn->handler->disconnected();
+            conn->cleanup();
 
-        uv_timer_stop(conn->handshake_timer);
-        conn->active = false;
-        conn->ready = false;
-        conn->handler->disconnected();
-        conn->cleanup();
-
-        if (!conn->closing)
-            conn->pool->updatePeerStatus(conn->hostname, conn->port,
-                                         PeerStatusListener::CONNECTING);
-        break;
+            if (!conn->closing)
+                conn->pool->updatePeerStatus(conn->hostname, conn->port,
+                                             PeerStatusListener::CONNECTING);
+        }
+       break;
     case yajr::StateChange::TRANSPORT_FAILURE:
         {
             char buf[120];
@@ -208,6 +212,12 @@ void OpflexClientConnection::connectionFailure() {
     } else {
         failureCount += 1;
     }
+}
+
+void OpflexClientConnection::resetAllUnconfiguredPeers() {
+    LOG(WARNING) << "Disconnect from existing peers and fallback to configured list";
+    pool->resetAllUnconfiguredPeers();
+    pool->addConfiguredPeers();
 }
 
 void OpflexClientConnection::messagesReady() {
