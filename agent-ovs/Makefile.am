@@ -133,6 +133,8 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSNetpolSource.h \
 	lib/include/opflexagent/FSPacketDropLogConfigSource.h \
 	lib/include/opflexagent/PacketDropLogConfig.h \
+	lib/include/opflexagent/FSOutOfBandConfigSource.h \
+	lib/include/opflexagent/OutOfBandConfig.h \
 	lib/include/opflexagent/Faults.h \
 	lib/include/opflexagent/PrometheusManager.h
 
@@ -231,6 +233,7 @@ libopflex_agent_la_SOURCES = \
 	lib/SnatSource.cpp \
 	lib/FSNetpolSource.cpp \
 	lib/FSPacketDropLogConfigSource.cpp \
+	lib/FSOutOfBandConfigSource.cpp \
 	lib/AgentPrometheusManager.cpp
 
 libopflex_agent_la_LDFLAGS = -shared -version-info ${VERSION_INFO}
@@ -695,6 +698,7 @@ pluginconf_DATA = plugin-renderer-openvswitch.conf
 defepwatchdir=${localstatedir}/lib/opflex-agent-ovs/endpoints
 defservwatchdir=${localstatedir}/lib/opflex-agent-ovs/services
 defdroplogwatchdir=${localstatedir}/lib/opflex-agent-ovs/droplog
+defoutofbandconfigdir = ${localstatedir}/lib/opflex-agent-ovs/outofband
 inspectsock=${localstatedir}/run/opflex-agent-inspect.sock
 notifsock=${localstatedir}/run/opflex-agent-notif.sock
 cacertdir=${sysconfdir}/ssl/certs
@@ -709,7 +713,8 @@ opflex-agent-ovs.conf: $(top_srcdir)/opflex-agent-ovs.conf.in
 	    -e "s|DEFAULT_CA_CERT_DIR|${cacertdir}|" \
 	    -e "s|DEFAULT_CLIENT_CERT_PATH|${clientcertpath}|" \
 	    -e "s|DEFAULT_DROP_LOG_DIR|${defdroplogwatchdir}|" \
-            -e "s|DEFAULT_FS_FAULT_DIR|${deffaultwatchdir}|" \
+	    -e "s|DEFAULT_FS_FAULT_DIR|${deffaultwatchdir}|" \
+	    -e "s|DEFAULT_OOB_CONFIG_DIR|${defoutofbandconfigdir}|" \
 	$< > $@
 
 flowidcachedir=${localstatedir}/lib/opflex-agent-ovs/ids
