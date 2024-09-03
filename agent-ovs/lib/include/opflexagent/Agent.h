@@ -28,6 +28,7 @@
 #include <opflexagent/NetFlowManager.h>
 #include <opflexagent/QosManager.h>
 #include <opflexagent/SysStatsManager.h>
+#include <opflexagent/FSOutOfBandConfigSource.h>
 
 #include <opflexagent/PrometheusManager.h>
 
@@ -365,10 +366,11 @@ private:
     std::vector<std::unique_ptr<FSRDConfigSource>> rdConfigSources;
     std::vector<std::unique_ptr<LearningBridgeSource>> learningBridgeSources;
     std::string dropLogCfgSourcePath;
+    std::string oobCfgSourcePath;
     std::set<std::string> hostAgentFaultPaths;
     std::string packetEventNotifSockPath;
     std::unique_ptr<FSPacketDropLogConfigSource> dropLogCfgSource;
-
+    std::unique_ptr<FSOutOfBandConfigSource> oobCfgSource;
     std::set<std::string> serviceSourcePaths;
     std::vector<std::unique_ptr<ServiceSource>> serviceSources;
 
