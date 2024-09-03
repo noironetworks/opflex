@@ -794,6 +794,20 @@ public:
     void deleteMOs(opflex::modb::mointernal::StoreClient::notif_t& notifs);
 
     /**
+     * Enable or Disable reset_all_peers bool in OpflexPool
+     * when enabled any peer disconnect will result in all non configured peers
+     * to disconnect.
+     * @param value bool current intended reset behavior
+     */
+    void setResetAllPeers(bool value);
+
+    /**
+     * return current value of reset_all_peers bool in OpflexPool
+     * @return bool current intended reset behavior
+     */
+    bool getResetAllPeers();
+
+    /**
      * Start the framework.  This will start all the framework threads
      * and attempt to connect to configured OpFlex peers.
      */
