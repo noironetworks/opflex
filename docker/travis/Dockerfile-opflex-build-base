@@ -2,10 +2,10 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:9.3
 ENV ROOT=/usr/local
 ARG make_args=-j1
 RUN microdnf install -y yum yum-utils \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/x86_64/os \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/debug/tree \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/aarch64/os \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/aarch64/os/ \
+ && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/aarch64/debug/tree \
  && yum --nogpgcheck -y update
 RUN yum --nogpgcheck install -y \
     libtool pkgconfig autoconf automake make cmake file python3-six \
