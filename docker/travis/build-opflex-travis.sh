@@ -25,12 +25,15 @@ set -Eeuxo pipefail
 
 echo "starting opflex build"
 
-docker buildx build $BUILDARG $SECOPT --platform linux/arm64 -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base . &> /tmp/opflex-build-base.log &
+docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base . &> /tmp/opflex-build-base.log &
 while [ ! -f  /tmp/opflex-build-base.log ]; do sleep 10; done
 tail -f /tmp/opflex-build-base.log | awk 'NR%100-1==0' &
 
 #while [[ "$(docker images -q $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG 2> /dev/null)" == ""]] && [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
 while [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
+
+# Display the entire log at the end
+cat /tmp/opflex-build-base.log
 
 #docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
 #docker pull quay.io/noirolabs/opflex-build-base:sumit-kmr2-test
@@ -45,7 +48,7 @@ tar cvfz opflex.tgz opflex
 cp opflex.tgz opflex/
 popd
 
-docker buildx build $BUILDARG --build-arg DOCKER_HUB_ID=$DOCKER_HUB_ID --build-arg DOCKER_TAG=$DOCKER_TAG $SECOPT --platform linux/arm64 -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
+docker build $BUILDARG --build-arg DOCKER_HUB_ID=$DOCKER_HUB_ID --build-arg DOCKER_TAG=$DOCKER_TAG $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
 #docker buildx build $SECOPT --platform linux/arm64 -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR
 ##docker push $DOCKER_HUB_ID/opflex-build$DOCKER_TAG
 while [ ! -f  /tmp/opflex-build.log ]; do sleep 10; done
@@ -124,4 +127,4 @@ mkdir build/opflex/dist/licenses
 cp $DOCKER_DIR/../licenses/* build/opflex/dist/licenses
 
 #######################################################################################
-docker buildx build $BUILDARG --platform linux/arm64 -t $DOCKER_HUB_ID/opflex:$DOCKER_TAG -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist
+docker build $BUILDARG -t $DOCKER_HUB_ID/opflex:$DOCKER_TAG -f ./build/opflex/dist/Dockerfile-opflex build/opflex/dist

@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.3
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 ENV ROOT=/usr/local
 ARG make_args=-j1
 RUN microdnf install -y yum yum-utils \
@@ -6,12 +6,12 @@ RUN microdnf install -y yum yum-utils \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/aarch64/os \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/aarch64/os/ \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/aarch64/debug/tree \
- && yum --nogpgcheck -y update
+ && yum --nogpgcheck -y update --nobest
 RUN yum --nogpgcheck install -y \
     libtool pkgconfig autoconf automake make cmake file python3-six \
     openssl-devel git gcc gcc-c++ diffutils python3-devel \
     wget which curl-devel procps zlib-devel vi boost-devel libnfnetlink-devel libmnl-devel \
-    libnetfilter_conntrack-devel libnftnl-devel \
+    libnetfilter_conntrack-devel libnftnl-devel --nobest \
   && yum clean all
 RUN git clone -b libnftnl-1.1.7 https://git.netfilter.org/libnftnl \
   && cd libnftnl \
