@@ -36,6 +36,15 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <modelgbp/gbpe/LocalL24Classifier.hpp>
+#include <modelgbp/gbp/LocalSecGroup.hpp>
+#include <modelgbp/gbp/LocalSecGroupSubject.hpp>
+#include <modelgbp/gbp/LocalSecGroupRule.hpp>
+#include <modelgbp/gbp/LocalAllowDenyAction.hpp>
+#include <modelgbp/gbp/LocalLogAction.hpp>
+#include <modelgbp/gbp/LocalSubnets.hpp>
+#include <modelgbp/gbp/LocalSubnet.hpp>
+
 #include <opflexagent/logging.h>
 #include <opflexagent/Endpoint.h>
 #include <opflexagent/EndpointManager.h>
