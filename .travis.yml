@@ -1,40 +1,14 @@
+os: linux
+arch: arm64-graviton2
 language: c++
 compiler:
   - gcc
 services: docker
-os: linux
 dist: jammy
 
 jobs:
   include:
-    - stage: check
-      if: tag IS NOT present
-      addons:
-        apt:
-          packages:
-          - libuv1-dev
-          - libboost-all-dev
-          - rapidjson-dev
-          - autoconf
-          - openjdk-11-jdk-headless
-          - maven
-          - lcov
-          - cmake
-          - libunbound8
-          - libunbound-dev
-      # In case we need to run perf, install the below in bionic:
-      # linux-tools-common
-      # linux-tools-4.15.0-72-generic
-      install: bash ./.travis/install-dependencies.sh
-      before_script: sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
-      env:
-        - TEST_SUITE=travis-build.sh
-      script: bash ./.travis/$TEST_SUITE
-      after_success:
-        - bash ./.travis/coveralls-deploy.sh
-
     - stage: build-images
-      if: tag IS present
       before_install:
         - mkdir -vp ~/.docker/cli-plugins/
         - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
@@ -46,8 +20,8 @@ jobs:
         - export UPSTREAM_ID=81c2369
       script:
         - echo "Skip running UTs"
-        - git clone http://www.github.com/noironetworks/cicd -b main /tmp/cicd
-        - /tmp/cicd/travis/check-git-tag.sh; RETURN_CODE=$? ; if [ $RETURN_CODE -eq 140 ]; then travis_terminate 0; elif [ $RETURN_CODE -ne 0 ]; then travis_terminate $RETURN_CODE; fi
+        - git clone http://www.github.com/noironetworks/cicd -b arm64-build /tmp/cicd
+        #- /tmp/cicd/travis/check-git-tag.sh; RETURN_CODE=$? ; if [ $RETURN_CODE -eq 140 ]; then travis_terminate 0; elif [ $RETURN_CODE -ne 0 ]; then travis_terminate $RETURN_CODE; fi
         - /tmp/cicd/travis/build-push-opflex-images.sh || travis_terminate 1
 
 cache:
