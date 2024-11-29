@@ -88,4 +88,5 @@ owner[policyelement]
     class[observer/DropLogConfig]
     class[observer/DropFlowConfig]
     class[observer/DropPruneConfig]
+    class[observer/OutOfBandConfig]
 }
