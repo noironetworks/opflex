@@ -138,6 +138,14 @@ public:
         return (uuid == tunnelEpUUID);
     }
 
+    /**
+     * Get TunnelEp's UUID
+     * @return TunnelEp's UUID
+     */
+    std::string getTunnelEpUUID() {
+        return tunnelEpUUID;
+    }
+
 private:
     Agent* agent;
     Renderer* renderer;
