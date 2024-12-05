@@ -2,6 +2,10 @@ pipeline {
     agent {
         label 'noiro-build-101.cisco.com'
     }
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
     environment {
         DOCKER_USER = 'noiro'
         DOCKER_TAG = 'latest'
@@ -80,6 +84,11 @@ pipeline {
                     """
                 }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs(deleteDirs: true)
         }
     }
 }
