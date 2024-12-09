@@ -1,0 +1,101 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+ARG proxy
+RUN microdnf install --enablerepo codeready-builder-for-rhel-8-x86_64-rpms \
+    libtool pkgconfig autoconf automake make cmake file python3-six openssl-devel \
+    git gcc gcc-c++ boost-devel diffutils python3-devel libnetfilter_conntrack-devel \
+    wget which curl-devel procps zlib-devel libmnl-devel vi rpmdevtools rpmlint \
+    java-11-openjdk-devel checkpolicy graphviz groff selinux-policy-devel iproute-devel \
+    doxygen libuv-devel libnsl2-devel selinux-policy-targeted \
+    && microdnf clean all
+RUN wget https://dlcdn.apache.org/maven/maven-3/3.9.7/binaries/apache-maven-3.9.7-bin.tar.gz \
+    && tar zxvf apache-maven-3.9.7-bin.tar.gz \
+    && rm apache-maven-3.9.7-bin.tar.gz
+RUN if [ ! -z "$proxy" ]; then \
+      mkdir -p /root/.m2 \
+      && echo -e "\
+<settings>\n\
+<proxies>\n\
+        <proxy>\n\
+                <id>httpproxy</id>\n\
+                <active>true</active>\n\
+                <protocol>http</protocol>\n\
+                <host>$proxy</host>\n\
+                <port>80</port>\n\
+                <nonProxyHosts>localhost</nonProxyHosts>\n\
+        </proxy>\n\
+        <proxy>\n\
+                <id>httpsproxy</id>\n\
+                <active>true</active>\n\
+                <protocol>https</protocol>\n\
+                <host>$proxy</host>\n\
+                <port>80</port>\n\
+                <nonProxyHosts>localhost</nonProxyHosts>\n\
+        </proxy>\n\
+</proxies>\n\
+</settings>\n\
+" > /root/.m2/settings.xml; \
+   fi
+ENV PATH=/apache-maven-3.9.7/bin:$PATH
+RUN pushd /root \
+    && git clone https://github.com/noironetworks/3rdparty-rpm \
+    && rpmdev-setuptree \
+    && git clone https://github.com/openvswitch/ovs.git -b v2.12.0 \
+    && pushd ovs \
+    && cp ../3rdparty-rpm/noiro-openvswitch/noiro-openvswitch.spec /root/rpmbuild/SPECS \
+    && patch -p1 < ../3rdparty-rpm/noiro-openvswitch/noiro-openvswitch.patch \
+    && rm -f openvswitch*.tar.gz \
+    && ./boot.sh \
+    && ./configure \
+    && make dist \
+    && cp ./openvswitch*.tar.gz /root/rpmbuild/SOURCES \
+    && rpmbuild -ba --without check --define '_topdir /root/rpmbuild' /root/rpmbuild/SPECS/noiro-openvswitch.spec --without=libcapng \
+    && mv /root/rpmbuild /root/rpmbuild-ovs \
+    && popd \
+    && mkdir -p /root/rpmbuild-ovs/RPMS/ovn/x86_64 \
+    && mv /root/rpmbuild-ovs/RPMS/x86_64/*ovn* /root/rpmbuild-ovs/RPMS/ovn/x86_64 \
+    && rm -Rf /root/ovs
+RUN pushd /root \
+    && rpmdev-setuptree \
+    && git clone https://github.com/libuv/libuv.git -b v1.20.2 \
+    && pushd libuv \
+    && cp ../3rdparty-rpm/libuv.spec /root/rpmbuild/SPECS \
+    && rm -f libuv*.tar.gz \
+    && sh autogen.sh \
+    && ./configure \
+    && make dist \
+    && cp libuv-1.20.2.tar.gz /root/rpmbuild/SOURCES/libuv-v1.20.2.tar.gz \
+    && rpmbuild -ba --define '_topdir /root/rpmbuild' /root/rpmbuild/SPECS/libuv.spec \
+    && mv /root/rpmbuild /root/rpmbuild-libuv \
+    && popd \
+    && rm -Rf /root/libuv
+RUN pushd /root \
+    && rpmdev-setuptree \
+    && git clone https://github.com/jupp0r/prometheus-cpp.git -b v1.0.1 \
+    && pushd prometheus-cpp \
+    && git submodule init \
+    && git submodule update \
+    && git apply ../3rdparty-rpm/prometheus/prometheus-cpp.patch \
+    && mkdir _build \
+    && popd \
+    && mv prometheus-cpp prometheus-cpp-1.0.1 \
+    && tar -czvf prometheus-cpp-1.0.1.tar.gz prometheus-cpp-1.0.1 \
+    && mv prometheus-cpp-1.0.1.tar.gz /root/rpmbuild/SOURCES \
+    && cp /root/3rdparty-rpm/prometheus-cpp.spec /root/rpmbuild/SPECS \
+    && rpmbuild -ba --define '_topdir /root/rpmbuild' /root/rpmbuild/SPECS/prometheus-cpp.spec \
+    && mv /root/rpmbuild /root/rpmbuild-prometheus \
+    && popd \
+    && rm -Rf /root/bin /root/doc /root/man /root/share /root/prometheus-cpp-1.0.1
+RUN pushd /root \
+    && rpmdev-setuptree \
+    && wget https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz \
+    && mv v1.1.0.tar.gz rpmbuild/SOURCES \
+    && cp /root/3rdparty-rpm/rapidjson-devel.spec /root/rpmbuild/SPECS \
+    && rpmbuild -ba --define '_topdir /root/rpmbuild' /root/rpmbuild/SPECS/rapidjson-devel.spec \
+    && mv /root/rpmbuild /root/rpmbuild-rapidjson \
+    && rm -Rf /root/3rdparty-rpm \
+    && popd
+RUN export OVS_NOARCH_INSTALLS=`ls /root/rpmbuild-ovs/RPMS/noarch/*.rpm` \
+    && export OVS_INSTALLS=`ls /root/rpmbuild-ovs/RPMS/x86_64/*.x86_64.rpm` \
+    && export RAPIDJSON_INSTALLS=`ls /root/rpmbuild-rapidjson/RPMS/x86_64/*.x86_64.rpm` \
+    && export PROMETHEUS_INSTALLS=`ls /root/rpmbuild-prometheus/RPMS/x86_64/*.x86_64.rpm` \
+    && rpm -i $OVS_NOARCH_INSTALLS $OVS_INSTALLS $RAPIDJSON_INSTALLS $PROMETHEUS_INSTALLS
