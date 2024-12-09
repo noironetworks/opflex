@@ -61,6 +61,7 @@ module[observer]
             }
         }
     }
+
     class[DropPruneConfig;
           super=policy/Definition;
           concrete;
@@ -87,6 +88,25 @@ module[observer]
             parent[class=*;]
             {
                 component[prefix="dropprune-";member=filterName]
+            }
+        }
+    }
+
+    class[OutOfBandConfig;
+          super=policy/Definition;
+          concrete;
+         ]
+    {
+        contained
+        {
+            parent[class=observer/OutOfBandConfigUniverse]
+        }
+        member[tunnelEpAdvertisementInterval; type=scalar/UInt64]
+        named
+        {
+            parent[class=*;]
+            {
+                component[prefix="oob-cfg"]
             }
         }
     }

@@ -346,6 +346,16 @@ void IntFlowManager::setEndpointAdv(AdvertManager::EndpointAdvMode mode,
     advertManager.enableTunnelEndpointAdv(tunnelMode, tunnelAdvIntvl);
 }
 
+void IntFlowManager::restartTunnelEndpointAdv(AdvertManager::EndpointAdvMode tunnelMode,
+        uint64_t tunnelAdvIntvl) {
+    advertManager.enableTunnelEndpointAdv(tunnelMode, tunnelAdvIntvl);
+    string uplinkIface;
+    tunnelEpManager.getUplinkIface(uplinkIface);
+    if(!uplinkIface.empty()) {        
+        advertManager.restartTunnelEndpointAdv(tunnelEpManager.getTunnelEpUUID());
+    }
+}
+
 void IntFlowManager::setMulticastGroupFile(const string& mcastGroupFile) {
     this->mcastGroupFile = mcastGroupFile;
 }

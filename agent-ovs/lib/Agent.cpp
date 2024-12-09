@@ -150,6 +150,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string SERVICE_SOURCE_PATH("service-sources.filesystem");
     static const std::string SNAT_SOURCE_PATH("snat-sources.filesystem");
     static const std::string DROP_LOG_CFG_SOURCE_FSPATH("drop-log-config-sources.filesystem");
+    static const std::string OUT_OF_BAND_CFG_SOURCE_FSPATH("out-of-band-config-sources.filesystem");
     static const std::string FAULT_SOURCE_FSPATH("host-agent-fault-sources.filesystem");
     static const std::string PACKET_EVENT_NOTIF_SOCK("packet-event-notif.socket-name");
     static const std::string OPFLEX_PEERS("opflex.peers");
@@ -334,7 +335,15 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         for (const ptree::value_type &v : dropLogCfgSrc.get())
         dropLogCfgSourcePath = v.second.data();
     }
-  
+
+    optional<const ptree&> outOfBandCfgSrc =
+        properties.get_child_optional(OUT_OF_BAND_CFG_SOURCE_FSPATH);
+
+    if (outOfBandCfgSrc) {
+        for (const ptree::value_type &v : outOfBandCfgSrc.get())
+        oobCfgSourcePath = v.second.data();
+    }
+
     optional<const ptree&> hostAgentFaultSrc =
         properties.get_child_optional(FAULT_SOURCE_FSPATH);
 
@@ -703,6 +712,14 @@ void Agent::start() {
         dropLogCfgSource.reset(new FSPacketDropLogConfigSource(&extraConfigManager,
                         fsWatcher, dropLogCfgSourcePath, uri));
     }
+    if(!oobCfgSourcePath.empty()) {
+        opflex::modb::URI uri = (opflex::modb::URIBuilder()
+                .addElement("PolicyUniverse").addElement("ObserverOutOfBandConfig")
+                .build());
+        oobCfgSource.reset(new FSOutOfBandConfigSource(&extraConfigManager,
+                        fsWatcher, oobCfgSourcePath, uri));
+    }
+
     for (const std::string& path : hostAgentFaultPaths) {
         FaultSource* source =
              new FSFaultSource(&faultManager, fsWatcher, path, *this);
@@ -820,6 +837,7 @@ void Agent::createUniverse (std::shared_ptr<modelgbp::dmtree::Root> root)
     root->addObserverSvcStatUniverse();
     root->addObserverPolicyStatUniverse();
     root->addObserverDropFlowConfigUniverse();
+    root->addObserverOutOfBandConfigUniverse();
     root->addSpanUniverse();
     root->addEpdrExternalDiscovered();
     root->addEpdrLocalRouteDiscovered();
