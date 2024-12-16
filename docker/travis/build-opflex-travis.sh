@@ -21,10 +21,15 @@ DOCKER_DIR=docker/travis
 OPFLEX_DIR=.
 export OPFLEX_DIR
 
-BUILD_BASE=$(git show -s --format=%B "${TRAVIS_TAG}" | grep -i "opflex-build-base" | tr -d '\n')
+# Check if the tag contains "opflex-build-base"
+if [[ "${TRAVIS_TAG}" == *"opflex-build-base"* ]]; then
+  BUILD_BASE=true
+else
+  BUILD_BASE=false
+fi
 
 set -Eeuxo pipefail
-if [[ -n "$BUILD_BASE" ]]; then
+if [[ "${BUILD_BASE}" == true ]]; then
     echo "starting opflex-base build"
     docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base . &> /tmp/opflex-build-base.log &
     while [ ! -f  /tmp/opflex-build-base.log ]; do sleep 10; done
