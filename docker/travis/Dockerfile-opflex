@@ -5,7 +5,7 @@ RUN yum install -y --nogpgcheck --disablerepo=* --repofrompath=centos,https://mi
   libstdc++ libuv \
   boost-program-options boost-system boost-date-time boost-filesystem \
   boost-iostreams libnetfilter_conntrack net-tools procps-ng ca-certificates \
-  && yum install -y compat-openssl11-1:1.1.1k-4.el9_0 vim-minimal-2:8.2.2637-20.el9_1 \
+  && yum install -y compat-openssl11-1:1.1.1k-4.el9_0 vim-minimal \
   && yum clean all
 # Required OpenShift Labels
 LABEL name="ACI CNI Opflex" \
