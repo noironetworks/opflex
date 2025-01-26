@@ -154,7 +154,6 @@ static int validatePrefix(int filter_idx, const std::string & arg,
         return -1;
     }
     if(!pfxLenArg.empty()) {
-        LOG(INFO) << "PrefixLen is set!";
         size_t *end = nullptr;
         uint8_t pfxLenVal;
         try {
