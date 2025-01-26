@@ -617,7 +617,8 @@ static void convertPruneFilter(std::shared_ptr<PacketDropLogPruneSpec> &sourceSp
     }
     if(sourceSpec->srcPfxLen) {
         std::stringstream strSrcPfxLen;
-        strSrcPfxLen << (uint8_t)sourceSpec->srcPfxLen.get();
+        strSrcPfxLen << (int)sourceSpec->srcPfxLen.get();
+        LOG(DEBUG) << "spfxLen " << strSrcPfxLen.str() << endl;
         filter->setField(TFLD_SPFX_LEN,strSrcPfxLen.str());
     }
     if(sourceSpec->dstIp) {
@@ -625,7 +626,8 @@ static void convertPruneFilter(std::shared_ptr<PacketDropLogPruneSpec> &sourceSp
     }
     if(sourceSpec->dstPfxLen) {
         std::stringstream strDstPfxLen;
-        strDstPfxLen << (uint8_t)sourceSpec->dstPfxLen.get();
+        strDstPfxLen << (int)sourceSpec->dstPfxLen.get();
+        LOG(DEBUG) << "dpfxLen " << strDstPfxLen.str() << endl;
         filter->setField(TFLD_DPFX_LEN,strDstPfxLen.str());
     }
     if(sourceSpec->srcMac) {
