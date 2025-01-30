@@ -46,7 +46,7 @@ jobs:
         - export UPSTREAM_ID=81c2369
       script:
         - echo "Skip running UTs"
-        - git clone http://www.github.com/noironetworks/cicd -b main /tmp/cicd
+        - git clone http://www.github.com/noironetworks/cicd -b tags-for-build-img /tmp/cicd
         - /tmp/cicd/travis/check-git-tag.sh; RETURN_CODE=$? ; if [ $RETURN_CODE -eq 140 ]; then travis_terminate 0; elif [ $RETURN_CODE -ne 0 ]; then travis_terminate $RETURN_CODE; fi
         - /tmp/cicd/travis/build-push-opflex-images.sh || travis_terminate 1
 
@@ -55,3 +55,6 @@ cache:
     - ../grpc
     - $HOME/.m2
 
+
+
+    
