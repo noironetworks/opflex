@@ -1,0 +1,88 @@
+name: Wait and Push Tag
+
+on:
+  push:
+    tags:
+      - '*-opflex-build-base'
+
+jobs:
+  wait-for-travis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Travis Build Status
+        id: check-travis
+        uses: actions/github-script@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRAVIS_API_TOKEN: ${{ secrets.TRAVIS_API_TOKEN }}
+        with:
+          script: |
+            const timeoutInterval = 120000;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = context.ref.replace('refs/tags/', '');
+            
+            if (!tag.endsWith('-opflex-build-base')) {
+              core.setFailed('The tag pushed is not valid, must end with "-opflex-build-base".');
+            }
+
+            const baseTag = tag.replace('-opflex-build-base', '');
+            core.info(`Detected base tag: ${baseTag}`);
+            
+            async function checkTravisStatus() {
+              const url = `https://api.travis-ci.com/repo/${owner}%2F${repo}/builds`;
+              const headers = {
+                'Travis-API-Version': '3',
+                'Authorization': `token ${process.env.TRAVIS_API_TOKEN}`
+              };
+              
+              while (true) {
+                const response = await fetch(url, { headers });
+                const data = await response.json();
+                const builds = data.builds;
+                const latestBuild = builds.find(build => build.branch.name === tag);
+                
+                if (latestBuild) {
+                  if (latestBuild.state === 'passed') {
+                    console.log(`Travis build for tag ${tag} completed successfully.`);
+                    return true;
+                  } else if (['failed', 'errored', 'canceled'].includes(latestBuild.state)) {
+                    console.log(`Travis build for tag ${tag} failed.`);
+                    return false;
+                  }
+                }
+                
+                console.log('Waiting for Travis build to complete...');
+                await new Promise(resolve => setTimeout(resolve, timeoutInterval));
+              }
+            }
+            
+            if (!(await checkTravisStatus())) {
+              core.setFailed('Travis build did not succeed.');
+            }
+
+            core.setOutput('baseTag', baseTag);
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.NOIRO101_GENERIC_PAT }}
+
+      - name: Push subsequent tag
+        if: success()          
+        run: |
+          BASE_TAG="${{ steps.check-travis.outputs.baseTag }}"
+          
+          if [ -z "$BASE_TAG" ]; then
+            echo "Base tag is empty. Exiting."
+            exit 1
+          fi
+
+          git config --local user.name "noiro-generic"
+          git config --local user.email "noiro-generic@github.com"
+          git remote add noiro-generic https://noiro-generic:${{ secrets.NOIRO101_GENERIC_PAT }}@github.com/${{ github.repository }}.git
+
+          TAG_MESSAGE="ACI Release $BASE_TAG Created by Github workflow ${{ github.workflow }} ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          git tag -f -a $BASE_TAG -m "$TAG_MESSAGE"
+          git push noiro-generic -f $BASE_TAG
