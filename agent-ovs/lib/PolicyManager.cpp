@@ -1126,6 +1126,15 @@ void PolicyManager::resolveSubnets(OFFramework& framework,
     }
 }
 
+template void PolicyManager::resolveSubnets
+    <modelgbp::gbp::Subnets, modelgbp::gbp::Subnet>(
+        OFFramework& framework, const optional<URI>& subnets_uri,
+        /* out */ network::subnets_t& subnets_out);
+template void PolicyManager::resolveSubnets
+    <modelgbp::gbp::LocalSubnets, modelgbp::gbp::LocalSubnet>(
+        OFFramework& framework, const optional<URI>& subnets_uri,
+        /* out */ network::subnets_t& subnets_out);
+
 template <typename Parent, typename Child>
 void resolveChildren(shared_ptr<Parent>& parent,
                      /* out */ vector<shared_ptr<Child> > &children) { }
