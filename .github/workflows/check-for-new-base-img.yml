@@ -1,0 +1,54 @@
+name: Update Release Artifacts
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at midnight UTC
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  update-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Base Image from Dockerfile
+        run: |
+          IMAGE_NAME=$(grep -m1 '^FROM' docker/travis/Dockerfile-opflex-build-base | awk '{print $2}')
+          if [[ -z "$IMAGE_NAME" ]]; then
+            echo "Error: Failed to extract base image." >&2
+            exit 1
+          fi
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Fetch Image Digest
+        id: get-image-digest
+        run: |
+          DIGEST=$(skopeo inspect --no-creds docker://$IMAGE_NAME | jq -r '.Digest')
+          if [[ -z "$DIGEST" ]]; then
+            echo "Error: Failed to fetch image digest." >&2
+            exit 1
+          fi
+          echo "DIGEST=$DIGEST" >> $GITHUB_ENV
+
+      - name: Clone test-cicd-status Repository
+        run: |
+          git clone https://github.com/noironetworks/test-cicd-status.git
+          cd test-cicd-status
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Modify YAML File
+        run: |
+          cd test-cicd-status
+          chmod +x ../modify_yaml.sh  # Ensure script is executable
+          ../modify_yaml.sh "$DIGEST"  # Call the encapsulated script to modify YAML
+
+      - name: Commit and Push Changes
+        run: |
+          cd test-cicd-status
+          git add docs/release_artifacts/releases.yaml
+          git commit -m "Update release digest to $DIGEST"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
