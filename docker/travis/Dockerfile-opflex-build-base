@@ -6,13 +6,15 @@ RUN microdnf install -y yum yum-utils \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/x86_64/os \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/debug/tree \
- && yum --nogpgcheck -y update
+ && yum --nogpgcheck -y update --exclude=openssl*
 RUN yum --nogpgcheck install -y \
     libtool pkgconfig autoconf automake make cmake file python3-six \
-    openssl-devel git gcc gcc-c++ diffutils python3-devel \
+    git gcc gcc-c++ diffutils python3-devel \
     wget which curl-devel procps zlib-devel vi boost-devel libnfnetlink-devel libmnl-devel \
-    libnetfilter_conntrack-devel libnftnl-devel \
-  && yum clean all
+    libnetfilter_conntrack-devel libnftnl-devel
+RUN yum --nogpgcheck install -y \
+    openssl-devel-3.2.2-6.el9_5.1 \
+    && yum clean all
 RUN git clone -b libnftnl-1.1.7 https://git.netfilter.org/libnftnl \
   && cd libnftnl \
   && ./autogen.sh \
