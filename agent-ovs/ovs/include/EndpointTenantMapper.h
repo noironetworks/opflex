@@ -99,6 +99,7 @@ public:
     virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI);
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI){}
     virtual void packetDropPruneConfigUpdated(const std::string& pruneFilter){}
+    virtual void outOfBandConfigUpdated(std::shared_ptr<OutOfBandConfigSpec> &oobSptr) {}
 
     /* Interface: PortStatusListener */
     virtual void portStatusUpdate(const std::string& portName,

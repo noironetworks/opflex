@@ -673,8 +673,6 @@ void AdvertManager::sendTunnelEpRarp(const string& uuid) {
     if (error < 0) {
         LOG(ERROR) << "Could not send tunnel advertisement: "
                    << error;
-    } else {
-       LOG(DEBUG) << "Sent RARP advertisement for TunnelEp: " << tunnelMac << " " << tunnelIp;
     }
     close(sockfd);
 #endif
@@ -744,8 +742,6 @@ void AdvertManager::sendTunnelEpGarp(const string& uuid) {
     if (error < 0) {
         LOG(ERROR) << "Could not send tunnel advertisement: "
                    << error;
-    } else {
-       LOG(DEBUG) << "Sent GARP advertisement for TunnelEp: " << tunnelMac << " " << tunnelIp;
     }
     close(sockfd);
 #endif
@@ -791,7 +787,7 @@ void AdvertManager::scheduleTunnelEpAdv(const std::string& uuid) {
     if (tunnelEpAdvTimer &&
             (tunnelEndpointAdv != EPADV_DISABLED)) {
 #ifdef __linux__
-        LOG(DEBUG) << "Scheduling Tunnel Ep advertisement";
+        LOG(DEBUG) << "Scheduling Tunnel Ep advertisement with interval " << tunnelEpAdvInterval;
         unique_lock<mutex> guard(tunnelep_mutex);
         pendingTunnelEps[uuid] = 5;
         doScheduleTunnelEpAdv();
@@ -799,6 +795,28 @@ void AdvertManager::scheduleTunnelEpAdv(const std::string& uuid) {
         LOG(ERROR) << "Tunnel advertisement not supported for non-linux platforms";
 #endif
     }
+}
+
+void AdvertManager::restartTunnelEndpointAdv(const std::string& uuid) {
+    #ifdef __linux__
+    
+    unique_lock<mutex> guard(tunnelep_mutex); 
+    try {
+      if(tunnelEpAdvTimer) {
+          tunnelEpAdvTimer->cancel();
+      } 
+    } catch(const std::exception &e) {
+        LOG(WARNING) << "Failed to cancel advertisement timer: " << e.what();
+    }  
+    tunnelEpAdvTimer.reset(new deadline_timer(*ioService));
+    if (tunnelEndpointAdv != EPADV_DISABLED) {
+        LOG(DEBUG) << "Scheduling Tunnel Ep advertisement with interval " << tunnelEpAdvInterval;
+        pendingTunnelEps[uuid] = 5;
+        doScheduleTunnelEpAdv();
+    }
+    #else
+        LOG(ERROR) << "Tunnel advertisement not supported for non-linux platforms";
+    #endif
 }
 
 } /* namespace opflexagent */
