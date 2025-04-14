@@ -254,7 +254,7 @@ void OVSRenderer::start() {
     ovsdbConnection->start();
     ovsdbConnection->connect();
 
-    //Register with extraconfig manager for drop prune handling
+    //Register with extraconfig manager for drop prune and out of band config handling
     getAgent().getExtraConfigManager().registerListener(this);
 
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
@@ -669,6 +669,18 @@ void OVSRenderer::packetDropPruneConfigUpdated(const std::string& filterName) {
     convertPruneFilter(sourceSpec, filter);
     pktLogger.updatePruneFilter(filterName, filter);
 }
+
+void OVSRenderer::outOfBandConfigUpdated(std::shared_ptr<OutOfBandConfigSpec> &sptr) {
+    using namespace std;
+    using namespace boost;
+    if (!sptr) {
+        intFlowManager.restartTunnelEndpointAdv(tunnelEndpointAdvMode,
+            tunnelEndpointAdvIntvl);
+        return;
+    }
+    intFlowManager.restartTunnelEndpointAdv(AdvertManager::EPADV_GARP_RARP_BROADCAST,
+            sptr->tunnelEpAdvInterval);
+}   
 
 void OVSRenderer::stopPacketLogger() {
     pktLogger.stopListener();

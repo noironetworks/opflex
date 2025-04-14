@@ -15,6 +15,8 @@
 #include <modelgbp/observer/DropFlowConfigUniverse.hpp>
 #include <modelgbp/observer/DropFlowConfig.hpp>
 #include <modelgbp/observer/DropPruneConfig.hpp>
+#include <modelgbp/observer/OutOfBandConfigUniverse.hpp>
+#include <modelgbp/observer/OutOfBandConfig.hpp>
 #include <opflex/modb/Mutator.h>
 
 #include <memory>
@@ -100,6 +102,42 @@ void ExtraConfigManager::notifyPacketDropPruneConfigListeners(const std::string 
     for (ExtraConfigListener* listener : extraConfigListeners) {
         listener->packetDropPruneConfigUpdated(filterName);
     }
+}
+
+void ExtraConfigManager::notifyOutOfBandConfigListeners(std::shared_ptr<OutOfBandConfigSpec> &oobSptr) {
+    unique_lock<mutex> guard(listener_mutex);
+    for (ExtraConfigListener* listener : extraConfigListeners) {
+        listener->outOfBandConfigUpdated(oobSptr);
+    }
+}
+
+void ExtraConfigManager::outOfBandConfigUpdated(const OutOfBandConfigSpec &outOfBandCfg) {
+    using modelgbp::observer::OutOfBandConfigUniverse;
+    using modelgbp::observer::OutOfBandConfig;
+    Mutator mutator(framework, "policyelement");
+    optional<shared_ptr<OutOfBandConfigUniverse>> oobCfgUni =
+            OutOfBandConfigUniverse::resolve(framework);
+    shared_ptr<OutOfBandConfig> oobCfg =
+            oobCfgUni.get()->addObserverOutOfBandConfig();
+    oobCfg->setTunnelEpAdvertisementInterval(outOfBandCfg.tunnelEpAdvInterval);
+    mutator.commit();
+    shared_ptr<OutOfBandConfigSpec> oobSptr(new OutOfBandConfigSpec(outOfBandCfg.tunnelEpAdvInterval));
+    notifyOutOfBandConfigListeners(oobSptr);
+}
+
+void ExtraConfigManager::outOfBandConfigDeleted() {
+    using modelgbp::observer::OutOfBandConfigUniverse;
+    using modelgbp::observer::OutOfBandConfig;
+    Mutator mutator(framework, "policyelement");
+    optional<shared_ptr<OutOfBandConfigUniverse>> oobCfgUni =
+            OutOfBandConfigUniverse::resolve(framework);
+    opflex::modb::URI oobCfgURI =
+        opflex::modb::URIBuilder(oobCfgUni.get()->getURI())
+        .addElement("ObserverOutOfBandConfig").build();
+    OutOfBandConfig::remove(framework, oobCfgURI);
+    mutator.commit();
+    shared_ptr<OutOfBandConfigSpec> oobSptr;
+    notifyOutOfBandConfigListeners(oobSptr);
 }
 
 void ExtraConfigManager::packetDropLogConfigUpdated(PacketDropLogConfig &dropCfg) {
