@@ -30,6 +30,10 @@ extern "C" {
 #include <openvswitch/ofp-monitor.h>
 }
 
+#ifndef OFPCR12_ROLE_MASTER
+#define OFPCR12_ROLE_MASTER OFPCR12_ROLE_PRIMARY
+#endif
+
 typedef std::lock_guard<std::mutex> mutex_guard;
 
 const int LOST_CONN_BACKOFF_MSEC = 5000;
