@@ -460,6 +460,8 @@ private:
     bool startupPolicyEnabled;
     /* Local Network Policy enable */
     bool localNetpolEnabled;
+    /* Force an EP undeclare on update resulting in redeclare */
+    bool force_ep_undeclares;
     boost::optional<std::string> opflexPolicyFile;
 };
 
