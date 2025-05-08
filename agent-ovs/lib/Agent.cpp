@@ -80,7 +80,8 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       behaviorL34FlowsWithoutSubnet(true),
       logParams(_logParams),
       startupPolicyEnabled(false),
-      localNetpolEnabled(false) {
+      localNetpolEnabled(false),
+      force_ep_undeclares(true) {
     std::random_device rng;
     std::mt19937 urng(rng());
     uuid = to_string(basic_random_generator<std::mt19937>(urng)());
@@ -199,6 +200,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_LOCAL_RESOLVE_AFTER_CONNECTION("opflex.startup.resolve-aft-conn");
     static const std::string OPFLEX_STARTUP_POLICY_DURATION("opflex.startup.policy-duration");
     static const std::string OPFLEX_ENABLE_LOCAL_NETPOL("opflex.enable-local-netpol");
+    static const std::string OPFLEX_FORCE_EP_UNDECLARES("opflex.force-ep-undeclares.enabled");
 
     // set feature flags to true
     clearFeatureFlags();
@@ -556,6 +558,14 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         LOG(INFO) << "Startup policy is enabled";
     }
 
+    /* Default true */
+    optional<bool> forceEpUndeclares =
+                properties.get_optional<bool>(OPFLEX_FORCE_EP_UNDECLARES);
+    if (forceEpUndeclares) {
+        if (forceEpUndeclares.get() == false)
+            force_ep_undeclares = false;
+    }
+
     optional<std::string> policyFile =
         properties.get_optional<std::string>(OPFLEX_POLICY_FILE);
     if (policyFile) {
@@ -647,6 +657,9 @@ void Agent::applyProperties() {
     framework.setStartupPolicy(opflexPolicyFile, modelgbp::getMetadata(),
                                startupPolicyDuration, startupPolicyEnabled,
                                localResolveAftConn);
+
+    LOG(INFO) << "Setting force_ep_undeclares to " << force_ep_undeclares;
+    framework.setForceEndpointUndeclares(force_ep_undeclares);
 }
 
 void Agent::start() {
