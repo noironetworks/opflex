@@ -280,6 +280,13 @@ public:
                           uint64_t& duration,
                           bool& enabled,
                           bool& resolve_after_connection);
+
+    /**
+     * set force ep undeclares boolean
+     * @param enabled if we want to convert a redeclare to undeclare + declare
+     */
+    void setForceEndpointUndeclares(bool& enabled) { force_ep_undeclares = enabled; }
+
     /**
      * Enable/Disable reporting of observable changes to registered observers
      *
@@ -611,6 +618,11 @@ private:
      * policy to resolve Mos from startupdb.
      */
     uint64_t startupPolicyDuration;
+
+    /**
+     * If true convert EP redeclares to undeclare + declare
+     */
+    volatile bool force_ep_undeclares;
 
     /**
      * Processing thread
