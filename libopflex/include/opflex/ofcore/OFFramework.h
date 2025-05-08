@@ -775,6 +775,11 @@ public:
                           uint64_t& duration,
                           bool& enabled,
                           bool& resolve_after_connection);
+    /**
+     * set force ep undeclares boolean
+     * @param enabled if we want to convert a redeclare to undeclare + declare
+     */
+    void setForceEndpointUndeclares(bool& enabled);
 
     /**
      * update MODB from file

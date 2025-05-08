@@ -136,6 +136,10 @@ void OFFramework::setStartupPolicy(boost::optional<std::string>& file,
                                       enabled, resolve_after_connection);
 }
 
+void OFFramework::setForceEndpointUndeclares(bool& enabled) {
+    pimpl->processor.setForceEndpointUndeclares(enabled);
+}
+
 void OFFramework::start() {
     LOG(DEBUG) << "Starting OpFlex Framework";
     pimpl->started = true;

@@ -464,6 +464,7 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
     ItemState curState = it->details->state;
     size_t curRefCount = it->details->refcount;
     bool local = it->details->local;
+    bool undeclare = false;
 
     obj_state_by_exp& exp_index = obj_state.get<expiration_tag>();
     uint64_t newexp = std::numeric_limits<uint64_t>::max();
@@ -487,8 +488,13 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
 
     switch (curState) {
     case NEW:
+        newState = IN_SYNC;
+        break;
     case UPDATED:
         newState = IN_SYNC;
+        if (ci.getType() == ClassInfo::LOCAL_ENDPOINT) {
+            undeclare = force_ep_undeclares;
+        }
         break;
     case PENDING_DELETE:
         if (local)
@@ -581,6 +587,15 @@ void Processor::processItem(obj_state_by_exp::iterator& it) {
         resolveObj(ci.getType(), *it, newexp);
         newState = RESOLVED;
     } else if (oi) {
+        // Force undeclare before declaring the same object
+        if (undeclare) {
+                LOG(DEBUG) << "Undeclaring " << it->uri.toString();
+                vector<reference_t> refs;
+                refs.emplace_back(it->details->class_id, it->uri);
+                EndpointUndeclareReq* req =
+                    new EndpointUndeclareReq(this, nextXid++, refs);
+                pool.sendToRole(req, OFConstants::ENDPOINT_REGISTRY);
+        }
         if (declareObj(ci.getType(), *it, newexp))
             newState = IN_SYNC;
     }
