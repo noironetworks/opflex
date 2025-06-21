@@ -6,7 +6,7 @@ RUN microdnf install -y yum yum-utils \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/x86_64/os \
  && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/debug/tree \
- && yum --nogpgcheck -y update --exclude=openssl*
+ && yum --nogpgcheck -y update --exclude=openssl* --exclude=rpm* --exclude=python3-rpm
 RUN yum --nogpgcheck install -y \
     libtool pkgconfig autoconf automake make cmake file python3-six \
     git gcc gcc-c++ diffutils python3-devel \
