@@ -5977,31 +5977,28 @@ void IntFlowManager::handleRoutingDomainUpdate(const URI& rdURI) {
                     matchSubnet(snr, rdId, 40, addr,
                                 extsub->getPrefixLen(0), false);
 
-                    if (natRef) {
+                    if (natRef && natEpgVnid) {
                         uint16_t natprio = addr.is_v4() ? 40 : 130;
                         // For external networks mapped to a NAT EPG,
                         // set the next hop action to NAT_OUT
-                        if (natEpgVnid) {
-                            snr.priority(40 + natprio + extsub->getPrefixLen(0))
-                                .action()
-                                .reg(MFF_REG2, netVnid)
-                                .reg(MFF_REG7, natEpgVnid.get())
-                                .metadata(flow::meta::out::NAT,
-                                          flow::meta::out::MASK)
-                                .go(POL_TABLE_ID);
-                        }
-                        // else drop until resolved
+                        snr.priority(40 + natprio + extsub->getPrefixLen(0))
+                            .action()
+                            .reg(MFF_REG2, netVnid)
+                            .reg(MFF_REG7, natEpgVnid.get())
+                            .metadata(flow::meta::out::NAT,
+                                      flow::meta::out::MASK)
+                            .go(POL_TABLE_ID);
                     } else if (tunPort != OFPP_NONE &&
                                encapType != ENCAP_NONE) {
                         // For other external networks, output to the tunnel
                         actionOutputToEPGTunnel(snr);
                     } else {
+                        // else drop the packets
                         snr.cookie(flow::cookie::TABLE_DROP_FLOW)
                            .flags(OFPUTIL_FF_SEND_FLOW_REM)
                            .action().dropLog(ROUTE_TABLE_ID)
                            .go(EXP_DROP_TABLE_ID);
                     }
-                    // else drop the packets
                     snr.build(rdRouteFlows);
                 }
                 {
