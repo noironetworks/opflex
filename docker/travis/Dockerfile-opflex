@@ -1,8 +1,8 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 RUN microdnf install -y yum yum-utils
-RUN yum update --exclude=openssl* -y --nogpgcheck --disablerepo=* --repofrompath=centos,https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os  --repofrompath=centos-app,https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os && rm -rf /var/cache/yum
-RUN yum install -y --nogpgcheck --disablerepo=* --repofrompath=centos,https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os --repofrompath=centos-app,https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
-  libstdc++ libuv \
+RUN yum update --exclude=openssl*,rpm*,python3-rpm -y --nogpgcheck --disablerepo=* --repofrompath=centos,https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os  --repofrompath=centos-app,https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os && rm -rf /var/cache/yum
+RUN yum install -y --nogpgcheck --skip-broken --disablerepo=* --repofrompath=centos,https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os --repofrompath=centos-app,https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
+  libstdc++ libuv openssl-libs-3.2.2-6.el9_5.1.x86_6 \
   boost-program-options boost-system boost-date-time boost-filesystem \
   boost-iostreams libnetfilter_conntrack net-tools procps-ng ca-certificates \
   && yum install -y vim-minimal strace \
