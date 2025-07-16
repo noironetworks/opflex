@@ -85,7 +85,7 @@ prepared:
         /* We need to make sure we unblock */
 
         if (!uv_is_active((uv_handle_t *)&prepareAgain_)) {
-            LOG(TRACE) << " Starting prepareAgain_ @" << reinterpret_cast<void *>(&prepareAgain_);
+            LOG(INFO) << " Starting prepareAgain_ @" << reinterpret_cast<void *>(&prepareAgain_);
         } // else we are just pushing it out in time :)
         uv_timer_start(&prepareAgain_, prepareAgainCB, 1250, 0);
     }
@@ -170,7 +170,7 @@ void Peer::LoopData::RetryPeer::operator () (Peer *peer) {
 }
 
 void Peer::LoopData::PeerDeleter::operator () (Peer *peer) {
-    LOG(DEBUG) << peer << " deleting abruptedly";
+    LOG(ERROR) << peer << " deleting abruptedly";
     assert(!"peers should never get deleted this way");
     delete peer;
 }
