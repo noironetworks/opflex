@@ -141,6 +141,7 @@ void on_active_connection(uv_connect_t *req, int status) {
 
     ActivePeer * peer = Peer::get(req);  // can't possibly crash yet
 
+    LOG(INFO) << peer << " has on_active_connection callback";
     if (status == UV_ECANCELED) {
 
         /* the peer might have been deleted, so we have to avoid accessing any
@@ -179,6 +180,7 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
     ActiveTcpPeer * peer = Peer::get(req);
     assert(!peer->passive_);
 
+    LOG(INFO) << peer << " has on_resolved callback";
     if (peer->destroying_) {
         LOG(INFO) << peer << " peer is being destroyed. down() it";
         peer->down();
