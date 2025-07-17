@@ -56,9 +56,9 @@ Next build and install the libmodelgbp library:
  - popd
 
 ### OVS
-The agent requires the Open vSwitch 2.12.0 library to connect to OVS and configure OpenFlow on the switch.
+The agent requires the Open vSwitch 2.15.0 library to connect to OVS and configure OpenFlow on the switch.
 
- - git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth 1
+ - git clone https://github.com/openvswitch/ovs.git --branch v2.15.0 --depth 1
  - pushd ovs
  - ROOT=/usr/local
  - ./boot.sh
