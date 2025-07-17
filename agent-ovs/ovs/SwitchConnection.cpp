@@ -30,6 +30,7 @@ extern "C" {
 #include <openvswitch/ofp-monitor.h>
 }
 
+
 typedef std::lock_guard<std::mutex> mutex_guard;
 
 const int LOST_CONN_BACKOFF_MSEC = 5000;
@@ -371,7 +372,7 @@ SwitchConnection::FireOnConnectListeners() {
         OfpBuf b0(ofpraw_alloc(OFPRAW_OFPT12_ROLE_REQUEST,
                                GetProtocolVersion(), sizeof *rr));
         rr = (ofp12_role_request*)b0.put_zeros(sizeof *rr);
-        rr->role = htonl(OFPCR12_ROLE_MASTER);
+        rr->role = htonl(OFPCR12_ROLE_PRIMARY);
         SendMessage(b0);
     }
     {

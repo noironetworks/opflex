@@ -38,6 +38,12 @@ pushd agent-ovs
 export LD_LIBRARY_PATH=/usr/local/lib
 ./autogen.sh &> /dev/null
 # --enable-grpc
+
+echo "[INFO] pkg-config path: $PKG_CONFIG_PATH"
+pkg-config --debug
+pkg-config --list-all | grep ofproto
+pkg-config --modversion libofproto || echo "[WARN] libofproto not found"
+
 ./configure --enable-coverage --enable-gprof &> /dev/null
 make -j2
 sudo make install

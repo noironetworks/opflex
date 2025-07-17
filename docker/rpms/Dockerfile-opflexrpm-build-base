@@ -39,7 +39,7 @@ ENV PATH=/apache-maven-3.9.7/bin:$PATH
 RUN pushd /root \
     && git clone https://github.com/noironetworks/3rdparty-rpm \
     && rpmdev-setuptree \
-    && git clone https://github.com/openvswitch/ovs.git -b v2.12.0 \
+    && git clone https://github.com/openvswitch/ovs.git -b v2.15.0 \
     && pushd ovs \
     && cp ../3rdparty-rpm/noiro-openvswitch/noiro-openvswitch.spec /root/rpmbuild/SPECS \
     && patch -p1 < ../3rdparty-rpm/noiro-openvswitch/noiro-openvswitch.patch \
