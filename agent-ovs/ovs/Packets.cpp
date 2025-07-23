@@ -24,7 +24,12 @@
 #include <sstream>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <algorithm>
+#include <array>
 
 namespace opflexagent {
 namespace packets {
@@ -68,6 +73,26 @@ uint16_t chksum_finalize(uint32_t chksum) {
     while (chksum>>16)
         chksum = (chksum & 0xffff) + (chksum >> 16);
     return ~chksum;
+}
+
+// Helper function for IPv4 header checksum
+// This function MUST be inside the 'packets' namespace for 'packets::chksum_ip' to work.
+uint16_t chksum_ip(const struct iphdr *ip_hdr) {
+    uint32_t sum = 0;
+    uint16_t *ptr = (uint16_t *)ip_hdr;
+    int len = ip_hdr->ihl * 4; // Header length in bytes
+
+    while (len > 1) {
+        sum += *ptr++;
+        len -= 2;
+    }
+    if (len == 1) { // Handle odd length
+        sum += *(uint8_t *)ptr;
+    }
+
+    sum = (sum >> 16) + (sum & 0xFFFF);
+    sum += (sum >> 16);
+    return (uint16_t)~sum;
 }
 
 struct nd_opt_def_route_info {
@@ -1026,6 +1051,391 @@ OfpBuf compose_arp(uint16_t op,
     tpa = htonl(tpa);
     memcpy(spaptr, &spa, sizeof(spa));
     memcpy(tpaptr, &tpa, sizeof(tpa));
+
+    return b;
+}
+
+/**
+ * Composes a TCP RST packet based on an original packet's raw data and Ethernet type.
+ * @param pkt_data Raw pointer to the original packet's data.
+ * @param pkt_len Length of the original packet.
+ * @param eth_type The Ethernet type (e.g., eth::type::IP, eth::type::IPV6).
+ * @param dmac destination mac to rewrite if present
+ * @return An OfpBuf containing the composed TCP RST packet. Returns an empty OfpBuf if an error occurs.
+ */
+OfpBuf compose_tcp_rst(const char* pkt_data,
+                       size_t pkt_len,
+                       uint16_t eth_type,
+                       const uint8_t* dmac) {
+    bool is_ipv4 = (eth_type == htons(eth::type::IP));
+    bool is_ipv6 = (eth_type == htons(eth::type::IPV6));
+
+    // Allocate buffer for the response packet.
+    // Use ofpbuf_new_with_headroom directly and wrap it in OfpBuf.
+    OfpBuf b(ofpbuf_new_with_headroom(pkt_len, 0));
+    if (!b.get()) {
+        LOG(ERROR) << "Failed to allocate OfpBuf for TCP RST.";
+        return OfpBuf((struct ofpbuf*)NULL); // Return empty OfpBuf on allocation failure
+    }
+    ofpbuf_put_uninit(b.get(), pkt_len); // Allocate space for the packet data
+
+    // Calculate IP and L4 offsets manually
+    size_t eth_hdr_len = sizeof(eth::eth_header);
+    size_t ip_offset = eth_hdr_len; // Start of IP header after Ethernet
+
+    size_t l4_offset = 0;
+    if (is_ipv4) {
+        if (pkt_len < ip_offset + sizeof(struct iphdr)) {
+            LOG(ERROR) << "Original packet too short for IPv4 header.";
+            return OfpBuf((struct ofpbuf*)NULL);
+        }
+        const struct iphdr* temp_ip_hdr = (const struct iphdr*)(pkt_data + ip_offset);
+        l4_offset = ip_offset + (temp_ip_hdr->ihl * 4);
+    } else if (is_ipv6) {
+        l4_offset = ip_offset + sizeof(struct ip6_hdr);
+    } else {
+        LOG(ERROR) << "Unsupported IP version for TCP RST composition.";
+        return OfpBuf((struct ofpbuf*)NULL);
+    }
+
+    // Ensure the packet is long enough to contain the TCP header
+    if (l4_offset + sizeof(struct tcphdr) > pkt_len) {
+        LOG(ERROR) << "Original packet too short for TCP header. Cannot compose RST.";
+        return OfpBuf((struct ofpbuf*)NULL);
+    }
+
+    // Copy original Ethernet header and swap MAC addresses
+    memcpy(b.get()->data, pkt_data, sizeof(eth::eth_header));
+    uint8_t* eth_hdr = (uint8_t*)b.get()->data;
+    uint8_t mac[eth::ADDR_LEN];
+    memcpy(&mac, eth_hdr, eth::ADDR_LEN);
+    if (dmac != NULL)
+        memcpy(eth_hdr, dmac, eth::ADDR_LEN); // Destination MAC is provided MAC
+    else
+        memcpy(eth_hdr, eth_hdr + eth::ADDR_LEN, eth::ADDR_LEN); // Destination MAC is original Source MAC
+
+    memcpy(eth_hdr + eth::ADDR_LEN, mac, eth::ADDR_LEN);     // Source MAC is original Destination MAC
+
+    if (is_ipv4) {
+        const struct iphdr* original_ip_hdr = (const struct iphdr*)(pkt_data + ip_offset);
+        const struct tcphdr* original_tcp_hdr = (const struct tcphdr*)(pkt_data + l4_offset);
+
+        uint32_t ip_hdr_len = original_ip_hdr->ihl * 4;
+        uint32_t tcp_hdr_len = original_tcp_hdr->th_off * 4;
+        uint32_t total_len = ntohs(original_ip_hdr->tot_len);
+        uint32_t payload_len = total_len - ip_hdr_len - tcp_hdr_len;
+
+        // Copy original IP header and swap IP addresses
+        memcpy((char*)b.get()->data + ip_offset, original_ip_hdr, ip_hdr_len);
+        struct iphdr* response_ip_hdr = (struct iphdr*)((char*)b.get()->data + ip_offset);
+        uint32_t saddr_orig = original_ip_hdr->saddr;
+        uint32_t daddr_orig = original_ip_hdr->daddr;
+        response_ip_hdr->saddr = daddr_orig; // New source IP is original destination IP
+        response_ip_hdr->daddr = saddr_orig; // New destination IP is original source IP
+        response_ip_hdr->check = 0;          // Clear checksum for recalculation
+        response_ip_hdr->tot_len = htons(ip_hdr_len + tcp_hdr_len); // New total length (no payload for RST)
+
+        uint16_t original_sport = original_tcp_hdr->th_sport;
+        uint16_t original_dport = original_tcp_hdr->th_dport;
+
+        // Copy original TCP header and modify for RST and swap ports
+        memcpy((char*)b.get()->data + l4_offset, original_tcp_hdr, tcp_hdr_len);
+        struct tcphdr* response_tcp_hdr = (struct tcphdr*)((char*)b.get()->data + l4_offset);
+        response_tcp_hdr->th_sport = original_dport; // New source port is original destination port
+        response_tcp_hdr->th_dport = original_sport; // New destination port is original source port
+
+        response_tcp_hdr->th_flags = TH_RST | TH_ACK; // Set RST and ACK flags
+        response_tcp_hdr->th_seq = original_tcp_hdr->th_ack; // RST sequence is original ACK
+
+        uint32_t original_segment_length = payload_len;
+        if (original_tcp_hdr->th_flags & TH_SYN) {
+            original_segment_length++; // SYN consumes one sequence number
+        }
+        if (original_tcp_hdr->th_flags & TH_FIN) {
+            original_segment_length++; // FIN consumes one sequence number
+        }
+        response_tcp_hdr->th_ack = htonl(ntohl(original_tcp_hdr->th_seq) + original_segment_length); // ACK is original SEQ + payload_len
+        response_tcp_hdr->th_win = 0; // Window size to 0
+        response_tcp_hdr->th_sum = 0; // Clear checksum for recalculation
+
+        // Recalculate checksums
+        response_ip_hdr->check = packets::chksum_ip(response_ip_hdr); // Recalculate IPv4 header checksum
+
+        uint32_t tcp_chksum = 0;
+        // Pseudoheader for TCP checksum (source IP, destination IP, protocol, TCP length)
+        chksum_accum(tcp_chksum, (uint16_t*)&response_ip_hdr->saddr, sizeof(response_ip_hdr->saddr));
+        chksum_accum(tcp_chksum, (uint16_t*)&response_ip_hdr->daddr, sizeof(response_ip_hdr->daddr));
+        tcp_chksum += htons(IPPROTO_TCP);
+        tcp_chksum += htons(tcp_hdr_len); // TCP length
+        // TCP header
+        chksum_accum(tcp_chksum, (uint16_t*)response_tcp_hdr, tcp_hdr_len);
+        response_tcp_hdr->th_sum = chksum_finalize(tcp_chksum);
+
+        b.get()->size = l4_offset + tcp_hdr_len; // Trim buffer to actual packet size
+
+        LOG(DEBUG) << "Composed TCP RST from "
+                   << boost::asio::ip::address_v4(ntohl(saddr_orig)) << ":" << ntohs(original_tcp_hdr->th_sport)
+                   << " to "
+                   << boost::asio::ip::address_v4(ntohl(daddr_orig)) << ":" << ntohs(original_tcp_hdr->th_dport);
+
+    } else if (is_ipv6) { // IPv6
+        const struct ip6_hdr* original_ip6_hdr = (const struct ip6_hdr*)(pkt_data + ip_offset);
+        const struct tcphdr* original_tcp_hdr = (const struct tcphdr*)(pkt_data + l4_offset);
+
+        uint32_t tcp_hdr_len = original_tcp_hdr->th_off * 4;
+        uint32_t payload_len = ntohs(original_ip6_hdr->ip6_plen) - tcp_hdr_len;
+
+        // Copy original IPv6 header and swap IPs
+        memcpy((char*)b.get()->data + ip_offset, original_ip6_hdr, sizeof(struct ip6_hdr));
+        struct ip6_hdr* response_ip6_hdr = (struct ip6_hdr*)((char*)b.get()->data + ip_offset);
+
+        // Use bytes_type for Boost.Asio address_v6 construction
+        boost::asio::ip::address_v6::bytes_type saddr_orig_v6_bytes;
+        boost::asio::ip::address_v6::bytes_type daddr_orig_v6_bytes;
+        memcpy(saddr_orig_v6_bytes.data(), &original_ip6_hdr->ip6_src, saddr_orig_v6_bytes.size());
+        memcpy(daddr_orig_v6_bytes.data(), &original_ip6_hdr->ip6_dst, daddr_orig_v6_bytes.size());
+
+        memcpy(&response_ip6_hdr->ip6_src, daddr_orig_v6_bytes.data(), daddr_orig_v6_bytes.size());
+        memcpy(&response_ip6_hdr->ip6_dst, saddr_orig_v6_bytes.data(), saddr_orig_v6_bytes.size());
+        response_ip6_hdr->ip6_nxt = IPPROTO_TCP; // Next header is TCP
+        response_ip6_hdr->ip6_plen = htons(tcp_hdr_len); // New payload length
+
+        uint16_t original_sport = original_tcp_hdr->th_sport;
+        uint16_t original_dport = original_tcp_hdr->th_dport;
+
+        // Copy original TCP header and modify for RST and swap ports
+        memcpy((char*)b.get()->data + l4_offset, original_tcp_hdr, tcp_hdr_len);
+        struct tcphdr* response_tcp_hdr = (struct tcphdr*)((char*)b.get()->data + l4_offset);
+        response_tcp_hdr->th_sport = original_dport; // New source port is original destination port
+        response_tcp_hdr->th_dport = original_sport; // New destination port is original source port
+
+        response_tcp_hdr->th_flags = TH_RST | TH_ACK;
+        response_tcp_hdr->th_seq = original_tcp_hdr->th_ack;
+        uint32_t original_segment_length = payload_len;
+        if (original_tcp_hdr->th_flags & TH_SYN) {
+            original_segment_length++; // SYN consumes one sequence number
+        }
+        if (original_tcp_hdr->th_flags & TH_FIN) {
+            original_segment_length++; // FIN consumes one sequence number
+        }
+        response_tcp_hdr->th_ack = htonl(ntohl(original_tcp_hdr->th_seq) + original_segment_length);
+        response_tcp_hdr->th_win = 0;
+        response_tcp_hdr->th_sum = 0;
+
+        // Recalculate TCP checksum (pseudoheader + TCP header + data)
+        uint32_t tcp_chksum = 0;
+        // Pseudoheader for TCP checksum (source IP, destination IP, TCP length, protocol)
+        chksum_accum(tcp_chksum, (uint16_t*)response_ip6_hdr->ip6_src.s6_addr, 16);
+        chksum_accum(tcp_chksum, (uint16_t*)response_ip6_hdr->ip6_dst.s6_addr, 16);
+        tcp_chksum += htons(tcp_hdr_len);
+        tcp_chksum += htons(IPPROTO_TCP);
+        // TCP header
+        chksum_accum(tcp_chksum, (uint16_t*)response_tcp_hdr, tcp_hdr_len);
+        response_tcp_hdr->th_sum = chksum_finalize(tcp_chksum);
+
+        b.get()->size = l4_offset + tcp_hdr_len;
+
+        LOG(DEBUG) << "Composed TCP RST (IPv6) from "
+                   << boost::asio::ip::address_v6(saddr_orig_v6_bytes) << ":" << ntohs(original_tcp_hdr->th_sport)
+                   << " to "
+                   << boost::asio::ip::address_v6(daddr_orig_v6_bytes) << ":" << ntohs(original_tcp_hdr->th_dport);
+    } else {
+        LOG(ERROR) << "Unsupported IP version for TCP RST composition.";
+        return OfpBuf((struct ofpbuf*)NULL);
+    }
+
+    return b;
+}
+
+/**
+ * Composes an ICMP Destination Unreachable (Port Unreachable) packet for UDP based on an original packet's raw data and Ethernet type.
+ * @param pkt_data Raw pointer to the original packet's data.
+ * @param pkt_len Length of the original packet.
+ * @param eth_type The Ethernet type (e.g., eth::type::IP, eth::type::IPV6).
+ * @param dmac destination mac to rewrite if present
+ * @return An OfpBuf containing the composed ICMP packet. Returns an empty OfpBuf if an error occurs.
+ */
+OfpBuf compose_icmp_port_unreachable(const char* pkt_data,
+                                     size_t pkt_len,
+                                     uint16_t eth_type,
+                                     const uint8_t* dmac) {
+    bool is_ipv4 = (eth_type == htons(eth::type::IP));
+    bool is_ipv6 = (eth_type == htons(eth::type::IPV6));
+
+    // Allocate buffer for the response packet.
+    // The final size (icmp_pkt_len) is calculated later, so we'll re-init 'b' then.
+    // For now, just create a valid, empty OfpBuf.
+    OfpBuf b(ofpbuf_new(0)); // Start with an empty buffer
+    if (!b.get()) {
+        LOG(ERROR) << "Failed to allocate initial OfpBuf for ICMP Port Unreachable.";
+        return OfpBuf((struct ofpbuf*)NULL); // Return empty OfpBuf on allocation failure
+    }
+
+    // Calculate IP and L4 offsets manually
+    size_t eth_hdr_len = sizeof(eth::eth_header);
+    size_t ip_offset = eth_hdr_len; // Start of IP header after Ethernet
+
+    size_t l4_offset = 0;
+    if (is_ipv4) {
+        if (pkt_len < ip_offset + sizeof(struct iphdr)) {
+            LOG(ERROR) << "Original packet too short for IPv4 header.";
+            return OfpBuf((struct ofpbuf*)NULL);
+        }
+        const struct iphdr* temp_ip_hdr = (const struct iphdr*)(pkt_data + ip_offset);
+        l4_offset = ip_offset + (temp_ip_hdr->ihl * 4);
+    } else if (is_ipv6) {
+        l4_offset = ip_offset + sizeof(struct ip6_hdr);
+    } else {
+        LOG(ERROR) << "Unsupported IP version for ICMP Port Unreachable composition.";
+        return OfpBuf((struct ofpbuf*)NULL);
+    }
+
+    // Ensure the packet is long enough to contain the UDP header
+    if (l4_offset + sizeof(struct udphdr) > pkt_len) {
+        LOG(ERROR) << "Original packet too short for UDP header. Cannot compose ICMP Unreachable.";
+        return OfpBuf((struct ofpbuf*)NULL);
+    }
+
+    // ICMP Unreachable packet includes original IP header + first 8 bytes of original L4 header/payload
+    size_t icmp_data_len = 0;
+    size_t icmp_pkt_len = 0;
+
+    if (is_ipv4) {
+        const struct iphdr* original_ip_hdr = (const struct iphdr*)(pkt_data + ip_offset);
+        const struct udphdr* original_udp_hdr = (const struct udphdr*)(pkt_data + l4_offset);
+
+        // ICMP data is original IP header + min(original UDP length, 8 bytes of UDP data)
+        icmp_data_len = original_ip_hdr->ihl * 4 + std::min((size_t)ntohs(original_udp_hdr->len), (size_t)8);
+        icmp_pkt_len = sizeof(eth::eth_header) + sizeof(struct iphdr) + sizeof(::icmphdr) + icmp_data_len; // Use ::icmphdr
+
+        // Re-initialize 'b' with the exact required size
+        b = OfpBuf(ofpbuf_new_with_headroom(icmp_pkt_len, 0));
+        if (!b.get()) {
+            LOG(ERROR) << "Failed to allocate OfpBuf for IPv4 ICMP Port Unreachable.";
+            return OfpBuf((struct ofpbuf*)NULL);
+        }
+        ofpbuf_put_uninit(b.get(), icmp_pkt_len); // Set the buffer's size to icmp_pkt_len
+
+        // Populate Ethernet header and swap MACs
+        uint8_t* eth_hdr = (uint8_t*)b.get()->data;
+        memcpy(eth_hdr + eth::ADDR_LEN, pkt_data, eth::ADDR_LEN); // Source MAC is original Destination MAC
+
+        if (dmac != NULL)
+            memcpy(eth_hdr, dmac, eth::ADDR_LEN); // Destination MAC is original Source MAC or Provided MAC
+        else
+            memcpy(eth_hdr, pkt_data + eth::ADDR_LEN, eth::ADDR_LEN);
+
+        eth_hdr[12] = (eth::type::IP >> 8) & 0xFF; // Set EtherType to IPv4
+        eth_hdr[13] = eth::type::IP & 0xFF;
+
+        // Populate new IP header
+        struct iphdr* response_ip_hdr = (struct iphdr*)((char*)b.get()->data + sizeof(eth::eth_header));
+        memset(response_ip_hdr, 0, sizeof(struct iphdr));
+        response_ip_hdr->ihl = 5;         // 20 bytes
+        response_ip_hdr->version = 4;
+        response_ip_hdr->tot_len = htons(icmp_pkt_len - sizeof(eth::eth_header));
+        response_ip_hdr->ttl = 64;        // Standard TTL
+        response_ip_hdr->protocol = IPPROTO_ICMP; // ICMP
+        response_ip_hdr->saddr = original_ip_hdr->daddr; // Source IP is original Destination IP
+        response_ip_hdr->daddr = original_ip_hdr->saddr; // Destination IP is original Source IP
+        response_ip_hdr->check = packets::chksum_ip(response_ip_hdr); // Recalculate checksum
+
+        // Populate ICMP header
+        ::icmphdr* response_icmp_hdr = (::icmphdr*)((char*)b.get()->data + sizeof(eth::eth_header) + sizeof(struct iphdr)); // Use ::icmphdr
+        memset(response_icmp_hdr, 0, sizeof(::icmphdr)); // Use ::icmphdr
+        response_icmp_hdr->type = ICMP_DEST_UNREACH; // Use ::ICMP_DEST_UNREACH
+        response_icmp_hdr->code = ICMP_PORT_UNREACH; // Use ::ICMP_PORT_UNREACH
+        response_icmp_hdr->checksum = 0;
+
+        // Copy original IP header + first 8 bytes of UDP payload as ICMP data
+        memcpy((char*)b.get()->data + sizeof(eth::eth_header) + sizeof(struct iphdr) + sizeof(::icmphdr), // Use ::icmphdr
+               original_ip_hdr, icmp_data_len);
+
+        // Recalculate ICMP checksum
+        uint32_t icmp_chksum = 0;
+        chksum_accum(icmp_chksum, (uint16_t*)response_icmp_hdr,
+                              sizeof(::icmphdr) + icmp_data_len); // Use ::icmphdr
+        response_icmp_hdr->checksum = chksum_finalize(icmp_chksum);
+
+        LOG(DEBUG) << "Composed ICMP Destination Unreachable (Port) from "
+                   << boost::asio::ip::address_v4(ntohl(original_ip_hdr->daddr))
+                   << " to "
+                   << boost::asio::ip::address_v4(ntohl(original_ip_hdr->saddr));
+
+    } else if (is_ipv6) { // IPv6
+        const struct ip6_hdr* original_ip6_hdr = (const struct ip6_hdr*)(pkt_data + ip_offset);
+        const struct udphdr* original_udp_hdr = (const struct udphdr*)(pkt_data + l4_offset);
+
+        // ICMPv6 data is original IPv6 header + min(original UDP length, 8 bytes of UDP data)
+        icmp_data_len = sizeof(struct ip6_hdr) + std::min((size_t)ntohs(original_udp_hdr->len), (size_t)8);
+        icmp_pkt_len = sizeof(eth::eth_header) + sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr) + icmp_data_len;
+
+        b = OfpBuf(ofpbuf_new_with_headroom(icmp_pkt_len, 0));
+        if (!b.get()) {
+            LOG(ERROR) << "Failed to allocate OfpBuf for IPv6 ICMP Port Unreachable.";
+            return OfpBuf((struct ofpbuf*)NULL);
+        }
+        ofpbuf_put_uninit(b.get(), icmp_pkt_len);
+
+        // Populate Ethernet header and swap MACs
+        uint8_t* eth_hdr = (uint8_t*)b.get()->data;
+        memcpy(eth_hdr + eth::ADDR_LEN, pkt_data, eth::ADDR_LEN); // Source MAC is original Destination MAC
+
+        if (dmac != NULL)
+            memcpy(eth_hdr, dmac, eth::ADDR_LEN); // Destination MAC is original Source MAC or Provided MAC
+        else
+            memcpy(eth_hdr, pkt_data + eth::ADDR_LEN, eth::ADDR_LEN);
+
+        eth_hdr[12] = (eth::type::IPV6 >> 8) & 0xFF;
+        eth_hdr[13] = eth::type::IPV6 & 0xFF;
+
+        // Populate new IPv6 header
+        struct ip6_hdr* response_ip6_hdr = (struct ip6_hdr*)((char*)b.get()->data + sizeof(eth::eth_header));
+        memset(response_ip6_hdr, 0, sizeof(struct ip6_hdr));
+        response_ip6_hdr->ip6_vfc = 0x60; // Version 6
+        response_ip6_hdr->ip6_plen = htons(sizeof(struct icmp6_hdr) + icmp_data_len);
+        response_ip6_hdr->ip6_nxt = IPPROTO_ICMPV6;
+        response_ip6_hdr->ip6_hops = 64;
+        memcpy(&response_ip6_hdr->ip6_src, &original_ip6_hdr->ip6_dst, sizeof(struct in6_addr));
+        memcpy(&response_ip6_hdr->ip6_dst, &original_ip6_hdr->ip6_src, sizeof(struct in6_addr));
+
+        // Populate ICMPv6 header
+        struct icmp6_hdr* response_icmp6_hdr = (struct icmp6_hdr*)((char*)b.get()->data + sizeof(eth::eth_header) + sizeof(struct ip6_hdr));
+        memset(response_icmp6_hdr, 0, sizeof(struct icmp6_hdr));
+        response_icmp6_hdr->icmp6_type = ICMP6_DST_UNREACH; // Destination Unreachable (Type 1)
+        response_icmp6_hdr->icmp6_code = ICMP6_DST_UNREACH_NOPORT; // No Port (Code 4)
+        response_icmp6_hdr->icmp6_cksum = 0;
+
+        // Copy original IPv6 header + first 8 bytes of UDP payload as ICMPv6 data
+        memcpy((char*)b.get()->data + sizeof(eth::eth_header) + sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr),
+               original_ip6_hdr, icmp_data_len);
+
+        // Recalculate ICMPv6 checksum (pseudoheader + ICMPv6 header + data)
+        uint32_t icmp6_chksum = 0;
+        // Pseudoheader for ICMPv6 checksum (source IP, destination IP, ICMPv6 length, protocol)
+        chksum_accum(icmp6_chksum, (uint16_t*)response_ip6_hdr->ip6_src.s6_addr, 16);
+        chksum_accum(icmp6_chksum, (uint16_t*)response_ip6_hdr->ip6_dst.s6_addr, 16);
+        icmp6_chksum += htons(sizeof(struct icmp6_hdr) + icmp_data_len);
+        icmp6_chksum += htons(IPPROTO_ICMPV6);
+        // ICMPv6 header + data
+        chksum_accum(icmp6_chksum, (uint16_t*)response_icmp6_hdr,
+                              sizeof(struct icmp6_hdr) + icmp_data_len);
+        response_icmp6_hdr->icmp6_cksum = chksum_finalize(icmp6_chksum);
+
+        // Use bytes_type for Boost.Asio address_v6 construction in LOG
+        boost::asio::ip::address_v6::bytes_type original_ip6_dst_bytes;
+        boost::asio::ip::address_v6::bytes_type original_ip6_src_bytes;
+        memcpy(original_ip6_dst_bytes.data(), &original_ip6_hdr->ip6_dst, original_ip6_dst_bytes.size());
+        memcpy(original_ip6_src_bytes.data(), &original_ip6_hdr->ip6_src, original_ip6_src_bytes.size());
+
+        LOG(DEBUG) << "Composed ICMPv6 Destination Unreachable (Port) from "
+                   << boost::asio::ip::address_v6(original_ip6_dst_bytes)
+                   << " to "
+                   << boost::asio::ip::address_v6(original_ip6_src_bytes);
+    } else {
+        LOG(ERROR) << "Unsupported IP version for ICMP Port Unreachable composition.";
+        return OfpBuf((struct ofpbuf*)NULL);
+    }
 
     return b;
 }

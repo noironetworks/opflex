@@ -127,7 +127,7 @@ static inline void fill_in6_addr(struct in6_addr& addr,
 
 static void addMatchSubnet(struct match* match,
                            const boost::asio::ip::address& ip,
-                           uint8_t prefixLen, bool src,
+                           uint8_t prefixLen, bool src, bool ct,
                            uint16_t& ethType) {
    if (ip.is_v4()) {
        switch (ethType) {
@@ -147,10 +147,17 @@ static void addMatchSubnet(struct match* match,
            : 0;
        uint32_t addr = ip.to_v4().to_ulong() & mask;
        match_set_dl_type(match, htons(ethType));
-       if (src)
-           match_set_nw_src_masked(match, htonl(addr), htonl(mask));
-       else
-           match_set_nw_dst_masked(match, htonl(addr), htonl(mask));
+       if (!ct) {
+           if (src)
+               match_set_nw_src_masked(match, htonl(addr), htonl(mask));
+           else
+               match_set_nw_dst_masked(match, htonl(addr), htonl(mask));
+       } else {
+           if (src)
+               match_set_ct_nw_src_masked(match, htonl(addr), htonl(mask));
+           else
+               match_set_ct_nw_dst_masked(match, htonl(addr), htonl(mask));
+       }
    } else {
        switch (ethType) {
        case 0:
@@ -168,10 +175,17 @@ static void addMatchSubnet(struct match* match,
        network::compute_ipv6_subnet(ip.to_v6(), prefixLen, &mask, &addr);
 
        match_set_dl_type(match, htons(ethType));
-       if (src)
-           match_set_ipv6_src_masked(match, &addr, &mask);
-       else
-           match_set_ipv6_dst_masked(match, &addr, &mask);
+       if (!ct) {
+           if (src)
+               match_set_ipv6_src_masked(match, &addr, &mask);
+           else
+               match_set_ipv6_dst_masked(match, &addr, &mask);
+       } else {
+           if (src)
+               match_set_ct_ipv6_src_masked(match, &addr, &mask);
+           else
+               match_set_ct_ipv6_dst_masked(match, &addr, &mask);
+       }
    }
 }
 
@@ -227,27 +241,39 @@ static void addMatchOuterSubnet(struct match* match,
 
 FlowBuilder& FlowBuilder::ipSrc(const boost::asio::ip::address& ip,
                                 uint8_t prefixLen) {
-    addMatchSubnet(match(), ip, prefixLen, true, ethType_);
+    addMatchSubnet(match(), ip, prefixLen, true, false, ethType_);
     return *this;
 }
 
 FlowBuilder& FlowBuilder::ipDst(const boost::asio::ip::address& ip,
                                 uint8_t prefixLen) {
-    addMatchSubnet(match(), ip, prefixLen, false, ethType_);
+    addMatchSubnet(match(), ip, prefixLen, false, false, ethType_);
+    return *this;
+}
+
+FlowBuilder& FlowBuilder::ctIpSrc(const boost::asio::ip::address& ip,
+                                uint8_t prefixLen) {
+    addMatchSubnet(match(), ip, prefixLen, true, true, ethType_);
+    return *this;
+}
+
+FlowBuilder& FlowBuilder::ctIpDst(const boost::asio::ip::address& ip,
+                                uint8_t prefixLen) {
+    addMatchSubnet(match(), ip, prefixLen, false, true, ethType_);
     return *this;
 }
 
 FlowBuilder& FlowBuilder::arpSrc(const boost::asio::ip::address& ip,
                                  uint8_t prefixLen) {
     ethType(eth::type::ARP);
-    addMatchSubnet(match(), ip, prefixLen, true, ethType_);
+    addMatchSubnet(match(), ip, prefixLen, true, false, ethType_);
     return *this;
 }
 
 FlowBuilder& FlowBuilder::arpDst(const boost::asio::ip::address& ip,
                                  uint8_t prefixLen) {
     ethType(eth::type::ARP);
-    addMatchSubnet(match(), ip, prefixLen, false, ethType_);
+    addMatchSubnet(match(), ip, prefixLen, false, false, ethType_);
     return *this;
 }
 
@@ -280,13 +306,28 @@ FlowBuilder& FlowBuilder::proto(uint8_t proto) {
     return *this;
 }
 
+FlowBuilder& FlowBuilder::ctProto(uint8_t proto) {
+    match_set_ct_nw_proto(match(), proto);
+    return *this;
+}
+
 FlowBuilder& FlowBuilder::tpSrc(uint16_t port, uint16_t mask) {
     match_set_tp_src_masked(match(), htons(port), htons(mask));
     return *this;
 }
 
+FlowBuilder& FlowBuilder::ctTpSrc(uint16_t port, uint16_t mask) {
+    match_set_ct_tp_src_masked(match(), htons(port), htons(mask));
+    return *this;
+}
+
 FlowBuilder& FlowBuilder::tpDst(uint16_t port, uint16_t mask) {
     match_set_tp_dst_masked(match(), htons(port), htons(mask));
+    return *this;
+}
+
+FlowBuilder& FlowBuilder::ctTpDst(uint16_t port, uint16_t mask) {
+    match_set_ct_tp_dst_masked(match(), htons(port), htons(mask));
     return *this;
 }
 
@@ -337,6 +378,11 @@ FlowBuilder& FlowBuilder::ctMark(uint32_t ctMark, uint32_t mask) {
 
 FlowBuilder& FlowBuilder::ctLabel(ovs_u128 ctLabel, ovs_u128 mask) {
     match_set_ct_label_masked(match(), ctLabel, mask);
+    return *this;
+}
+
+FlowBuilder& FlowBuilder::ctZone(uint16_t ct_zone) {
+    match_set_ct_zone(match(), ct_zone);
     return *this;
 }
 
