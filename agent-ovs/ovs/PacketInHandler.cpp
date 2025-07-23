@@ -902,6 +902,121 @@ void PacketInHandler::handleDNSPktIn(struct ofputil_packet_in& pi,
 }
 
 /**
+ * Handles TCP RST packet generation and sending.
+ * @param conn The Switch Connection
+ * @param intFlowManager IntFlowManager
+ * @param pi The OpenFlow packet-in structure.
+ * @param proto The OpenFlow protocol version.
+ * @param pkt The dp_packet containing the raw packet data.
+ * @param flow The parsed flow from the packet.
+ */
+static void handleTcpRstPktIn(SwitchConnection* conn,
+                              IntFlowManager& intFlowManager,
+                              struct ofputil_packet_in& pi,
+                              ofputil_protocol& proto,
+                              struct dp_packet* pkt,
+                              struct flow& flow) {
+    const uint8_t* dmac = NULL;
+    if (pi.cookie == flow::cookie::RST_VLAN_FLOW)
+        dmac = intFlowManager.getRouterMacAddr();
+
+    // Use ofpbuf_data and ofpbuf_size macros to access dp_packet contents
+    OfpBuf b = packets::compose_tcp_rst((const char *)dpp_data(pkt), dpp_size(pkt), flow.dl_type, dmac);
+
+    if (b.get()) { // Check if packet composition was successful
+        // Send the composed packet out.
+        // The packet-in with RST_FLOW cookie indicates it's handled by the controller,
+        // and the response should be sent back to the original ingress port.
+        if (pi.cookie == flow::cookie::RST_VLAN_FLOW) {
+            uint32_t vlan = pi.flow_metadata.flow.regs[0];
+            send_packet_out(conn, b, proto,
+                            OFPP_CONTROLLER, pi.flow_metadata.flow.in_port.ofp_port, pushVlanActions(vlan));
+        } else {
+            send_packet_out(conn, b, proto,
+                            OFPP_CONTROLLER, pi.flow_metadata.flow.in_port.ofp_port);
+        }
+    } else {
+        LOG(ERROR) << "Failed to compose TCP RST packet.";
+    }
+}
+
+/**
+ * Handles ICMP Destination Unreachable (Port Unreachable) packet generation and sending for UDP.
+ * @param conn The Switch Connection
+ * @param intFlowManager IntFlowManager
+ * @param pi The OpenFlow packet-in structure.
+ * @param proto The OpenFlow protocol version.
+ * @param pkt The dp_packet containing the raw packet data.
+ * @param flow The parsed flow from the packet.
+ */
+static void handleUdpIcmpUnreachablePktIn(SwitchConnection* conn,
+                                          IntFlowManager& intFlowManager,
+                                          struct ofputil_packet_in& pi,
+                                          ofputil_protocol& proto,
+                                          struct dp_packet* pkt,
+                                          struct flow& flow) {
+    const uint8_t* dmac = NULL;
+    if (pi.cookie == flow::cookie::RST_VLAN_FLOW)
+        dmac = intFlowManager.getRouterMacAddr();
+
+    // Use ofpbuf_data and ofpbuf_size macros to access dp_packet contents
+    OfpBuf b = packets::compose_icmp_port_unreachable((const char *)dpp_data(pkt), dpp_size(pkt), flow.dl_type, dmac);
+
+    if (b.get()) { // Check if packet composition was successful
+        // Send the composed packet out.
+        // The packet-in with RST_FLOW cookie indicates it's handled by the controller,
+        // and the response should be sent back to the original ingress port.
+        if (pi.cookie == flow::cookie::RST_VLAN_FLOW) {
+            uint32_t vlan = pi.flow_metadata.flow.regs[0];
+            send_packet_out(conn, b, proto,
+                            OFPP_CONTROLLER, pi.flow_metadata.flow.in_port.ofp_port, pushVlanActions(vlan));
+        } else {
+            send_packet_out(conn, b, proto,
+                            OFPP_CONTROLLER, pi.flow_metadata.flow.in_port.ofp_port);
+        }
+    } else {
+        LOG(ERROR) << "Failed to compose ICMP Port Unreachable packet.";
+    }
+}
+
+/**
+ * Dispatches packet-in messages with RST_FLOW cookie to appropriate handlers based on the L4 protocol.
+ * @param conn The Switch Connection
+ * @param intFlowManager IntFlowManager
+ * @param pi The OpenFlow packet-in structure.
+ * @param proto The OpenFlow protocol version.
+ * @param pkt The dp_packet containing the raw packet data.
+ */
+static void handleRstPktIn(SwitchConnection* conn,
+                           IntFlowManager& intFlowManager,
+                           struct ofputil_packet_in& pi,
+                           ofputil_protocol& proto,
+                           struct dp_packet* pkt) {
+    struct flow flow;
+    flow_extract(pkt, &flow); // Extract flow information from the packet
+
+    // Determine if the packet is IPv4 or IPv6
+    bool is_ipv4 = (flow.dl_type == htons(eth::type::IP));
+    bool is_ipv6 = (flow.dl_type == htons(eth::type::IPV6));
+
+    if (!is_ipv4 && !is_ipv6) {
+        LOG(WARNING) << "RST_FLOW cookie received for non-IP packet. Ignoring.";
+        return;
+    }
+
+    if (flow.nw_proto == IPPROTO_TCP) { // TCP protocol (6)
+        LOG(DEBUG) << "Dispatching to handleTcpRstPktIn.";
+        handleTcpRstPktIn(conn, intFlowManager, pi, proto, pkt, flow); // Call as member function
+    } else if (flow.nw_proto == IPPROTO_UDP) { // UDP protocol (17)
+        LOG(DEBUG) << "Dispatching to handleUdpIcmpUnreachablePktIn.";
+        handleUdpIcmpUnreachablePktIn(conn, intFlowManager, pi, proto, pkt, flow); // Call as member function
+    } else {
+        LOG(WARNING) << "RST_FLOW cookie received for unsupported L4 protocol "
+                     << (uint32_t)flow.nw_proto << ". Ignoring.";
+    }
+}
+
+/**
  * Dispatch packet-in messages to the appropriate handlers
  */
 void PacketInHandler::Handle(SwitchConnection* conn,
@@ -964,6 +1079,8 @@ void PacketInHandler::Handle(SwitchConnection* conn,
                             conn, accSwConnection, pi, proto, pkt.get());
     else if ((pi.cookie == flow::cookie::DNS_RESPONSE_V4) || (pi.cookie == flow::cookie::DNS_RESPONSE_V6))
         handleDNSPktIn(pi, proto, pkt.get());
+    else if ((pi.cookie == flow::cookie::RST_FLOW) || (pi.cookie == flow::cookie::RST_VLAN_FLOW))
+        handleRstPktIn(conn, intFlowManager, pi, proto, pkt.get());
 }
 
 } /* namespace opflexagent */
