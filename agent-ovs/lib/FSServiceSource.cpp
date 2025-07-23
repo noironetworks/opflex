@@ -75,6 +75,7 @@ void FSServiceSource::updated(const fs::path& filePath) {
     static const std::string SM_NEXT_HOP_PORT("next-hop-port");
     static const std::string SM_NODE_PORT("node-port");
     static const std::string SM_CONNTRACK("conntrack-enabled");
+    static const std::string SM_CONNTRACK_NAT("conntrack-nat");
     static const std::string SESSION_AFFINITY("session-affinity");
     static const std::string CLIENT_IP("client-ip");
     static const std::string TIMEOUT_SECONDS("timeout-seconds");
@@ -254,6 +255,11 @@ void FSServiceSource::updated(const fs::path& filePath) {
                     v.second.get_optional<bool>(SM_CONNTRACK);
                 if (conntrack)
                     sm.setConntrackMode(conntrack.get());
+
+                optional<bool> conntrackNat =
+                    v.second.get_optional<bool>(SM_CONNTRACK_NAT);
+                if (conntrackNat)
+                    sm.setConntrackNatMode(conntrackNat.get());
 
                 optional<const ptree&> sa =
                     v.second.get_child_optional(SESSION_AFFINITY);
