@@ -73,6 +73,10 @@ std::ostream & operator<<(std::ostream &os, const Service& s) {
                 os << "->[" << join(sm.getNextHopIPs(), ",") << "]";
             }
 
+            if (!sm.getTerminatingNextHopIPs().empty()) {
+                os << "->[" << join(sm.getTerminatingNextHopIPs(), ",") << "]";
+            }
+
             if (sm.getNextHopPort())
                 os << ":" << sm.getNextHopPort().get();
 
@@ -81,6 +85,9 @@ std::ostream & operator<<(std::ostream &os, const Service& s) {
 
             if (sm.isConntrackMode())
                 os << " (conntrack)";
+
+            if (sm.isConntrackNatMode())
+                os << " (conntrack-nat)";
 
             if (sm.getClientAffinity())
                 os << ",session-affinity-timeout:" << sm.getClientAffinity().get();

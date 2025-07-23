@@ -72,9 +72,11 @@ void FSServiceSource::updated(const fs::path& filePath) {
     static const std::string SM_GATEWAY_IP("gateway-ip");
     static const std::string SM_NEXT_HOP_IP("next-hop-ip");
     static const std::string SM_NEXT_HOP_IPS("next-hop-ips");
+    static const std::string SM_TERMINATING_NEXT_HOP_IPS("terminating-next-hop-ips");
     static const std::string SM_NEXT_HOP_PORT("next-hop-port");
     static const std::string SM_NODE_PORT("node-port");
     static const std::string SM_CONNTRACK("conntrack-enabled");
+    static const std::string SM_CONNTRACK_NAT("conntrack-nat");
     static const std::string SESSION_AFFINITY("session-affinity");
     static const std::string CLIENT_IP("client-ip");
     static const std::string TIMEOUT_SECONDS("timeout-seconds");
@@ -240,6 +242,14 @@ void FSServiceSource::updated(const fs::path& filePath) {
                     }
                 }
 
+                optional<const ptree&> terminating_nhips =
+                    v.second.get_child_optional(SM_TERMINATING_NEXT_HOP_IPS);
+                if (terminating_nhips) {
+                    for (auto& nhip : terminating_nhips.get()) {
+                        sm.addTerminatingNextHopIP(nhip.second.data());
+                    }
+                }
+
                 optional<uint16_t> nextHopPort =
                     v.second.get_optional<uint16_t>(SM_NEXT_HOP_PORT);
                 if (nextHopPort)
@@ -254,6 +264,11 @@ void FSServiceSource::updated(const fs::path& filePath) {
                     v.second.get_optional<bool>(SM_CONNTRACK);
                 if (conntrack)
                     sm.setConntrackMode(conntrack.get());
+
+                optional<bool> conntrackNat =
+                    v.second.get_optional<bool>(SM_CONNTRACK_NAT);
+                if (conntrackNat)
+                    sm.setConntrackNatMode(conntrackNat.get());
 
                 optional<const ptree&> sa =
                     v.second.get_child_optional(SESSION_AFFINITY);
