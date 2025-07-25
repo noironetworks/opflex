@@ -290,7 +290,7 @@ public:
          */
         ServiceMapping() : serviceIp(boost::none), serviceProto(boost::none),
             servicePort(boost::none), gatewayIp(boost::none), nextHopPort(boost::none),
-            nodePort(boost::none), saTimeoutSecs(boost::none), ctMode(false) {}
+            nodePort(boost::none), saTimeoutSecs(boost::none), ctMode(false), ctNatMode(false) {}
 
         /**
          * Get the service IP address for this service mapping
@@ -480,12 +480,33 @@ public:
         }
 
         /**
+         * Set the connection tracking nat mode flag to the value
+         * specified.  If connection tracking nat is enabled, reverse flow
+         * mapping requires a stateful connection
+         *
+         * @param ctNatMode the new value for the connection tracking
+         * mode
+         */
+        void setConntrackNatMode(bool ctNatMode) {
+            this->ctNatMode = ctNatMode;
+        }
+
+        /**
          * Get the value of the connection tracking mode flag
          *
          * @return true if connection tracking mode is on
          */
         bool isConntrackMode() const {
             return ctMode;
+        }
+
+        /**
+         * Get the value of the connection tracking nat mode flag
+         *
+         * @return true if connection tracking nat mode is on
+         */
+        bool isConntrackNatMode() const {
+            return ctNatMode;
         }
 
        /**
@@ -523,6 +544,7 @@ public:
         boost::optional<uint16_t> nodePort;
         boost::optional<uint32_t> saTimeoutSecs;
         bool ctMode;
+        bool ctNatMode;
     };
 
     /**
