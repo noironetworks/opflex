@@ -145,9 +145,18 @@ void on_active_connection(uv_connect_t *req, int status) {
 
         /* the peer might have been deleted, so we have to avoid accessing any
          * of its members */
-        LOG(DEBUG) << peer << " has had a connection attempt cancelled";
+	if (peer != 0) {
+            LOG(WARNING) << "Peer has had a connection attempt cancelled";
+	} else {
+            LOG(WARNING) << "Peerless connection attempt cancelled";
+	}
         peer->onError(status);
         return;
+    }
+    if (peer != 0) {
+        LOG(INFO) << "Peer has on_active_connection callback";
+    } else {
+        LOG(INFO) << "Peerless on_active_connection callback";
     }
 
     if (peer->destroying_) {
@@ -178,6 +187,11 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
 
     ActiveTcpPeer * peer = Peer::get(req);
     assert(!peer->passive_);
+    if (peer != 0) {
+        LOG(INFO) << "Peer has on_resolved callback";
+    } else {
+        LOG(INFO) << "Peerless on_resolved callback";
+    }
 
     if (peer->destroying_) {
         LOG(INFO) << peer << " peer is being destroyed. down() it";
