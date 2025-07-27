@@ -145,9 +145,19 @@ void on_active_connection(uv_connect_t *req, int status) {
 
         /* the peer might have been deleted, so we have to avoid accessing any
          * of its members */
+	if (peer != 0) {
+            LOG(WARNING) << "Peer has had a connection attempt cancelled";
+	} else {
+            LOG(WARNING) << "Peerless connection attempt cancelled";
+	}
         LOG(DEBUG) << peer << " has had a connection attempt cancelled";
         peer->onError(status);
         return;
+    }
+    if (peer != 0) {
+        LOG(INFO) << "Peer has on_active_connection callback";
+    } else {
+        LOG(INFO) << "Peerless on_active_connection callback";
     }
 
     if (peer->destroying_) {

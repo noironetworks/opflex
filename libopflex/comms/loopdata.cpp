@@ -85,7 +85,7 @@ prepared:
         /* We need to make sure we unblock */
 
         if (!uv_is_active((uv_handle_t *)&prepareAgain_)) {
-            LOG(TRACE) << " Starting prepareAgain_ @" << reinterpret_cast<void *>(&prepareAgain_);
+            LOG(TRACE) << "Starting prepareAgain_ ";
         } // else we are just pushing it out in time :)
         uv_timer_start(&prepareAgain_, prepareAgainCB, 1250, 0);
     }
@@ -203,7 +203,7 @@ Peer::LoopData::~LoopData() {
 }
 
 void Peer::LoopData::PeerDisposer::operator () (Peer *peer) {
-    LOG(INFO) << peer << " destroy() because this communication thread is shutting down";
+    LOG(INFO) << "Do destroy() because this communication thread is shutting down";
     peer->destroy(now_);
 }
 

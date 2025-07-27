@@ -72,16 +72,19 @@ void OpflexClientConnection::connect() {
     active = true;
     ready = false;
 
+    LOG(INFO) << "initializing handshake timer  to set up new connection";
     handshake_timer = new uv_timer_t;
     uv_timer_init(pool->client_loop, handshake_timer);
     handshake_timer->data = this;
 
+    LOG(INFO) << "updating peer status to set up new connection";
     pool->updatePeerStatus(hostname, port, PeerStatusListener::CONNECTING);
 
     std::stringstream rp;
     rp << hostname << ":" << port;
     remote_peer = rp.str();
 
+    LOG(INFO) << "calling create to set up new connection";
     peer = yajr::Peer::create(hostname,
                               std::to_string(port),
                               on_state_change,

@@ -24,6 +24,8 @@ extern void retry_later(ActivePeer * peer);
 
 void ::yajr::comms::internal::ActiveTcpPeer::retry() {
 
+    LOG(INFO) << "Retrying peer";
+
     if (destroying_) {
         LOG(INFO) << this << "Not retrying because of pending destroy";
         return;
