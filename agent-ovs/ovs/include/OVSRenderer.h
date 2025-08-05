@@ -29,6 +29,7 @@
 #include "PacketLogHandler.h"
 #include "QosRenderer.h"
 #include "NatStatsManager.h"
+#include <opflexagent/OutOfBandConfig.h>
 
 #include <mutex>
 
@@ -163,6 +164,7 @@ private:
     virtual void packetDropLogConfigUpdated(const opflex::modb::URI& dropLogCfgURI){}
     virtual void packetDropFlowConfigUpdated(const opflex::modb::URI& dropFlowCfgURI){}
     virtual void packetDropPruneConfigUpdated(const std::string& pruneFilter);
+    virtual void outOfBandConfigUpdated(std::shared_ptr<OutOfBandConfigSpec> &sptr);
 
     /**
      * Start packet logger

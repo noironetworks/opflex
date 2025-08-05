@@ -128,6 +128,25 @@ private:
     void notifyPacketDropPruneConfigListeners(const std::string &dropPruneFilterName);
 
     /**
+     * Notify listeners for out of band config object
+     *
+     * @param oobSptr shared ptr to OutOfBandConfig
+     */
+    void notifyOutOfBandConfigListeners(std::shared_ptr<OutOfBandConfigSpec> &oobSptr);
+
+    /**
+     * Add or update an out of band config object
+     *
+     * @param oobCfg Out Of Band Config object
+     */
+    void outOfBandConfigUpdated(const OutOfBandConfigSpec &oobCfg);
+
+    /**
+     * Delete an out of band config object
+     */
+    void outOfBandConfigDeleted();
+
+    /**
      * Add or update a packet drop log config object
      *
      * @param dropCfg Drop log enable and mode
@@ -167,6 +186,7 @@ private:
 
     friend class FSRDConfigSource;
     friend class FSPacketDropLogConfigSource;
+    friend class FSOutOfBandConfigSource;
 };
 
 } /* namespace opflexagent */
