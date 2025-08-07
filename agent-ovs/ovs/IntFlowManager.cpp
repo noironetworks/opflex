@@ -1416,6 +1416,28 @@ static void matchServiceProto (FlowBuilder& flow, uint8_t proto,
     }
 }
 
+// match L3L4 original tuple dest stored in conntrack against service
+static void matchCtL34(FlowBuilder& flow, uint8_t proto,
+                      const Service::ServiceMapping& sm) {
+    boost::system::error_code ec;
+    address serviceAddr = address::from_string(sm.getServiceIP().get(), ec);
+    if (ec) {
+        LOG(WARNING) << "Invalid service IP: "
+                     << sm.getServiceIP().get()
+                     << ": " << ec.message();
+        return;
+    }
+    flow.ctIpDst(serviceAddr);
+
+    if (!proto) return;
+    flow.ctProto(proto);
+
+    if (!sm.getServicePort()) return;
+    uint16_t s_port = sm.getServicePort().get();
+
+    flow.ctTpDst(s_port);
+}
+
 static void matchActionServiceProto(FlowBuilder& flow, uint8_t proto,
                                     const Service::ServiceMapping& sm,
                                     bool forward, bool applyAction) {
@@ -1452,8 +1474,12 @@ static void flowRevMapCt(FlowEntryList& serviceRevFlows,
                          uint16_t zoneId,
                          uint8_t proto,
                          uint32_t tunPort,
-                         IntFlowManager::EncapType encapType) {
+                         IntFlowManager::EncapType encapType,
+                         bool ctNatAction) {
     FlowBuilder ipRevMapCt;
+    ActionBuilder fna;
+    fna.unnat();
+
     matchDestDom(ipRevMapCt, 0, rdId);
     matchActionServiceProto(ipRevMapCt, proto, sm,
                             false, false);
@@ -1466,9 +1492,15 @@ static void flowRevMapCt(FlowEntryList& serviceRevFlows,
             .pushVlan()
             .regMove(MFF_REG0, MFF_VLAN_VID);
     }
-    ipRevMapCt.action()
-        .conntrack(0, static_cast<mf_field_id>(0),
-                   zoneId, IntFlowManager::SRC_TABLE_ID);
+    if (!ctNatAction) {
+        ipRevMapCt.action()
+            .conntrack(0, static_cast<mf_field_id>(0),
+                       zoneId, IntFlowManager::SRC_TABLE_ID);
+    } else {
+        ipRevMapCt.action()
+            .conntrack(0, static_cast<mf_field_id>(0),
+                       zoneId, IntFlowManager::SRC_TABLE_ID, 0, fna);
+    }
     ipRevMapCt.build(serviceRevFlows);
 }
 
@@ -4467,6 +4499,18 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                                << as.getDomainURI().get();
             }
 
+            bool ctNatAction = false;
+            // define when to use ct nat action
+            if (!loopback
+                && conntrackEnabled
+                && sm.isConntrackNatMode()
+                && zoneId != static_cast<uint16_t>(-1)
+                && as.getServiceMode() == Service::LOADBALANCER) {
+                LOG(INFO) << "Using Connection Tracking NAT for "
+                          << as.getDomainURI().get();
+                ctNatAction = true;
+            }
+
             address serviceAddr =
                 address::from_string(sm.getServiceIP().get(), ec);
             if (ec) {
@@ -4485,6 +4529,97 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     proto = 6;
             }
 
+            if (ctNatAction) {
+                FlowBuilder ipFwdCt, ipFwdEst, ipFwdRstNew, ipRevEst;
+                uint32_t metav = as.getInterfaceName()
+                    ? flow::meta::FROM_SERVICE_INTERFACE
+                    : 0;
+
+                 ipFwdCt.metadata(metav, flow::meta::FROM_SERVICE_INTERFACE);
+                 ipFwdEst.metadata(metav, flow::meta::FROM_SERVICE_INTERFACE);
+
+                ActionBuilder fna;
+                fna.unnat();
+                matchDestDom(ipFwdCt, 0, rdId);
+                matchActionServiceProto(ipFwdCt, proto, sm, true, false);
+                // Untracked flows
+                ipFwdCt.priority(100).ipDst(serviceAddr)
+                    .conntrackState(0, FlowBuilder::CT_TRACKED)
+                    .action()
+                    .conntrack(0, static_cast<mf_field_id>(0),
+                               zoneId, IntFlowManager::SERVICE_NEXTHOP_TABLE_ID,
+                               0, fna)
+                    .parent().build(serviceNextHopFlows);
+
+                // Established flows
+                matchDestDom(ipFwdEst, 0, rdId);
+                matchCtL34(ipFwdEst, proto, sm);
+                ipFwdEst.priority(100)
+                        .ctZone(zoneId)
+                        .ctMark(ctMark)
+                        .conntrackState(FlowBuilder::CT_TRACKED |
+                                        FlowBuilder::CT_ESTABLISHED,
+                                        FlowBuilder::CT_TRACKED |
+                                        FlowBuilder::CT_ESTABLISHED |
+                                        FlowBuilder::CT_INVALID |
+                                        FlowBuilder::CT_NEW)
+                        .action()
+                        .decTtl()
+                        .metadata(flow::meta::ROUTED, flow::meta::ROUTED)
+                        .go(ROUTE_TABLE_ID)
+                        .parent().build(serviceNextHopFlows);
+
+                // reset +new flows when active nhop list empty
+                matchDestDom(ipFwdRstNew, 0, rdId);
+                matchActionServiceProto(ipFwdRstNew, proto, sm, true, !ctNatAction);
+
+                if (as.getInterfaceName() && (ofPort != OFPP_NONE) && as.getIfaceVlan())
+                    ipFwdRstNew.cookie(flow::cookie::RST_VLAN_FLOW);
+                else
+                    ipFwdRstNew.cookie(flow::cookie::RST_FLOW);
+
+                ipFwdRstNew.priority(10)
+                           .ipDst(serviceAddr)
+                           .conntrackState(FlowBuilder::CT_TRACKED |
+                                           FlowBuilder::CT_NEW,
+                                           FlowBuilder::CT_TRACKED |
+                                           FlowBuilder::CT_NEW)
+                            .action().controller()
+                            .parent().build(serviceNextHopFlows);
+
+                // Established flows (reverse)
+                matchDestDom(ipRevEst, 0, rdId);
+                matchCtL34(ipRevEst, proto, sm);
+                ipRevEst.priority(100)
+                        .ctZone(zoneId)
+                        .ctMark(ctMark)
+                        .conntrackState(FlowBuilder::CT_TRACKED |
+                                        FlowBuilder::CT_ESTABLISHED,
+                                        FlowBuilder::CT_TRACKED |
+                                        FlowBuilder::CT_ESTABLISHED |
+                                        FlowBuilder::CT_INVALID |
+                                        FlowBuilder::CT_NEW)
+                        .action()
+                        .ethSrc(macAddr)
+                        .decTtl();
+                if (!as.getInterfaceName()) {
+                    ipRevEst.action()
+                        .metadata(flow::meta::ROUTED,
+                                  flow::meta::ROUTED)
+                        .go(BRIDGE_TABLE_ID);
+                } else if (ofPort != OFPP_NONE) {
+                    if (as.getIfaceVlan()) {
+                        ipRevEst.action()
+                            .pushVlan()
+                            .setVlanVid(as.getIfaceVlan().get());
+                    }
+                    ipRevEst.action()
+                        .ethDst(getRouterMacAddr())
+                        .output(ofPort);
+                }
+                ipRevEst.build(serviceRevFlows);
+            }
+
             uint16_t link = 0;
             for (const string& ipstr : sm.getNextHopIPs()) {
                 auto nextHopAddr = address::from_string(ipstr, ec);
@@ -4496,7 +4631,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                 {
                     FlowBuilder ipMap;
                     matchDestDom(ipMap, 0, rdId);
-                    matchActionServiceProto(ipMap, proto, sm, true, true);
+                    matchActionServiceProto(ipMap, proto, sm, true, !ctNatAction);
                     ipMap.ipDst(serviceAddr);
 
                     // use the first address as a "default" so that
@@ -4508,7 +4643,9 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                         ipMap.priority(100)
                             .reg(7, link);
                     }
-                    ipMap.action().ipDst(nextHopAddr).decTtl();
+                    if (!ctNatAction)
+                        ipMap.action().ipDst(nextHopAddr);
+                    ipMap.action().decTtl();
                     // loopback has highest priority
                     if (loopback) {
                         if (!agent.getEndpointManager().getEpFromLocalMap(ipstr)) {
@@ -4546,16 +4683,31 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                             ipMap.metadata(metav,
                                            flow::meta::FROM_SERVICE_INTERFACE);
 
-                            ActionBuilder setMark;
-                            // Carry the ctMark information in reg12 so that cluster
-                            // service-pod stats flows can use this info to avoid getting
-                            // get hit for traffic coming from on-prem.
-                            setMark.reg(MFF_CT_MARK, ctMark);
-                            ipMap.action()
-                                .reg(MFF_REG12, ctMark)
-                                .conntrack(ActionBuilder::CT_COMMIT,
-                                           static_cast<mf_field_id>(0),
-                                           zoneId, 0xff, 0, setMark);
+                            if (!loopback) {
+                                ActionBuilder setMarkAndNat;
+                                // Carry the ctMark information in reg12 so that cluster
+                                // service-pod stats flows can use this info to avoid getting
+                                // get hit for traffic coming from on-prem.
+                                setMarkAndNat.reg(MFF_CT_MARK, ctMark);
+                                uint8_t nextTable = 0xff;
+                                if (ctNatAction) {
+                                    ipMap.conntrackState(FlowBuilder::CT_TRACKED |
+                                                         FlowBuilder::CT_NEW,
+                                                         FlowBuilder::CT_TRACKED |
+                                                         FlowBuilder::CT_NEW);
+                                    uint16_t s_port = sm.getServicePort().get();
+                                    uint16_t nh_port = s_port;
+                                    if (sm.getNextHopPort())
+                                        nh_port = sm.getNextHopPort().get();
+                                    setMarkAndNat.nat(nextHopAddr, nh_port, 0, false);
+                                    nextTable = IntFlowManager::ROUTE_TABLE_ID;
+                                }
+                                ipMap.action()
+                                    .reg(MFF_REG12, ctMark)
+                                    .conntrack(ActionBuilder::CT_COMMIT,
+                                               static_cast<mf_field_id>(0),
+                                               zoneId, nextTable, 0, setMarkAndNat);
+                            }
                         }
 
                         // If a cookie was already allocated by updateSvcTgtStatsFlows()
@@ -4575,8 +4727,9 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                         }
 
                         ipMap.action()
-                            .metadata(flow::meta::ROUTED, flow::meta::ROUTED)
-                            .go(ROUTE_TABLE_ID);
+                            .metadata(flow::meta::ROUTED, flow::meta::ROUTED);
+                        if (!ctNatAction)
+                            ipMap.action().go(ROUTE_TABLE_ID);
                     } else if (as.getServiceMode() == Service::LOCAL_ANYCAST &&
                                ofPort != OFPP_NONE) {
                         ipMap.action().output(ofPort);
@@ -4587,7 +4740,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                 if (as.getServiceMode() == Service::LOADBALANCER) {
                     // For load balanced services reverse traffic is
                     // handled with normal policy semantics
-                    if (zoneId != static_cast<uint16_t>(-1)) {
+                    if (zoneId != static_cast<uint16_t>(-1) && !loopback) {
                         if (encapType == ENCAP_VLAN) {
                             // traffic from the uplink will originally
                             // have had a vlan tag that was stripped
@@ -4597,13 +4750,14 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                             // the state when the packet comes back.
                             flowRevMapCt(serviceRevFlows, 101,
                                          sm, nextHopAddr, rdId, zoneId, proto,
-                                         getTunnelPort(), ENCAP_VLAN);
+                                         getTunnelPort(), ENCAP_VLAN, ctNatAction);
                         }
                         flowRevMapCt(serviceRevFlows, 100,
                                      sm, nextHopAddr, rdId, zoneId, proto,
-                                     0, ENCAP_NONE);
+                                     0, ENCAP_NONE, ctNatAction);
                     }
-                    {
+                    // ctNatAction skips est flows per link
+                    if (!ctNatAction) {
                         FlowBuilder ipRevMap;
                         matchDestDom(ipRevMap, 0, rdId);
                         matchActionServiceProto(ipRevMap, proto, sm,
@@ -4637,7 +4791,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                                     .action()
                                     .ipDst(nextHopAddr);
                         }
-                        if (zoneId != static_cast<uint16_t>(-1)) {
+                        if (zoneId != static_cast<uint16_t>(-1) && !loopback) {
                             ipRevMap
                                 .conntrackState(FlowBuilder::CT_TRACKED |
                                                 FlowBuilder::CT_ESTABLISHED,
@@ -4668,6 +4822,34 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                 }
 
                 link += 1;
+            }
+
+            if (!ctNatAction)
+                continue;
+
+            // add -trk reverse flows for terminating next hop ips
+            // for ctNatAction implies !loopback
+            // note all estb flows are per service mapping and will
+            // be present as long as service mapping is present
+            for (const string& ipstr : sm.getTerminatingNextHopIPs()) {
+                auto nextHopAddr = address::from_string(ipstr, ec);
+                if (ec) {
+                    LOG(WARNING) << "Invalid service next hop IP: "
+                                 << ipstr << ": " << ec.message();
+                    continue;
+                }
+                if (as.getServiceMode() == Service::LOADBALANCER) {
+                    if (zoneId != static_cast<uint16_t>(-1)) {
+                        if (encapType == ENCAP_VLAN) {
+                            flowRevMapCt(serviceRevFlows, 101,
+                                         sm, nextHopAddr, rdId, zoneId, proto,
+                                         getTunnelPort(), ENCAP_VLAN, ctNatAction);
+                        }
+                        flowRevMapCt(serviceRevFlows, 100,
+                                     sm, nextHopAddr, rdId, zoneId, proto,
+                                     0, ENCAP_NONE, ctNatAction);
+                    }
+                }
             }
         }
     }
@@ -4769,6 +4951,17 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                 }
             }
 
+            vector<address> terminatingNextHopAddrs;
+            for (const string& ipstr : sm.getTerminatingNextHopIPs()) {
+                auto nextHopAddr = address::from_string(ipstr, ec);
+                if (ec) {
+                    LOG(WARNING) << "Invalid service next hop IP: "
+                                 << ipstr << ": " << ec.message();
+                } else {
+                    terminatingNextHopAddrs.push_back(nextHopAddr);
+                }
+            }
+
             uint8_t proto = 0;
             if (sm.getServiceProto()) {
                 const string& protoStr = sm.getServiceProto().get();
@@ -4804,7 +4997,7 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                     serviceDest.action().ethSrc(getRouterMacAddr());
                 }
 
-                if (!nextHopAddrs.empty()) {
+                if (!nextHopAddrs.empty() || !terminatingNextHopAddrs.empty()) {
                     // map traffic to service to the next hop IPs
                     // using DNAT semantics
                     if (as.getServiceMode() == Service::LOCAL_ANYCAST) {
@@ -4812,18 +5005,27 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                     } else {
                         serviceDest.action().ethDst(getRouterMacAddr());
                     }
-                    serviceDest.action()
-                        .multipath(hash_fields,
-                                   1024,
-                                   ActionBuilder::NX_MP_ALG_ITER_HASH,
-                                   static_cast<uint16_t>(nextHopAddrs.size()-1),
-                                   32, MFF_REG7)
-                        .go(SERVICE_NEXTHOP_TABLE_ID);
+                    if (!nextHopAddrs.empty()) {
+                        serviceDest.action()
+                            .multipath(hash_fields,
+                                       1024,
+                                       ActionBuilder::NX_MP_ALG_ITER_HASH,
+                                       static_cast<uint16_t>(nextHopAddrs.size()-1),
+                                       32, MFF_REG7);
+                    }
+                    serviceDest.action().go(SERVICE_NEXTHOP_TABLE_ID);
                 } else if (as.getServiceMode() == Service::LOCAL_ANYCAST &&
                            ofPort != OFPP_NONE) {
                     serviceDest.action()
                         .ethDst(macAddr).decTtl()
                         .output(ofPort);
+                } else {
+                    // send packet to be dropped to controller
+                    if (as.getInterfaceName() && (ofPort != OFPP_NONE) && as.getIfaceVlan())
+                        serviceDest.cookie(flow::cookie::RST_VLAN_FLOW);
+                    else
+                        serviceDest.cookie(flow::cookie::RST_FLOW);
+                    serviceDest.action().controller();
                 }
 
                 serviceDest.build(bridgeFlows);

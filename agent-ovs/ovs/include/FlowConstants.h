@@ -95,6 +95,17 @@ extern const uint64_t DNS_RESPONSE_V6;
  */
 extern const uint64_t NAT_FLOW;
 
+/**
+ * The cookie used to capture packets for which a tcp rst or icmp unreachable needs to be sent.
+ */
+extern const uint64_t RST_FLOW;
+
+/**
+ * The cookie used to capture packets for which a tcp rst or icmp unreachable needs to be sent along with
+ * a vlan push
+ */
+extern const uint64_t RST_VLAN_FLOW;
+
 } // namespace cookie
 
 namespace meta {

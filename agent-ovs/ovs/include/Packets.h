@@ -234,6 +234,31 @@ OfpBuf compose_arp(uint16_t op,
                    uint32_t tpa,
                    bool rarp = false);
 
+/**
+ * Composes a TCP RST packet based on an original packet's raw data and Ethernet type.
+ * @param pkt_data Raw pointer to the original packet's data.
+ * @param pkt_len Length of the original packet.
+ * @param eth_type The Ethernet type (e.g., eth::type::IPV4, eth::type::IPV6).
+ * @param dmac destination mac to rewrite if present
+ * @return An OfpBuf containing the composed TCP RST packet. Returns an empty OfpBuf if an error occurs.
+ */
+OfpBuf compose_tcp_rst(const char* pkt_data,
+                       size_t pkt_len,
+                       uint16_t eth_type,
+                       const uint8_t* dmac = NULL);
+
+/**
+ * Composes an ICMP Destination Unreachable (Port Unreachable) packet for UDP based on an original packet's raw data and Ethernet type.
+ * @param pkt_data Raw pointer to the original packet's data.
+ * @param pkt_len Length of the original packet.
+ * @param eth_type The Ethernet type (e.g., eth::type::IPV4, eth::type::IPV6).
+ * @param dmac destination mac to rewrite if present
+ * @return An OfpBuf containing the composed ICMP packet. Returns an empty OfpBuf if an error occurs.
+ */
+OfpBuf compose_icmp_port_unreachable(const char* pkt_data,
+                                     size_t pkt_len,
+                                     uint16_t eth_type,
+                                     const uint8_t* dmac = NULL);
 } /* namespace packets */
 } /* namespace opflexagent */
 

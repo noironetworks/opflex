@@ -164,6 +164,26 @@ public:
                        uint8_t prefixLen = 128);
 
     /**
+     * Add a match against CT IP source.  Also sets appropriate ethertype
+     * match.
+     * @param ip the original ip address to match in connection tracker
+     * @param prefixLen prefix to compute a mask
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& ctIpSrc(const boost::asio::ip::address& ip,
+                       uint8_t prefixLen = 128);
+
+    /**
+     * Add a match against CT IP destination.  Also sets appropriate
+     * ethertype match.
+     * @param ip the original ip address to match in connection tracker
+     * @param prefixLen prefix to compute a mask
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& ctIpDst(const boost::asio::ip::address& ip,
+                       uint8_t prefixLen = 128);
+
+    /**
      * Add a match against ARP source.  Also sets appropriate ethertype
      * match.
      * @param ip the ip address to match
@@ -212,6 +232,13 @@ public:
     FlowBuilder& proto(uint8_t proto);
 
     /**
+     * Add a match against CT IPv4/IPv6 protocol number
+     * @param proto the protocol number to match
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& ctProto(uint8_t proto);
+
+    /**
      * Add a match against TCP/UDP source port number.  Must have
      * appropriate ethertype match and protocol number match.
      * @param port the port number to match
@@ -221,6 +248,15 @@ public:
     FlowBuilder& tpSrc(uint16_t port, uint16_t mask = ~0);
 
     /**
+     * Add a match against CT TCP/UDP source port number.  Must have
+     * appropriate ethertype match and protocol number match.
+     * @param port the port number to match
+     * @param mask The mask for the match
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& ctTpSrc(uint16_t port, uint16_t mask = ~0);
+
+    /**
      * Add a match against TCP/UDP destination port number.  Must have
      * appropriate ethertype match and protocol number match.
      * @param port the port number to match
@@ -228,6 +264,15 @@ public:
      * @return this flow builder for chaining
      */
     FlowBuilder& tpDst(uint16_t port, uint16_t mask = ~0);
+
+    /**
+     * Add a match against CT TCP/UDP destination port number.  Must have
+     * appropriate ethertype match and protocol number match.
+     * @param port the port number to match
+     * @param mask The mask for the match
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& ctTpDst(uint16_t port, uint16_t mask = ~0);
 
     /**
      * Add a match against TCP flags.  Must have apprioate ethertype
@@ -340,6 +385,13 @@ public:
      * @return this flow builder for chaining
      */
     FlowBuilder& ctLabel(ovs_u128 ctLabel, ovs_u128 mask);
+
+    /**
+     * Match against the connection tracking zone
+     * @param ct_zone the value of the connection tracking zone
+     * @return this flow builder for chaining
+     */
+    FlowBuilder& ctZone(uint16_t ctZone);
 
     /**
      * Match against the connection tracking label
