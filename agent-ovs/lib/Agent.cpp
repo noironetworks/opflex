@@ -191,6 +191,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string OPFLEX_SWITCH_SYNC_DELAY("opflex.timers.switch-sync-delay");
     static const std::string OPFLEX_SWITCH_SYNC_DYNAMIC("opflex.timers.switch-sync-dynamic");
     static const std::string OPFLEX_RESET_WAIT_DELAY("opflex.timers.reset-wait-delay");
+    static const std::string OPFLEX_CONNECT_TIMEOUT("opflex.timers.connect-timeout");
     static const std::string DISABLED_FEATURES("feature.disabled");
     static const std::string BEHAVIOR_L34FLOWS_WITHOUT_SUBNET("behavior.l34flows-without-subnet");
     static const std::string OPFLEX_ASYC_JSON("opflex.asyncjson.enabled");
@@ -516,6 +517,12 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
         LOG(INFO) << "policy retry delay timer set to " << policy_retry_delay_timer << " secs";
     }
 
+    optional<uint32_t> connectTimeoutOpt = properties.get_optional<uint32_t>(OPFLEX_CONNECT_TIMEOUT);
+    if (connectTimeoutOpt) {
+        connectTimeout = connectTimeoutOpt.get();
+        LOG(INFO) << "connect watchedog timer set to " << connectTimeout << " secs";
+    }
+
     optional<uint32_t> handshakeOpt = properties.get_optional<uint32_t>(OPFLEX_HANDSHAKE);
     if (handshakeOpt) {
         peerHandshakeTimeout = handshakeOpt.get();
@@ -654,6 +661,7 @@ void Agent::applyProperties() {
     framework.setPolicyRetryDelayTimerDuration(policy_retry_delay_timer*1000);
     framework.setHandshakeTimeout(peerHandshakeTimeout);
     framework.setKeepaliveTimeout(keepaliveTimeout);
+    framework.setConnectTimeout(connectTimeout);
     framework.setStartupPolicy(opflexPolicyFile, modelgbp::getMetadata(),
                                startupPolicyDuration, startupPolicyEnabled,
                                localResolveAftConn);

@@ -421,6 +421,7 @@ class Peer : public SafeListBaseHook {
         } _;
         uv_timer_t keepAliveTimer_;
     };
+    uv_timer_t connectTimer_;
     /** Function pointer type for the uv_loop selector method to be used to
      *  select which particular uv_loop to assign a peer to.
      */
@@ -497,7 +498,8 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
         ::yajr::Peer::StateChangeCb connectionHandler,
         void * data,
         ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL,
-        internal::Peer::PeerStatus status = kPS_UNINITIALIZED)
+        internal::Peer::PeerStatus status = kPS_UNINITIALIZED,
+        const uint32_t connectTimeout = 10)
             :
                 ::yajr::Peer(),
                 internal::Peer(passive, uvLoopSelector, status),
@@ -508,12 +510,15 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
                 nextId_(0),
                 keepAliveInterval_(0),
                 lastHeard_(0),
+                connectTimeout_(connectTimeout),
                 transport_(transport::PlainText::getPlainTextTransport()),
                 asyncDocParser_([this](Document& d) -> int { return asyncDocParserCb(d); })
             {
                 req_.data = this;
                 getHandle()->loop = uvLoopSelector_(getData());
                 getLoopData()->up();
+                uv_timer_init(getHandle()->loop, &connectTimer_);
+                connectTimer_.data = this;
             }
 
     /**
@@ -586,6 +591,22 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
     virtual void stopKeepAlive();
 
     /**
+     * Start Peer connect timer
+     */
+    virtual void startConnectTimer();
+
+    /**
+     * Stop Peer connect timer
+     */
+    virtual void stopConnectTimer();
+
+    /**
+     * CB for connection timer expiry
+     * @param timer libuv timer
+     */
+    static void on_connect_timeout(uv_timer_t * timer);
+
+    /**
      * CB for timer expiry
      * @param timer libuv timer
      */
@@ -593,6 +614,11 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
 
     /** send echo req to peer */
     void sendEchoReq();
+
+    /**
+     * Called on connection timeout
+     */
+    void connectTimeout();
 
     /**
      * Called on timeout
@@ -810,6 +836,8 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
 
     std::atomic<uint64_t> keepAliveInterval_;
     mutable uint64_t lastHeard_;
+    const uint32_t connectTimeout_;
+
 
     ::yajr::transport::Transport transport_;
 
@@ -857,14 +885,16 @@ class ActivePeer : public CommunicationPeer {
     explicit ActivePeer(
             ::yajr::Peer::StateChangeCb connectionHandler,
             void * data,
-            ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL)
+            ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL,
+            const uint32_t connectTimeout = 10)
         :
             CommunicationPeer(
                     false,
                     connectionHandler,
                     data,
                     uvLoopSelector,
-                    kPS_RESOLVING)
+                    kPS_RESOLVING,
+                    connectTimeout)
         {
         }
 
@@ -911,12 +941,14 @@ class ActiveTcpPeer : public ActivePeer {
             std::string const & service,
             ::yajr::Peer::StateChangeCb connectionHandler,
             void * data,
-            ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL)
+            ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL,
+            const uint32_t connectTimeout = 10)
         :
             ActivePeer(
                     connectionHandler,
                     data,
-                    uvLoopSelector),
+                    uvLoopSelector,
+                    connectTimeout),
             hostname_(hostname),
             service_(service)
         {

@@ -123,8 +123,10 @@ class Peer {
                                                       /**< [in] callback data */
             UvLoopSelector          uvLoopSelector    = NULL,
                                      /**< [in] uv_loop selector for this Peer */
-            bool nullTermination = true
+            bool nullTermination = true,
                  /**< [in] add null byte to end of every rpc message sent out */
+            const uint32_t connectTimeout = 10
+                                /**< [in] value for connection watchdog timer */
     );
 
     /**
