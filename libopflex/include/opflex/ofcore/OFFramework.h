@@ -755,6 +755,12 @@ public:
      */
     void setKeepaliveTimeout(const uint32_t timeout);
 
+    /**
+     * Set the connection watchdog timeout
+     * @param timeout keepalive timeout in milliseconds
+     */
+    void setConnectTimeout(const uint32_t timeout);
+
    /**
     * Wait for pending items
     * @param wait min wait time input and how long to wait as output

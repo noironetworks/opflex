@@ -47,7 +47,8 @@
         ::yajr::Peer::StateChangeCb connectionHandler,
         void * data,
         UvLoopSelector uvLoopSelector,
-        bool nullTermination_
+        bool nullTermination_,
+        const uint32_t connectTimeout
     ) {
 
     LOG(INFO) << host << ":" << service;
@@ -61,7 +62,8 @@
                 service,
                 connectionHandler,
                 data,
-                uvLoopSelector);
+                uvLoopSelector,
+                connectTimeout);
 #if __cpp_exceptions || __EXCEPTIONS
     } catch(const std::bad_alloc&) {
     }
@@ -73,6 +75,7 @@
     }
 
     peer->nullTermination = nullTermination_;
+    peer->startConnectTimer();
     peer->insert(::yajr::comms::internal::Peer::LoopData::TO_RESOLVE);
     return peer;
 }
@@ -130,6 +133,8 @@ void retry_later(ActivePeer * peer) {
         LOG(INFO) << peer << " peer is being destroyed. not inserting in RETRY_TO_CONNECT";
         return;
     }
+    peer->stopConnectTimer();
+    peer->startConnectTimer();
 
     peer->unlink();
     peer->insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
@@ -151,6 +156,7 @@ void on_active_connection(uv_connect_t *req, int status) {
     }
 
     if (peer->destroying_) {
+        peer->stopConnectTimer();
         peer->down();
         return;
     }
@@ -166,6 +172,7 @@ void on_active_connection(uv_connect_t *req, int status) {
         return;
     }
 
+    peer->stopConnectTimer();
     peer->unlink();
     peer->insert(internal::Peer::LoopData::ONLINE);
 
@@ -181,6 +188,7 @@ void on_resolved(uv_getaddrinfo_t * req, int status, struct addrinfo *resp) {
 
     if (peer->destroying_) {
         LOG(INFO) << peer << " peer is being destroyed. down() it";
+        peer->stopConnectTimer();
         peer->down();
         return;
     }

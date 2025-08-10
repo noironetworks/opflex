@@ -123,6 +123,10 @@ void OFFramework::setKeepaliveTimeout(const uint32_t timeout) {
     pimpl->processor.setKeepaliveTimeout(timeout);
 }
 
+void OFFramework::setConnectTimeout(const uint32_t timeout) {
+    pimpl->processor.setConnectTimeout(timeout);
+}
+
 bool OFFramework::waitForPendingItems(uint32_t& wait) {
     return pimpl->processor.waitForPendingItems(wait);
 }

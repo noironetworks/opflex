@@ -141,6 +141,23 @@ public:
         keepaliveTimeout = timeout;
     }
 
+    /**
+     * Get the connect watchdog timeout (in ms)
+     * @return timeout
+     */
+    uint32_t getConnectTimeout() const {
+        return connectTimeout;
+    }
+
+    /**
+     * Set the connect watchdog timeout (in ms)
+     * @param timeout timeout
+     */
+    void setConnectTimeout(uint32_t timeout) {
+        connectTimeout = timeout;
+    }
+
+
 protected:
     /**
      * The handler for the connection
@@ -150,6 +167,7 @@ protected:
 private:
     uint32_t handshakeTimeout;
     uint32_t keepaliveTimeout;
+    uint32_t connectTimeout;
 
     virtual void notifyReady();
     virtual void notifyFailed() {}
