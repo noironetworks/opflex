@@ -499,7 +499,7 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
         void * data,
         ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL,
         internal::Peer::PeerStatus status = kPS_UNINITIALIZED,
-        const uint32_t connectTimeout = 10)
+        const uint32_t connectTimeout = 30)
             :
                 ::yajr::Peer(),
                 internal::Peer(passive, uvLoopSelector, status),
@@ -886,7 +886,7 @@ class ActivePeer : public CommunicationPeer {
             ::yajr::Peer::StateChangeCb connectionHandler,
             void * data,
             ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL,
-            const uint32_t connectTimeout = 10)
+            const uint32_t connectTimeout = 30)
         :
             CommunicationPeer(
                     false,
@@ -942,7 +942,7 @@ class ActiveTcpPeer : public ActivePeer {
             ::yajr::Peer::StateChangeCb connectionHandler,
             void * data,
             ::yajr::Peer::UvLoopSelector uvLoopSelector = NULL,
-            const uint32_t connectTimeout = 10)
+            const uint32_t connectTimeout = 30)
         :
             ActivePeer(
                     connectionHandler,
