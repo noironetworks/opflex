@@ -221,11 +221,25 @@ public:
     void setKeepaliveTimeout(const uint32_t timeout) {
         keepaliveTimeout = timeout;
     }
-\
+
     /**
      * Set the prr timer duration in secs
      */
     uint64_t getPrrTimerDuration() { return prrTimerDuration; }
+
+    /**
+     * Get the connect watchdog timeout
+     */
+    const uint32_t getConnectTimerTimeout() const {
+        return connectTimerTimeout;
+    }
+
+    /**
+     * Set the connect watchdog timeout
+     */
+    void setConnectTimeout(const uint32_t timeout) {
+        connectTimerTimeout = timeout;
+    }
 
     // See HandlerFactory::newHandler
     virtual
@@ -591,6 +605,7 @@ private:
 
     uint32_t peerHandshakeTimeout = 45000;
     uint32_t keepaliveTimeout = 120000;
+    uint32_t connectTimerTimeout = 10;
 
     /**
      *  policy refresh timer duration in msecs

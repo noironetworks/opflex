@@ -78,6 +78,8 @@ namespace yajr {
     namespace comms {
         namespace internal {
 
+extern void retry_later(ActivePeer * peer);
+
 void CommunicationPeer::startKeepAlive(
         uint64_t begin,
         uint64_t repeat,
@@ -95,6 +97,26 @@ void CommunicationPeer::stopKeepAlive() {
     LOG(DEBUG)<< this;
     uv_timer_stop(&keepAliveTimer_);
     keepAliveInterval_ = 0;
+}
+
+void CommunicationPeer::startConnectTimer() {
+    LOG(DEBUG) << this;
+
+    if (connectTimeout_ > 0) {
+        uv_timer_start(&connectTimer_, on_connect_timeout,
+                       connectTimeout_ * 1000, 0);
+    }
+}
+
+void CommunicationPeer::stopConnectTimer() {
+    LOG(DEBUG)<< this;
+    if (connectTimeout_ > 0) {
+        uv_timer_stop(&connectTimer_);
+    }
+}
+
+void CommunicationPeer::on_connect_timeout(uv_timer_t * timer) {
+    get(timer)->connectTimeout();
 }
 
 void CommunicationPeer::on_timeout(uv_timer_t * timer) {
@@ -147,6 +169,7 @@ void CommunicationPeer::onDisconnect() {
     }
 
     unlink();
+    stopConnectTimer();
 
     if (destroying_) {
         LOG(DEBUG) << this << " already destroying";
@@ -155,6 +178,7 @@ void CommunicationPeer::onDisconnect() {
 
     if (!passive_) {
         LOG(DEBUG) << this << " active => retry queue";
+        startConnectTimer();
         /* we should attempt to reconnect later */
         insert(internal::Peer::LoopData::RETRY_TO_CONNECT);
         status_ = kPS_DISCONNECTED;
@@ -168,6 +192,7 @@ void CommunicationPeer::onDisconnect() {
 
 void CommunicationPeer::destroy(bool now) {
     destroying_ = true;
+    stopConnectTimer();
     onDisconnect();
 }
 
@@ -439,6 +464,23 @@ void CommunicationPeer::timeout() {
 
     /* send echo request */
     sendEchoReq();
+}
+
+void CommunicationPeer::connectTimeout() {
+
+    LOG(WARNING) << this << " timed out trying to connect";
+    if (!uv_is_closing(this->getHandle())) {
+        /* we already have a pending close */
+        LOG(TRACE) << this << " Already closing";
+        return;
+    }
+    /* We don't know if we've completed peer name lookup, so
+     * the count might not yet be incremented.
+     */
+    if (uvRefCnt_ > 1) {
+        this->down();
+    }
+    retry_later((ActivePeer *)this);
 }
 
 int comms::internal::CommunicationPeer::choke() const {
