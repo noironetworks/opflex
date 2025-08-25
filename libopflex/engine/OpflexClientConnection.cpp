@@ -85,7 +85,8 @@ void OpflexClientConnection::connect() {
     peer = yajr::Peer::create(hostname,
                               std::to_string(port),
                               on_state_change,
-                              this, loop_selector);
+                              this, loop_selector,
+                              true, getConnectTimeout());
 }
 
 void OpflexClientConnection::disconnect() {
