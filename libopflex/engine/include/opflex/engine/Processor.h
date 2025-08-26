@@ -605,7 +605,7 @@ private:
 
     uint32_t peerHandshakeTimeout = 45000;
     uint32_t keepaliveTimeout = 120000;
-    uint32_t connectTimerTimeout = 10;
+    uint32_t connectTimerTimeout = 30;
 
     /**
      *  policy refresh timer duration in msecs

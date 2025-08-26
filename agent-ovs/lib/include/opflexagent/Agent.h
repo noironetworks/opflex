@@ -376,7 +376,7 @@ private:
     /* keepalive timeout */
     uint32_t keepaliveTimeout = 120000;
     /* connect timeout */
-    uint32_t connectTimeout = 10; /* seconds */
+    uint32_t connectTimeout = 30; /* seconds */
     /* How long to wait before timing out old multicast cache */
     uint32_t multicast_cache_timeout = 300; /* seconds */
     /* How long to wait from platform config to switch Sync */
