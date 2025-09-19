@@ -3,10 +3,10 @@
 set -o errtrace
 set -x
 
-git clone https://github.com/eddyxu/cpp-coveralls
-pushd cpp-coveralls
-sudo ./setup.py install
-popd
+python3 -m pip install --upgrade --user pip setuptools wheel packaging
+python3 -m pip install --upgrade --user cpp-coveralls
+export PATH="$HOME/.local/bin:$PATH"
+coveralls --version || true
 
 wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
 tar -xvzf artifacts.tgz
