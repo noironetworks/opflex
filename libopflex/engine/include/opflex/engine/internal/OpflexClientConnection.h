@@ -131,6 +131,7 @@ protected:
                                 yajr::StateChange::To stateChange,
                                 int error);
     void connectionFailure();
+    void resetAllUnconfiguredPeers();
 
 };
 
