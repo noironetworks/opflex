@@ -10,6 +10,7 @@ RUN yum install -y --nogpgcheck --disablerepo=* --repofrompath=centos,https://mi
   && yum clean all
 # Required OpenShift Labels
 LABEL name="ACI CNI Opflex" \
+maintainer="Vishal Lella <vlella@cisco.com>" \
 vendor="Cisco" \
 version="v1.1.0" \
 release="1" \
