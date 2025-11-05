@@ -1596,6 +1596,7 @@ void EndpointManager::configUpdated(const URI& uri) {
     if (!config) {
         LOG(WARNING) << "Platform config has been deleted. Disconnect from existing peers and fallback to configured list";
         agent.updateResetTime();
+        agent.getEventNotificationManager().handlePlatformConfigDeleted(uri);
         framework.resetAllUnconfiguredPeers();
     }
 }
