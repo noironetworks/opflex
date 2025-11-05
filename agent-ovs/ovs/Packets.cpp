@@ -1173,7 +1173,7 @@ OfpBuf compose_tcp_rst(const char* pkt_data,
 
         b.get()->size = l4_offset + tcp_hdr_len; // Trim buffer to actual packet size
 
-        LOG(DEBUG) << "Composed TCP RST from "
+        LOG(TRACE) << "Composed TCP RST from "
                    << boost::asio::ip::address_v4(ntohl(saddr_orig)) << ":" << ntohs(original_tcp_hdr->th_sport)
                    << " to "
                    << boost::asio::ip::address_v4(ntohl(daddr_orig)) << ":" << ntohs(original_tcp_hdr->th_dport);
