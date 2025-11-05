@@ -136,6 +136,7 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/FSOutOfBandConfigSource.h \
 	lib/include/opflexagent/OutOfBandConfig.h \
 	lib/include/opflexagent/Faults.h \
+	lib/include/opflexagent/EventNotificationManager.h \
 	lib/include/opflexagent/PrometheusManager.h
 
 noinst_HEADERS = \
@@ -234,6 +235,7 @@ libopflex_agent_la_SOURCES = \
 	lib/FSNetpolSource.cpp \
 	lib/FSPacketDropLogConfigSource.cpp \
 	lib/FSOutOfBandConfigSource.cpp \
+	lib/EventNotificationManager.cpp \
 	lib/AgentPrometheusManager.cpp
 
 libopflex_agent_la_LDFLAGS = -shared -version-info ${VERSION_INFO}
@@ -486,6 +488,7 @@ agent_test_SOURCES = \
 	lib/test/SnatManager_test.cpp \
 	lib/test/QosManager_test.cpp \
 	lib/test/FaultManager_test.cpp \
+	lib/test/EventNotificationManager_test.cpp \
 	server/test/AgentStats_test.cpp \
 	server/ServerPrometheusManager.cpp \
 	cmd/test/agent_test.cpp
