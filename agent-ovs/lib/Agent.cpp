@@ -65,7 +65,9 @@ Agent::Agent(OFFramework& framework_, const LogParams& _logParams)
       endpointManager(*this, framework, policyManager, prometheusManager),
       serviceManager(*this, framework, prometheusManager),
       extraConfigManager(framework),
-      notifServer(agent_io),rendererFwdMode(opflex_elem_t::INVALID_MODE),
+      notifServer(agent_io),
+      eventNotificationManager(*this, ""),
+      rendererFwdMode(opflex_elem_t::INVALID_MODE),
       faultManager(*this, framework),
       sysStatsManager(this),
       started(false), presetFwdMode(opflex_elem_t::INVALID_MODE),
@@ -155,6 +157,7 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     static const std::string NETPOL_SOURCE_PATH("netpol-sources.filesystem");
     static const std::string DROP_LOG_CFG_SOURCE_FSPATH("drop-log-config-sources.filesystem");
     static const std::string FAULT_SOURCE_FSPATH("host-agent-fault-sources.filesystem");
+    static const std::string EVENT_NOTIFICATION_DIR("event-notifications.filesystem");
     static const std::string PACKET_EVENT_NOTIF_SOCK("packet-event-notif.socket-name");
     static const std::string OPFLEX_PEERS("opflex.peers");
     static const std::string OPFLEX_SSL_MODE("opflex.ssl.mode");
@@ -356,6 +359,13 @@ void Agent::setProperties(const boost::property_tree::ptree& properties) {
     if (hostAgentFaultSrc) {
         for (const ptree::value_type &v : hostAgentFaultSrc.get())
             hostAgentFaultPaths.insert(v.second.data());
+    }
+    
+    optional<string> eventNotificationDir =
+        properties.get_optional<string>(EVENT_NOTIFICATION_DIR);
+    if (eventNotificationDir) {
+        eventNotificationPath = eventNotificationDir.get();
+        eventNotificationManager.setEventsDirectory(eventNotificationPath);
     }
     
     optional<const ptree&> packetEventNotifSock =
@@ -766,6 +776,11 @@ void Agent::start() {
              new FSFaultSource(&faultManager, fsWatcher, path, *this);
         faultSources.emplace_back(source);
     }
+    
+    if (!eventNotificationPath.empty()) {
+        eventNotificationManager.start();
+    }
+    
     fsWatcher.start();
 
     for (const host_t& h : opflexPeers)
@@ -825,6 +840,10 @@ void Agent::stop() {
         fsWatcher.stop();
     } catch (const std::runtime_error& e) {
         LOG(WARNING) << "failed to stop fswatcher: " << e.what();
+    }
+    
+    if (!eventNotificationPath.empty()) {
+        eventNotificationManager.stop();
     }
 
     notifServer.stop();
