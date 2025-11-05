@@ -1005,10 +1005,10 @@ static void handleRstPktIn(SwitchConnection* conn,
     }
 
     if (flow.nw_proto == IPPROTO_TCP) { // TCP protocol (6)
-        LOG(DEBUG) << "Dispatching to handleTcpRstPktIn.";
+        LOG(TRACE) << "Dispatching to handleTcpRstPktIn.";
         handleTcpRstPktIn(conn, intFlowManager, pi, proto, pkt, flow); // Call as member function
     } else if (flow.nw_proto == IPPROTO_UDP) { // UDP protocol (17)
-        LOG(DEBUG) << "Dispatching to handleUdpIcmpUnreachablePktIn.";
+        LOG(TRACE) << "Dispatching to handleUdpIcmpUnreachablePktIn.";
         handleUdpIcmpUnreachablePktIn(conn, intFlowManager, pi, proto, pkt, flow); // Call as member function
     } else {
         LOG(WARNING) << "RST_FLOW cookie received for unsupported L4 protocol "
