@@ -215,6 +215,14 @@ void add_classifier_entries(L24Classifier& clsfr, ClassAction act, bool log,
     MaskList srcPorts;
     MaskList dstPorts;
 
+    // Ovs will always allow fragmented traffic in combination with CT
+    // if other rules allow it. If the only rule is to allow fragmented
+    // traffic we will not support that.
+    boost::optional<const uint8_t> fragmentFlags = clsfr.getFragmentFlags();
+    if (fragmentFlags && *fragmentFlags != 0) {
+        return;
+    }
+
     if (isSystemRule){
         svnid = 0;
         dvnid = 0;
