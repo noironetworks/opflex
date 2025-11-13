@@ -30,6 +30,7 @@
 #include <opflexagent/QosManager.h>
 #include <opflexagent/SysStatsManager.h>
 #include <opflexagent/FSOutOfBandConfigSource.h>
+#include <opflexagent/EventNotificationManager.h>
 
 #include <opflexagent/PrometheusManager.h>
 
@@ -246,6 +247,11 @@ public:
     FaultManager& getFaultManager() { return faultManager; }
 
     /**
+     * Get the event notification manager object for this agent
+     */
+    EventNotificationManager& getEventNotificationManager() { return eventNotificationManager; }
+
+    /**
      * Get packet event notification socket file name
      */
     const std::string& getPacketEventNotifSock() { return packetEventNotifSockPath; }
@@ -350,6 +356,7 @@ private:
     SnatManager snatManager;
     NotifServer notifServer;
     FSWatcher fsWatcher;
+    EventNotificationManager eventNotificationManager;
     opflex_elem_t rendererFwdMode; 
     FaultManager faultManager;
     SysStatsManager sysStatsManager;
@@ -401,6 +408,7 @@ private:
     std::string dropLogCfgSourcePath;
     std::string oobCfgSourcePath;
     std::set<std::string> hostAgentFaultPaths;
+    std::string eventNotificationPath;
     std::string packetEventNotifSockPath;
     std::unique_ptr<FSPacketDropLogConfigSource> dropLogCfgSource;
     std::unique_ptr<FSOutOfBandConfigSource> oobCfgSource;
