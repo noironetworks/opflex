@@ -1597,7 +1597,7 @@ void EndpointManager::configUpdated(const URI& uri) {
         LOG(WARNING) << "Platform config has been deleted. Disconnect from existing peers and fallback to configured list";
         agent.updateResetTime();
         agent.getEventNotificationManager().handlePlatformConfigDeleted(uri);
-        framework.resetAllUnconfiguredPeers();
+        framework.resetPeers();
     }
 }
 } /* namespace opflexagent */

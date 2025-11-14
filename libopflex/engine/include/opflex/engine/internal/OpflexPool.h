@@ -200,6 +200,8 @@ public:
 
     void resetAllUnconfiguredPeers();
 
+    void resetPeers(const bool doConfigured = true);
+
     /**
      * Pending unresolved policy
      */

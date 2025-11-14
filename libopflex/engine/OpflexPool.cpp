@@ -348,14 +348,20 @@ void OpflexPool::doRemovePeer(const string& hostname, int port) {
     }
 }
 
-void OpflexPool::resetAllUnconfiguredPeers() {
+void OpflexPool::resetPeers(const bool doConfigured) {
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
     conn_map_t conns(connections);
     for (conn_map_t::value_type& v : conns) {
-        if (!isConfiguredPeer(v.first.first, v.first.second)) {
+        if ((doConfigured &&
+	     isConfiguredPeer(v.first.first, v.first.second)) ||
+           (!isConfiguredPeer(v.first.first, v.first.second))) {
             v.second.conn->close();
         }
     }
+}
+
+void OpflexPool::resetAllUnconfiguredPeers() {
+    resetPeers(false);
 }
 
 // must be called with conn_mutex held

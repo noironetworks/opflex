@@ -951,10 +951,16 @@ public:
     virtual void getMacProxy(boost::asio::ip::address_v4 &macProxyAddress );
 
     /**
-     * Disconnect from all current peers and use the configured
+     * Disconnect from all unconfigured peers and use the configured
      * peer list to establish new peers.
      */
      virtual void resetAllUnconfiguredPeers();
+
+    /**
+     * Disconnect from all peers, and optionally the configured ones,
+     * then use the configured peer list to establish new peers.
+     */
+     virtual void resetPeers(const bool doConfigured = true);
 
     /**
      * Retrieve OpFlex client stats for each available peer

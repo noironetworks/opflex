@@ -296,12 +296,16 @@ modb::ObjectStore& OFFramework::getStore() {
     return pimpl->db;
 }
 
-void OFFramework::resetAllUnconfiguredPeers() {
+void OFFramework::resetPeers(const bool doConfigured) {
     engine::internal::OpflexPool& pool = pimpl->processor.getPool();
     string location;
     pool.setLocation(location);
-    pool.resetAllUnconfiguredPeers();
+    pool.resetPeers(doConfigured);
     pool.addConfiguredPeers();
+}
+
+void OFFramework::resetAllUnconfiguredPeers() {
+    resetPeers(false);
 }
 
 void OFFramework::registerTLMutator(modb::Mutator& mutator) {

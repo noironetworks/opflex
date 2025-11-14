@@ -40,7 +40,7 @@ public:
         OpflexClientConnection(handlerFactory,
                                pool,
                                hostname,
-                               port), ready(true),closed(false) {}
+                               port), ready(true),closed(false),close_delayed(false) {}
 
     virtual void connect() {}
     virtual void disconnect() {
@@ -53,9 +53,22 @@ public:
     }
     virtual void close() {
         closed = true;
+        if (!close_delayed) {
+            // Immediately trigger the disconnect callback
+            disconnect();
+        }
     }
+    
+    // Simulate delayed close completion for race condition testing
+    void completeDelayedClose() {
+        if (close_delayed && closed) {
+            disconnect();
+        }
+    }
+    
     bool ready;
     bool closed;
+    bool close_delayed;
 };
 
 class PoolFixture {
@@ -147,6 +160,71 @@ BOOST_FIXTURE_TEST_CASE( manage_ivxlan_roles , PoolFixture ) {
     c1->disconnect();
     c2->disconnect();
     c3->disconnect();
+}
+
+BOOST_FIXTURE_TEST_CASE( configured_peer_race_condition, PoolFixture ) {
+    // Test case: Race condition between OpflexPEHandler::handleSendIdentityRes 
+    // closing a configured peer and resetAllUnconfiguredPeers re-adding it
+    
+    // Step 1: Create a mock configured peer with delayed close
+    std::string hostname = "configured.peer.com";
+    int port = 8009;
+    
+    MockClientConn* configuredConn = new MockClientConn(handlerFactory, &pool, hostname, port);
+    configuredConn->close_delayed = true; // Enable delayed close to simulate race timing
+    
+    // Add as configured peer and add the connection to the pool
+    pool.addPeer(hostname, port, true); // Mark as configured peer
+    pool.addPeer(configuredConn);       // Add the mock connection
+    
+    // Verify the configured peer was added correctly
+    OpflexClientConnection* foundConn = pool.getPeer(hostname, port);
+    BOOST_REQUIRE(foundConn != nullptr);
+    BOOST_CHECK(pool.isConfiguredPeer(hostname, port));
+    
+    // Step 2: Start closing the configured peer (simulating 
+    // OpflexPEHandler::handleSendIdentityRes where peer is not found in peer list)
+    configuredConn->close(); // This starts the close but doesn't complete due to delay
+    
+    // At this point: close has been called but connectionClosed hasn't happened yet
+    BOOST_CHECK(configuredConn->closed == true);
+    
+    // Verify peer is still in the pool's connection list (this is key to the race)
+    OpflexClientConnection* stillThere = pool.getPeer(hostname, port);
+    BOOST_CHECK(stillThere == configuredConn);
+    
+    // Step 3: Simulate the race condition - resetAllUnconfiguredPeers is called
+    // before the close operation completes, and call addConfiguredPeers() which
+    // tries to re-add configured peers
+    pool.resetAllUnconfiguredPeers();
+    pool.addConfiguredPeers();
+    
+    // Step 4: At this point, doAddPeer sees the connection already exists 
+    // (because connectionClosed hasn't been called yet) and skips re-adding
+    // Verify the configured peer is still marked as configured
+    BOOST_CHECK(pool.isConfiguredPeer(hostname, port));
+    
+    // Verify the connection is still there (demonstrating the race timing)
+    OpflexClientConnection* stillThereAfterReset = pool.getPeer(hostname, port);
+    BOOST_CHECK(stillThereAfterReset == configuredConn);
+    
+    // Step 5: Complete the delayed close operation
+    // This simulates the original close() operation finally completing
+    configuredConn->completeDelayedClose();
+    
+    // Step 6: Verify the race condition bug - peer should be gone and not re-added
+    OpflexClientConnection* shouldBeNull = pool.getPeer(hostname, port);
+    
+    // This demonstrates the bug: the configured peer is gone but wasn't re-added
+    // because doAddPeer skipped it when resetAllUnconfiguredPeers was called
+    BOOST_CHECK(shouldBeNull == nullptr); 
+    
+    // The pool should still know about configured peers
+    BOOST_CHECK(pool.isConfiguredPeer(hostname, port));
+    
+    // But there's no connection in the pool for the configured peer
+    // This is the problematic final state - configured peer exists but no connection
+    // and no mechanism to trigger re-addition of the configured peer
 }
 
 BOOST_AUTO_TEST_SUITE_END()
