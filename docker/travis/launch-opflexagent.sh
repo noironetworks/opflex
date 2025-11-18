@@ -51,6 +51,10 @@ elif [ "$OPFLEXAGENT_DROPLOG_SYSLOG" = "true" ]; then
     EXTRA_ARGS="--drop_log_syslog"
 fi
 
+OPFLEX_PORT=$(egrep -rI 'hostname' ${OPFLEXAGENT_CONF_PATH}/* | awk -F":" '{print $NF}' | awk -F'"' '{print $2}')
+# background opflex connection monitoring script
+/bin/sh -c "sleep 120; while true; do if ! netstat -natp | grep -q ${OPFLEX_PORT}; then sleep 60; if ! netstat -natp | grep -q ${OPFLEX_PORT}; then date >> ${OPFLEXAGENT_REBOOT_CONFD}/reset.conf; fi; sleep 60; fi; done" &
+
 if [ "$REBOOT_WITH_OVS" = "true" ]; then
     exec ${OPFLEXAGENT} -w \
          -c ${OPFLEXAGENT_DISABLED_CONF} \
