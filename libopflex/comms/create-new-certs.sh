@@ -12,7 +12,7 @@ DOMAIN=$1
 # Create root CA & Private key
 
 openssl req -x509 \
-            -sha256 -days 356 \
+            -sha256 -days 3650 \
             -nodes \
             -newkey rsa:2048 \
             -subj "/CN=${DOMAIN}/C=US/L=San Fransisco" \
@@ -75,7 +75,8 @@ openssl x509 -req \
     -in "${DOMAIN}.csr" \
     -CA test/ca.pem -CAkey rootCA.key \
     -CAcreateserial -out "${DOMAIN}.crt" \
-    -days 365 \
+    -days 3650 \
     -sha256 -extfile cert.conf
-cat "${DOMAIN}.key" > test/server.pem
-cat "${DOMAIN}.crt" >> test/server.pem
+
+cat "${DOMAIN}.crt" > test/server.pem
+cat "${DOMAIN}.key" >> test/server.pem
