@@ -14,7 +14,7 @@ RUN yum --nogpgcheck install -y \
     wget which curl-devel procps zlib-devel vi boost-devel libnfnetlink-devel libmnl-devel \
     libnetfilter_conntrack-devel libnftnl-devel
 RUN yum --nogpgcheck install -y \
-    openssl-devel-3.2.2-6.el9_5.1 \
+    openssl-devel \
     && yum clean all
 RUN git clone -b libnftnl-1.1.7 https://git.netfilter.org/libnftnl \
   && cd libnftnl \
