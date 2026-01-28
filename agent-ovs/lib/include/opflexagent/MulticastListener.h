@@ -15,10 +15,13 @@
 
 #include <memory>
 #include <unordered_set>
+#include <vector>
+#include <string>
 
 #include <boost/noncopyable.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/asio/ip/address_v4.hpp>
 
 namespace opflexagent {
 
@@ -32,8 +35,11 @@ public:
      * Instantiate the listener
      *
      * @param io_service the io_service object
+     * @param interfaces list of interface names to bind multicast to
+     *                   (empty means all interfaces)
      */
-    MulticastListener(boost::asio::io_service& io_service);
+    MulticastListener(boost::asio::io_service& io_service,
+                      const std::vector<std::string>& interfaces = {});
 
     /**
      * Destroy the server and clean up all state
@@ -57,10 +63,19 @@ private:
     std::unordered_set<std::string> addresses;
     std::atomic<bool> running;
 
+    // Interface filtering for multicast membership
+    std::vector<boost::asio::ip::address_v4> interface_addrs_v4;
+    std::vector<unsigned int> interface_indices_v6;
+
     void join(const std::string& mcast_address);
     void leave(const std::string& mcast_address);
 
     void do_stop();
+
+    // Resolve interface name to IPv4 address and interface index
+    static bool resolveInterface(const std::string& ifname,
+                                 boost::asio::ip::address_v4& addr_v4,
+                                 unsigned int& if_index);
 };
 
 } /* namespace opflexagent */

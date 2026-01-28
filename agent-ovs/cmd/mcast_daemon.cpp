@@ -25,6 +25,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <string>
+#include <vector>
 #include <iostream>
 #include <unordered_map>
 #include <memory>
@@ -34,6 +35,7 @@
 #include <cstring>
 
 using std::string;
+using std::vector;
 using boost::optional;
 using std::shared_ptr;
 using std::unique_ptr;
@@ -122,6 +124,10 @@ int main(int argc, char** argv) {
             ("version,v", "print version information and git hash")
             ("watch,d", po::value<string>()->default_value(""),
              "Watch the specified directory for multicast address files")
+            ("interface,i", po::value<vector<string>>()->composing(),
+             "Restrict multicast membership to the specified interface "
+             "(can be specified multiple times for multiple interfaces). "
+             "If not specified, multicast groups are joined on all interfaces.")
             ("log", po::value<string>()->default_value(""),
              "Log to the specified file (default standard out)")
             ("level", po::value<string>()->default_value("info"),
@@ -139,6 +145,7 @@ int main(int argc, char** argv) {
     string log_file;
     string level_str;
     string watch_dir;
+    vector<string> interfaces;
 
     po::variables_map vm;
     try {
@@ -162,6 +169,9 @@ int main(int argc, char** argv) {
         watch_dir = vm["watch"].as<string>();
         if (watch_dir == "")
             watch_dir = DEFAULT_WATCH;
+        if (vm.count("interface")) {
+            interfaces = vm["interface"].as<vector<string>>();
+        }
         log_file = vm["log"].as<string>();
         level_str = vm["level"].as<string>();
         if (vm.count("syslog")) {
@@ -184,7 +194,7 @@ int main(int argc, char** argv) {
         boost::asio::io_service io;
         unique_ptr<boost::asio::io_service::work>
             work(new boost::asio::io_service::work(io));
-        MulticastListener listener(io);
+        MulticastListener listener(io, interfaces);
 
         std::thread io_thread([&io]() { io.run(); });
 
@@ -192,6 +202,14 @@ int main(int argc, char** argv) {
         McastWatcher mwatcher(io, listener);
 
         LOG(INFO) << "Watching " << watch_dir << " for multicast addresses";
+        if (!interfaces.empty()) {
+            std::string ifaces_str;
+            for (size_t i = 0; i < interfaces.size(); ++i) {
+                if (i > 0) ifaces_str += ", ";
+                ifaces_str += interfaces[i];
+            }
+            LOG(INFO) << "Multicast membership restricted to interfaces: " << ifaces_str;
+        }
         watcher.addWatch(watch_dir, mwatcher);
         watcher.start();
 
