@@ -112,6 +112,7 @@ libopflex_agent_la_include_HEADERS = \
 	lib/include/opflexagent/Fault.h \
 	lib/include/opflexagent/Agent.h \
 	lib/include/opflexagent/IdGenerator.h \
+	lib/include/opflexagent/interface_utils.h \
 	lib/include/opflexagent/KeyedRateLimiter.h \
 	lib/include/opflexagent/MulticastListener.h \
 	lib/include/opflexagent/TaskQueue.h \
@@ -222,6 +223,7 @@ libopflex_agent_la_SOURCES = \
 	lib/Fault.cpp \
 	lib/Agent.cpp \
 	lib/IdGenerator.cpp \
+	lib/interface_utils.cpp \
 	lib/NotifServer.cpp \
 	lib/MulticastListener.cpp \
 	lib/TaskQueue.cpp \

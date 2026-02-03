@@ -11,6 +11,7 @@
 
 #include "OVSRenderer.h"
 #include <opflexagent/logging.h>
+#include <opflexagent/interface_utils.h>
 #include <sstream>
 #include <boost/asio/placeholders.hpp>
 #include <openvswitch/vlog.h>
@@ -119,6 +120,14 @@ void OVSRenderer::start() {
         tunnelEpManager.setUplinkVlan(uplinkVlan);
         tunnelEpManager.setParentRenderer(this);
         tunnelEpManager.start();
+    }
+    else if (encapType == IntFlowManager::ENCAP_VLAN) {
+        if (!uplinkIface.empty()) {
+            std::string uplinkMac = getInterfaceMac(uplinkIface);
+            if (!uplinkMac.empty()) {
+                getAgent().setUplinkMac(uplinkMac);
+            }
+        }
     }
 
     if (!flowIdCache.empty())
