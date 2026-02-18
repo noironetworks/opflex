@@ -128,6 +128,7 @@ void CommunicationPeer::bumpLastHeard() const {
 }
 
 void CommunicationPeer::onConnect() {
+    disconnectPending_ = false;
     connected_ = true;
     status_ = internal::Peer::kPS_ONLINE;
 
@@ -145,6 +146,14 @@ void CommunicationPeer::onConnect() {
 }
 
 void CommunicationPeer::onDisconnect() {
+    if (disconnectPending_.exchange(true)) {
+        LOG(TRACE) << this << " disconnect already pending";
+        return;
+    }
+    getLoopData()->enqueueDisconnect(this);
+}
+
+void CommunicationPeer::onDisconnectInternal() {
     LOG(DEBUG) << this << " connected_ = " << connected_;
     if (!uv_is_closing(getHandle())) {
         uv_close(getHandle(), on_close);
@@ -188,6 +197,8 @@ void CommunicationPeer::onDisconnect() {
         insert(internal::Peer::LoopData::PENDING_DELETE);
         status_ = kPS_PENDING_DELETE;
     }
+
+    disconnectPending_ = false;
 }
 
 void CommunicationPeer::destroy(bool now) {
@@ -570,4 +581,3 @@ yajr::rpc::InboundMessage * comms::internal::CommunicationPeer::parseFrame() {
 } // namespace internal
 } // namespace comms
 } // namespace yajr
-
