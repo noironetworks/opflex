@@ -41,6 +41,7 @@ jobs:
         - chmod a+x ~/.docker/cli-plugins/docker-buildx
       install:
         - pip install pyyaml pytz
+        - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
       before_script:
         - export DOCKER_BUILDKIT=1
         - export UPSTREAM_ID=81c2369
