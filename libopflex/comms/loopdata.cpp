@@ -96,6 +96,31 @@ void internal::Peer::LoopData::onPrepareLoop(uv_prepare_t * h) {
         ->onPrepareLoop();
 }
 
+void internal::Peer::LoopData::enqueueDisconnect(CommunicationPeer* peer) {
+    if (!peer) {
+        return;
+    }
+    {
+        const std::lock_guard<std::mutex> lock(disconnectMutex_);
+        disconnectQueue_.push_back(peer);
+    }
+    uv_async_send(&disconnect_async_);
+}
+
+void internal::Peer::LoopData::onDisconnectAsync(uv_async_t* handle) {
+    auto* loopData = static_cast< ::yajr::comms::internal::Peer::LoopData * >(handle->data);
+    std::vector<CommunicationPeer*> pending;
+    {
+        const std::lock_guard<std::mutex> lock(loopData->disconnectMutex_);
+        pending.swap(loopData->disconnectQueue_);
+    }
+    for (CommunicationPeer* peer : pending) {
+        if (peer) {
+            peer->onDisconnectInternal();
+        }
+    }
+}
+
 void internal::Peer::LoopData::fini(uv_handle_t * h) {
     LOG(INFO);
     delete static_cast< ::yajr::comms::internal::Peer::LoopData *>(h->data);
@@ -212,4 +237,3 @@ Peer::LoopData::PeerDisposer::PeerDisposer(bool now) : now_(now) {}
 } /* yajr::comms::internal namespace */
 } /* yajr::comms namespace */
 } /* yajr namespace */
-
