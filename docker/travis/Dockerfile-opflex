@@ -6,6 +6,7 @@ RUN yum install -y --nogpgcheck --disablerepo=* --repofrompath=centos,https://mi
   libstdc++ libuv \
   boost-program-options boost-system boost-date-time boost-filesystem \
   boost-iostreams libnetfilter_conntrack net-tools procps-ng ca-certificates \
+  logrotate \
   && yum install -y vim-minimal strace \
   && yum clean all
 # Required OpenShift Labels
