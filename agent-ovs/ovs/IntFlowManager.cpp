@@ -5461,7 +5461,7 @@ void IntFlowManager::updateEPGFlood(const URI& epgURI, uint32_t epgVnid,
              * irrespective of inventory mode for external svi BD
              */
             FlowBuilder ucast;
-            actionOutputToEPGTunnel(ucast.priority(2))
+            actionOutputToEPGTunnel(ucast.priority(1))
                 .build(grpDst);
         }
         mcast.action()
