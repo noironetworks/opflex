@@ -41,6 +41,7 @@ OpflexPool::OpflexPool(HandlerFactory& factory_,
     conn_async = {};
     cleanup_async = {};
     writeq_async = {};
+    reset_async = {};
 }
 
 OpflexPool::~OpflexPool() {
@@ -191,6 +192,7 @@ void OpflexPool::on_cleanup_async(uv_async_t* handle) {
 
     uv_close((uv_handle_t*)&pool->writeq_async, NULL);
     uv_close((uv_handle_t*)&pool->conn_async, NULL);
+    uv_close((uv_handle_t*)&pool->reset_async, NULL);
     uv_close((uv_handle_t*)handle, NULL);
     yajr::finiLoop(pool->client_loop);
 }
@@ -200,6 +202,23 @@ void OpflexPool::on_writeq_async(uv_async_t* handle) {
     const std::lock_guard<std::recursive_mutex> lock(pool->conn_mutex);
     for (conn_map_t::value_type& v : pool->connections) {
         v.second.conn->processWriteQueue();
+    }
+}
+
+void OpflexPool::on_reset_async(uv_async_t* handle) {
+    OpflexPool* pool = (OpflexPool*)handle->data;
+    if (!pool->active) return;
+    std::vector<peer_name_t> to_close;
+    {
+        const std::lock_guard<std::recursive_mutex> lock(pool->conn_mutex);
+        to_close.swap(pool->peers_to_close);
+    }
+    for (const peer_name_t& peer : to_close) {
+        const std::lock_guard<std::recursive_mutex> lock(pool->conn_mutex);
+        auto it = pool->connections.find(peer);
+        if (it != pool->connections.end() && it->second.conn) {
+            it->second.conn->close();
+        }
     }
 }
 
@@ -213,9 +232,11 @@ void OpflexPool::start() {
     conn_async.data = this;
     cleanup_async.data = this;
     writeq_async.data = this;
+    reset_async.data = this;
     uv_async_init(client_loop, &conn_async, on_conn_async);
     uv_async_init(client_loop, &cleanup_async, on_cleanup_async);
     uv_async_init(client_loop, &writeq_async, on_writeq_async);
+    uv_async_init(client_loop, &reset_async, on_reset_async);
 
     threadManager.startTask("connection_pool");
 }
@@ -349,13 +370,15 @@ void OpflexPool::doRemovePeer(const string& hostname, int port) {
 }
 
 void OpflexPool::resetAllUnconfiguredPeers() {
+    if (!active) return;
     const std::lock_guard<std::recursive_mutex> lock(conn_mutex);
-    conn_map_t conns(connections);
-    for (conn_map_t::value_type& v : conns) {
+    for (const conn_map_t::value_type& v : connections) {
         if (!isConfiguredPeer(v.first.first, v.first.second)) {
-            v.second.conn->close();
+            peers_to_close.push_back(v.first);
         }
     }
+    if (!peers_to_close.empty())
+        uv_async_send(&reset_async);
 }
 
 // must be called with conn_mutex held
