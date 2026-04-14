@@ -435,6 +435,10 @@ private:
     uv_async_t conn_async;
     uv_async_t cleanup_async;
     uv_async_t writeq_async;
+    uv_async_t reset_async;
+
+    /** Peers that need to be closed, dispatched to UV loop thread */
+    std::vector<peer_name_t> peers_to_close;
 
     std::list<ofcore::PeerStatusListener*> peerStatusListeners;
     ofcore::PeerStatusListener::Health curHealth;
@@ -452,6 +456,7 @@ private:
     static void on_conn_async(uv_async_t *handle);
     static void on_cleanup_async(uv_async_t *handle);
     static void on_writeq_async(uv_async_t *handle);
+    static void on_reset_async(uv_async_t *handle);
 
     void updatePeerStatus(const std::string& hostname, int port,
                           ofcore::PeerStatusListener::PeerStatus status);
