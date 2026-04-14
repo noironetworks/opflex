@@ -4349,7 +4349,7 @@ void BaseIntFlowManagerFixture::initExpSviBD(const URI& sviBDURI,
          .reg(SEPG, fixedVnid).reg(FD, fdId).isEthDst(mmac).actions()
          .mdAct(opflexagent::flow::meta::out::FLOOD)
          .go(STAT).done());
-    ADDF(Bldr().table(BR).priority(2)
+    ADDF(Bldr().table(BR).priority(1)
          .actions().mdAct(opflexagent::flow::meta::out::TUNNEL)
          .go(STAT).done());
     if(uplink != OFPP_NONE) {
