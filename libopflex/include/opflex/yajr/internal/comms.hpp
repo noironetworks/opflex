@@ -29,6 +29,7 @@
 #include <iostream>
 #include <atomic>
 #include <mutex>
+#include <vector>
 
 #define uv_close(h, cb)                        \
     do {                                       \
@@ -169,6 +170,8 @@ class Peer : public SafeListBaseHook {
             uv_timer_init(loop, &prepareAgain_);
             prepareAgain_.data = this;
             uv_async_init(loop, &kickLibuv_, NULL);
+            uv_async_init(loop, &disconnect_async_, &onDisconnectAsync);
+            disconnect_async_.data = this;
         }
 
         /**
@@ -227,6 +230,9 @@ class Peer : public SafeListBaseHook {
             uv_async_send(&kickLibuv_);
         }
 
+        /** Schedule a peer disconnect on the libuv loop thread */
+        void enqueueDisconnect(CommunicationPeer* peer);
+
         /** Iterate over handles and close each one
          *
          * @param handle UV handle
@@ -240,6 +246,9 @@ class Peer : public SafeListBaseHook {
          * @param countHandles Resulting count
          */
         static void walkAndCountHandlesCb(uv_handle_t* handle, void* countHandles);
+
+        /** Process queued disconnects */
+        static void onDisconnectAsync(uv_async_t* handle);
 
       private:
         friend std::ostream& operator<< (std::ostream&, Peer::LoopData const *);
@@ -259,10 +268,14 @@ class Peer : public SafeListBaseHook {
         static std::recursive_mutex peerMutex;
         uv_prepare_t prepare_;
         uv_async_t kickLibuv_;
+        uv_async_t disconnect_async_;
         uv_timer_t prepareAgain_;
         uint64_t lastRun_;
         std::atomic<bool> destroying_;
         std::atomic<uint64_t> refCount_;
+
+        std::mutex disconnectMutex_;
+        std::vector<CommunicationPeer*> disconnectQueue_;
 
         friend class Peer;
     };
@@ -511,6 +524,7 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
                 keepAliveInterval_(0),
                 lastHeard_(0),
                 connectTimeout_(connectTimeout),
+                disconnectPending_(false),
                 transport_(transport::PlainText::getPlainTextTransport()),
                 asyncDocParser_([this](Document& d) -> int { return asyncDocParserCb(d); })
             {
@@ -822,6 +836,7 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
     virtual ~CommunicationPeer() {}
 
   private:
+    void onDisconnectInternal();
 
     mutable ::yajr::internal::StringQueue s_;
 
@@ -837,6 +852,7 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
     std::atomic<uint64_t> keepAliveInterval_;
     mutable uint64_t lastHeard_;
     const uint32_t connectTimeout_;
+    std::atomic<bool> disconnectPending_;
 
 
     ::yajr::transport::Transport transport_;
@@ -868,6 +884,8 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
     int asyncDocParserCb(rapidjson::Document &d);
 
     mutable AsyncDocumentParser<> asyncDocParser_;
+
+    friend class ::yajr::comms::internal::Peer::LoopData;
 };
 static_assert (sizeof(CommunicationPeer) <= 4096, "CommunicationPeer won't fit on one page");
 
@@ -1335,4 +1353,3 @@ char const * getUvHandleField(uv_handle_t * h, internal::Peer * peer);
 } // namespace yajr
 
 #endif /* _INCLUDE__OPFLEX__COMMS_INTERNAL_HPP */
-
