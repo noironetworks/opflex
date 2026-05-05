@@ -47,6 +47,30 @@ if [ -n "$OPFLEXAGENT_DROPLOG_FILE" ]; then
     DROP_LOG_FILE_PATH="$LOG_DIR/$OPFLEXAGENT_DROPLOG_FILE"
     touch "$DROP_LOG_FILE_PATH"
     EXTRA_ARGS="--drop_log=$DROP_LOG_FILE_PATH"
+
+    # Background drop log rotation to prevent unbounded file growth.
+    DROPLOG_MAXSIZE_MB=${OPFLEXAGENT_DROPLOG_MAXSIZE:-50}
+    DROPLOG_ROTATE_COUNT=${OPFLEXAGENT_DROPLOG_ROTATE:-5}
+    LOGROTATE_CONF="/tmp/droplog-logrotate.conf"
+    LOGROTATE_STATE="/tmp/droplog-logrotate.state"
+    cat > "${LOGROTATE_CONF}" <<LREOF
+${DROP_LOG_FILE_PATH} {
+    size ${DROPLOG_MAXSIZE_MB}M
+    rotate ${DROPLOG_ROTATE_COUNT}
+    copytruncate
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
+LREOF
+    /bin/sh -c "
+        while true; do
+            sleep 43200
+            logrotate -s \"${LOGROTATE_STATE}\" \"${LOGROTATE_CONF}\"
+        done
+    " &
+
 elif [ "$OPFLEXAGENT_DROPLOG_SYSLOG" = "true" ]; then
     EXTRA_ARGS="--drop_log_syslog"
 fi
