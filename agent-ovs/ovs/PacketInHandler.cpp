@@ -170,8 +170,17 @@ static void send_packet_out(Agent& agent,
         unordered_set<string> eps;
         agent.getEndpointManager().getEndpointsByIface(iface, eps);
         if (eps.size() == 0) {
-            LOG(WARNING) << "No endpoint found for output packet"
-                         << " on " << iface;
+            /*
+             * Service interfaces do not have endpoint records.  In that
+             * case the packet is already targeted at an integration bridge
+             * port, so send it directly rather than trying to translate it
+             * to an access bridge port.
+             */
+            LOG(DEBUG) << "No endpoint found for output packet"
+                       << " on " << iface
+                       << "; sending on integration bridge";
+            send_packet_out(conn, b, proto, in_port, out_port,
+                            std::move(outActions));
             return;
         }
         if (eps.size() > 1)
