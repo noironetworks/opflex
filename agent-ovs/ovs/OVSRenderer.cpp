@@ -439,6 +439,7 @@ void OVSRenderer::setProperties(const ptree& properties) {
         encapType = IntFlowManager::ENCAP_VLAN;
         encapIface = vlan.get().get<std::string>(ENCAP_IFACE, "");
         uplinkNativeIface = vlan.get().get<std::string>(UPLINK_NATIVE_IFACE, "");
+        uplinkIface = vlan.get().get<std::string>(UPLINK_IFACE, "");
         count += 1;
     }
     if (vxlan) {
