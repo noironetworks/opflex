@@ -34,6 +34,7 @@ OpflexPool::OpflexPool(HandlerFactory& factory_,
                        util::ThreadManager& threadManager_)
     : factory(factory_), threadManager(threadManager_),
       active(false),
+      reset_all_peers(false),
       client_mode(OFConstants::OpflexElementMode::STITCHED_MODE),
       transport_state(OFConstants::OpflexTransportModeState::SEEKING_PROXIES),
       ipv4_proxy(0), ipv6_proxy(0),

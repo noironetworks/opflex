@@ -264,6 +264,16 @@ void OFFramework::getMacProxy(boost::asio::ip::address_v4 &macProxyAddress ) {
     macProxyAddress = pool.getMacProxy();
 }
 
+void OFFramework::setResetAllPeers(bool value) {
+    engine::internal::OpflexPool& pool = pimpl->processor.getPool();
+    pool.setResetAllPeers(value);
+}
+
+bool OFFramework::getResetAllPeers() {
+    engine::internal::OpflexPool& pool = pimpl->processor.getPool();
+    return pool.getResetAllPeers();
+}
+
 void MockOFFramework::setV4Proxy(const boost::asio::ip::address_v4& v4ProxyAddress ) {
     engine::internal::OpflexPool& pool = pimpl->processor.getPool();
     pool.setV4Proxy(v4ProxyAddress);

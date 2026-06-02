@@ -123,6 +123,7 @@ void ExtraConfigManager::outOfBandConfigUpdated(const OutOfBandConfigSpec &outOf
     mutator.commit();
     shared_ptr<OutOfBandConfigSpec> oobSptr(new OutOfBandConfigSpec(outOfBandCfg.tunnelEpAdvInterval));
     notifyOutOfBandConfigListeners(oobSptr);
+    framework.setResetAllPeers(true);
 }
 
 void ExtraConfigManager::outOfBandConfigDeleted() {
@@ -138,6 +139,7 @@ void ExtraConfigManager::outOfBandConfigDeleted() {
     mutator.commit();
     shared_ptr<OutOfBandConfigSpec> oobSptr;
     notifyOutOfBandConfigListeners(oobSptr);
+    framework.setResetAllPeers(false);
 }
 
 void ExtraConfigManager::packetDropLogConfigUpdated(PacketDropLogConfig &dropCfg) {
