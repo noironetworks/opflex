@@ -18,6 +18,7 @@
 
 #include "CtZoneManager.h"
 #include "PacketInHandler.h"
+#include "Packets.h"
 #include <opflexagent/test/ModbFixture.h>
 #include "MockSwitchManager.h"
 #include "IntFlowManager.h"
@@ -28,6 +29,7 @@
 BOOST_AUTO_TEST_SUITE(PacketInHandler_test)
 
 using boost::asio::ip::address_v4;
+using boost::asio::ip::address_v6;
 using std::unordered_set;
 using namespace opflexagent;
 
@@ -380,6 +382,11 @@ static const uint8_t pkt_icmp6_echo_rep[] =
     "\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21" \
     "\x22\x23\x24\x25\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31" \
     "\x32\x33\x34\x35\x36\x37";
+
+static void to_in6_addr(const char* ip, struct in6_addr& out) {
+    address_v6::bytes_type bytes = address_v6::from_string(ip).to_bytes();
+    memcpy(&out, bytes.data(), sizeof(out));
+}
 
 static void init_packet_in(ofputil_packet_in_private& pin,
                            const void* packet_buf, size_t len,
@@ -942,6 +949,36 @@ BOOST_FIXTURE_TEST_CASE(icmpv4_echo, PacketInHandlerFixture) {
 
 BOOST_FIXTURE_TEST_CASE(icmpv6_echo, PacketInHandlerFixture) {
     testIcmpEcho(false);
+}
+
+BOOST_FIXTURE_TEST_CASE(neigh_solicit_no_endpoint_output,
+                        PacketInHandlerFixture) {
+    const uint8_t svcMac[6] = {0x66, 0x35, 0x1d, 0x53, 0x9d, 0xec};
+    const uint8_t mcastMac[6] = {0x33, 0x33, 0xff, 0x77, 0x36, 0x4b};
+    struct in6_addr svcIp;
+    struct in6_addr solicitedIp;
+    struct in6_addr targetIp;
+    to_in6_addr("fe80::a9fe:f003", svcIp);
+    to_in6_addr("ff02::1:ff77:364b", solicitedIp);
+    to_in6_addr("fe80::f816:3eff:fe77:364b", targetIp);
+
+    OfpBuf ns = packets::compose_icmp6_neigh_solit(svcMac, mcastMac,
+                                                   &svcIp, &solicitedIp,
+                                                   &targetIp);
+    intPortMapper.setPort("of-svc-ovsport", 4);
+    intPortMapper.setPort(4, "of-svc-ovsport");
+
+    ofputil_packet_in_private pin;
+    init_packet_in(pin, ns.data(), ns.size(),
+                   opflexagent::flow::cookie::NEIGH_DISC,
+                   IntFlowManager::SERVICE_DST_TABLE_ID, 4);
+
+    OfpBuf b(ofputil_encode_packet_in_private(&pin,
+                                              OFPUTIL_P_OF13_OXM,
+                                              OFPUTIL_PACKET_IN_NXT));
+    pktInHandler.Handle(&intConn, OFPTYPE_PACKET_IN, b.get());
+
+    BOOST_CHECK_EQUAL(1, intConn.getSentMsgCount());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
