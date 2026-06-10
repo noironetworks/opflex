@@ -31,11 +31,10 @@ fi
 set -Eeuxo pipefail
 if [[ "${BUILD_BASE}" == true ]]; then
     echo "starting opflex-base build"
-    docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base . &> /tmp/opflex-build-base.log &
-    while [ ! -f  /tmp/opflex-build-base.log ]; do sleep 10; done
-    tail -f /tmp/opflex-build-base.log | awk 'NR%100-1==0' &
-    #while [[ "$(docker images -q $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG 2> /dev/null)" == ""]] && [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
-    while [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
+    docker build $BUILDARG $SECOPT -t $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build-base .
+    # while [ ! -f  /tmp/opflex-build-base.log ]; do sleep 10; done
+    # tail -f /tmp/opflex-build-base.log | awk 'NR%100-1==0' &
+    # while [[ "$(pgrep -x 'docker' 2> /dev/null)" != '' ]]; do sleep 60; done
 else
     echo "starting opflex build"
     #docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
