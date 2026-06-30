@@ -1,18 +1,26 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 ENV ROOT=/usr/local
 ARG make_args=-j1
-RUN rpm -e --nodeps openssl-fips-provider-so 2>/dev/null || true
-RUN microdnf install -y yum yum-utils \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/CRB/x86_64/os \
- && yum-config-manager --add-repo=https://mirror.stream.centos.org/9-stream/AppStream/x86_64/debug/tree \
- && yum --nogpgcheck -y update
+
+RUN microdnf install -y yum yum-utils
+
+RUN yum --nogpgcheck update -y \
+      --disablerepo=* \
+      --enablerepo=ubi-9-baseos-rpms --enablerepo=ubi-9-appstream-rpms \
+      --enablerepo=ubi-9-codeready-builder-rpms
 RUN yum --nogpgcheck install -y \
+      --disablerepo=* \
+      --enablerepo=ubi-9-baseos-rpms --enablerepo=ubi-9-appstream-rpms \
+      --enablerepo=ubi-9-codeready-builder-rpms \
     libtool pkgconfig autoconf automake make cmake file python3-six \
     openssl-devel git gcc gcc-c++ diffutils python3-devel \
-    wget which curl-devel procps zlib-devel vi boost-devel libnfnetlink-devel libmnl-devel \
-    libnetfilter_conntrack-devel libnftnl-devel \
+    wget which curl-devel procps zlib-devel vi libmnl-devel
+RUN yum --nogpgcheck install -y \
+      --disablerepo=* \
+      --repofrompath=centos-baseos,https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os \
+      --repofrompath=centos-app,https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os \
+      --repofrompath=centos-crb,https://mirror.stream.centos.org/9-stream/CRB/x86_64/os \
+    boost-devel libnfnetlink-devel libnetfilter_conntrack-devel libnftnl-devel \
   && yum clean all
 RUN git clone -b libnftnl-1.1.7 https://git.netfilter.org/libnftnl \
   && cd libnftnl \
