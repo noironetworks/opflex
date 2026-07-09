@@ -51,6 +51,7 @@ if [ -n "$OPFLEXAGENT_DROPLOG_FILE" ]; then
     # Background drop log rotation to prevent unbounded file growth.
     DROPLOG_MAXSIZE_MB=${OPFLEXAGENT_DROPLOG_MAXSIZE:-50}
     DROPLOG_ROTATE_COUNT=${OPFLEXAGENT_DROPLOG_ROTATE:-5}
+    DROPLOG_ROTATE_INTERVAL=${OPFLEXAGENT_DROPLOG_ROTATE_INTERVAL:-7200}
     LOGROTATE_CONF="/tmp/droplog-logrotate.conf"
     LOGROTATE_STATE="/tmp/droplog-logrotate.state"
     cat > "${LOGROTATE_CONF}" <<LREOF
@@ -66,7 +67,7 @@ ${DROP_LOG_FILE_PATH} {
 LREOF
     /bin/sh -c "
         while true; do
-            sleep 43200
+            sleep ${DROPLOG_ROTATE_INTERVAL}
             logrotate -s \"${LOGROTATE_STATE}\" \"${LOGROTATE_CONF}\"
         done
     " &
