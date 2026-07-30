@@ -234,6 +234,7 @@ void IntFlowManager::stop() {
     }
     if (multiCastIOThread) {
         LOG(DEBUG) << "Stopping multiCastIOThread";
+        multiCastIOService.stop();
         multiCastIOThread->join();
         multiCastIOThread.reset();
     }
@@ -6935,6 +6936,9 @@ void IntFlowManager::readOldMulticastGroups() {
     if (oldMcastEntries.empty()) return;
 
     /* Start a timer to clear the oldMcastEntries */
+    if (multiCastIOService.stopped()) {
+        multiCastIOService.reset();
+    }
     multiCastIOThread.reset(new std::thread([this]() {
         LOG(DEBUG) << "multiCastIOThread start with timeout "
                    << agent.getMulticastCacheTimeout() << " secs.";
