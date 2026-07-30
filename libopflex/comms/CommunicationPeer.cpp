@@ -194,6 +194,12 @@ void CommunicationPeer::destroy(bool now) {
     destroying_ = true;
     stopConnectTimer();
     onDisconnect();
+
+    if (!uv_is_closing((uv_handle_t*)&connectTimer_)) {
+        // Keep the peer alive until libuv unlinks its embedded timer.
+        up();
+        uv_close((uv_handle_t*)&connectTimer_, on_close);
+    }
 }
 
 int CommunicationPeer::tcpInit() {
