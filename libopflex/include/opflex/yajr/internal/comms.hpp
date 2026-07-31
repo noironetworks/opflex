@@ -517,8 +517,10 @@ class CommunicationPeer : public Peer, virtual public ::yajr::Peer {
                 req_.data = this;
                 getHandle()->loop = uvLoopSelector_(getData());
                 getLoopData()->up();
-                uv_timer_init(getHandle()->loop, &connectTimer_);
-                connectTimer_.data = this;
+                if (connectTimeout_ > 0) {
+                    uv_timer_init(getHandle()->loop, &connectTimer_);
+                    connectTimer_.data = this;
+                }
             }
 
     /**
@@ -1059,7 +1061,8 @@ class PassivePeer : public CommunicationPeer {
                     connectionHandler,
                     data,
                     uvLoopSelector,
-                    kPS_RESOLVING)
+                    kPS_RESOLVING,
+                    0)
         {
             createFail_ = 0;
         }
