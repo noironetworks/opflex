@@ -3,7 +3,7 @@ name: Opflex feature image build
 on:
   push:
     tags:
-      - "gha-test-6.1.1.7-opflex"
+      - "[0-9]+.[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
@@ -13,11 +13,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  FEATURE_BRANCH: github-actions-image-build
-  SAFE_TAG: gha-test-6.1.1.7-opflex
-  RELEASE_TAG: 6.1.1.7
-  UPSTREAM_ID: 81c2369
-  CICD_BRANCH: github-actions-image-build
+  SOURCE_BRANCH: ${{ vars.SOURCE_BRANCH || 'mmr-6.1.1' }}
+  UPSTREAM_ID: ${{ vars.UPSTREAM_ID }}
+  CICD_BRANCH: ${{ vars.CICD_BRANCH || 'mmr-6.1.1' }}
   SKIP_CICD_STATUS: ${{ vars.SKIP_CICD_STATUS || 'true' }}
   GHA_PLATFORM: linux/amd64
   DOCKER_BUILDKIT: "1"
@@ -25,7 +23,7 @@ env:
 jobs:
   validate-source:
     name: Validate Jenkins feature tag
-    if: github.event_name == 'push' && github.event.deleted == false && github.repository == 'noironetworks/opflex' && github.ref == 'refs/tags/gha-test-6.1.1.7-opflex'
+    if: github.event_name == 'push' && github.event.deleted == false && github.repository == 'noironetworks/opflex' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     outputs:
@@ -34,6 +32,8 @@ jobs:
       image-tag: ${{ steps.source.outputs.image_tag }}
       dated-image-tag: ${{ steps.source.outputs.dated_image_tag }}
       image-z-tag: ${{ steps.source.outputs.image_z_tag }}
+      release-tag: ${{ steps.derive.outputs.release_tag }}
+      safe-tag: ${{ steps.derive.outputs.safe_tag }}
 
     steps:
       - name: Check out tagged feature source
@@ -42,6 +42,35 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Derive release identifiers from tag
+        id: derive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          # Trigger tag is the plain release tag (e.g. 6.1.1.7); UPSTREAM_ID comes from the repo variable.
+          tag="${GITHUB_REF_NAME}"
+          [[ "${tag}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::Trigger tag ${tag} is not a release tag of form N.N.N.N (e.g. 6.1.1.7)"
+            exit 1
+          }
+          [[ -n "${UPSTREAM_ID}" ]] || {
+            echo "::error::UPSTREAM_ID is empty; set the UPSTREAM_ID Actions variable on this repository (e.g. 81c2369)"
+            exit 1
+          }
+          [[ "${UPSTREAM_ID}" =~ ^[0-9a-f]+$ ]] || {
+            echo "::error::UPSTREAM_ID must be a lowercase hex id (e.g. 81c2369)"
+            exit 1
+          }
+          {
+            echo "RELEASE_TAG=${tag}"
+            echo "SAFE_TAG=${tag}"
+          } >> "${GITHUB_ENV}"
+          {
+            echo "release_tag=${tag}"
+            echo "safe_tag=${tag}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Validate annotated tag and feature head
         id: source
@@ -66,16 +95,16 @@ jobs:
           }
 
           git fetch --no-tags origin \
-            "+refs/heads/${FEATURE_BRANCH}:refs/remotes/origin/${FEATURE_BRANCH}"
+            "+refs/heads/${SOURCE_BRANCH}:refs/remotes/origin/${SOURCE_BRANCH}"
           tagged_commit="$(git rev-parse "refs/tags/${SAFE_TAG}^{commit}")"
           checked_out_commit="$(git rev-parse HEAD)"
-          feature_commit="$(git rev-parse "refs/remotes/origin/${FEATURE_BRANCH}")"
+          source_commit="$(git rev-parse "refs/remotes/origin/${SOURCE_BRANCH}")"
           [[ "${tagged_commit}" == "${checked_out_commit}" ]] || {
             echo "::error::Tag ${SAFE_TAG} moved after this run was queued; refusing superseded run"
             exit 1
           }
-          [[ "${tagged_commit}" == "${feature_commit}" ]] || {
-            echo "::error::Tag ${SAFE_TAG} resolves to ${tagged_commit}, not current ${FEATURE_BRANCH} head ${feature_commit}"
+          [[ "${tagged_commit}" == "${source_commit}" ]] || {
+            echo "::error::Tag ${SAFE_TAG} resolves to ${tagged_commit}, not current ${SOURCE_BRANCH} head ${source_commit}"
             exit 1
           }
           [[ "${GITHUB_RUN_NUMBER}" =~ ^[1-9][0-9]*$ ]] || {
@@ -143,6 +172,8 @@ jobs:
       IMAGE_TAG: ${{ needs.validate-source.outputs.image-tag }}
       GHA_DATED_IMAGE_TAG: ${{ needs.validate-source.outputs.dated-image-tag }}
       UPSTREAM_IMAGE_Z_TAG: ${{ needs.validate-source.outputs.image-z-tag }}
+      RELEASE_TAG: ${{ needs.validate-source.outputs.release-tag }}
+      SAFE_TAG: ${{ needs.validate-source.outputs.safe-tag }}
       GHA_OPFLEX_BUILD_PHASE: base
 
     steps:
@@ -435,6 +466,8 @@ jobs:
       IMAGE_TAG: ${{ needs.validate-source.outputs.image-tag }}
       GHA_DATED_IMAGE_TAG: ${{ needs.validate-source.outputs.dated-image-tag }}
       UPSTREAM_IMAGE_Z_TAG: ${{ needs.validate-source.outputs.image-z-tag }}
+      RELEASE_TAG: ${{ needs.validate-source.outputs.release-tag }}
+      SAFE_TAG: ${{ needs.validate-source.outputs.safe-tag }}
       GHA_OPFLEX_BUILD_PHASE: runtime
       EXPECTED_OPFLEX_BASE_DIGEST: ${{ needs.build-base.outputs.quay-digest }}
       CICD_COMMIT: ${{ needs.build-base.outputs.cicd_commit }}
@@ -574,6 +607,7 @@ jobs:
         env:
           TRAVIS_BUILD_NUMBER: ${{ github.run_number }}
           TRAVIS_REPO_SLUG: ${{ github.repository }}
+          TRAVIS_TAGGER: ${{ secrets.GITHUBACTIONS_TAGGER }}
         run: |
           set -Eeuo pipefail
           export TRAVIS_TAG="${RELEASE_TAG}"
@@ -676,22 +710,6 @@ jobs:
               z_digest="$(awk -F '\t' -v ref="${z_ref}" '$1 == ref { print $2 }' "${manifest}")"
               printf '| `%s` | `%s` |\n' "${z_ref}" "${z_digest}"
             done
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Publish opflex result to CICD status preview
-        if: env.SKIP_CICD_STATUS == 'false'
-        shell: bash
-        env:
-          TEST_CICD_STATUS_TOKEN: ${{ secrets.GITHUBACTIONS_TAGGER }}
-        run: |
-          set -Eeuo pipefail
-          bash "${CICD_DIR}/travis/publish-github-actions-test-status.sh" \
-            --component opflex
-          {
-            echo
-            echo "### CICD status preview"
-            echo
-            echo "Published the verified final opflex image to [6.1.1.7.z](https://noironetworks.github.io/cicd-status/release.html?release=6.1.1.7.z)."
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Record runtime final diagnostics
