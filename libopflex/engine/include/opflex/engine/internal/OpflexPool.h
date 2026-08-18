@@ -379,6 +379,14 @@ public:
         return tunnelMac;
     }
 
+    void setResetAllPeers(bool value) {
+        reset_all_peers = value;
+    }
+
+    bool getResetAllPeers() {
+        return reset_all_peers;
+    }
+
     /**
      * Retrieve OpFlex client stats for each available peer
      *
@@ -422,6 +430,7 @@ private:
     conn_map_t connections;
     role_map_t roles;
     boost::atomic<bool> active;
+    boost::atomic<bool> reset_all_peers;
 
     opflex::ofcore::OFConstants::OpflexElementMode client_mode;
     opflex::ofcore::OFConstants::OpflexTransportModeState transport_state;
