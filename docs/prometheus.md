@@ -56,8 +56,7 @@ This collects flow stats between Endpoints and External network for NAT traffic.
 These metrics answer below operational questions:
 * Packet count and byte count for the NAT traffic flow from Endpoint to External network
 * Packet count and byte count for the NAT traffic flow from External network to Endpoint
-* Endpoint Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for NAT egress flow 
-* Endpoint Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for NAT ingress flow
+* All the metrics are annotated with Endpoint uuid, mapped ip, floating Ip, Source epg and destination epg for the NAT flow 
 * For Endpoint to Extnetwork traffic, Source epg is the Endpoint's EPG and Dest epg is the External Epg
 * For Extnetwork to Endpoint traffic, Source epg is the External EPG and Dest epg is the Endpoint's Epg
 * The packet and byte counters are referred from the OVS flow mod where the NAT happens i.e rewriting of the Ip and MAC address happens. 
