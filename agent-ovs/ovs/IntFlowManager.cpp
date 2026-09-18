@@ -1481,6 +1481,7 @@ static void flowRevMapCt(FlowEntryList& serviceRevFlows,
                          uint16_t priority,
                          const Service::ServiceMapping& sm,
                          const address& nextHopAddr,
+                         uint32_t bdId,
                          uint32_t rdId,
                          uint16_t zoneId,
                          uint8_t proto,
@@ -1491,7 +1492,7 @@ static void flowRevMapCt(FlowEntryList& serviceRevFlows,
     ActionBuilder fna;
     fna.unnat();
 
-    matchDestDom(ipRevMapCt, 0, rdId);
+    matchDestDom(ipRevMapCt, bdId, rdId);
     matchActionServiceProto(ipRevMapCt, proto, sm,
                             false, false);
     ipRevMapCt.conntrackState(0, FlowBuilder::CT_TRACKED)
@@ -2508,6 +2509,7 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         anycastReturnIps.push_back(addr);
                     }
                 }
+                uint32_t serviceBdId = anycastReturnIps.empty() ? 0 : bdId;
                 if (anycastReturnIps.empty()) {
                     anycastReturnIps = std::move(ipAddresses);
                 }
@@ -2516,9 +2518,9 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                     {
                         // Deliver packets sent to service address
                         FlowBuilder serviceDest;
-                        matchDestDom(serviceDest, 0, rdId);
+                        matchDestDom(serviceDest, serviceBdId, rdId);
                         serviceDest
-                            .priority(50)
+                            .priority(50 + (serviceBdId ? 1 : 0))
                             .ipDst(ipAddr)
                             .action()
                             .ethSrc(getRouterMacAddr()).ethDst(macAddr)
@@ -2527,7 +2529,8 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                             .parent().build(elServiceMap);
                     }
                     flowsProxyDiscovery(*this, elServiceMap,
-                                        51, ipAddr, macAddr, 0, rdId, 0);
+                                        51 + (serviceBdId ? 1 : 0),
+                                        ipAddr, macAddr, 0, rdId, serviceBdId);
                 }
             }
         }
@@ -4493,6 +4496,10 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
         }
 
         uint32_t rdId = getId(RoutingDomain::CLASS_ID, as.getDomainURI().get());
+        uint32_t bdId = 0;
+        if (as.getBridgeDomainURI())
+            bdId = getId(BridgeDomain::CLASS_ID,
+                         as.getBridgeDomainURI().get());
         uint32_t ctMark = idGen.getId(ID_NMSPC_SERVICE, uuid);
         if (as.getInterfaceName())
             ctMark |= 1 << 31;
@@ -4551,7 +4558,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
 
                 ActionBuilder fna;
                 fna.unnat();
-                matchDestDom(ipFwdCt, 0, rdId);
+                matchDestDom(ipFwdCt, bdId, rdId);
                 matchActionServiceProto(ipFwdCt, proto, sm, true, false);
                 // Untracked flows
                 ipFwdCt.priority(100).ipDst(serviceAddr)
@@ -4563,7 +4570,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     .parent().build(serviceNextHopFlows);
 
                 // Established flows
-                matchDestDom(ipFwdEst, 0, rdId);
+                matchDestDom(ipFwdEst, bdId, rdId);
                 matchCtL34(ipFwdEst, proto, sm);
                 ipFwdEst.priority(100)
                         .ctZone(zoneId)
@@ -4581,7 +4588,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                         .parent().build(serviceNextHopFlows);
 
                 // reset +new flows when active nhop list empty
-                matchDestDom(ipFwdRstNew, 0, rdId);
+                matchDestDom(ipFwdRstNew, bdId, rdId);
                 matchActionServiceProto(ipFwdRstNew, proto, sm, true, !ctNatAction);
 
                 if (as.getInterfaceName() && (ofPort != OFPP_NONE) && as.getIfaceVlan())
@@ -4599,7 +4606,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                             .parent().build(serviceNextHopFlows);
 
                 // Established flows (reverse)
-                matchDestDom(ipRevEst, 0, rdId);
+                matchDestDom(ipRevEst, bdId, rdId);
                 matchCtL34(ipRevEst, proto, sm);
                 ipRevEst.priority(100)
                         .ctZone(zoneId)
@@ -4641,7 +4648,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                 }
                 {
                     FlowBuilder ipMap;
-                    matchDestDom(ipMap, 0, rdId);
+                    matchDestDom(ipMap, bdId, rdId);
                     matchActionServiceProto(ipMap, proto, sm, true, !ctNatAction);
                     ipMap.ipDst(serviceAddr);
 
@@ -4649,9 +4656,9 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     // there is no transient case where there is no
                     // match while flows are updated.
                     if (link == 0) {
-                        ipMap.priority(99);
+                        ipMap.priority(99 + (bdId ? 1 : 0));
                     } else {
-                        ipMap.priority(100)
+                        ipMap.priority(100 + (bdId ? 1 : 0))
                             .reg(7, link);
                     }
                     if (!ctNatAction)
@@ -4663,7 +4670,7 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                             link++;
                             continue;
                         }
-                        ipMap.priority(102)
+                        ipMap.priority(102 + (bdId ? 1 : 0))
                              .reg(7, link)
                              .ipSrc(nextHopAddr)
                              .action()
@@ -4760,17 +4767,17 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                             // table to ensure we can property rebuild
                             // the state when the packet comes back.
                             flowRevMapCt(serviceRevFlows, 101,
-                                         sm, nextHopAddr, rdId, zoneId, proto,
+                                         sm, nextHopAddr, bdId, rdId, zoneId, proto,
                                          getTunnelPort(), ENCAP_VLAN, ctNatAction);
                         }
                         flowRevMapCt(serviceRevFlows, 100,
-                                     sm, nextHopAddr, rdId, zoneId, proto,
+                                     sm, nextHopAddr, bdId, rdId, zoneId, proto,
                                      0, ENCAP_NONE, ctNatAction);
                     }
                     // ctNatAction skips est flows per link
                     if (!ctNatAction) {
                         FlowBuilder ipRevMap;
-                        matchDestDom(ipRevMap, 0, rdId);
+                        matchDestDom(ipRevMap, bdId, rdId);
                         matchActionServiceProto(ipRevMap, proto, sm,
                                                 false, true);
 
@@ -4853,11 +4860,11 @@ void IntFlowManager::updateServiceSnatDnatFlows(const string& uuid,
                     if (zoneId != static_cast<uint16_t>(-1)) {
                         if (encapType == ENCAP_VLAN) {
                             flowRevMapCt(serviceRevFlows, 101,
-                                         sm, nextHopAddr, rdId, zoneId, proto,
+                                         sm, nextHopAddr, bdId, rdId, zoneId, proto,
                                          getTunnelPort(), ENCAP_VLAN, ctNatAction);
                         }
                         flowRevMapCt(serviceRevFlows, 100,
-                                     sm, nextHopAddr, rdId, zoneId, proto,
+                                     sm, nextHopAddr, bdId, rdId, zoneId, proto,
                                      0, ENCAP_NONE, ctNatAction);
                     }
                 }
@@ -4922,6 +4929,10 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
         }
 
         uint32_t rdId = getId(RoutingDomain::CLASS_ID, as.getDomainURI().get());
+        uint32_t bdId = 0;
+        if (as.getBridgeDomainURI())
+            bdId = getId(BridgeDomain::CLASS_ID,
+                         as.getBridgeDomainURI().get());
         uint32_t ctMark = idGen.getId(ID_NMSPC_SERVICE, uuid);
         if (as.getInterfaceName())
             ctMark |= 1 << 31;
@@ -4995,7 +5006,7 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                 } else {
                     hash_fields = NX_HASH_FIELDS_SYMMETRIC_L3L4_UDP;
                 }
-                matchDestDom(serviceDest, 0, rdId);
+                matchDestDom(serviceDest, bdId, rdId);
                 matchActionServiceProto(serviceDest, proto, sm, true, false);
                 if (as.getServiceMAC() &&
                     as.getServiceMode() == Service::LOADBALANCER)
@@ -5054,11 +5065,13 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
 
                     for (const address& nextHopAddr : nextHopAddrs) {
                         FlowBuilder svcIp;
-                        svcIp.priority(100)
+                        svcIp.priority(100 + (bdId ? 1 : 0))
                             .inPort(ofPort)
                             .ethSrc(macAddr)
-                            .action()
-                            .reg(MFF_REG6, rdId);
+                            .action();
+                        if (bdId)
+                            svcIp.action().reg(MFF_REG4, bdId);
+                        svcIp.action().reg(MFF_REG6, rdId);
 
                         if (nextHopAddr != address()) {
                             // If there is a next hop mapping, map the return
@@ -5081,12 +5094,16 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                         if (serviceAddr.is_v4()) {
                             // Note that v6 neighbor discovery is
                             // handled by the regular IP rules
-                            FlowBuilder().priority(100)
+                            FlowBuilder svcArp;
+                            svcArp.priority(100 + (bdId ? 1 : 0))
                                 .inPort(ofPort)
                                 .ethSrc(macAddr)
                                 .arpSrc(nextHopAddr != address()
                                         ? nextHopAddr : serviceAddr)
-                                .action()
+                                .action();
+                            if (bdId)
+                                svcArp.action().reg(MFF_REG4, bdId);
+                            svcArp.action()
                                 .reg(MFF_REG6, rdId)
                                 .go(SERVICE_DST_TABLE_ID)
                                 .parent().build(secFlows);
@@ -5097,7 +5114,7 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                     // address
                     flowsProxyDiscovery(*this, bridgeFlows,
                                         51, serviceAddr, macAddr,
-                                        0, rdId, 0);
+                                        0, rdId, bdId);
 
                     if (sm.getGatewayIP()) {
                         address gwAddr =
@@ -5110,7 +5127,7 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                         } else {
                             flowsProxyDiscovery(*this, serviceDstFlows, 31,
                                                 gwAddr, getRouterMacAddr(),
-                                                0, rdId, 0, true, macAddr);
+                                                0, rdId, bdId, true, macAddr);
                         }
                     }
                 }
@@ -5146,6 +5163,8 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                 svcIface.vlan(as.getIfaceVlan().get());
                 svcIface.action().popVlan();
             }
+            if (bdId)
+                svcIface.action().reg(MFF_REG4, bdId);
             svcIface.action()
                 .reg(MFF_REG0, proxyVnid)
                 .reg(MFF_REG6, rdId)
@@ -5166,6 +5185,8 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                 svcArp.vlan(as.getIfaceVlan().get());
                 svcArp.action().popVlan();
             }
+            if (bdId)
+                svcArp.action().reg(MFF_REG4, bdId);
             svcArp.action()
                 .reg(MFF_REG0, proxyVnid)
                 .reg(MFF_REG6, rdId)
@@ -5187,9 +5208,9 @@ void IntFlowManager::handleServiceUpdate(const string& uuid) {
                 } else {
                     flowsProxyDiscovery(bridgeFlows,
                                         51, ifaceAddr, macAddr,
-                                        proxyVnid, rdId, 0, false, NULL,
+                                        proxyVnid, rdId, bdId, false, NULL,
                                         ofPort, serviceEncapType, true);
-                    flowsProxyICMP(bridgeFlows, 51, ifaceAddr, 0, rdId);
+                    flowsProxyICMP(bridgeFlows, 51, ifaceAddr, bdId, rdId);
                 }
             }
         }

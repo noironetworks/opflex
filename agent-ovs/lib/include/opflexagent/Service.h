@@ -195,6 +195,18 @@ public:
         domainURI = boost::none;
     }
 
+    const boost::optional<opflex::modb::URI>& getBridgeDomainURI() const {
+        return bridgeDomainURI;
+    }
+
+    void setBridgeDomainURI(const opflex::modb::URI& bridgeDomainURI) {
+        this->bridgeDomainURI = bridgeDomainURI;
+    }
+
+    void unsetBridgeDomainURI() {
+        bridgeDomainURI = boost::none;
+    }
+
     /**
      * Modes for the service
      */
@@ -641,6 +653,7 @@ public:
 private:
     std::string uuid;
     boost::optional<opflex::modb::URI> domainURI;
+    boost::optional<opflex::modb::URI> bridgeDomainURI;
     boost::optional<std::string> interfaceName;
     boost::optional<uint16_t> ifaceVlan;
     boost::optional<opflex::modb::MAC> serviceMac;

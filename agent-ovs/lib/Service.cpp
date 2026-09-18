@@ -38,6 +38,8 @@ std::ostream & operator<<(std::ostream &os, const Service& s) {
 
     if (s.getDomainURI())
         os << ",domain=" << s.getDomainURI().get();
+    if (s.getBridgeDomainURI())
+        os << ",bridgeDomain=" << s.getBridgeDomainURI().get();
 
     if (s.getInterfaceName())
         os << ",interface=" << s.getInterfaceName().get();

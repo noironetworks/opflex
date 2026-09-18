@@ -746,6 +746,8 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
         << "\"uuid\":\"" << uuid1 << "\","
         << "\"domain-policy-space\": \"common\","
         << "\"domain-name\": \"l3out_1_vrf\","
+        << "\"bridge-domain-policy-space\": \"project-a\","
+        << "\"bridge-domain-name\": \"net_net-a\","
         << "\"service-mode\": \"loadbalancer\","
         << "\"service-mac\": \"88:1d:fc:f2:fb:59\","
         << "\"interface-name\": \"veth0\","
@@ -778,6 +780,11 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
     FSServiceSource source(&serviceMgr, watcher, temp.string());
     watcher.start();
     WAIT_FOR(hasService(serviceMgr, uuid1), 500);
+    auto service = serviceMgr.getService(uuid1);
+    BOOST_CHECK(service->getBridgeDomainURI());
+    BOOST_CHECK_EQUAL(
+        "/PolicyUniverse/PolicySpace/project-a/GbpBridgeDomain/net_net-a/",
+        service->getBridgeDomainURI()->toString());
 
     fs::path path2(temp / (uuid1 + ".service"));
     fs::ofstream os2(path2);
@@ -815,6 +822,40 @@ BOOST_FIXTURE_TEST_CASE( fsservice, FSServiceFixture ) {
              && (serviceMgr.getService(uuid1)->getServiceMode() \
                         == Service::ServiceMode::LOCAL_ANYCAST),
              500);
+
+    // A partial bridge-domain scope (missing bridge-domain-policy-space)
+    // must be rejected entirely, leaving the prior published service
+    // state untouched.
+    fs::ofstream os3(path2);
+    os3 << "{"
+        << "\"uuid\":\"" << uuid1 << "\","
+        << "\"domain-policy-space\": \"common\","
+        << "\"domain-name\": \"l3out_1_vrf\","
+        << "\"bridge-domain-name\": \"net_net-a\","
+        << "\"service-mode\": \"local-anycast\","
+        << "\"interface-name\": \"veth1\""
+        << "}" << std::endl;
+    os3.close();
+
+    // Follow with a valid update that changes an observable field, so we
+    // have a deterministic condition to wait on instead of racing on the
+    // rejected update above.
+    fs::ofstream os4(path2);
+    os4 << "{"
+        << "\"uuid\":\"" << uuid1 << "\","
+        << "\"domain-policy-space\": \"common\","
+        << "\"domain-name\": \"l3out_1_vrf\","
+        << "\"service-mode\": \"local-anycast\","
+        << "\"interface-name\": \"veth2\""
+        << "}" << std::endl;
+    os4.close();
+
+    WAIT_FOR(hasService(serviceMgr, uuid1)
+             && serviceMgr.getService(uuid1)->getInterfaceName()
+             && serviceMgr.getService(uuid1)->getInterfaceName().get()
+                    == "veth2",
+             500);
+    BOOST_CHECK(!serviceMgr.getService(uuid1)->getBridgeDomainURI());
     watcher.stop();
 
 }

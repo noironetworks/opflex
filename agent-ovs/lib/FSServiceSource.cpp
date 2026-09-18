@@ -64,6 +64,9 @@ void FSServiceSource::updated(const fs::path& filePath) {
     static const std::string SERVICE_DOMAIN("domain");
     static const std::string DOMAIN_POLICY_SPACE("domain-policy-space");
     static const std::string DOMAIN_NAME("domain-name");
+    static const std::string BRIDGE_DOMAIN_POLICY_SPACE(
+        "bridge-domain-policy-space");
+    static const std::string BRIDGE_DOMAIN_NAME("bridge-domain-name");
 
     static const std::string SERVICE_MAPPING("service-mapping");
     static const std::string SM_SERVICE_IP("service-ip");
@@ -150,6 +153,26 @@ void FSServiceSource::updated(const fs::path& filePath) {
                                      .addElement("GbpRoutingDomain")
                                      .addElement(domainName.get()).build());
             }
+        }
+
+        optional<string> bridgeDomainName =
+            properties.get_optional<string>(BRIDGE_DOMAIN_NAME);
+        optional<string> bridgeDomainPSpace =
+            properties.get_optional<string>(BRIDGE_DOMAIN_POLICY_SPACE);
+        if (bridgeDomainName && bridgeDomainPSpace) {
+            newserv.setBridgeDomainURI(opflex::modb::URIBuilder()
+                                       .addElement("PolicyUniverse")
+                                       .addElement("PolicySpace")
+                                       .addElement(bridgeDomainPSpace.get())
+                                       .addElement("GbpBridgeDomain")
+                                       .addElement(bridgeDomainName.get())
+                                       .build());
+        } else if (bridgeDomainName || bridgeDomainPSpace) {
+            LOG(WARNING) << "Ignoring incomplete bridge-domain scope for service "
+                         << newserv.getUUID()
+                         << ": both bridge-domain-name and "
+                         << "bridge-domain-policy-space are required";
+            return;
         }
 
         optional<ptree&> attrs =
