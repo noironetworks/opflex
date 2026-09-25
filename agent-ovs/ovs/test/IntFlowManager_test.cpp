@@ -186,7 +186,12 @@ public:
                      uint32_t bdId = 1, uint32_t rdId = 1);
 
     /** Initialize service-scoped flow entries for local services */
-    void initExpAnycastService(Service &as, int nextHop = 0);
+    void initExpAnycastService(Service &as, int nextHop = 0,
+                               uint32_t bdId = 1,
+                               const string& serviceMac =
+                               "ed:84:da:ef:16:96",
+                               const string& serviceMacHex =
+                               "0xed84daef1696");
 
     /**
      * Initialize flows in stats table for pod to svc
@@ -1557,6 +1562,7 @@ BOOST_FIXTURE_TEST_CASE(anycastService, VxlanIntFlowManagerFixture) {
     as.setUUID("ed84daef-1696-4b98-8c80-6b22d85f4dc2");
     as.setServiceMAC(MAC("ed:84:da:ef:16:96"));
     as.setDomainURI(URI(rd0->getURI()));
+    as.setBridgeDomainURI(URI(bd0->getURI()));
     as.setInterfaceName("service-iface");
 
     Service::ServiceMapping sm1;
@@ -1619,9 +1625,40 @@ BOOST_FIXTURE_TEST_CASE(anycastService, VxlanIntFlowManagerFixture) {
     initExpAnycastService(as,2);
     WAIT_FOR_TABLES("nexthop lb", 500);
 
+    // Use a bridge domain with no pre-existing group/subnet relations,
+    // unlike ModbFixture's bd1, so this test only exercises BD scoping.
+    Mutator mutator(framework, policyOwner);
+    auto bd2 = space->addGbpBridgeDomain("bd2");
+    bd2->addGbpBridgeDomainToNetworkRSrc()
+        ->setTargetRoutingDomain(rd0->getURI());
+    mutator.commit();
+
+    Service as2;
+    as2.setUUID("262f1120-3e08-4529-affe-6164de3ff410");
+    as2.setServiceMAC(MAC("12:34:56:78:9a:bc"));
+    as2.setDomainURI(URI(rd0->getURI()));
+    as2.setBridgeDomainURI(URI(bd2->getURI()));
+    as2.setInterfaceName("service-iface");
+    Service::ServiceMapping sm3;
+    sm3.setServiceIP("169.254.169.254");
+    sm3.setGatewayIP("169.254.1.1");
+    as2.addServiceMapping(sm3);
+    Service::ServiceMapping sm4;
+    sm4.setServiceIP("fe80::a9:fe:a9:fe");
+    sm4.setGatewayIP("fe80::1");
+    as2.addServiceMapping(sm4);
+    servSrc.updateService(as2);
+    intFlowManager.serviceUpdated(as2.getUUID());
+
+    initExpAnycastService(as2, 0, 2, "12:34:56:78:9a:bc",
+                          "0x123456789abc");
+    WAIT_FOR_TABLES("same RD different BD", 500);
+
     // Test service deletion
     servSrc.removeService(as.getUUID());
     intFlowManager.serviceUpdated(as.getUUID());
+    servSrc.removeService(as2.getUUID());
+    intFlowManager.serviceUpdated(as2.getUUID());
 
     clearExpFlowTables();
     initExpStatic();
@@ -2252,7 +2289,8 @@ void BaseIntFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
         network::construct_link_local_ip_addr(ep->getMAC().get()).to_string();
     ips.insert(lladdr);
     const unordered_set<string>* acastIps = &ep->getAnycastReturnIPs();
-    if (acastIps->size() == 0) acastIps = &ips;
+    uint32_t serviceBdId = acastIps->empty() ? 0 : bdId;
+    if (acastIps->empty()) acastIps = &ips;
     uint32_t vnid = policyMgr.getVnidForGroup(epg->getURI()).get();
     uint32_t tunPort = intFlowManager.getTunnelPort();
     bool isHostAccess = ep->getUUID().find("veth_host_ac") != std::string::npos;
@@ -2439,13 +2477,19 @@ void BaseIntFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
         for (const string& ip : *acastIps) {
             address ipa = address::from_string(ip);
             if (ipa.is_v4()) {
-                ADDF(Bldr().table(SVD).priority(50).ip()
-                     .reg(RD, rdId).isIpDst(ip)
+                Bldr serviceIp;
+                serviceIp.table(SVD)
+                    .priority(50 + (serviceBdId ? 1 : 0)).ip();
+                if (serviceBdId) serviceIp.reg(BD, serviceBdId);
+                ADDF(serviceIp.reg(RD, rdId).isIpDst(ip)
                      .actions()
                      .ethSrc(rmac).ethDst(mac)
                      .decTtl().outPort(port).done());
-                ADDF(Bldr().table(SVD).priority(51).arp()
-                     .reg(RD, rdId)
+                Bldr serviceArp;
+                serviceArp.table(SVD)
+                    .priority(51 + (serviceBdId ? 1 : 0)).arp();
+                if (serviceBdId) serviceArp.reg(BD, serviceBdId);
+                ADDF(serviceArp.reg(RD, rdId)
                      .isEthDst(bmac).isTpa(ipa.to_string())
                      .isArpOp(1)
                      .actions().move(ETHSRC, ETHDST)
@@ -2455,14 +2499,21 @@ void BaseIntFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
                                                 ipa.to_v4().to_ulong())
                      .inport().done());
             } else {
-                ADDF(Bldr().table(SVD).priority(50).ipv6()
-                     .reg(RD, rdId).isIpv6Dst(ip)
+                Bldr serviceIp;
+                serviceIp.table(SVD)
+                    .priority(50 + (serviceBdId ? 1 : 0)).ipv6();
+                if (serviceBdId) serviceIp.reg(BD, serviceBdId);
+                ADDF(serviceIp.reg(RD, rdId).isIpv6Dst(ip)
                      .actions()
                      .ethSrc(rmac).ethDst(mac)
                      .decTtl().outPort(port).done());
-                ADDF(Bldr().cookie(ovs_ntohll(opflexagent::flow::cookie::NEIGH_DISC))
-                     .table(SVD).priority(51).icmp6()
-                     .reg(RD, rdId).isEthDst(mmac)
+                Bldr serviceNd;
+                serviceNd.cookie(ovs_ntohll(
+                    opflexagent::flow::cookie::NEIGH_DISC))
+                    .table(SVD)
+                    .priority(51 + (serviceBdId ? 1 : 0)).icmp6();
+                if (serviceBdId) serviceNd.reg(BD, serviceBdId);
+                ADDF(serviceNd.reg(RD, rdId).isEthDst(mmac)
                      .icmp_type(135).icmp_code(0)
                      .isNdTarget(ipa.to_string())
                      .actions()
@@ -3153,8 +3204,11 @@ void BaseIntFlowManagerFixture::initExpRemoteEp() {
     }
 }
 
-void BaseIntFlowManagerFixture::initExpAnycastService(Service &as, int nextHop) {
-    string mac = "ed:84:da:ef:16:96";
+void BaseIntFlowManagerFixture::initExpAnycastService(Service &as, int nextHop,
+                                                      uint32_t bdId,
+                                                      const string& serviceMac,
+                                                      const string& serviceMacHex) {
+    string mac = serviceMac;
     string bmac("ff:ff:ff:ff:ff:ff");
     uint8_t rmacArr[6];
     memcpy(rmacArr, intFlowManager.getRouterMacAddr(), sizeof(rmacArr));
@@ -3166,131 +3220,135 @@ void BaseIntFlowManagerFixture::initExpAnycastService(Service &as, int nextHop) 
         mss << "symmetric_l3l4+udp,1024,iter_hash,"
             << nextHop << ",32,NXM_NX_REG7[]";
         ADDF(Bldr().table(BR).priority(50)
-             .ip().reg(RD, 1).isIpDst("169.254.169.254")
+             .ip().reg(BD, bdId).reg(RD, 1).isIpDst("169.254.169.254")
              .actions()
              .ethSrc(rmac).ethDst(mac)
              .multipath(mss.str())
              .go(SVH).done());
         ADDF(Bldr().table(BR).priority(50)
-             .ipv6().reg(RD, 1).isIpv6Dst("fe80::a9:fe:a9:fe")
+             .ipv6().reg(BD, bdId).reg(RD, 1).isIpv6Dst("fe80::a9:fe:a9:fe")
              .actions()
              .ethSrc(rmac).ethDst(mac)
              .multipath(mss.str())
              .go(SVH).done());
 
-        ADDF(Bldr().table(SVH).priority(99)
-             .ip().reg(RD, 1)
+        ADDF(Bldr().table(SVH).priority(99 + (bdId ? 1 : 0))
+             .ip().reg(BD, bdId).reg(RD, 1)
              .isIpDst("169.254.169.254")
              .actions()
              .ipDst("169.254.169.1").decTtl()
              .outPort(17).done());
-        ADDF(Bldr().table(SVH).priority(99)
-             .ipv6().reg(RD, 1)
+        ADDF(Bldr().table(SVH).priority(99 + (bdId ? 1 : 0))
+             .ipv6().reg(BD, bdId).reg(RD, 1)
              .isIpv6Dst("fe80::a9:fe:a9:fe")
              .actions()
              .ipv6Dst("fe80::a9:fe:a9:1")
              .decTtl()
              .outPort(17).done());
 
-        ADDF(Bldr().table(SEC).priority(100).ip().in(17)
-             .isEthSrc("ed:84:da:ef:16:96")
+        ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).ip().in(17)
+             .isEthSrc(serviceMac)
              .isIpSrc("169.254.169.1")
-             .actions().load(RD, 1).ipSrc("169.254.169.254")
+             .actions().load(BD, bdId).load(RD, 1).ipSrc("169.254.169.254")
              .decTtl()
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(SVD).done());
-        ADDF(Bldr().table(SEC).priority(100).arp().in(17)
-             .isEthSrc("ed:84:da:ef:16:96").isSpa("169.254.169.1")
-             .actions().load(RD, 1).go(SVD).done());
-        ADDF(Bldr().table(SEC).priority(100).ipv6().in(17)
-             .isEthSrc("ed:84:da:ef:16:96")
+        ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).arp().in(17)
+             .isEthSrc(serviceMac).isSpa("169.254.169.1")
+             .actions().load(BD, bdId).load(RD, 1).go(SVD).done());
+        ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).ipv6().in(17)
+             .isEthSrc(serviceMac)
              .isIpv6Src("fe80::a9:fe:a9:1")
-             .actions().load(RD, 1).ipv6Src("fe80::a9:fe:a9:fe")
+             .actions().load(BD, bdId).load(RD, 1).ipv6Src("fe80::a9:fe:a9:fe")
              .decTtl()
              .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
              .go(SVD).done());
 
         if (nextHop >= 2) {
-            ADDF(Bldr().table(SVH).priority(100)
-                 .ip().reg(RD, 1).reg(OUTPORT, 1)
+            ADDF(Bldr().table(SVH).priority(100 + (bdId ? 1 : 0))
+                 .ip().reg(BD, bdId).reg(RD, 1).reg(OUTPORT, 1)
                  .isIpDst("169.254.169.254")
                  .actions()
                  .ipDst("169.254.169.2").decTtl()
                  .outPort(17).done());
-            ADDF(Bldr().table(SVH).priority(100)
-                 .ipv6().reg(RD, 1).reg(OUTPORT, 1)
+            ADDF(Bldr().table(SVH).priority(100 + (bdId ? 1 : 0))
+                 .ipv6().reg(BD, bdId).reg(RD, 1).reg(OUTPORT, 1)
                  .isIpv6Dst("fe80::a9:fe:a9:fe")
                  .actions()
                  .ipv6Dst("fe80::a9:fe:a9:2")
                  .decTtl()
                  .outPort(17).done());
 
-            ADDF(Bldr().table(SEC).priority(100).ip().in(17)
-                 .isEthSrc("ed:84:da:ef:16:96")
+            ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).ip().in(17)
+                 .isEthSrc(serviceMac)
                  .isIpSrc("169.254.169.2")
-                 .actions().load(RD, 1).ipSrc("169.254.169.254")
+                 .actions().load(BD, bdId).load(RD, 1).ipSrc("169.254.169.254")
                  .decTtl()
                  .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(SVD).done());
-            ADDF(Bldr().table(SEC).priority(100).arp().in(17)
-                 .isEthSrc("ed:84:da:ef:16:96").isSpa("169.254.169.2")
-                 .actions().load(RD, 1).go(SVD).done());
-            ADDF(Bldr().table(SEC).priority(100).ipv6().in(17)
-                 .isEthSrc("ed:84:da:ef:16:96")
+            ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).arp().in(17)
+                 .isEthSrc(serviceMac).isSpa("169.254.169.2")
+                 .actions().load(BD, bdId).load(RD, 1).go(SVD).done());
+            ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).ipv6().in(17)
+                 .isEthSrc(serviceMac)
                  .isIpv6Src("fe80::a9:fe:a9:2")
-                 .actions().load(RD, 1).ipv6Src("fe80::a9:fe:a9:fe")
+                 .actions().load(BD, bdId).load(RD, 1).ipv6Src("fe80::a9:fe:a9:fe")
                  .decTtl()
                  .meta(opflexagent::flow::meta::ROUTED, opflexagent::flow::meta::ROUTED)
                  .go(SVD).done());
         }
     } else {
         ADDF(Bldr().table(BR).priority(50)
-             .ip().reg(RD, 1).isIpDst("169.254.169.254")
+             .ip().reg(BD, bdId).reg(RD, 1).isIpDst("169.254.169.254")
              .actions()
              .ethSrc(rmac).ethDst(mac).decTtl()
              .outPort(17).done());
         ADDF(Bldr().table(BR).priority(50)
-             .ipv6().reg(RD, 1).isIpv6Dst("fe80::a9:fe:a9:fe")
+             .ipv6().reg(BD, bdId).reg(RD, 1).isIpv6Dst("fe80::a9:fe:a9:fe")
              .actions()
              .ethSrc(rmac).ethDst(mac).decTtl()
              .outPort(17).done());
 
-        ADDF(Bldr().table(SEC).priority(100).ip().in(17)
-             .isEthSrc("ed:84:da:ef:16:96")
+        ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).ip().in(17)
+             .isEthSrc(serviceMac)
              .isIpSrc("169.254.169.254")
-             .actions().load(RD, 1)
+             .actions().load(BD, bdId).load(RD, 1)
              .go(SVD).done());
-        ADDF(Bldr().table(SEC).priority(100).arp().in(17)
-             .isEthSrc("ed:84:da:ef:16:96").isSpa("169.254.169.254")
-             .actions().load(RD, 1).go(SVD).done());
-        ADDF(Bldr().table(SEC).priority(100).ipv6().in(17)
-             .isEthSrc("ed:84:da:ef:16:96")
+        ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).arp().in(17)
+             .isEthSrc(serviceMac).isSpa("169.254.169.254")
+             .actions().load(BD, bdId).load(RD, 1).go(SVD).done());
+        ADDF(Bldr().table(SEC).priority(100 + (bdId ? 1 : 0)).ipv6().in(17)
+             .isEthSrc(serviceMac)
              .isIpv6Src("fe80::a9:fe:a9:fe")
-             .actions().load(RD, 1)
+             .actions().load(BD, bdId).load(RD, 1)
              .go(SVD).done());
     }
 
     ADDF(Bldr().table(BR).priority(51).arp()
-         .reg(RD, 1)
+         .reg(BD, bdId).reg(RD, 1)
          .isEthDst(bmac).isTpa("169.254.169.254")
          .isArpOp(1)
          .actions().move(ETHSRC, ETHDST)
-         .load(ETHSRC, "0xed84daef1696").load(ARPOP, 2)
-         .move(ARPSHA, ARPTHA).load(ARPSHA, "0xed84daef1696")
+         .load(ETHSRC, serviceMacHex).load(ARPOP, 2)
+         .move(ARPSHA, ARPTHA).load(ARPSHA, serviceMacHex)
          .move(ARPSPA, ARPTPA).load(ARPSPA, "0xa9fea9fe")
          .inport().done());
+    uint64_t ndMetadata = 0;
+    MAC(serviceMac).toUIntArray(reinterpret_cast<uint8_t*>(&ndMetadata));
+    reinterpret_cast<uint8_t*>(&ndMetadata)[7] = 1;
+
     ADDF(Bldr().cookie(ovs_ntohll(opflexagent::flow::cookie::NEIGH_DISC))
          .table(BR).priority(51).icmp6()
-         .reg(RD, 1).isEthDst(mmac)
+         .reg(BD, bdId).reg(RD, 1).isEthDst(mmac)
          .icmp_type(135).icmp_code(0)
          .isNdTarget("fe80::a9:fe:a9:fe")
          .actions()
-         .load64(METADATA, 0x1009616efda84edll)
+         .load64(METADATA, ndMetadata)
          .controller(65535).done());
 
     ADDF(Bldr().table(SVD).priority(31).arp()
-         .reg(RD, 1)
-         .isEthSrc("ed:84:da:ef:16:96")
+         .reg(BD, bdId).reg(RD, 1)
+         .isEthSrc(serviceMac)
          .isEthDst(bmac).isTpa("169.254.1.1")
          .isArpOp(1)
          .actions().move(ETHSRC, ETHDST)
@@ -3300,7 +3358,7 @@ void BaseIntFlowManagerFixture::initExpAnycastService(Service &as, int nextHop) 
          .inport().done());
     ADDF(Bldr().cookie(ovs_ntohll(opflexagent::flow::cookie::NEIGH_DISC))
          .table(SVD).priority(31).icmp6()
-         .reg(RD, 1).isEthSrc("ed:84:da:ef:16:96")
+         .reg(BD, bdId).reg(RD, 1).isEthSrc(serviceMac)
          .isEthDst(mmac)
          .icmp_type(135).icmp_code(0)
          .isNdTarget("fe80::1")
