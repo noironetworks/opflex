@@ -2509,7 +2509,11 @@ void IntFlowManager::handleEndpointUpdate(const string& uuid) {
                         anycastReturnIps.push_back(addr);
                     }
                 }
-                uint32_t serviceBdId = anycastReturnIps.empty() ? 0 : bdId;
+                uint32_t serviceBdId = 0;
+                if (endPoint.getBridgeDomainURI())
+                    serviceBdId = getId(
+                        BridgeDomain::CLASS_ID,
+                        endPoint.getBridgeDomainURI().get());
                 if (anycastReturnIps.empty()) {
                     anycastReturnIps = std::move(ipAddresses);
                 }

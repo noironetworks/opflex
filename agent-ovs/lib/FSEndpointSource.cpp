@@ -65,6 +65,9 @@ void FSEndpointSource::updated(const fs::path& filePath) {
     static const std::string EP_VIRTUAL_IP("virtual-ip");
     static const std::string EP_GROUP("endpoint-group");
     static const std::string POLICY_SPACE_NAME("policy-space-name");
+    static const std::string BRIDGE_DOMAIN_POLICY_SPACE(
+        "bridge-domain-policy-space");
+    static const std::string BRIDGE_DOMAIN_NAME("bridge-domain-name");
     static const std::string EG_POLICY_SPACE("eg-policy-space");
     static const std::string EG_MAPPING_ALIAS("eg-mapping-alias");
     static const std::string EP_GROUP_NAME("endpoint-group-name");
@@ -142,6 +145,23 @@ void FSEndpointSource::updated(const fs::path& filePath) {
         if (anycastReturnIps) {
             for (const ptree::value_type &v : anycastReturnIps.get())
                 newep.addAnycastReturnIP(v.second.data());
+        }
+        optional<string> bridgeDomainName =
+            properties.get_optional<string>(BRIDGE_DOMAIN_NAME);
+        optional<string> bridgeDomainPSpace =
+            properties.get_optional<string>(BRIDGE_DOMAIN_POLICY_SPACE);
+        if (bridgeDomainName && bridgeDomainPSpace) {
+            newep.setBridgeDomainURI(opflex::modb::URIBuilder()
+                .addElement("PolicyUniverse")
+                .addElement("PolicySpace")
+                .addElement(bridgeDomainPSpace.get())
+                .addElement("GbpBridgeDomain")
+                .addElement(bridgeDomainName.get())
+                .build());
+        } else if (bridgeDomainName || bridgeDomainPSpace) {
+            LOG(WARNING) << "Ignoring incomplete metadata bridge-domain scope for endpoint "
+                         << newep.getUUID();
+            return;
         }
         optional<ptree&> serviceIps =
             properties.get_child_optional(EP_SERVICE_IP);

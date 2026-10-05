@@ -1553,6 +1553,9 @@ BOOST_FIXTURE_TEST_CASE(remoteEndpoint_vlan, VlanIntFlowManagerFixture) {
 
 BOOST_FIXTURE_TEST_CASE(anycastService, VxlanIntFlowManagerFixture) {
     setConnected();
+    ep0->setBridgeDomainURI(URI(bd0->getURI()));
+    epSrc.updateEndpoint(*ep0);
+    intFlowManager.endpointUpdated(ep0->getUUID());
     intFlowManager.egDomainUpdated(epg0->getURI());
     intFlowManager.domainUpdated(RoutingDomain::CLASS_ID, rd0->getURI());
     portmapper.setPort("service-iface", 17);
@@ -2289,7 +2292,7 @@ void BaseIntFlowManagerFixture::initExpEp(shared_ptr<Endpoint>& ep,
         network::construct_link_local_ip_addr(ep->getMAC().get()).to_string();
     ips.insert(lladdr);
     const unordered_set<string>* acastIps = &ep->getAnycastReturnIPs();
-    uint32_t serviceBdId = acastIps->empty() ? 0 : bdId;
+    uint32_t serviceBdId = ep->getBridgeDomainURI() ? bdId : 0;
     if (acastIps->empty()) acastIps = &ips;
     uint32_t vnid = policyMgr.getVnidForGroup(epg->getURI()).get();
     uint32_t tunPort = intFlowManager.getTunnelPort();

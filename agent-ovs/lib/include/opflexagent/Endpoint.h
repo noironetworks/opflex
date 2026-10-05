@@ -91,6 +91,15 @@ public:
         egURI = boost::none;
     }
 
+    const boost::optional<opflex::modb::URI>&
+    getBridgeDomainURI() const {
+        return bridgeDomainURI;
+    }
+
+    void setBridgeDomainURI(const opflex::modb::URI& bridgeDomainURI) {
+        this->bridgeDomainURI = bridgeDomainURI;
+    }
+
     /**
      * Get the mapping alias for this endpoint
      *
@@ -1327,6 +1336,7 @@ private:
     virt_ip_set virtualIps;
     boost::optional<std::string> egMappingAlias;
     boost::optional<opflex::modb::URI> egURI;
+    boost::optional<opflex::modb::URI> bridgeDomainURI;
     boost::optional<opflex::modb::URI> qosPolicy;
     /*Properties in this block are relevant for external
      endpoints only*/
