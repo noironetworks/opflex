@@ -1340,6 +1340,8 @@ BOOST_FIXTURE_TEST_CASE( testotherparams, FSEndpointFixture ) {
        << "\"discovery-proxy-mode\":\"true\","
        << "\"nat-mode\":\"true\","
        << "\"anycast-return-ip\":[\"1.2.3.4\"],"
+       << "\"bridge-domain-policy-space\":\"project-a\","
+       << "\"bridge-domain-name\":\"net_net-a\","
        << "\"virtual-ip\":[{\"mac\":\"24:ff:00:a3:01:03\",\"ip\":\"9.9.9.1\"},{\"ip\":\"11.1.1.1\"}],"
        << "\"dhcp4\":{\"ip\":\"123.123.123.123\",\"server-ip\":\"23.53.31.23\",\"server-mac\":\"10:ff:00:a3:01:03\","
          << "\"prefix-len\":\"24\",\"routers\":[\"44.1.3.4\"],\"dns-servers\":[\"8.8.8.8\",\"8.8.8.7\"],"
@@ -1364,11 +1366,43 @@ BOOST_FIXTURE_TEST_CASE( testotherparams, FSEndpointFixture ) {
     auto ep = agent.getEndpointManager().getEndpoint(uuid);
 
     BOOST_CHECK_EQUAL(1, ep->getAnycastReturnIPs().size());
+    BOOST_REQUIRE(ep->getBridgeDomainURI());
+    BOOST_CHECK_EQUAL(
+        "/PolicyUniverse/PolicySpace/project-a/GbpBridgeDomain/net_net-a/",
+        ep->getBridgeDomainURI()->toString());
     BOOST_CHECK_EQUAL(2, ep->getVirtualIPs().size());
 
-    fs::remove(path1);
-    WAIT_FOR((agent.getEndpointManager().getEndpoint(uuid) == nullptr), 500);
     watcher.stop();
+
+    fs::ofstream partial(path1);
+    partial << "{"
+            << "\"uuid\":\"" << uuid << "\","
+            << "\"bridge-domain-name\":\"net_net-b\""
+            << "}" << std::endl;
+    partial.close();
+    source.updated(path1);
+
+    ep = agent.getEndpointManager().getEndpoint(uuid);
+    BOOST_REQUIRE(ep);
+    BOOST_REQUIRE(ep->getBridgeDomainURI());
+    BOOST_CHECK_EQUAL(
+        "/PolicyUniverse/PolicySpace/project-a/GbpBridgeDomain/net_net-a/",
+        ep->getBridgeDomainURI()->toString());
+
+    fs::ofstream unscoped(path1);
+    unscoped << "{"
+             << "\"uuid\":\"" << uuid << "\""
+             << "}" << std::endl;
+    unscoped.close();
+    source.updated(path1);
+
+    ep = agent.getEndpointManager().getEndpoint(uuid);
+    BOOST_REQUIRE(ep);
+    BOOST_CHECK(!ep->getBridgeDomainURI());
+
+    fs::remove(path1);
+    source.deleted(path1);
+    BOOST_CHECK(!agent.getEndpointManager().getEndpoint(uuid));
     agent.stop();
 }
 
