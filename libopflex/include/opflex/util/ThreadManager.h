@@ -16,6 +16,8 @@
 #define OPFLEX_UTIL_THREADMANAGER_H
 
 #include <memory>
+#include <functional>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -46,11 +48,13 @@ public:
     void startTask(const std::string& name);
 
     /**
-     * Stop the task of the given name.  Call when all handles for the
-     * task have been closed.  Will join the thread for the task if
-     * running without an adaptor.
+     * Stop the task of the given name.  The optional cleanup runs on the
+     * task's loop thread after its stop handle is closed.  Without cleanup,
+     * call when all other handles for the task have been closed.  Will join
+     * the thread for the task if running without an adaptor.
      */
     void stopTask(const std::string& name);
+    void stopTask(const std::string& name, std::function<void()> cleanup);
 
     /**
      * Allocate a main loop adaptor and use it for running tasks
@@ -72,6 +76,8 @@ private:
         uv_loop_t* loop;
         uv_thread_t thread;
         uv_async_t cleanup;
+        std::mutex stopMutex;
+        std::function<void()> stopCleanup;
     };
 
     class AdaptorImpl : public ofcore::MainLoopAdaptor {
