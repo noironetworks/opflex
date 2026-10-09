@@ -43,6 +43,7 @@
 #include <utility>
 #include <unordered_map>
 #include <unordered_set>
+#include <atomic>
 #include <mutex>
 
 namespace opflexagent {
@@ -417,6 +418,22 @@ public:
      * Start the policy manager
      */
     void start();
+
+    /**
+     * Stop processing model updates and stop notifying policy
+     * listeners, but keep the current policy state.  When this
+     * returns, no update callback or listener notification is in
+     * progress, and policy work already running stops at its next
+     * item.
+     */
+    void requestStop();
+
+    /**
+     * Check whether requestStop() has been called since start()
+     *
+     * @return true if the policy manager is stopping
+     */
+    bool isStopping() const { return stopping.load(); }
 
     /**
      * Stop the policy manager
@@ -880,6 +897,7 @@ private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;
     bool localNetpolEnabled = false;
+    std::atomic<bool> stopping{false};
     TaskQueue taskQueue;
     typedef std::unordered_map<opflex::modb::URI,
                 std::shared_ptr<modelgbp::gbp::Subnet> > subnet_map_t;
@@ -1153,6 +1171,19 @@ private:
      * @return true if the endpoint group was updated
      */
     bool updateEPGDomains(const opflex::modb::URI& egURI, bool& toRemove);
+
+    /**
+     * Unregister the model listeners registered in start()
+     */
+    void unregisterModbListeners();
+
+    /**
+     * Call the given function for each policy listener, unless the
+     * policy manager is stopping
+     *
+     * @param notify the function to call for each listener
+     */
+    void notifyListeners(const std::function<void(PolicyListener*)>& notify);
 
     /**
      * Notify policy listeners about an update to the forwarding

@@ -13,6 +13,7 @@
 
 #include <boost/asio/io_service.hpp>
 
+#include <cstdint>
 #include <unordered_set>
 #include <string>
 #include <mutex>
@@ -45,13 +46,28 @@ public:
     void dispatch(const std::string& taskId,
                   const std::function<void ()>& task);
 
+    /**
+     * Accept tasks again after a call to stop().  Tasks dispatched
+     * before stop() still never run.  A new task queue accepts tasks.
+     */
+    void start();
+
+    /**
+     * Skip every task that has not begun executing, and drop tasks
+     * dispatched until start() is called.  A task that is already
+     * executing is not interrupted.
+     */
+    void stop();
+
 private:
-    void run_task(const std::string& taskId,
+    void run_task(uint64_t gen, const std::string& taskId,
                   const std::function<void ()>& task);
 
     boost::asio::io_service& io_service;
     std::mutex queueMutex;
     std::unordered_set<std::string> queuedItems;
+    bool stopped;
+    uint64_t generation;
 };
 
 } // namespace opflexagent
