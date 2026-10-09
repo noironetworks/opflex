@@ -33,6 +33,11 @@ void OvsdbConnection::on_writeq_async(uv_async_t* handle) {
 }
 
 void OvsdbConnection::start() {
+    const std::lock_guard<std::mutex> lifecycleGuard(lifecycleMtx);
+    {
+        const std::lock_guard<std::mutex> guard(asyncMtx);
+        if (running) return;
+    }
     LOG(DEBUG) << "Starting .....";
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
     client_loop = threadManager.initTask("OvsdbConnection");
@@ -40,6 +45,10 @@ void OvsdbConnection::start() {
     uv_async_init(client_loop,&connect_async, connect_cb);
     writeq_async.data = this;
     uv_async_init(client_loop, &writeq_async, on_writeq_async);
+    {
+        const std::lock_guard<std::mutex> guard(asyncMtx);
+        running = true;
+    }
 
     threadManager.startTask("OvsdbConnection");
 }
@@ -47,6 +56,10 @@ void OvsdbConnection::start() {
 void OvsdbConnection::connect_cb(uv_async_t* handle) {
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
     auto* ocp = (OvsdbConnection*)handle->data;
+    {
+        const std::lock_guard<std::mutex> guard(ocp->asyncMtx);
+        if (!ocp->running) return;
+    }
     if (ocp->ovsdbUseLocalTcpPort) {
         ocp->peer = yajr::Peer::create("127.0.0.1",
                                        "6640",
@@ -64,10 +77,19 @@ void OvsdbConnection::connect_cb(uv_async_t* handle) {
 }
 
 void OvsdbConnection::stop() {
-    uv_close((uv_handle_t*)&connect_async, nullptr);
-    uv_close((uv_handle_t*)&writeq_async, nullptr);
-    yajr::finiLoop(client_loop);
-    threadManager.stopTask("OvsdbConnection");
+    const std::lock_guard<std::mutex> lifecycleGuard(lifecycleMtx);
+    {
+        const std::lock_guard<std::mutex> guard(asyncMtx);
+        if (!running) return;
+        running = false;
+    }
+    threadManager.stopTask("OvsdbConnection", [this]() {
+        uv_close((uv_handle_t*)&connect_async, nullptr);
+        uv_close((uv_handle_t*)&writeq_async, nullptr);
+        yajr::finiLoop(client_loop);
+    });
+    peer = nullptr;
+    client_loop = nullptr;
     cleanup();
 }
 
@@ -110,6 +132,8 @@ uv_loop_t* OvsdbConnection::loop_selector(void* data) {
 void OvsdbConnection::connect() {
     unique_lock<mutex> lock(OvsdbConnection::ovsdbMtx);
     if (!connected) {
+        const std::lock_guard<std::mutex> guard(asyncMtx);
+        if (!running) return;
         connect_async.data = this;
         uv_async_send(&connect_async);
     }
@@ -507,7 +531,8 @@ void OvsdbConnection::handleUpdate(const Document& payload) {
 }
 
 void OvsdbConnection::messagesReady() {
-    uv_async_send(&writeq_async);
+    const std::lock_guard<std::mutex> guard(asyncMtx);
+    if (running) uv_async_send(&writeq_async);
 }
 
 void OvsdbConnection::sendMonitorRequests() {

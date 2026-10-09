@@ -105,6 +105,12 @@ public:
      */
     void UninstallListenersForConnection(SwitchConnection *conn);
 
+    /**
+     * Fail and wake all requests waiting for a barrier reply. Used when the
+     * connection is re-established or its receive thread has stopped.
+     */
+    void FailOutstandingRequests();
+
     /** Interface: MessageHandler */
     void Handle(SwitchConnection *conn,
                 int msgType,

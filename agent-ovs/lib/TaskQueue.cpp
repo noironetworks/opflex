@@ -12,14 +12,16 @@
 namespace opflexagent {
 
 TaskQueue::TaskQueue(boost::asio::io_service& io_service_)
-    : io_service(io_service_) {
+    : io_service(io_service_), stopped(false), generation(0) {
 
 }
 
-void TaskQueue::run_task(const std::string& taskId,
+void TaskQueue::run_task(uint64_t gen, const std::string& taskId,
                          const std::function<void ()>& task) {
     {
         std::unique_lock<std::mutex> guard(queueMutex);
+        // Dispatched before the most recent stop()
+        if (gen != generation) return;
         queuedItems.erase(taskId);
     }
     try {
@@ -34,11 +36,25 @@ void TaskQueue::run_task(const std::string& taskId,
 
 void TaskQueue::dispatch(const std::string& taskId,
                          const std::function<void ()>& task) {
+    uint64_t gen;
     {
         std::unique_lock<std::mutex> guard(queueMutex);
-        if (!queuedItems.insert(taskId).second) return;
+        if (stopped || !queuedItems.insert(taskId).second) return;
+        gen = generation;
     }
-    io_service.post([=]() { TaskQueue::run_task(taskId, task); });
+    io_service.post([=]() { TaskQueue::run_task(gen, taskId, task); });
+}
+
+void TaskQueue::start() {
+    std::unique_lock<std::mutex> guard(queueMutex);
+    stopped = false;
+}
+
+void TaskQueue::stop() {
+    std::unique_lock<std::mutex> guard(queueMutex);
+    stopped = true;
+    ++generation;
+    queuedItems.clear();
 }
 
 } // namespace opflexagent

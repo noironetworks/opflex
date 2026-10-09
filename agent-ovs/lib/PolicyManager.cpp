@@ -65,6 +65,8 @@ PolicyManager::~PolicyManager() {
 const uint16_t PolicyManager::MAX_POLICY_RULE_PRIORITY = 8192;
 
 void PolicyManager::start() {
+    stopping.store(false);
+    taskQueue.start();
     LOG(DEBUG) << "Starting policy manager";
 
     using namespace modelgbp;
@@ -152,13 +154,36 @@ void PolicyManager::start() {
     }
 }
 
+void PolicyManager::requestStop() {
+    {
+        // Set under listener_mutex so that no notification is in
+        // progress once stopping is set.
+        lock_guard<mutex> guard(listener_mutex);
+        if (stopping.exchange(true)) return;
+    }
+    taskQueue.stop();
+    // Must follow setting stopping: a modb callback can be blocked on
+    // state_mutex behind a policy rescan, and unregistering waits for
+    // callbacks in progress to return.
+    unregisterModbListeners();
+}
+
 void PolicyManager::stop() {
+    requestStop();
     LOG(DEBUG) << "Stopping policy manager";
 
+    lock_guard<mutex> guard(state_mutex);
+    group_map.clear();
+    vnid_map.clear();
+    redirGrpMap.clear();
+}
+
+void PolicyManager::unregisterModbListeners() {
     using namespace modelgbp;
     using namespace modelgbp::gbp;
     using namespace modelgbp::gbpe;
     using namespace modelgbp::epdr;
+    platform::Config::unregisterListener(framework, &configListener);
     BridgeDomain::unregisterListener(framework, &domainListener);
     FloodDomain::unregisterListener(framework, &domainListener);
     FloodContext::unregisterListener(framework, &domainListener);
@@ -202,11 +227,7 @@ void PolicyManager::stop() {
     RoutingDomain::unregisterListener(framework, &routeListener);
     RemoteRoute::unregisterListener(framework, &routeListener);
     RemoteNextHop::unregisterListener(framework, &routeListener);
-
-    lock_guard<mutex> guard(state_mutex);
-    group_map.clear();
-    vnid_map.clear();
-    redirGrpMap.clear();
+    L3ExternalNetwork::unregisterListener(framework, &routeListener);
 }
 
 void PolicyManager::registerListener(PolicyListener* listener) {
@@ -219,67 +240,67 @@ void PolicyManager::unregisterListener(PolicyListener* listener) {
     policyListeners.remove(listener);
 }
 
-void PolicyManager::notifyEPGDomain(const URI& egURI) {
+void PolicyManager::notifyListeners(
+        const std::function<void(PolicyListener*)>& notify) {
     lock_guard<mutex> guard(listener_mutex);
+    if (isStopping()) return;
     for (PolicyListener* listener : policyListeners) {
-        listener->egDomainUpdated(egURI);
+        notify(listener);
     }
+}
+
+void PolicyManager::notifyEPGDomain(const URI& egURI) {
+    notifyListeners([&](PolicyListener* listener) {
+        listener->egDomainUpdated(egURI);
+    });
 }
 
 void PolicyManager::notifyExternalInterface(const URI& extIntfURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener* listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->externalInterfaceUpdated(extIntfURI);
-    }
+    });
 }
 
 void PolicyManager::notifyStaticRoute(const URI& staticRtURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener* listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->staticRouteUpdated(staticRtURI);
-    }
+    });
 }
 
 void PolicyManager::notifyRemoteRoute(const URI& remoteRtURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener* listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->remoteRouteUpdated(remoteRtURI);
-    }
+    });
 }
 
 void PolicyManager::notifyLocalRoute(const URI& localRtURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener* listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->localRouteUpdated(localRtURI);
-    }
+    });
 }
 
 void PolicyManager::notifyDomain(class_id_t cid, const URI& domURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener* listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->domainUpdated(cid, domURI);
-    }
+    });
 }
 
 void PolicyManager::notifyContract(const URI& contractURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener *listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->contractUpdated(contractURI);
-    }
+    });
 }
 
 void PolicyManager::notifySecGroup(const URI& secGroupURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener *listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->secGroupUpdated(secGroupURI);
-    }
+    });
 }
 
 void PolicyManager::notifyConfig(const URI& configURI) {
-    lock_guard<mutex> guard(listener_mutex);
-    for (PolicyListener *listener : policyListeners) {
+    notifyListeners([&](PolicyListener* listener) {
         listener->configUpdated(configURI);
-    }
+    });
 }
 
 optional<shared_ptr<modelgbp::gbp::RoutingDomain> >
@@ -866,9 +887,11 @@ void PolicyManager::updateGroupContracts(class_id_t groupType,
 
 bool operator==(const PolicyRule& lhs, const PolicyRule& rhs) {
     return ((lhs.getDirection() == rhs.getDirection()) &&
+            (lhs.getPriority() == rhs.getPriority()) &&
             (lhs.getAllow() == rhs.getAllow()) &&
             (lhs.getRemoteSubnets() == rhs.getRemoteSubnets()) &&
             (*lhs.getL24Classifier() == *rhs.getL24Classifier()) &&
+            (lhs.getRedirect() == rhs.getRedirect()) &&
             (lhs.getRedirectDestGrpURI() == rhs.getRedirectDestGrpURI()) && 
             (lhs.getLog() == rhs.getLog()) &&
             (lhs.egressDnsResolved == rhs.egressDnsResolved));
@@ -1396,6 +1419,7 @@ void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, 
             itr->second.resolved.clear();
             notifyContracts = itr->second.secGrpSet;
             for(auto &secGrp: notifyContracts) {
+                if (isStopping()) return;
                 bool notFound;
                 updateSecGrpRules(secGrp, notFound);
             }
@@ -1456,6 +1480,7 @@ void PolicyManager::updateDnsPolicies(const class_id_t class_id,const URI &uri, 
         itr->second.resolved = newResolved;
         notifyContracts = itr->second.secGrpSet;
 	for(auto &secGrp: notifyContracts) {
+	    if (isStopping()) return;
 	    bool notFound;
 	    updateSecGrpRules(secGrp, notFound);
 	}
@@ -1544,6 +1569,7 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
         uint16_t rulePrio = PolicyManager::MAX_POLICY_RULE_PRIORITY;
 
         for (shared_ptr<Rule>& rule : rules) {
+            if (pMgr.isStopping()) return false;
             if (!rule->isDirectionSet()) {
                 continue;       // ignore rules with no direction
             }
@@ -1658,8 +1684,9 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
     }
     PolicyManager::rule_list_t::const_iterator li = oldRules.begin();
     PolicyManager::rule_list_t::const_iterator ri = newRules.begin();
+    // Rules are rebuilt for every scan, so pointer identity is not a change.
     while (li != oldRules.end() && ri != newRules.end() &&
-           li->get() == ri->get()) {
+           **li == **ri) {
         ++li;
         ++ri;
     }
@@ -1667,6 +1694,7 @@ static bool updatePolicyRules(PolicyManager &pMgr, OFFramework& framework,
     if (updated) {
         oldRules.swap(newRules);
         for (shared_ptr<PolicyRule>& c : oldRules) {
+            if (pMgr.isStopping()) break;
             LOG(DEBUG) << parentURI << ": " << *c
                        << " local: " << local;
         }
@@ -1699,6 +1727,8 @@ bool PolicyManager::updateSecGrpRules(const URI& secGrpURI, bool& notFound, bool
                               oldRedirGrps, log, local, newRedirGrps, newDnsRefs);
     }
 
+    // The build is incomplete if requestStop() interrupted it.
+    if (isStopping()) return false;
     for (const auto& s : oldDnsRefs) {
         /*lost Dns Ref*/
         if(dns_demand_map.find(s) != dns_demand_map.end() && (newDnsRefs.find(s) == newDnsRefs.end())) {
@@ -1731,6 +1761,8 @@ bool PolicyManager::updateContractRules(const URI& contrURI, bool& notFound) {
                                            oldRedirGrps, log, false,
                                            newRedirGrps,
                                            newDnsRef);
+    // The build is incomplete if requestStop() interrupted it.
+    if (isStopping()) return false;
     for (const URI& u : oldRedirGrps) {
         if(redirGrpMap.find(u) != redirGrpMap.end()) {
             redirGrpMap[u].ctrctSet.erase(contrURI);
@@ -1750,6 +1782,7 @@ void PolicyManager::updateContracts() {
        object changed */
     for (auto itr = contractMap.begin();
          itr != contractMap.end();) {
+        if (isStopping()) return;
 
         bool notFound = false;
         if (updateContractRules(itr->first, notFound)) {
@@ -1791,6 +1824,7 @@ void PolicyManager::updateSecGrps(bool local) {
     uri_set_t toNotify;
     auto it = secGrpMap.begin();
     while (it != secGrpMap.end()) {
+        if (isStopping()) return;
         bool notfound = false;
         /* Skip rules that are not relevant for this computation */
         if (it->second.isLocal != local) {
@@ -2464,6 +2498,7 @@ void PolicyManager::updateDomain(class_id_t class_id, const URI& uri) {
         ext_int_map[uri];
     }
     for (auto itr = group_map.begin(); itr != group_map.end(); ) {
+        if (isStopping()) return;
         bool toRemove = false;
         if (updateEPGDomains(itr->first, toRemove)) {
             notifyGroups.insert(itr->first);
@@ -2484,6 +2519,7 @@ void PolicyManager::updateDomain(class_id_t class_id, const URI& uri) {
     }
     for (auto itr = ext_int_map.begin();
          itr != ext_int_map.end(); ) {
+        if (isStopping()) return;
         bool toRemove = false;
         if (updateExternalInterface(itr->first, toRemove)) {
             notifyExtIntfs.insert(itr->first);
