@@ -823,6 +823,7 @@ void Agent::start() {
 
 void Agent::stop() {
     if (!started) return;
+    policyManager.requestStop();
     LOG(INFO) << "Stopping OpFlex Agent";
 
     // Just in case the io_service gets blocked by some stray

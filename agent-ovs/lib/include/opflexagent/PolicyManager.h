@@ -43,6 +43,7 @@
 #include <utility>
 #include <unordered_map>
 #include <unordered_set>
+#include <atomic>
 #include <mutex>
 
 namespace opflexagent {
@@ -417,6 +418,11 @@ public:
      * Start the policy manager
      */
     void start();
+
+    /** Request that in-flight policy work stop before listener teardown. */
+    void requestStop() { stopping.store(true); }
+
+    bool isStopping() const { return stopping.load(); }
 
     /**
      * Stop the policy manager
@@ -880,6 +886,7 @@ private:
     opflex::ofcore::OFFramework& framework;
     std::string opflexDomain;
     bool localNetpolEnabled = false;
+    std::atomic<bool> stopping{false};
     TaskQueue taskQueue;
     typedef std::unordered_map<opflex::modb::URI,
                 std::shared_ptr<modelgbp::gbp::Subnet> > subnet_map_t;
