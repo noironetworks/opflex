@@ -289,6 +289,11 @@ FlowExecutor::Handle(SwitchConnection *,
 void
 FlowExecutor::Connected(SwitchConnection*) {
     /* If connection was re-established, fail outstanding requests */
+    FailOutstandingRequests();
+}
+
+void
+FlowExecutor::FailOutstandingRequests() {
     mutex_guard lock(reqMtx);
     for (RequestMap::value_type& kv : requests) {
         RequestState& req = kv.second;
