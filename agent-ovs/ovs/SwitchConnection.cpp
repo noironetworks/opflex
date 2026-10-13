@@ -10,6 +10,8 @@
 #include <opflexagent/logging.h>
 
 #include <sys/eventfd.h>
+#include <cerrno>
+#include <cstring>
 #include <string>
 #include <fstream>
 
@@ -73,6 +75,9 @@ SwitchConnection::SwitchConnection(const std::string& swName) :
 
 SwitchConnection::~SwitchConnection() {
     Disconnect();
+    if (pollEventFd >= 0) {
+        close(pollEventFd);
+    }
 }
 
 void
@@ -168,7 +173,10 @@ void SwitchConnection::cleanupOFConn() {
 void
 SwitchConnection::Disconnect() {
     isDisconnecting = true;
-    if (connThread && SignalPollEvent()) {
+    if (connThread) {
+        // A failed wake-up must not leave the receive thread running while
+        // callers unregister and destroy its message handlers.
+        SignalPollEvent();
         connThread->join();
         connThread.reset();
     }
@@ -206,7 +214,10 @@ SwitchConnection::operator()() {
 bool
 SwitchConnection::SignalPollEvent() {
     uint64_t data = 1;
-    ssize_t szWrote = write(pollEventFd, &data, sizeof(data));
+    ssize_t szWrote;
+    do {
+        szWrote = write(pollEventFd, &data, sizeof(data));
+    } while (szWrote < 0 && errno == EINTR);
     if (szWrote != sizeof(data)) {
         LOG(ERROR) << "Failed to send event to poll loop: " << strerror(errno);
         return false;
@@ -281,7 +292,13 @@ SwitchConnection::Monitor() {
             }
             poll_block();
         }
+        if (isDisconnecting) {
+            return;
+        }
         connLost = (EOF == receiveOFMessage());
+        if (isDisconnecting) {
+            return;
+        }
 
         if (!connLost) {
             std::chrono::time_point<std::chrono::steady_clock> echoTime;
@@ -306,6 +323,9 @@ SwitchConnection::Monitor() {
 int
 SwitchConnection::receiveOFMessage() {
     do {
+        if (isDisconnecting) {
+            return 0;
+        }
         int err;
         ofpbuf *recvMsg;
         {
@@ -344,6 +364,9 @@ SwitchConnection::receiveOFMessage() {
 int
 SwitchConnection::SendMessage(OfpBuf& msg) {
     while(true) {
+        if (isDisconnecting) {
+            return ENOTCONN;
+        }
         mutex_guard lock(connMtx);
         if (!IsConnectedLocked()) {
             return ENOTCONN;
