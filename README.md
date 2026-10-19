@@ -9,3 +9,14 @@
 [Prometheus integration](docs/prometheus.md)
 
 [Configuring and using drop logs](docs/drop_logs.md)
+
+## Running unit tests
+
+The PR workflow in `.github/workflows/opflex-images.yml` runs the existing
+`.travis/travis-build.sh` script on Ubuntu 22.04 with the required development
+dependencies installed. It builds and tests `libopflex`, generates and builds
+`libmodelgbp` with Genie, then builds and tests `agent-ovs`.
+
+The default test configuration enables coverage and profiling, but not gRPC.
+This native build does not build or publish container images. The workflow
+uploads build logs, test reports, and coverage as Actions artifacts.
