@@ -3,13 +3,24 @@
 set -o errtrace
 set -x
 
-git clone https://github.com/eddyxu/cpp-coveralls
-pushd cpp-coveralls
-sudo ./setup.py install
-popd
+if [[ "${GITHUB_ACTIONS:-false}" != "true" ]]; then
+    git clone https://github.com/eddyxu/cpp-coveralls
+    pushd cpp-coveralls
+    sudo ./setup.py install
+    popd
+fi
 
 wget https://travisci-static-artifacts-dd485362-9714-11ea-bb37-0242ac130002.s3.us-east-2.amazonaws.com/artifacts.tgz
 tar -xvzf artifacts.tgz
+if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+    sudo apt-get install -y ./jammy/libnoiro-openvswitch_2.12.0-1_amd64.deb \
+        ./jammy/libnoiro-openvswitch-dev_2.12.0-1_amd64.deb \
+        ./prometheus-cpp_1.0.1_amd64.deb
+    sudo ldconfig
+    # The default UT configure does not enable gRPC; retain it below for Travis
+    # sanitizer builds. GHA stores coverage artifacts instead of using Coveralls.
+    exit 0
+fi
 sudo dpkg -i jammy/libnoiro-openvswitch_2.12.0-1_amd64.deb
 sudo dpkg -i jammy/libnoiro-openvswitch-dev_2.12.0-1_amd64.deb
 sudo dpkg -i prometheus-cpp_1.0.1_amd64.deb

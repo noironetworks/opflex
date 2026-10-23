@@ -1,7 +1,10 @@
-name: Opflex feature image build
+name: OpFlex CI
 
 on:
+  pull_request:
   push:
+    branches:
+      - "**"
     tags:
       - "[0-9]+.[0-9]+.[0-9]+.[0-9]+"
 
@@ -21,6 +24,101 @@ env:
   DOCKER_BUILDKIT: "1"
 
 jobs:
+  unit-tests:
+    name: OpFlex unit tests
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' &&
+       github.event.deleted == false &&
+       startsWith(github.ref, 'refs/heads/'))
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      UT_ARTIFACT_DIR: ut-artifacts
+
+    steps:
+      - name: Check out test source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Java 11 for Genie
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "11"
+          cache: maven
+          cache-dependency-path: genie/pom.xml
+
+      - name: Install unit test dependencies
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${UT_ARTIFACT_DIR}"
+          {
+            sudo apt-get update
+            sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+              libssl-dev libuv1-dev libboost-all-dev rapidjson-dev maven lcov cmake \
+              libunbound8 libunbound-dev libnetfilter-conntrack-dev libcurl4-openssl-dev
+            bash -e ./.travis/install-dependencies.sh
+            sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+          } 2>&1 | tee "${UT_ARTIFACT_DIR}/dependencies.log"
+
+      - name: Build and run unit tests
+        id: tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${UT_ARTIFACT_DIR}"
+          bash ./.travis/travis-build.sh 2>&1 | tee "${UT_ARTIFACT_DIR}/tests.log"
+
+      - name: Summarize unit tests and collect coverage
+        if: always()
+        shell: bash
+        env:
+          UNIT_TEST_RESULT: ${{ steps.tests.outcome }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${UT_ARTIFACT_DIR}"
+          {
+            echo "### OpFlex unit tests"
+            echo
+            printf 'Tested commit: `%s`\n\n' "${GITHUB_SHA}"
+            printf 'Test result: `%s`\n\n' "${UNIT_TEST_RESULT}"
+            if [[ -d libopflex && -d agent-ovs ]] && command -v lcov >/dev/null; then
+              if lcov --capture --directory libopflex --directory agent-ovs \
+                --output-file "${UT_ARTIFACT_DIR}/coverage-all.info" \
+                >"${UT_ARTIFACT_DIR}/coverage.log" 2>&1; then
+                if lcov --summary "${UT_ARTIFACT_DIR}/coverage-all.info" \
+                  >>"${UT_ARTIFACT_DIR}/coverage.log" 2>&1; then
+                  echo 'Coverage captured; see coverage-all.info and coverage.log in the artifact.'
+                else
+                  echo 'Coverage captured, but its summary failed; see coverage.log.'
+                fi
+              else
+                echo 'Coverage could not be collected; see coverage.log in the artifact.'
+              fi
+            else
+              echo 'Coverage is unavailable because setup did not complete.'
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload unit test logs and coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: opflex-unit-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ut-artifacts/
+            libopflex/**/*.log
+            libopflex/**/*.trs
+            agent-ovs/**/*.log
+            agent-ovs/**/*.trs
+            genie/target/libmodelgbp/config.log
+          if-no-files-found: warn
+          retention-days: 14
+
   validate-source:
     name: Validate Jenkins feature tag
     if: github.event_name == 'push' && github.event.deleted == false && github.repository == 'noironetworks/opflex' && startsWith(github.ref, 'refs/tags/')
