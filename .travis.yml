@@ -5,10 +5,14 @@ services: docker
 os: linux
 dist: jammy
 
+env:
+  global:
+    - CI_PROVIDER: gha
+
 jobs:
   include:
     - stage: check
-      if: tag IS NOT present
+      if: tag IS NOT present AND env(CI_PROVIDER) = travis
       addons:
         apt:
           packages:
@@ -34,7 +38,7 @@ jobs:
         - bash ./.travis/coveralls-deploy.sh
 
     - stage: build-images
-      if: tag IS present
+      if: tag IS present AND env(CI_PROVIDER) = travis
       before_install:
         - mkdir -vp ~/.docker/cli-plugins/
         - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx

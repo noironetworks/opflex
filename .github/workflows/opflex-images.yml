@@ -1,0 +1,407 @@
+name: OpFlex CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ startsWith(github.ref, 'refs/tags/') && format('opflex-release-{0}', github.ref) || format('opflex-tests-{0}', github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  SOURCE_BRANCH: ${{ vars.SOURCE_BRANCH || 'master' }}
+  UPSTREAM_ID: ${{ vars.UPSTREAM_ID }}
+  CICD_BRANCH: ${{ vars.CICD_BRANCH || 'main' }}
+  SKIP_CICD_STATUS: ${{ vars.SKIP_CICD_STATUS || 'true' }}
+  GHA_PLATFORM: linux/amd64
+  DOCKER_BUILDKIT: "1"
+
+jobs:
+  unit-tests:
+    name: OpFlex unit tests
+    needs: select-ci-provider
+    if: >-
+      needs.select-ci-provider.outputs.run-gha == 'true' &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'push' &&
+        github.event.deleted == false &&
+        startsWith(github.ref, 'refs/heads/')))
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      UT_ARTIFACT_DIR: ut-artifacts
+
+    steps:
+      - name: Check out test source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Java 11 for Genie
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "11"
+          cache: maven
+          cache-dependency-path: genie/pom.xml
+
+      - name: Install unit test dependencies
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${UT_ARTIFACT_DIR}"
+          {
+            sudo apt-get update
+            sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+              libssl-dev libuv1-dev libboost-all-dev rapidjson-dev maven lcov cmake \
+              libunbound8 libunbound-dev libnetfilter-conntrack-dev libcurl4-openssl-dev
+            bash -e ./.travis/install-dependencies.sh
+            sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+          } 2>&1 | tee "${UT_ARTIFACT_DIR}/dependencies.log"
+
+      - name: Build and run unit tests
+        id: tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${UT_ARTIFACT_DIR}"
+          bash ./.travis/travis-build.sh 2>&1 | tee "${UT_ARTIFACT_DIR}/tests.log"
+
+      - name: Summarize unit tests and collect coverage
+        if: always()
+        shell: bash
+        env:
+          UNIT_TEST_RESULT: ${{ steps.tests.outcome }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${UT_ARTIFACT_DIR}"
+          {
+            echo "### OpFlex unit tests"
+            echo
+            printf 'Tested commit: `%s`\n\n' "${GITHUB_SHA}"
+            printf 'Test result: `%s`\n\n' "${UNIT_TEST_RESULT}"
+            if [[ -d libopflex && -d agent-ovs ]] && command -v lcov >/dev/null; then
+              if lcov --capture --directory libopflex --directory agent-ovs \
+                --output-file "${UT_ARTIFACT_DIR}/coverage-all.info" \
+                >"${UT_ARTIFACT_DIR}/coverage.log" 2>&1; then
+                if lcov --summary "${UT_ARTIFACT_DIR}/coverage-all.info" \
+                  >>"${UT_ARTIFACT_DIR}/coverage.log" 2>&1; then
+                  echo 'Coverage captured; see coverage-all.info and coverage.log in the artifact.'
+                else
+                  echo 'Coverage captured, but its summary failed; see coverage.log.'
+                fi
+              else
+                echo 'Coverage could not be collected; see coverage.log in the artifact.'
+              fi
+            else
+              echo 'Coverage is unavailable because setup did not complete.'
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload unit test logs and coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: opflex-unit-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ut-artifacts/
+            libopflex/**/*.log
+            libopflex/**/*.trs
+            agent-ovs/**/*.log
+            agent-ovs/**/*.trs
+            genie/target/libmodelgbp/config.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  select-ci-provider:
+    name: Select CI provider
+    runs-on: ubuntu-22.04
+    outputs:
+      run-gha: ${{ steps.selector.outputs.run_gha }}
+    steps:
+      - name: Check out source configuration
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Read CI provider from Travis configuration
+        id: selector
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mapfile -t providers < <(
+            awk -F: '$1 ~ /^[[:space:]]*-[[:space:]]*CI_PROVIDER[[:space:]]*$/ {
+              value = $2
+              gsub(/[[:space:]]/, "", value)
+              sub(/#.*/, "", value)
+              print value
+            }' .travis.yml
+          )
+          if ((${#providers[@]} != 1)); then
+            echo "::error:: .travis.yml must define CI_PROVIDER exactly once"
+            exit 1
+          fi
+          provider="${providers[0]}"
+          case "${provider}" in
+            gha) run_gha=true ;;
+            travis) run_gha=false ;;
+            *) echo "::error:: CI_PROVIDER must be 'gha' or 'travis'"; exit 1 ;;
+          esac
+          echo "run_gha=${run_gha}" >> "${GITHUB_OUTPUT}"
+
+  validate-source:
+    name: Validate release tag
+    needs: select-ci-provider
+    if: needs.select-ci-provider.outputs.run-gha == 'true' && github.event_name == 'push' && github.event.deleted == false && github.repository == 'noironetworks/opflex' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      opflex-commit: ${{ steps.source.outputs.opflex_commit }}
+      date-tag: ${{ steps.source.outputs.date_tag }}
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate annotated tag and branch head
+        id: source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "::error::Release tag must have form N.N.N.N"; exit 1;
+          }
+          [[ "${UPSTREAM_ID}" =~ ^[0-9a-f]+$ ]] || {
+            echo "::error::UPSTREAM_ID must be a lowercase hex id"; exit 1;
+          }
+          [[ "${SKIP_CICD_STATUS}" == "true" || "${SKIP_CICD_STATUS}" == "false" ]] || {
+            echo "::error::SKIP_CICD_STATUS must be true or false"; exit 1;
+          }
+          git fetch --force --no-tags origin \
+            "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" \
+            "+refs/heads/${SOURCE_BRANCH}:refs/remotes/origin/${SOURCE_BRANCH}"
+          [[ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" == "tag" ]] || {
+            echo "::error::Release tag must be annotated"; exit 1;
+          }
+          commit="$(git rev-parse "refs/tags/${GITHUB_REF_NAME}^{commit}")"
+          [[ "${commit}" == "$(git rev-parse HEAD)" ]] || {
+            echo "::error::Release tag moved after this run was queued"; exit 1;
+          }
+          [[ "${commit}" == "$(git rev-parse "refs/remotes/origin/${SOURCE_BRANCH}")" ]] || {
+            echo "::error::Release tag must point to current ${SOURCE_BRANCH} head"; exit 1;
+          }
+          echo "opflex_commit=${commit}" >> "${GITHUB_OUTPUT}"
+          echo "date_tag=$(date -u +%m%d%y)" >> "${GITHUB_OUTPUT}"
+
+  build-base:
+    name: Build and publish opflex-build-base
+    needs:
+      - select-ci-provider
+      - validate-source
+    if: needs.select-ci-provider.outputs.run-gha == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    outputs:
+      quay-digest: ${{ steps.publish.outputs.quay_digest }}
+      cicd-commit: ${{ steps.cicd.outputs.cicd_commit }}
+    env:
+      TRAVIS_COMMIT: ${{ needs.validate-source.outputs.opflex-commit }}
+      TRAVIS_TAG: ${{ github.ref_name }}
+      TRAVIS_BUILD_NUMBER: ${{ github.run_number }}
+      TRAVIS_REPO_SLUG: ${{ github.repository }}
+      GHA_TRIGGER_TAG: ${{ github.ref_name }}
+      GHA_DATE_TAG: ${{ needs.validate-source.outputs.date-tag }}
+      GHA_OPFLEX_BUILD_PHASE: base
+      CI_ARTIFACT_DIR: ci-artifacts
+
+    steps:
+      - name: Check out validated source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.validate-source.outputs.opflex-commit }}
+          persist-credentials: false
+
+      - name: Clone CICD scripts
+        id: cicd
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cicd_dir="${RUNNER_TEMP}/cicd"
+          git clone --depth=1 --single-branch --branch "${CICD_BRANCH}" \
+            https://github.com/noironetworks/cicd.git "${cicd_dir}"
+          cicd_release="$(sed -nE 's/^RELEASE_TAG="([^"]+)"/\1/p' "${cicd_dir}/travis/globals.sh")"
+          [[ "${cicd_release}" == "${TRAVIS_TAG}" ]] || {
+            echo "::error::CICD release ${cicd_release} does not match ${TRAVIS_TAG}"; exit 1;
+          }
+          echo "CICD_DIR=${cicd_dir}" >> "${GITHUB_ENV}"
+          echo "cicd_commit=$(git -C "${cicd_dir}" rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+          echo "DOCKER_CONFIG=${RUNNER_TEMP}/opflex-docker-config" >> "${GITHUB_ENV}"
+          echo "QUAY_NOIRO_DOCKER_CONFIG=${RUNNER_TEMP}/opflex-quay-noiro-docker-config" >> "${GITHUB_ENV}"
+
+      - name: Authenticate to image registries
+        shell: bash
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_NOIROLABS_USERNAME }}
+          QUAY_TOKEN: ${{ secrets.QUAY_NOIROLABS_TOKEN }}
+          QUAY_NOIRO_USERNAME: ${{ secrets.QUAY_NOIRO_USERNAME }}
+          QUAY_NOIRO_TOKEN: ${{ secrets.QUAY_NOIRO_TOKEN }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_NOIRO_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_NOIRO_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          : "${QUAY_USERNAME:?}" "${QUAY_TOKEN:?}" "${QUAY_NOIRO_USERNAME:?}" \
+            "${QUAY_NOIRO_TOKEN:?}" "${DOCKER_USERNAME:?}" "${DOCKER_TOKEN:?}"
+          install -d -m 700 "${DOCKER_CONFIG}" "${QUAY_NOIRO_DOCKER_CONFIG}"
+          printf '%s' "${QUAY_TOKEN}" | docker login quay.io \
+            --username "${QUAY_USERNAME}" --password-stdin
+          printf '%s' "${DOCKER_TOKEN}" | docker login docker.io \
+            --username "${DOCKER_USERNAME}" --password-stdin
+          printf '%s' "${QUAY_NOIRO_TOKEN}" | DOCKER_CONFIG="${QUAY_NOIRO_DOCKER_CONFIG}" \
+            docker login quay.io --username "${QUAY_NOIRO_USERNAME}" --password-stdin
+
+      - name: Build and publish base through CICD
+        id: publish
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${CI_ARTIFACT_DIR}"
+          "${CICD_DIR}/travis/build-push-opflex-images.sh" \
+            2>&1 | tee "${CI_ARTIFACT_DIR}/build-and-publish-base.log"
+          digest="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' \
+            "quay.io/noirolabs/opflex-build-base:${TRAVIS_TAG}.${UPSTREAM_ID}" \
+            | sed -n 's|^quay.io/noirolabs/opflex-build-base@||p')"
+          [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::Cannot resolve published opflex-build-base digest"; exit 1;
+          }
+          echo "quay_digest=${digest}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload base build logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: opflex-base-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Remove registry credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- "${RUNNER_TEMP}/opflex-docker-config/config.json" \
+            "${RUNNER_TEMP}/opflex-quay-noiro-docker-config/config.json"
+
+  build-runtime:
+    name: Build and publish opflex-build and opflex
+    if: needs.select-ci-provider.outputs.run-gha == 'true'
+    needs:
+      - select-ci-provider
+      - validate-source
+      - build-base
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      TRAVIS_COMMIT: ${{ needs.validate-source.outputs.opflex-commit }}
+      TRAVIS_TAG: ${{ github.ref_name }}
+      TRAVIS_BUILD_NUMBER: ${{ github.run_number }}
+      TRAVIS_REPO_SLUG: ${{ github.repository }}
+      TRAVIS_JOB_WEB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      GHA_TRIGGER_TAG: ${{ github.ref_name }}
+      GHA_DATE_TAG: ${{ needs.validate-source.outputs.date-tag }}
+      GHA_OPFLEX_BUILD_PHASE: runtime
+      EXPECTED_OPFLEX_BASE_DIGEST: ${{ needs.build-base.outputs.quay-digest }}
+      CICD_COMMIT: ${{ needs.build-base.outputs.cicd-commit }}
+      CI_ARTIFACT_DIR: ci-artifacts
+
+    steps:
+      - name: Check out validated source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.validate-source.outputs.opflex-commit }}
+          persist-credentials: false
+
+      - name: Set up Java 11 for Genie
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "11"
+          cache: maven
+          cache-dependency-path: genie/pom.xml
+
+      - name: Install status dependencies and clone the base job's CICD scripts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m pip install pyyaml pytz
+          cicd_dir="${RUNNER_TEMP}/cicd"
+          git init --quiet "${cicd_dir}"
+          git -C "${cicd_dir}" remote add origin https://github.com/noironetworks/cicd.git
+          git -C "${cicd_dir}" fetch --depth=1 origin "${CICD_COMMIT}"
+          git -C "${cicd_dir}" checkout --quiet --detach FETCH_HEAD
+          [[ "$(git -C "${cicd_dir}" rev-parse HEAD)" == "${CICD_COMMIT}" ]] || {
+            echo "::error::Runtime CICD checkout does not match the base job"; exit 1;
+          }
+          echo "CICD_DIR=${cicd_dir}" >> "${GITHUB_ENV}"
+          echo "DOCKER_CONFIG=${RUNNER_TEMP}/opflex-docker-config" >> "${GITHUB_ENV}"
+          echo "QUAY_NOIRO_DOCKER_CONFIG=${RUNNER_TEMP}/opflex-quay-noiro-docker-config" >> "${GITHUB_ENV}"
+
+      - name: Authenticate to image registries
+        shell: bash
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_NOIROLABS_USERNAME }}
+          QUAY_TOKEN: ${{ secrets.QUAY_NOIROLABS_TOKEN }}
+          QUAY_NOIRO_USERNAME: ${{ secrets.QUAY_NOIRO_USERNAME }}
+          QUAY_NOIRO_TOKEN: ${{ secrets.QUAY_NOIRO_TOKEN }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_NOIRO_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_NOIRO_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          : "${QUAY_USERNAME:?}" "${QUAY_TOKEN:?}" "${QUAY_NOIRO_USERNAME:?}" \
+            "${QUAY_NOIRO_TOKEN:?}" "${DOCKER_USERNAME:?}" "${DOCKER_TOKEN:?}"
+          install -d -m 700 "${DOCKER_CONFIG}" "${QUAY_NOIRO_DOCKER_CONFIG}"
+          printf '%s' "${QUAY_TOKEN}" | docker login quay.io \
+            --username "${QUAY_USERNAME}" --password-stdin
+          printf '%s' "${DOCKER_TOKEN}" | docker login docker.io \
+            --username "${DOCKER_USERNAME}" --password-stdin
+          printf '%s' "${QUAY_NOIRO_TOKEN}" | DOCKER_CONFIG="${QUAY_NOIRO_DOCKER_CONFIG}" \
+            docker login quay.io --username "${QUAY_NOIRO_USERNAME}" --password-stdin
+
+      - name: Build and publish runtime images through CICD
+        shell: bash
+        env:
+          TRAVIS_TAGGER: ${{ secrets.GITHUBACTIONS_TAGGER }}
+        run: |
+          set -Eeuo pipefail
+          if [[ "${SKIP_CICD_STATUS}" == "false" ]]; then
+            : "${TRAVIS_TAGGER:?GITHUBACTIONS_TAGGER is required for status publication}"
+          fi
+          mkdir -p "${CI_ARTIFACT_DIR}"
+          "${CICD_DIR}/travis/build-push-opflex-images.sh" \
+            2>&1 | tee "${CI_ARTIFACT_DIR}/build-and-publish-runtime.log"
+
+      - name: Upload runtime build logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: opflex-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Remove registry credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- "${RUNNER_TEMP}/opflex-docker-config/config.json" \
+            "${RUNNER_TEMP}/opflex-quay-noiro-docker-config/config.json"
