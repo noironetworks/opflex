@@ -20,6 +20,7 @@ make -j2
 sudo make install
 set +e
 make check
+libopflex_result=$?
 find . -name test-suite.log|xargs cat
 popd
 
@@ -66,4 +67,8 @@ find . -name *_test.log | xargs grep "Leaving test case" | \
     awk '{print $NF , $6 , $10}' | sort -nrk1 | \
     awk '{print "time:"$1"us", "test:"$2":"$3}'
 
+# Do not let a successful agent suite hide a failed libopflex suite.
+if [[ "${libopflex_result}" -ne 0 ]]; then
+    exit "${libopflex_result}"
+fi
 exit $result

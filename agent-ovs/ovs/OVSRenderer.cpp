@@ -287,6 +287,11 @@ void OVSRenderer::stop() {
         }
     }
 
+    // Stop OpenFlow receive callbacks before any of their handlers are
+    // unregistered by the managers below.
+    intSwitchManager.stop();
+    accessSwitchManager.stop();
+
     if (ifaceStatsEnabled)
         interfaceStatsManager.stop();
     if (serviceStatsEnabled)
@@ -304,8 +309,6 @@ void OVSRenderer::stop() {
     intFlowManager.stop();
     accessFlowManager.stop();
 
-    intSwitchManager.stop();
-    accessSwitchManager.stop();
     endpointTenantMapper.stop();
     if (getAgent().isFeatureEnabled(FeatureList::ERSPAN))
         spanRenderer.stop();

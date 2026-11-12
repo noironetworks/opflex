@@ -60,6 +60,12 @@ void SwitchManager::stop() {
     stopping = true;
 
     if (connection) {
+        // The receive thread traverses handlers without holding connMtx.
+        // Join it before removing any handler from the connection.
+        connection->Disconnect();
+        // Barrier replies can no longer arrive; release flow writers that
+        // were already waiting when the connection was stopped.
+        flowExecutor.FailOutstandingRequests();
         flowReader.uninstallListenersForConnection(connection.get());
         flowExecutor.UninstallListenersForConnection(connection.get());
         portMapper.UninstallListenersForConnection(connection.get());

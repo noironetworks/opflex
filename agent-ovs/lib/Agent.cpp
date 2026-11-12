@@ -832,6 +832,7 @@ void Agent::stop() {
             }
         });
 
+    policyManager.requestStop();
     for (auto& r : renderers) {
         r.second->stop();
     }

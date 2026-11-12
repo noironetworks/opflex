@@ -249,6 +249,9 @@ private:
     opflex::util::ThreadManager threadManager;
     uv_async_t connect_async;
     uv_async_t writeq_async;
+    std::mutex lifecycleMtx;
+    std::mutex asyncMtx;
+    bool running = false;
     std::atomic<bool> connected;
     std::atomic<bool> syncComplete;
     std::atomic<int> syncMsgsRemaining;

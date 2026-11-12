@@ -16,6 +16,8 @@
 
 #include "opflex/util/ThreadManager.h"
 
+#include <utility>
+
 namespace opflex {
 namespace util {
 
@@ -62,9 +64,18 @@ void ThreadManager::startTask(const std::string& name) {
 }
 
 void ThreadManager::stopTask(const std::string& name) {
+    stopTask(name, std::function<void()>());
+}
+
+void ThreadManager::stopTask(const std::string& name,
+                             std::function<void()> cleanup) {
     auto it = task_map.find(name);
     if (it != task_map.end()) {
         Task& task = it->second;
+        {
+            const std::lock_guard<std::mutex> guard(task.stopMutex);
+            task.stopCleanup = std::move(cleanup);
+        }
         uv_async_send(&task.cleanup);
 
         if (!adaptor) {
@@ -78,6 +89,13 @@ void ThreadManager::stopTask(const std::string& name) {
 
 void ThreadManager::cleanup_func(uv_async_t* handle) {
     uv_close((uv_handle_t*)handle, NULL);
+    Task* task = static_cast<Task*>(handle->data);
+    std::function<void()> cleanup;
+    {
+        const std::lock_guard<std::mutex> guard(task->stopMutex);
+        cleanup = std::move(task->stopCleanup);
+    }
+    if (cleanup) cleanup();
 }
 
 void ThreadManager::thread_func(void* taskptr) {
