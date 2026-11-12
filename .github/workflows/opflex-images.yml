@@ -18,7 +18,7 @@ concurrency:
 env:
   SOURCE_BRANCH: ${{ vars.SOURCE_BRANCH || 'mmr-6.1.1' }}
   UPSTREAM_ID: ${{ vars.UPSTREAM_ID }}
-  CICD_BRANCH: ${{ vars.CICD_BRANCH || 'mmr-6.1.1' }}
+  CICD_COMMIT: ed91df64e63184ab5a5171d0705062ae57c664a7
   SKIP_CICD_STATUS: ${{ vars.SKIP_CICD_STATUS || 'true' }}
   GHA_PLATFORM: linux/amd64
   DOCKER_BUILDKIT: "1"
@@ -84,7 +84,11 @@ jobs:
           {
             echo "### OpFlex unit tests"
             echo
+            # Markdown backticks are literal in this printf format.
+            # shellcheck disable=SC2016
             printf 'Tested commit: `%s`\n\n' "${GITHUB_SHA}"
+            # Markdown backticks are literal in this printf format.
+            # shellcheck disable=SC2016
             printf 'Test result: `%s`\n\n' "${UNIT_TEST_RESULT}"
             if [[ -d libopflex && -d agent-ovs ]] && command -v lcov >/dev/null; then
               if lcov --capture --directory libopflex --directory agent-ovs \
@@ -183,6 +187,8 @@ jobs:
       GHA_DATE_TAG: ${{ needs.validate-source.outputs.date-tag }}
       GHA_OPFLEX_BUILD_PHASE: base
       CI_ARTIFACT_DIR: ci-artifacts
+      CI_EVIDENCE_MODE: prepared-v1
+      CI_SCAN_POLICY: fatal
 
     steps:
       - name: Check out validated source
@@ -197,8 +203,16 @@ jobs:
         run: |
           set -Eeuo pipefail
           cicd_dir="${RUNNER_TEMP}/cicd"
-          git clone --depth=1 --single-branch --branch "${CICD_BRANCH}" \
-            https://github.com/noironetworks/cicd.git "${cicd_dir}"
+          [[ "${CICD_COMMIT}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::CICD_COMMIT must pin a reviewed full commit SHA"; exit 1;
+          }
+          git init --quiet "${cicd_dir}"
+          git -C "${cicd_dir}" remote add origin https://github.com/noironetworks/cicd.git
+          git -C "${cicd_dir}" fetch --depth=1 origin "${CICD_COMMIT}"
+          git -C "${cicd_dir}" checkout --quiet --detach FETCH_HEAD
+          [[ "$(git -C "${cicd_dir}" rev-parse HEAD)" == "${CICD_COMMIT}" ]] || {
+            echo "::error::CICD checkout does not match reviewed pin"; exit 1;
+          }
           cicd_release="$(sed -nE 's/^RELEASE_TAG="([^"]+)"/\1/p' "${cicd_dir}/travis/globals.sh")"
           [[ "${cicd_release}" == "${TRAVIS_TAG}" ]] || {
             echo "::error::CICD release ${cicd_release} does not match ${TRAVIS_TAG}"; exit 1;
@@ -235,7 +249,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           mkdir -p "${CI_ARTIFACT_DIR}"
-          "${CICD_DIR}/travis/build-push-opflex-images.sh" \
+          SKIP_CICD_STATUS=true "${CICD_DIR}/travis/build-push-opflex-images.sh" \
             2>&1 | tee "${CI_ARTIFACT_DIR}/build-and-publish-base.log"
           digest="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' \
             "quay.io/noirolabs/opflex-build-base:${TRAVIS_TAG}.${UPSTREAM_ID}" \
@@ -280,6 +294,8 @@ jobs:
       EXPECTED_OPFLEX_BASE_DIGEST: ${{ needs.build-base.outputs.quay-digest }}
       CICD_COMMIT: ${{ needs.build-base.outputs.cicd-commit }}
       CI_ARTIFACT_DIR: ci-artifacts
+      CI_EVIDENCE_MODE: prepared-v1
+      CI_SCAN_POLICY: fatal
 
     steps:
       - name: Check out validated source
@@ -302,6 +318,7 @@ jobs:
           set -Eeuo pipefail
           python3 -m pip install pyyaml pytz
           cicd_dir="${RUNNER_TEMP}/cicd"
+          [[ "${CICD_COMMIT}" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid reviewed CICD SHA"; exit 1; }
           git init --quiet "${cicd_dir}"
           git -C "${cicd_dir}" remote add origin https://github.com/noironetworks/cicd.git
           git -C "${cicd_dir}" fetch --depth=1 origin "${CICD_COMMIT}"
@@ -309,9 +326,11 @@ jobs:
           [[ "$(git -C "${cicd_dir}" rev-parse HEAD)" == "${CICD_COMMIT}" ]] || {
             echo "::error::Runtime CICD checkout does not match the base job"; exit 1;
           }
-          echo "CICD_DIR=${cicd_dir}" >> "${GITHUB_ENV}"
-          echo "DOCKER_CONFIG=${RUNNER_TEMP}/opflex-docker-config" >> "${GITHUB_ENV}"
-          echo "QUAY_NOIRO_DOCKER_CONFIG=${RUNNER_TEMP}/opflex-quay-noiro-docker-config" >> "${GITHUB_ENV}"
+          {
+            echo "CICD_DIR=${cicd_dir}"
+            echo "DOCKER_CONFIG=${RUNNER_TEMP}/opflex-docker-config"
+            echo "QUAY_NOIRO_DOCKER_CONFIG=${RUNNER_TEMP}/opflex-quay-noiro-docker-config"
+          } >> "${GITHUB_ENV}"
 
       - name: Authenticate to image registries
         shell: bash
@@ -336,16 +355,50 @@ jobs:
 
       - name: Build and publish runtime images through CICD
         shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${CI_ARTIFACT_DIR}"
+          SKIP_CICD_STATUS=true "${CICD_DIR}/travis/build-push-opflex-images.sh" \
+            2>&1 | tee "${CI_ARTIFACT_DIR}/build-and-publish-runtime.log"
+
+      - name: Remove registry credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- "${RUNNER_TEMP}/opflex-docker-config/config.json" \
+            "${RUNNER_TEMP}/opflex-quay-noiro-docker-config/config.json"
+
+      - name: Prepare immutable image evidence
+        id: evidence
+        if: ${{ always() && hashFiles('ci-artifacts/image-metadata.jsonl') != '' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 "${CICD_DIR}/travis/ci_evidence.py" prepare-images \
+            --metadata "${CI_ARTIFACT_DIR}/image-metadata.jsonl" \
+            --bundle "${CI_ARTIFACT_DIR}/status-bundle" \
+            --release-tag "${TRAVIS_TAG}" --source-repository "${GITHUB_REPOSITORY}" \
+            --source-sha "${TRAVIS_COMMIT}" --run-id "${GITHUB_RUN_ID}" \
+            --run-number "${GITHUB_RUN_NUMBER}" --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --run-url "${TRAVIS_JOB_WEB_URL}" --trigger-tag "${GITHUB_REF_NAME}" \
+            --upstream-id "${UPSTREAM_ID}"
+          echo "prepared=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish prepared image status
+        if: ${{ always() && env.SKIP_CICD_STATUS == 'false' && steps.evidence.outputs.prepared == 'true' }}
+        shell: bash
         env:
           TRAVIS_TAGGER: ${{ secrets.GITHUBACTIONS_TAGGER }}
         run: |
           set -Eeuo pipefail
-          if [[ "${SKIP_CICD_STATUS}" == "false" ]]; then
-            : "${TRAVIS_TAGGER:?GITHUBACTIONS_TAGGER is required for status publication}"
-          fi
-          mkdir -p "${CI_ARTIFACT_DIR}"
-          "${CICD_DIR}/travis/build-push-opflex-images.sh" \
-            2>&1 | tee "${CI_ARTIFACT_DIR}/build-and-publish-runtime.log"
+          python3 "${CICD_DIR}/travis/ci_evidence.py" publish \
+            --bundle "${CI_ARTIFACT_DIR}/status-bundle" \
+            --expected-release-tag "${TRAVIS_TAG}" --expected-kind images \
+            --expected-stream "${TRAVIS_TAG}.z" \
+            --expected-source-repository "${GITHUB_REPOSITORY}" --expected-source-sha "${TRAVIS_COMMIT}" \
+            --expected-cicd-sha "${CICD_COMMIT}" --expected-run-id "${GITHUB_RUN_ID}" \
+            --expected-run-attempt "${GITHUB_RUN_ATTEMPT}" --expected-images "opflex" \
+            --repository https://github.com/noironetworks/cicd-status.git --branch main
 
       - name: Upload runtime build logs
         if: always()
@@ -356,9 +409,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Remove registry credentials
-        if: always()
-        shell: bash
-        run: |
-          rm -f -- "${RUNNER_TEMP}/opflex-docker-config/config.json" \
-            "${RUNNER_TEMP}/opflex-quay-noiro-docker-config/config.json"
