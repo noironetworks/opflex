@@ -115,7 +115,26 @@ else
     echo "starting opflex build"
     #docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
     #docker pull quay.io/noirolabs/opflex-build-base:sumit-kmr2-test
+    OPFLEX_BASE_BUILD_ARGS=()
     BASE_IMAGE_REF="$DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" && "${CI_EVIDENCE_MODE:-}" == "prepared-v1" ]]; then
+      # Validate this new runtime contract without changing legacy phase dispatch.
+      [[ "${GHA_OPFLEX_BUILD_PHASE:-}" == runtime ]] || {
+        echo "Prepared runtime input requires the runtime phase; the parent phase fix is required" >&2
+        exit 1
+      }
+      [[ "${EXPECTED_OPFLEX_BASE_DIGEST:-}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+        echo "Invalid expected opflex-build-base digest" >&2
+        exit 1
+      }
+      [[ -n "${CI_ARTIFACT_DIR:-}" ]] || {
+        echo "CI_ARTIFACT_DIR is required in prepared mode" >&2
+        exit 1
+      }
+      mkdir -p "${CI_ARTIFACT_DIR}"
+      BASE_IMAGE_REF="$DOCKER_HUB_ID/opflex-build-base@${EXPECTED_OPFLEX_BASE_DIGEST}"
+      OPFLEX_BASE_BUILD_ARGS=(--build-arg "OPFLEX_BUILD_BASE_IMAGE=${BASE_IMAGE_REF}")
+    fi
     docker pull "${BASE_IMAGE_REF}"
     if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
       : "${EXPECTED_OPFLEX_BASE_DIGEST:?EXPECTED_OPFLEX_BASE_DIGEST is required}"
@@ -150,7 +169,7 @@ else
     popd
 
     run_logged_docker_build "opflex-build image build" "${BUILD_LOG_DIR}/opflex-build.log" \
-      docker build "${PLATFORM_ARGS[@]}" $BUILDARG \
+      docker build "${PLATFORM_ARGS[@]}" $BUILDARG ${OPFLEX_BASE_BUILD_ARGS[@]+"${OPFLEX_BASE_BUILD_ARGS[@]}"} \
       --build-arg "DOCKER_HUB_ID=$DOCKER_HUB_ID" \
       --build-arg "DOCKER_TAG=$DOCKER_TAG" $SECOPT \
       -t "$DOCKER_HUB_ID/opflex-build:$DOCKER_TAG" \

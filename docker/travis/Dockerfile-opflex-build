@@ -1,6 +1,7 @@
 ARG DOCKER_TAG
 ARG DOCKER_HUB_ID=quay.io/noirolabs
-FROM ${DOCKER_HUB_ID}/opflex-build-base:${DOCKER_TAG}
+ARG OPFLEX_BUILD_BASE_IMAGE=${DOCKER_HUB_ID}/opflex-build-base:${DOCKER_TAG}
+FROM ${OPFLEX_BUILD_BASE_IMAGE}
 ARG BUILDOPTS="--enable-grpc"
 ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/share/pkgconfig
 WORKDIR /opflex
