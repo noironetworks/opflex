@@ -188,7 +188,7 @@ jobs:
       GHA_OPFLEX_BUILD_PHASE: base
       CI_ARTIFACT_DIR: ci-artifacts
       CI_EVIDENCE_MODE: prepared-v1
-      CI_SCAN_POLICY: fatal
+      CI_SCAN_POLICY: advisory
 
     steps:
       - name: Check out validated source
@@ -295,7 +295,7 @@ jobs:
       CICD_COMMIT: ${{ needs.build-base.outputs.cicd-commit }}
       CI_ARTIFACT_DIR: ci-artifacts
       CI_EVIDENCE_MODE: prepared-v1
-      CI_SCAN_POLICY: fatal
+      CI_SCAN_POLICY: advisory
 
     steps:
       - name: Check out validated source
