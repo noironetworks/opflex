@@ -40,7 +40,41 @@ else
     echo "starting opflex build"
     #docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
     #docker pull quay.io/noirolabs/opflex-build-base:sumit-kmr2-test
-    docker pull $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
+    OPFLEX_BASE_BUILD_ARGS=()
+    PREPARED_RUNTIME_INPUT=false
+    BASE_IMAGE_REF="$DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG"
+    if [[ "${GITHUB_ACTIONS:-false}" == "true" && "${CI_EVIDENCE_MODE:-}" == "prepared-v1" ]]; then
+      # Validate this new runtime contract without changing legacy phase dispatch.
+      [[ "${GHA_OPFLEX_BUILD_PHASE:-}" == runtime ]] || {
+        echo "Prepared runtime input requires the runtime phase; the parent phase fix is required" >&2
+        exit 1
+      }
+      [[ "${EXPECTED_OPFLEX_BASE_DIGEST:-}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+        echo "Invalid expected opflex-build-base digest" >&2
+        exit 1
+      }
+      [[ -n "${CI_ARTIFACT_DIR:-}" ]] || {
+        echo "CI_ARTIFACT_DIR is required in prepared mode" >&2
+        exit 1
+      }
+      mkdir -p "${CI_ARTIFACT_DIR}"
+      BASE_IMAGE_REF="$DOCKER_HUB_ID/opflex-build-base@${EXPECTED_OPFLEX_BASE_DIGEST}"
+      OPFLEX_BASE_BUILD_ARGS=(--build-arg "OPFLEX_BUILD_BASE_IMAGE=${BASE_IMAGE_REF}")
+      PREPARED_RUNTIME_INPUT=true
+    fi
+    docker pull "${BASE_IMAGE_REF}"
+    if [[ "${PREPARED_RUNTIME_INPUT}" == true ]]; then
+      ACTUAL_BASE_REPODIGEST=$(docker image inspect \
+        --format='{{index .RepoDigests 0}}' "${BASE_IMAGE_REF}")
+      ACTUAL_BASE_DIGEST="${ACTUAL_BASE_REPODIGEST##*@}"
+      [[ "${ACTUAL_BASE_DIGEST}" == "${EXPECTED_OPFLEX_BASE_DIGEST}" ]] || {
+        echo "Pulled base digest differs from the approved input" >&2
+        exit 1
+      }
+      printf 'opflex_build_base_ref=%s\nopflex_build_base_digest=%s\n' \
+        "${BASE_IMAGE_REF}" "${ACTUAL_BASE_DIGEST}" \
+        > "${CI_ARTIFACT_DIR}/opflex-build-base-input.txt"
+    fi
 
     pushd $OPFLEX_DIR/genie
     mvn compile exec:java
@@ -52,7 +86,7 @@ else
     cp opflex.tgz opflex/
     popd
 
-    docker build $BUILDARG --build-arg DOCKER_HUB_ID=$DOCKER_HUB_ID --build-arg DOCKER_TAG=$DOCKER_TAG $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
+    docker build $BUILDARG ${OPFLEX_BASE_BUILD_ARGS[@]+"${OPFLEX_BASE_BUILD_ARGS[@]}"} --build-arg DOCKER_HUB_ID=$DOCKER_HUB_ID --build-arg DOCKER_TAG=$DOCKER_TAG $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR &> /tmp/opflex-build.log &
     #docker build $SECOPT -t $DOCKER_HUB_ID/opflex-build:$DOCKER_TAG -f $DOCKER_DIR/Dockerfile-opflex-build $OPFLEX_DIR
     ##docker push $DOCKER_HUB_ID/opflex-build$DOCKER_TAG
     while [ ! -f  /tmp/opflex-build.log ]; do sleep 10; done
