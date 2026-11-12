@@ -187,6 +187,8 @@ jobs:
       GHA_DATE_TAG: ${{ needs.validate-source.outputs.date-tag }}
       GHA_OPFLEX_BUILD_PHASE: base
       CI_ARTIFACT_DIR: ci-artifacts
+      CI_EVIDENCE_MODE: prepared-v1
+      CI_SCAN_POLICY: fatal
 
     steps:
       - name: Check out validated source
@@ -292,6 +294,8 @@ jobs:
       EXPECTED_OPFLEX_BASE_DIGEST: ${{ needs.build-base.outputs.quay-digest }}
       CICD_COMMIT: ${{ needs.build-base.outputs.cicd-commit }}
       CI_ARTIFACT_DIR: ci-artifacts
+      CI_EVIDENCE_MODE: prepared-v1
+      CI_SCAN_POLICY: fatal
 
     steps:
       - name: Check out validated source
