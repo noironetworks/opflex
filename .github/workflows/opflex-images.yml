@@ -84,7 +84,11 @@ jobs:
           {
             echo "### OpFlex unit tests"
             echo
+            # Markdown backticks are literal in this printf format.
+            # shellcheck disable=SC2016
             printf 'Tested commit: `%s`\n\n' "${GITHUB_SHA}"
+            # Markdown backticks are literal in this printf format.
+            # shellcheck disable=SC2016
             printf 'Test result: `%s`\n\n' "${UNIT_TEST_RESULT}"
             if [[ -d libopflex && -d agent-ovs ]] && command -v lcov >/dev/null; then
               if lcov --capture --directory libopflex --directory agent-ovs \
@@ -320,9 +324,11 @@ jobs:
           [[ "$(git -C "${cicd_dir}" rev-parse HEAD)" == "${CICD_COMMIT}" ]] || {
             echo "::error::Runtime CICD checkout does not match the base job"; exit 1;
           }
-          echo "CICD_DIR=${cicd_dir}" >> "${GITHUB_ENV}"
-          echo "DOCKER_CONFIG=${RUNNER_TEMP}/opflex-docker-config" >> "${GITHUB_ENV}"
-          echo "QUAY_NOIRO_DOCKER_CONFIG=${RUNNER_TEMP}/opflex-quay-noiro-docker-config" >> "${GITHUB_ENV}"
+          {
+            echo "CICD_DIR=${cicd_dir}"
+            echo "DOCKER_CONFIG=${RUNNER_TEMP}/opflex-docker-config"
+            echo "QUAY_NOIRO_DOCKER_CONFIG=${RUNNER_TEMP}/opflex-quay-noiro-docker-config"
+          } >> "${GITHUB_ENV}"
 
       - name: Authenticate to image registries
         shell: bash
