@@ -21,11 +21,28 @@ DOCKER_DIR=docker/travis
 OPFLEX_DIR=.
 export OPFLEX_DIR
 
-# Check if the tag contains "opflex-build-base"
-if [[ "${TRAVIS_TAG}" == *"opflex-build-base"* ]]; then
-  BUILD_BASE=true
+# Determine build phase: prioritize GHA_OPFLEX_BUILD_PHASE if set, otherwise use TRAVIS_TAG parsing
+if [[ -n "${GHA_OPFLEX_BUILD_PHASE:-}" ]]; then
+  # GitHub Actions build: explicit phase passed as environment variable
+  case "${GHA_OPFLEX_BUILD_PHASE}" in
+    base)
+      BUILD_BASE=true
+      ;;
+    runtime)
+      BUILD_BASE=false
+      ;;
+    *)
+      echo "ERROR: GHA_OPFLEX_BUILD_PHASE must be 'base' or 'runtime', got '${GHA_OPFLEX_BUILD_PHASE}'" >&2
+      exit 1
+      ;;
+  esac
 else
-  BUILD_BASE=false
+  # Travis CI build: derive phase from tag name
+  if [[ "${TRAVIS_TAG}" == *"opflex-build-base"* ]]; then
+    BUILD_BASE=true
+  else
+    BUILD_BASE=false
+  fi
 fi
 
 set -Eeuxo pipefail
@@ -41,6 +58,32 @@ else
     #docker push $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
     #docker pull quay.io/noirolabs/opflex-build-base:sumit-kmr2-test
     docker pull $DOCKER_HUB_ID/opflex-build-base:$DOCKER_TAG
+
+    # Validate base image digest for GitHub Actions runtime phase
+    # This ensures we build on the correct base image before Maven and Docker build
+    if [[ -n "${GHA_OPFLEX_BUILD_PHASE:-}" ]] && [[ "${GHA_OPFLEX_BUILD_PHASE}" == "runtime" ]]; then
+      if [[ -z "${EXPECTED_OPFLEX_BASE_DIGEST:-}" ]]; then
+        echo "ERROR: EXPECTED_OPFLEX_BASE_DIGEST is required for runtime phase" >&2
+        exit 1
+      fi
+      # Extract actual digest from pulled image
+      actual_digest=$(docker image inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' \
+        "${DOCKER_HUB_ID}/opflex-build-base:${DOCKER_TAG}" \
+        | sed -n "s|^${DOCKER_HUB_ID}/opflex-build-base@||p")
+      
+      if ! [[ "${actual_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+        echo "ERROR: Cannot resolve opflex-build-base digest from ${DOCKER_HUB_ID}/opflex-build-base:${DOCKER_TAG}" >&2
+        exit 1
+      fi
+      
+      if [[ "${actual_digest}" != "${EXPECTED_OPFLEX_BASE_DIGEST}" ]]; then
+        echo "ERROR: Base image digest mismatch" >&2
+        echo "  Expected: ${EXPECTED_OPFLEX_BASE_DIGEST}" >&2
+        echo "  Actual:   ${actual_digest}" >&2
+        exit 1
+      fi
+      echo "Base image digest validated successfully: ${actual_digest}"
+    fi
 
     pushd $OPFLEX_DIR/genie
     mvn compile exec:java
